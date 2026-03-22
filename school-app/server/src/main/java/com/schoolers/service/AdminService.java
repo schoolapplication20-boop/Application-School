@@ -12,6 +12,10 @@ import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.LocalDate;
@@ -218,25 +222,41 @@ public class AdminService {
         return ApiResponse.success(teacherRepository.findAll());
     }
 
+    @Transactional   // rolls back BOTH saves atomically if teacherRepository.save() fails
     public ApiResponse<Map<String, Object>> createTeacher(CreateTeacherRequest req) {
+
+        // ── Input validation (fast-fail before touching the DB) ────────────────
         if (req.getName() == null || req.getName().isBlank())
             return ApiResponse.error("Teacher name is required");
-        if (req.getEmail() == null || !req.getEmail().matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"))
-            return ApiResponse.error("Valid email is required");
-        String normalizedEmail = req.getEmail().trim().toLowerCase();
-        if (userRepository.existsByEmail(normalizedEmail))
-            return ApiResponse.error("Email already registered: " + normalizedEmail);
 
-        // Use admin-provided password if given, otherwise auto-generate
+        if (req.getEmail() == null || !req.getEmail().matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"))
+            return ApiResponse.error("A valid email address is required");
+
+        String normalizedEmail  = req.getEmail().trim().toLowerCase();
+        String normalizedMobile = (req.getMobile() != null && !req.getMobile().isBlank())
+                ? req.getMobile().trim() : null;
+
+        // Pre-check uniqueness so users get a clear message instead of a raw DB error
+        if (userRepository.existsByEmail(normalizedEmail))
+            return ApiResponse.error("Email '" + normalizedEmail + "' is already registered. Use a different email.");
+
+        if (normalizedMobile != null && userRepository.existsByMobile(normalizedMobile))
+            return ApiResponse.error("Mobile number '" + normalizedMobile + "' is already registered. Use a different number.");
+
         String rawPassword = (req.getPassword() != null && !req.getPassword().isBlank())
                 ? req.getPassword()
                 : generatePassword();
 
+        String empId = (req.getEmpId() != null && !req.getEmpId().isBlank())
+                ? req.getEmpId().trim()
+                : "EMP" + System.currentTimeMillis() % 100000;
+
         try {
+            // Step 1 — create login account
             User user = userRepository.save(User.builder()
                     .name(req.getName().trim())
                     .email(normalizedEmail)
-                    .mobile(req.getMobile() != null && !req.getMobile().isBlank() ? req.getMobile() : null)
+                    .mobile(normalizedMobile)
                     .password(passwordEncoder.encode(rawPassword))
                     .tempPassword(rawPassword)
                     .role(User.Role.TEACHER)
@@ -244,10 +264,11 @@ public class AdminService {
                     .firstLogin(true)
                     .build());
 
+            // Step 2 — create teacher profile (rolled back with step 1 on failure)
             Teacher teacher = teacherRepository.save(Teacher.builder()
                     .user(user)
                     .name(req.getName().trim())
-                    .employeeId(req.getEmpId() != null ? req.getEmpId() : "EMP" + System.currentTimeMillis() % 100000)
+                    .employeeId(empId)
                     .subject(req.getSubject())
                     .department(req.getDepartment())
                     .classes(req.getClasses())
@@ -258,26 +279,55 @@ public class AdminService {
                     .build());
 
             Map<String, Object> result = new HashMap<>();
-            result.put("id", teacher.getId());
-            result.put("userId", user.getId());
-            result.put("name", user.getName());
-            result.put("email", user.getEmail());
-            result.put("mobile", user.getMobile());
-            result.put("empId", teacher.getEmployeeId());
-            result.put("subject", teacher.getSubject());
-            result.put("department", teacher.getDepartment());
-            result.put("classes", teacher.getClasses());
-            result.put("qualification", teacher.getQualification());
-            result.put("experience", teacher.getExperience());
-            result.put("joiningDate", teacher.getJoiningDate());
-            result.put("status", teacher.getIsActive() ? "Active" : "Inactive");
+            result.put("id",                teacher.getId());
+            result.put("userId",            user.getId());
+            result.put("name",              user.getName());
+            result.put("email",             user.getEmail());
+            result.put("mobile",            user.getMobile());
+            result.put("empId",             teacher.getEmployeeId());
+            result.put("subject",           teacher.getSubject());
+            result.put("department",        teacher.getDepartment());
+            result.put("classes",           teacher.getClasses());
+            result.put("qualification",     teacher.getQualification());
+            result.put("experience",        teacher.getExperience());
+            result.put("joiningDate",       teacher.getJoiningDate());
+            result.put("status",            teacher.getIsActive() ? "Active" : "Inactive");
             result.put("generatedPassword", rawPassword);
+
+            log.info("[createTeacher] Created teacher id=" + teacher.getId()
+                    + " empId=" + empId + " email=" + normalizedEmail);
 
             return ApiResponse.success("Teacher created successfully", result);
 
+        } catch (DataIntegrityViolationException e) {
+            // Reached only in a race condition (two concurrent requests with the same email/mobile).
+            // Decode the constraint name from the DB message to give the user a specific hint.
+            String hint = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
+            String userMessage;
+            if (hint.contains("email") || hint.contains("users_email_key")) {
+                userMessage = "Email '" + normalizedEmail + "' was just registered by another request. Please use a different email.";
+            } else if (hint.contains("mobile") || hint.contains("users_mobile_key")) {
+                userMessage = "Mobile number '" + normalizedMobile + "' was just registered by another request. Please use a different number.";
+            } else if (hint.contains("employee_id") || hint.contains("teachers_employee_id_key")) {
+                userMessage = "Employee ID '" + empId + "' is already assigned to another teacher. Please provide a unique employee ID.";
+            } else {
+                userMessage = "A data conflict occurred (duplicate entry). Please verify the email, mobile, and employee ID are unique.";
+            }
+            log.warning("[createTeacher] Constraint violation — email=" + normalizedEmail
+                    + " empId=" + empId + " | " + e.getMessage());
+            return ApiResponse.error(userMessage);
+
+        } catch (DataAccessException e) {
+            // DB is unreachable, query timed out, connection pool exhausted, etc.
+            log.severe("[createTeacher] Database access failure — email=" + normalizedEmail
+                    + " | " + e.getClass().getSimpleName() + ": " + e.getMessage());
+            return ApiResponse.error("A database error occurred while creating the teacher. Please try again in a moment.");
+
         } catch (Exception e) {
-            log.severe("[createTeacher] DB error for email=" + normalizedEmail + ": " + e.getMessage());
-            return ApiResponse.error("Failed to create teacher: " + e.getMessage());
+            // Truly unexpected — log full stack trace for debugging
+            log.severe("[createTeacher] Unexpected error — email=" + normalizedEmail
+                    + " | " + e.getClass().getName() + ": " + e.getMessage());
+            return ApiResponse.error("An unexpected error occurred. Please contact your system administrator.");
         }
     }
 

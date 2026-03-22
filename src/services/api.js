@@ -4,7 +4,7 @@ import axios from 'axios';
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 // Clear any legacy localStorage data left from older builds
-['schoolers_teacher_creds', 'student_export_history'].forEach(k => localStorage.removeItem(k));
+['schoolers_teacher_creds', 'student_export_history', 'schoolers_notifications'].forEach(k => localStorage.removeItem(k));
 
 // Module-level auth token (no localStorage)
 let _authToken = null;
