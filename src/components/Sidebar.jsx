@@ -1,0 +1,234 @@
+import React from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import '../styles/sidebar.css';
+
+const adminNavItems = [
+  { path: '/admin/dashboard',          icon: 'dashboard',              label: 'Dashboard',          permKey: null },
+  { path: '/admin/students',           icon: 'school',                  label: 'Students',           permKey: 'students' },
+  { path: '/admin/teachers',           icon: 'person',                  label: 'Teachers',           permKey: 'teachers' },
+  { path: '/admin/applications',       icon: 'assignment_ind',          label: 'Applications',       permKey: 'applications' },
+  { path: '/admin/parents',            icon: 'family_restroom',         label: 'Parents',            permKey: 'parents' },
+  { path: '/admin/classes',            icon: 'class',                   label: 'Classes',            permKey: 'classes' },
+  { path: '/admin/collect-fee',        icon: 'point_of_sale',           label: 'Collect Fee',        permKey: 'collectFee' },
+  { path: '/admin/fees',               icon: 'payments',                label: 'Fees & Payments',    permKey: 'fees' },
+  { path: '/admin/salaries',           icon: 'account_balance_wallet',  label: 'Salaries',           permKey: 'salaries' },
+  { path: '/admin/expenses',           icon: 'receipt_long',            label: 'Expenses',           permKey: 'expenses' },
+  { path: '/admin/leave',              icon: 'event_busy',              label: 'Leave Management',   permKey: 'leave' },
+  { path: '/admin/transport',          icon: 'directions_bus',          label: 'Transport',          permKey: 'transport' },
+  { path: '/admin/attendance-report',  icon: 'fact_check',              label: 'Attendance Report',  permKey: 'attendance' },
+  { path: '/admin/timetable',          icon: 'schedule',                label: 'Timetable',          permKey: 'timetable' },
+  { path: '/admin/examination',        icon: 'verified',                label: 'Exam & Certificates', permKey: 'examination' },
+];
+
+// Super-Admin-only items (platform management)
+const superAdminOnlyItems = [
+  { path: '/superadmin/dashboard', icon: 'admin_panel_settings', label: 'SA Dashboard',     permKey: null },
+  { path: '/superadmin/admins',    icon: 'manage_accounts',       label: 'Admin Management', permKey: null },
+];
+
+const teacherNavItems = [
+  { path: '/teacher/dashboard',       icon: 'dashboard',      label: 'Dashboard' },
+  { path: '/teacher/schedule',        icon: 'calendar_today', label: 'My Schedule' },
+  { path: '/teacher/attendance',      icon: 'fact_check',     label: 'Attendance' },
+  { path: '/teacher/assignments',     icon: 'assignment',     label: 'Assignments' },
+  { path: '/teacher/homework',        icon: 'menu_book',      label: 'Homework' },
+  { path: '/teacher/marks',           icon: 'grade',          label: 'Marks' },
+  { path: '/teacher/messages',        icon: 'chat',           label: 'Messages' },
+  { path: '/teacher/leave-approval',  icon: 'how_to_reg',     label: 'Leave Approval' },
+  { path: '/teacher/leave-request',   icon: 'event_busy',     label: 'Leave Request' },
+  { path: '/teacher/examination',     icon: 'verified',       label: 'Exam & Certificates' },
+];
+
+const parentNavItems = [
+  { path: '/parent/dashboard',    icon: 'dashboard',    label: 'Dashboard' },
+  { path: '/parent/performance',  icon: 'bar_chart',    label: 'My Child' },
+  { path: '/parent/attendance',   icon: 'fact_check',   label: 'Attendance' },
+  { path: '/parent/assignments',  icon: 'assignment',   label: 'Assignments' },
+  { path: '/parent/pay-fees',     icon: 'payments',     label: 'Pay Fees' },
+  { path: '/parent/leave',        icon: 'event_busy',   label: 'Leave Request' },
+  { path: '/parent/messages',     icon: 'chat',         label: 'Messages', badge: 2 },
+  { path: '/parent/examination',  icon: 'verified',     label: 'Hall Ticket & Certs' },
+];
+
+const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  /**
+   * Returns the nav sections to render.
+   * For SUPER_ADMIN: two sections — SA-specific items + full admin panel.
+   * For restricted ADMIN: only permitted items.
+   * For others: their own items.
+   */
+  const getNavSections = () => {
+    switch (user?.role) {
+      case 'SUPER_ADMIN':
+        return [
+          { label: 'Super Admin',  items: superAdminOnlyItems },
+          { label: 'Admin Panel',  items: adminNavItems },
+        ];
+
+      case 'ADMIN': {
+        // Parse permissions — handles null, object, or JSON string from backend
+        let perms = {};
+        if (user.permissions) {
+          if (typeof user.permissions === 'string') {
+            try { perms = JSON.parse(user.permissions); } catch { perms = {}; }
+          } else if (typeof user.permissions === 'object') {
+            perms = user.permissions;
+          }
+        }
+        // Dashboard & Timetable (permKey: null) always show
+        // All other items require explicit true permission
+        const visibleItems = adminNavItems.filter(
+          item => item.permKey === null || perms[item.permKey] === true
+        );
+        return [{ label: 'Navigation', items: visibleItems }];
+      }
+
+      case 'TEACHER':
+        return [{ label: 'Navigation', items: teacherNavItems }];
+
+      case 'PARENT':
+        return [{ label: 'Navigation', items: parentNavItems }];
+
+      default:
+        return [];
+    }
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
+  const getInitials = (name) => {
+    if (!name) return 'U';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
+  const roleBadgeColor = {
+    SUPER_ADMIN: { bg: '#7c3aed20', text: '#7c3aed' },
+    ADMIN:       { bg: '#76C44220', text: '#276749' },
+    TEACHER:     { bg: '#3182ce20', text: '#2c5282' },
+    PARENT:      { bg: '#ed893620', text: '#9c4221' },
+  };
+  const roleColors = roleBadgeColor[user?.role] || { bg: '#f0f4f8', text: '#4a5568' };
+
+  const sections = getNavSections();
+
+  return (
+    <aside className={`sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
+      {/* Brand */}
+      <div className="sidebar-brand">
+        <div className="brand-logo">
+          <span style={{ fontSize: '20px' }}>🏆</span>
+        </div>
+        <div className="brand-text">
+          <div className="brand-name">Schoolers</div>
+          <div className="brand-tagline">Management System</div>
+        </div>
+      </div>
+
+      {/* Toggle Button */}
+      <button className="sidebar-toggle" onClick={onToggle} title={collapsed ? 'Expand' : 'Collapse'}>
+        <span className="material-icons" style={{ fontSize: '16px' }}>
+          {collapsed ? 'chevron_right' : 'chevron_left'}
+        </span>
+      </button>
+
+      {/* Navigation */}
+      <nav className="sidebar-nav">
+        {sections.map((section, si) => (
+          <React.Fragment key={section.label}>
+            {!collapsed && (
+              <div
+                className="nav-section-label"
+                style={si > 0 ? { marginTop: '12px' } : {}}
+              >
+                {section.label}
+              </div>
+            )}
+
+            {section.items.map((item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                data-tooltip={item.label}
+              >
+                <span className="material-icons">{item.icon}</span>
+                <span className="nav-label">{item.label}</span>
+                {item.badge && !collapsed && (
+                  <span className="nav-badge">{item.badge}</span>
+                )}
+              </NavLink>
+            ))}
+          </React.Fragment>
+        ))}
+
+        <div style={{ flex: 1 }} />
+
+        {!collapsed && <div className="nav-section-label" style={{ marginTop: '16px' }}>Account</div>}
+
+        {(user?.role === 'TEACHER' || user?.role === 'PARENT') && (
+          <NavLink
+            to="/reset-password"
+            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+            data-tooltip="Reset Password"
+          >
+            <span className="material-icons">lock_reset</span>
+            <span className="nav-label">Reset Password</span>
+          </NavLink>
+        )}
+
+        <button
+          className="nav-item nav-logout"
+          onClick={handleLogout}
+          data-tooltip="Logout"
+          style={{ width: '100%', border: 'none', background: 'none', textAlign: 'left', marginTop: '4px', cursor: 'pointer' }}
+        >
+          <span className="material-icons">logout</span>
+          <span className="nav-label">Logout</span>
+        </button>
+      </nav>
+
+      {/* User Info */}
+      <div className="sidebar-bottom">
+        <div className="sidebar-user">
+          <div
+            className="user-avatar"
+            style={{
+              background: user?.role === 'SUPER_ADMIN'
+                ? 'linear-gradient(135deg, #7c3aed, #553c9a)'
+                : 'linear-gradient(135deg, #76C442, #5fa832)',
+            }}
+          >
+            {getInitials(user?.name)}
+          </div>
+          <div className="user-info">
+            <div className="user-name">{user?.name || 'User'}</div>
+            <div
+              className="user-role"
+              style={{
+                display: 'inline-block',
+                padding: '1px 7px',
+                borderRadius: '8px',
+                fontSize: '10px',
+                fontWeight: 700,
+                background: roleColors.bg,
+                color: roleColors.text,
+                marginTop: '2px',
+              }}
+            >
+              {user?.role === 'SUPER_ADMIN' ? 'Super Admin' : (user?.role || 'Role')}
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  );
+};
+
+export default Sidebar;
