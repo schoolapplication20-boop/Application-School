@@ -1,72 +1,10 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Layout from '../../components/Layout';
 import Toast from '../../components/Toast';
 import HallTicketDocument from '../../components/HallTicketDocument';
 import { examinationAPI } from '../../services/api';
 import { adminAPI } from '../../services/api';
 import '../../styles/examination.css';
-
-// ─── Mock data for offline / demo mode ──────────────────────────────────────
-const MOCK_SCHEDULES = [
-  { id: 1, examName: 'Annual Exam 2024', examType: 'ANNUAL', className: '10', section: 'A', subject: 'Mathematics', examDate: '2024-03-15', startTime: '09:00', endTime: '12:00', hallNumber: 'H-101', maxMarks: 100, status: 'SCHEDULED', instructions: 'No calculators allowed.' },
-  { id: 2, examName: 'Annual Exam 2024', examType: 'ANNUAL', className: '10', section: 'A', subject: 'Science',     examDate: '2024-03-17', startTime: '09:00', endTime: '12:00', hallNumber: 'H-102', maxMarks: 100, status: 'SCHEDULED', instructions: '' },
-  { id: 3, examName: 'Mid-Term 2024',    examType: 'MIDTERM', className: '9',  section: 'B', subject: 'English',    examDate: '2024-02-10', startTime: '10:00', endTime: '12:30', hallNumber: 'H-201', maxMarks: 80,  status: 'COMPLETED', instructions: '' },
-];
-
-const MOCK_HALL_TICKETS = [
-  {
-    id: 1, ticketNumber: 'HT2024001', studentName: 'Arjun Patel', rollNumber: 'S001',
-    className: '10', section: 'A', examName: 'Annual Exam 2024', examType: 'ANNUAL',
-    academicYear: '2023-2024', createdAt: '2024-03-01T10:00:00',
-    dateOfBirth: '2010-01-15', gender: 'Male', registrationNumber: 'REG2024001',
-    examCenter: 'Main Campus', examCenterAddress: 'Schoolers Institution, Knowledge Park, Hyderabad',
-    examSubjects: JSON.stringify([
-      { subject: 'Mathematics', date: '2024-03-15', startTime: '09:00', endTime: '12:00', hall: 'H-101', maxMarks: 100 },
-      { subject: 'Science',     date: '2024-03-17', startTime: '09:00', endTime: '12:00', hall: 'H-102', maxMarks: 100 },
-      { subject: 'English',     date: '2024-03-19', startTime: '09:00', endTime: '11:30', hall: 'H-101', maxMarks: 80  },
-      { subject: 'Social Studies', date: '2024-03-21', startTime: '10:00', endTime: '12:30', hall: 'H-103', maxMarks: 80 },
-      { subject: 'Hindi',       date: '2024-03-23', startTime: '09:00', endTime: '11:30', hall: 'H-101', maxMarks: 80  },
-    ]),
-  },
-  {
-    id: 2, ticketNumber: 'HT2024002', studentName: 'Sneha Gupta', rollNumber: 'S002',
-    className: '10', section: 'A', examName: 'Annual Exam 2024', examType: 'ANNUAL',
-    academicYear: '2023-2024', createdAt: '2024-03-01T10:05:00',
-    dateOfBirth: '2011-03-22', gender: 'Female', registrationNumber: 'REG2024002',
-    examCenter: 'Main Campus', examCenterAddress: 'Schoolers Institution, Knowledge Park, Hyderabad',
-    examSubjects: JSON.stringify([
-      { subject: 'Mathematics', date: '2024-03-15', startTime: '09:00', endTime: '12:00', hall: 'H-101', maxMarks: 100 },
-      { subject: 'Science',     date: '2024-03-17', startTime: '09:00', endTime: '12:00', hall: 'H-102', maxMarks: 100 },
-      { subject: 'English',     date: '2024-03-19', startTime: '09:00', endTime: '11:30', hall: 'H-101', maxMarks: 80  },
-    ]),
-  },
-  {
-    id: 3, ticketNumber: 'HT2024003', studentName: 'Ravi Kumar', rollNumber: 'S003',
-    className: '9', section: 'B', examName: 'Mid-Term 2024', examType: 'MIDTERM',
-    academicYear: '2023-2024', createdAt: '2024-02-05T09:00:00',
-    dateOfBirth: '2012-07-05', gender: 'Male', registrationNumber: 'REG2024003',
-    examCenter: 'Branch Campus', examCenterAddress: 'Schoolers Branch, Banjara Hills, Hyderabad',
-    examSubjects: JSON.stringify([
-      { subject: 'Mathematics', date: '2024-02-10', startTime: '10:00', endTime: '12:30', hall: 'H-201', maxMarks: 80 },
-      { subject: 'English',     date: '2024-02-12', startTime: '10:00', endTime: '12:00', hall: 'H-202', maxMarks: 60 },
-      { subject: 'Science',     date: '2024-02-14', startTime: '10:00', endTime: '12:30', hall: 'H-201', maxMarks: 80 },
-    ]),
-  },
-];
-
-const MOCK_CERTIFICATES = [
-  { id: 1, certificateId: 'BON24001', certificateType: 'BONAFIDE',         studentName: 'Arjun Patel',  rollNumber: 'S001', className: '10', section: 'A', issueDate: '2024-01-10', purpose: 'Bank Account Opening', verifiedBy: null,     createdAt: '2024-01-10T11:00:00' },
-  { id: 2, certificateId: 'TC24001',  certificateType: 'TRANSFER',          studentName: 'Sneha Gupta',  rollNumber: 'S002', className: '10', section: 'A', issueDate: '2024-02-14', purpose: 'School Transfer',      verifiedBy: 'teacher@school.com', createdAt: '2024-02-14T09:30:00' },
-  { id: 3, certificateId: 'MM24001',  certificateType: 'MARKS_MEMO',        studentName: 'Ravi Kumar',   rollNumber: 'S003', className: '9',  section: 'B', issueDate: '2024-03-01', purpose: 'College Admission',    verifiedBy: null,     createdAt: '2024-03-01T14:00:00' },
-];
-
-const MOCK_STUDENTS = [
-  { id: 1, name: 'Arjun Patel',  rollNumber: 'S001', className: '10', section: 'A' },
-  { id: 2, name: 'Sneha Gupta',  rollNumber: 'S002', className: '10', section: 'A' },
-  { id: 3, name: 'Ravi Kumar',   rollNumber: 'S003', className: '9',  section: 'B' },
-  { id: 4, name: 'Ananya Singh', rollNumber: 'S004', className: '10', section: 'B' },
-  { id: 5, name: 'Kiran Reddy',  rollNumber: 'S005', className: '7',  section: 'A' },
-];
 
 const EXAM_TYPES   = ['ANNUAL', 'HALFYEARLY', 'QUARTERLY', 'MIDTERM', 'UNIT_TEST'];
 const CERT_TYPES   = ['BONAFIDE', 'TRANSFER', 'COURSE_COMPLETION', 'MARKS_MEMO'];
@@ -178,21 +116,21 @@ export default function Examination() {
         examinationAPI.getHallTickets({}),
         examinationAPI.getCertificates({}),
       ]);
-      setSchedules(sRes.data?.data ?? MOCK_SCHEDULES);
-      setHallTickets(htRes.data?.data ?? MOCK_HALL_TICKETS);
-      setCertificates(certRes.data?.data ?? MOCK_CERTIFICATES);
+      setSchedules(sRes.data?.data ?? []);
+      setHallTickets(htRes.data?.data ?? []);
+      setCertificates(certRes.data?.data ?? []);
     } catch {
-      setSchedules(MOCK_SCHEDULES);
-      setHallTickets(MOCK_HALL_TICKETS);
-      setCertificates(MOCK_CERTIFICATES);
+      setSchedules([]);
+      setHallTickets([]);
+      setCertificates([]);
     }
     try {
       const sRes = await adminAPI.getStudents({});
       const raw = sRes.data?.data;
       const arr = raw?.content ?? raw ?? [];
-      setStudents(Array.isArray(arr) ? arr : MOCK_STUDENTS);
+      setStudents(Array.isArray(arr) ? arr : []);
     } catch {
-      setStudents(MOCK_STUDENTS);
+      setStudents([]);
     }
     setLoading(false);
   }, []);

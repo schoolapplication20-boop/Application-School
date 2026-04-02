@@ -46,9 +46,6 @@ public class Student {
     @Column(name = "parent_mobile", length = 15)
     private String parentMobile;
 
-    @Column(name = "blood_group", length = 5)
-    private String bloodGroup;
-
     @Column(name = "mother_name", length = 100)
     private String motherName;
 

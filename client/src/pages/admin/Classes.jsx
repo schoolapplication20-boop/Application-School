@@ -156,6 +156,32 @@ const Classes = () => {
     });
   }, [allStudents, viewClass, viewSearch]);
 
+  // ── Export students of current view class as CSV ─────────────────────────
+  const handleExportCSV = () => {
+    if (!viewClass || viewStudents.length === 0) return;
+    const headers = ['#', 'Name', 'Roll No', 'Class', 'Section', 'Father Name', 'Father Phone', 'Mother Name', 'Mother Phone', 'Status'];
+    const rows = viewStudents.map((s, idx) => [
+      idx + 1,
+      s.name || '',
+      s.rollNumber || s.rollNo || '',
+      String(s.className || s.class || '').replace(/^Class\s+/i, ''),
+      s.section || '',
+      s.parentName || s.fatherName || s.parent || '',
+      s.parentMobile || s.fatherPhone || s.mobile || '',
+      s.motherName || '',
+      s.motherMobile || s.motherPhone || '',
+      (s.isActive ?? s.status === 'Active') ? 'Active' : 'Inactive',
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `${viewClass.name}-${viewClass.section}-students.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   // ── Open view panel — always reload students for fresh data ──────────────
   const openView = (c) => {
     setViewClass(c);
@@ -602,6 +628,13 @@ const Classes = () => {
             </div>
 
             <div className="modal-footer">
+              <button
+                onClick={handleExportCSV}
+                disabled={viewStudents.length === 0}
+                style={{ padding: '10px 20px', border: '1.5px solid #76C442', borderRadius: 8, background: '#fff', color: '#76C442', fontWeight: 700, cursor: viewStudents.length === 0 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: viewStudents.length === 0 ? 0.5 : 1 }}>
+                <span className="material-icons" style={{ fontSize: 18 }}>download</span>
+                Export CSV
+              </button>
               <button onClick={() => setViewClass(null)}
                 style={{ padding: '10px 24px', background: '#76C442', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
                 Close

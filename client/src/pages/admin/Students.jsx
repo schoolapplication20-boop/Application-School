@@ -125,7 +125,7 @@ const mockStudents = [
 ];
 
 const EMPTY_FORM = {
-  name: '', rollNo: '', class: '', section: '', dob: '', bloodGroup: '', status: 'Active', photo: null,
+  name: '', rollNo: '', class: '', section: '', dob: '', status: 'Active', photo: null,
   fatherName: '', fatherPhone: '',
   motherName: '', motherPhone: '',
   guardianName: '', guardianPhone: '',
@@ -381,7 +381,6 @@ export default function Students() {
       class:            formData.class,
       section:          formData.section,
       dob:              formData.dob,
-      bloodGroup:       formData.bloodGroup,
       status:           formData.status,
       photo:            formData.photo,
       fatherName:       formData.fatherName,
@@ -524,7 +523,6 @@ export default function Students() {
                 <th>Roll No</th>
                 <th>Class</th>
                 <th>Section</th>
-                <th>Blood Group</th>
                 <th>Father's Name</th>
                 <th>Father's Phone</th>
                 <th>Status</th>
@@ -533,9 +531,9 @@ export default function Students() {
             </thead>
             <tbody>
               {loadingStudents ? (
-                <tr><td colSpan={9}><div className="empty-state"><span className="material-icons" style={{ animation: 'spin 1s linear infinite' }}>refresh</span><h3>Loading students...</h3></div></td></tr>
+                <tr><td colSpan={8}><div className="empty-state"><span className="material-icons" style={{ animation: 'spin 1s linear infinite' }}>refresh</span><h3>Loading students...</h3></div></td></tr>
               ) : paginated.length === 0 ? (
-                <tr><td colSpan={9}><div className="empty-state"><span className="material-icons">search_off</span><h3>No students found</h3></div></td></tr>
+                <tr><td colSpan={8}><div className="empty-state"><span className="material-icons">search_off</span><h3>No students found</h3></div></td></tr>
               ) : paginated.map(s => (
                 <tr key={s.id}>
                   <td>
@@ -554,7 +552,6 @@ export default function Students() {
                   <td style={{ fontFamily: 'monospace', fontSize: '12px', color: '#718096', fontWeight: 600 }}>{s.rollNo}</td>
                   <td><span style={{ fontSize: '13px', fontWeight: 700 }}>{String(s.class || '—').replace(/^Class\s+/i, '')}</span></td>
                   <td><span style={{ padding: '2px 10px', borderRadius: 20, fontSize: '11px', fontWeight: 700, background: '#3182ce20', color: '#2b6cb0' }}>{s.section || '—'}</span></td>
-                  <td><span className="badge bg-danger bg-opacity-10 text-danger fw-bold" style={{ fontSize: 11 }}>{s.bloodGroup || '—'}</span></td>
                   <td style={{ fontSize: '13px' }}>{s.fatherName || s.parent || '—'}</td>
                   <td style={{ fontSize: '12px', color: '#718096' }}>{s.fatherPhone || s.mobile || '—'}</td>
                   <td><span className={`status-badge ${s.status === 'Active' ? 'status-present' : 'status-absent'}`}>{s.status}</span></td>
@@ -683,20 +680,13 @@ export default function Students() {
                         {sectionsForClass.map(s => <option key={s} value={s}>{s}</option>)}
                       </select>
                     </div>
-                    <div className="col-md-3">
+                    <div className="col-md-4">
                       <label className="form-label fw-medium small">Date of Birth</label>
                       <input type="date" className="form-control form-control-sm"
                         value={formData.dob} max={new Date().toISOString().split('T')[0]}
                         onChange={set('dob')} />
                     </div>
-                    <div className="col-md-3">
-                      <label className="form-label fw-medium small">Blood Group</label>
-                      <select className="form-select form-select-sm" value={formData.bloodGroup} onChange={set('bloodGroup')}>
-                        <option value="">Select</option>
-                        {['A+','A-','B+','B-','AB+','AB-','O+','O-'].map(bg => <option key={bg}>{bg}</option>)}
-                      </select>
-                    </div>
-                    <div className="col-md-3">
+                    <div className="col-md-4">
                       <label className="form-label fw-medium small">Status</label>
                       <select className="form-select form-select-sm" value={formData.status} onChange={set('status')}>
                         <option>Active</option>
@@ -882,11 +872,6 @@ export default function Students() {
                       <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', padding: '2px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
                         {selectedStudent.status}
                       </span>
-                      {selectedStudent.bloodGroup && (
-                        <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', padding: '2px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
-                          {selectedStudent.bloodGroup}
-                        </span>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -896,7 +881,6 @@ export default function Students() {
                   <ViewRow label="Date of Birth" value={formatDOB(selectedStudent.dob)} />
                   <ViewRow label="Class / Section" value={`Class ${selectedStudent.class}${selectedStudent.section ? `-${selectedStudent.section}` : ''}`} />
                   <ViewRow label="Roll Number" value={selectedStudent.rollNo} mono />
-                  <ViewRow label="Blood Group" value={selectedStudent.bloodGroup} />
                 </ViewSection>
 
                 {/* Parents */}

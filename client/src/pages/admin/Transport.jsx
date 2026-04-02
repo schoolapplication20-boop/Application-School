@@ -5,44 +5,10 @@ import {
   fetchBuses, createBus, updateBus, deleteBus,
   fetchRoutes, createRoute, updateRoute, deleteRoute,
   fetchDrivers, createDriver, updateDriver, deleteDriver,
+  fetchStudentAssignments, assignStudent, updateStudentAssignment, removeStudentAssignment,
+  fetchStops, createStop, updateStop, deleteStop,
+  fetchTransportFees, createTransportFee, updateTransportFee, deleteTransportFee, markTransportFeePaid,
 } from '../../services/transportService';
-
-// ─── Mock seed data ───────────────────────────────────────────────────────────
-const SEED = {
-  buses: [
-    { id: 1, busNo: 'BUS-001', model: 'Tata Starbus',  year: '2021', capacity: 40, driverId: 1, routeId: 1, status: 'Active' },
-    { id: 2, busNo: 'BUS-002', model: 'Ashok Leyland', year: '2020', capacity: 50, driverId: 2, routeId: 2, status: 'Active' },
-    { id: 3, busNo: 'BUS-003', model: 'Force Traveller',year: '2019', capacity: 20, driverId: 3, routeId: 3, status: 'Maintenance' },
-  ],
-  routes: [
-    { id: 1, name: 'Route A – North',  start: 'School Gate',   end: 'Sector 14',    distance: '12 km', stops: 6, status: 'Active' },
-    { id: 2, name: 'Route B – South',  start: 'School Gate',   end: 'Green Park',   distance: '9 km',  stops: 5, status: 'Active' },
-    { id: 3, name: 'Route C – East',   start: 'School Gate',   end: 'Lake Colony',  distance: '15 km', stops: 8, status: 'Active' },
-  ],
-  drivers: [
-    { id: 1, name: 'Ramesh Verma',  license: 'DL-1420110012345', phone: '9876543201', experience: '8 yrs', busId: 1, status: 'Active' },
-    { id: 2, name: 'Suresh Tiwari', license: 'DL-0520090067890', phone: '9876543202', experience: '5 yrs', busId: 2, status: 'Active' },
-    { id: 3, name: 'Dinesh Yadav',  license: 'DL-2720150098765', phone: '9876543203', experience: '3 yrs', busId: 3, status: 'On Leave' },
-  ],
-  assignedStudents: [
-    { id: 1, studentName: 'Arjun Patel',   rollNo: 'S001', routeId: 1, stopId: 1, busId: 1, status: 'Active' },
-    { id: 2, studentName: 'Sneha Gupta',   rollNo: 'S002', routeId: 2, stopId: 4, busId: 2, status: 'Active' },
-    { id: 3, studentName: 'Ravi Kumar',    rollNo: 'S003', routeId: 1, stopId: 2, busId: 1, status: 'Active' },
-  ],
-  stops: [
-    { id: 1, name: 'Sector 14 Chowk',  routeId: 1, order: 1, pickupTime: '07:00', dropTime: '14:30' },
-    { id: 2, name: 'MG Road Junction',  routeId: 1, order: 2, pickupTime: '07:10', dropTime: '14:20' },
-    { id: 3, name: 'City Centre',       routeId: 1, order: 3, pickupTime: '07:20', dropTime: '14:10' },
-    { id: 4, name: 'Green Park Gate',   routeId: 2, order: 1, pickupTime: '07:05', dropTime: '14:35' },
-    { id: 5, name: 'Park View Colony',  routeId: 2, order: 2, pickupTime: '07:15', dropTime: '14:25' },
-    { id: 6, name: 'Lake View Apt',     routeId: 3, order: 1, pickupTime: '06:55', dropTime: '14:40' },
-  ],
-  fees: [
-    { id: 1, studentName: 'Arjun Patel',  rollNo: 'S001', amount: 2500, month: 'March 2026',   dueDate: '2026-03-10', status: 'Paid',    paidOn: '2026-03-08' },
-    { id: 2, studentName: 'Sneha Gupta',  rollNo: 'S002', amount: 2500, month: 'March 2026',   dueDate: '2026-03-10', status: 'Pending', paidOn: '' },
-    { id: 3, studentName: 'Ravi Kumar',   rollNo: 'S003', amount: 2500, month: 'February 2026', dueDate: '2026-02-10', status: 'Overdue', paidOn: '' },
-  ],
-};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const ITEMS_PER_PAGE = 6;
@@ -67,13 +33,6 @@ const TABS = [
   { key: 'fees',     label: 'Fees',    icon: 'payments' },
 ];
 
-// ─── Local shims for stop/fees/students (no service file yet) ─────────────────
-const localShim = {
-  getStudents: () => Promise.resolve({ data: SEED.assignedStudents }),
-  getStops:    () => Promise.resolve({ data: SEED.stops }),
-  getFees:     () => Promise.resolve({ data: SEED.fees }),
-};
-
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function Transport() {
   const [activeTab, setActiveTab] = useState('buses');
@@ -87,14 +46,14 @@ export default function Transport() {
   const [stops,    setStops]    = useState([]);
   const [fees,     setFees]     = useState([]);
 
-  // Load all data on mount (buses/routes/drivers via real API service, rest via local shim)
+  // Load all data on mount from real API
   useEffect(() => {
-    fetchBuses().then(data => { if (data && data.length > 0) setBuses(data); else setBuses(SEED.buses); });
-    fetchRoutes().then(data => { if (data && data.length > 0) setRoutes(data); else setRoutes(SEED.routes); });
-    fetchDrivers().then(data => { if (data && data.length > 0) setDrivers(data); else setDrivers(SEED.drivers); });
-    localShim.getStudents().then(r => setStudents(r.data));
-    localShim.getStops().then(r => setStops(r.data));
-    localShim.getFees().then(r => setFees(r.data));
+    fetchBuses().then(data => setBuses(data));
+    fetchRoutes().then(data => setRoutes(data));
+    fetchDrivers().then(data => setDrivers(data));
+    fetchStudentAssignments().then(data => setStudents(data));
+    fetchStops().then(data => setStops(data));
+    fetchTransportFees().then(data => setFees(data));
   }, []);
 
   const showToast = (message, type = 'success') => {
@@ -184,7 +143,7 @@ export default function Transport() {
         <StopsPanel stops={stops} setStops={setStops} routes={routes} showToast={showToast} />
       )}
       {activeTab === 'fees' && (
-        <FeesPanel fees={fees} setFees={setFees} students={students} showToast={showToast} />
+        <FeesPanel fees={fees} setFees={setFees} showToast={showToast} />
       )}
     </Layout>
   );
@@ -766,26 +725,35 @@ function StudentsPanel({ students, setStudents, routes, stops, buses, showToast 
   const openAdd  = () => { setEditItem(null); setForm({ studentName: '', rollNo: '', routeId: '', stopId: '', busId: '', status: 'Active' }); setErrors({}); setShowModal(true); };
   const openEdit = (item) => { setEditItem(item); setForm({ ...item }); setErrors({}); setShowModal(true); };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     if (!validate()) return;
-    let updated;
-    if (editItem) {
-      updated = students.map(s => s.id === editItem.id ? { ...s, ...form } : s);
-      showToast('Student transport updated successfully');
-    } else {
-      updated = [...students, { id: nextId(students), ...form }];
-      showToast('Student assigned to transport successfully');
+    try {
+      if (editItem) {
+        await updateStudentAssignment(editItem.id, form);
+        showToast('Student transport updated successfully');
+      } else {
+        await assignStudent(form);
+        showToast('Student assigned to transport successfully');
+      }
+      const data = await fetchStudentAssignments();
+      setStudents(data);
+      setShowModal(false);
+    } catch {
+      showToast('Failed to save. Please try again.', 'error');
     }
-    setStudents(updated);
-    setShowModal(false);
   };
 
-  const handleDelete = (id) => {
-    const updated = students.filter(s => s.id !== id);
-    setStudents(updated);
+  const handleDelete = async (id) => {
+    try {
+      await removeStudentAssignment(id);
+      const data = await fetchStudentAssignments();
+      setStudents(data);
+      showToast('Student transport assignment removed', 'warning');
+    } catch {
+      showToast('Failed to remove assignment.', 'error');
+    }
     setDeleteId(null);
-    showToast('Student transport assignment removed', 'warning');
   };
 
   const routeName = (id) => routes.find(r => r.id === +id)?.name || '—';
@@ -915,26 +883,35 @@ function StopsPanel({ stops, setStops, routes, showToast }) {
   const openAdd  = () => { setEditItem(null); setForm({ name: '', routeId: '', order: '', pickupTime: '', dropTime: '' }); setErrors({}); setShowModal(true); };
   const openEdit = (item) => { setEditItem(item); setForm({ ...item }); setErrors({}); setShowModal(true); };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     if (!validate()) return;
-    let updated;
-    if (editItem) {
-      updated = stops.map(s => s.id === editItem.id ? { ...s, ...form } : s);
-      showToast('Stop updated successfully');
-    } else {
-      updated = [...stops, { id: nextId(stops), ...form }];
-      showToast('Stop added successfully');
+    try {
+      if (editItem) {
+        await updateStop(editItem.id, form);
+        showToast('Stop updated successfully');
+      } else {
+        await createStop(form);
+        showToast('Stop added successfully');
+      }
+      const data = await fetchStops();
+      setStops(data);
+      setShowModal(false);
+    } catch {
+      showToast('Failed to save stop. Please try again.', 'error');
     }
-    setStops(updated);
-    setShowModal(false);
   };
 
-  const handleDelete = (id) => {
-    const updated = stops.filter(s => s.id !== id);
-    setStops(updated);
+  const handleDelete = async (id) => {
+    try {
+      await deleteStop(id);
+      const data = await fetchStops();
+      setStops(data);
+      showToast('Stop removed', 'warning');
+    } catch {
+      showToast('Failed to delete stop.', 'error');
+    }
     setDeleteId(null);
-    showToast('Stop removed', 'warning');
   };
 
   const routeName = (id) => routes.find(r => r.id === +id)?.name || '—';
@@ -1025,7 +1002,7 @@ function StopsPanel({ stops, setStops, routes, showToast }) {
 }
 
 // ─── FEES Panel ───────────────────────────────────────────────────────────────
-function FeesPanel({ fees, setFees, students, showToast }) {
+function FeesPanel({ fees, setFees, showToast }) {
   const [filterStatus, setFilterStatus] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -1059,32 +1036,46 @@ function FeesPanel({ fees, setFees, students, showToast }) {
   const openAdd  = () => { setEditItem(null); setForm({ studentName: '', rollNo: '', amount: '', month: '', dueDate: '', status: 'Pending', paidOn: '' }); setErrors({}); setShowModal(true); };
   const openEdit = (item) => { setEditItem(item); setForm({ ...item }); setErrors({}); setShowModal(true); };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     if (!validate()) return;
-    let updated;
-    if (editItem) {
-      updated = fees.map(f => f.id === editItem.id ? { ...f, ...form } : f);
-      showToast('Fee record updated successfully');
-    } else {
-      updated = [...fees, { id: nextId(fees), ...form }];
-      showToast('Fee record added successfully');
+    try {
+      if (editItem) {
+        await updateTransportFee(editItem.id, form);
+        showToast('Fee record updated successfully');
+      } else {
+        await createTransportFee(form);
+        showToast('Fee record added successfully');
+      }
+      const data = await fetchTransportFees();
+      setFees(data);
+      setShowModal(false);
+    } catch {
+      showToast('Failed to save fee record. Please try again.', 'error');
     }
-    setFees(updated);
-    setShowModal(false);
   };
 
-  const markPaid = (id) => {
-    const updated = fees.map(f => f.id === id ? { ...f, status: 'Paid', paidOn: new Date().toISOString().split('T')[0] } : f);
-    setFees(updated);
-    showToast('Fee marked as paid');
+  const markPaid = async (id) => {
+    try {
+      await markTransportFeePaid(id);
+      const data = await fetchTransportFees();
+      setFees(data);
+      showToast('Fee marked as paid');
+    } catch {
+      showToast('Failed to mark as paid.', 'error');
+    }
   };
 
-  const handleDelete = (id) => {
-    const updated = fees.filter(f => f.id !== id);
-    setFees(updated);
+  const handleDelete = async (id) => {
+    try {
+      await deleteTransportFee(id);
+      const data = await fetchTransportFees();
+      setFees(data);
+      showToast('Fee record removed', 'warning');
+    } catch {
+      showToast('Failed to delete fee record.', 'error');
+    }
     setDeleteId(null);
-    showToast('Fee record removed', 'warning');
   };
 
   const fmt = (n) => '₹' + Number(n).toLocaleString('en-IN');

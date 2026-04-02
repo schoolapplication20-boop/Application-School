@@ -126,20 +126,13 @@ public class AuthService {
         otpStore.put(mobile, otp);
         otpExpiryStore.put(mobile, expiry);
 
-        // Persist to BigQuery asynchronously — don't block the HTTP response
-        final User userToSave = user;
-        final String otpToSave = otp;
-        final LocalDateTime expiryToSave = expiry;
-        new Thread(() -> {
-            try {
-                userToSave.setResetOtp(otpToSave);
-                userToSave.setOtpExpiry(expiryToSave);
-                userRepository.save(userToSave);
-                log.info("[forgotPassword] BigQuery updated for " + mobile);
-            } catch (Exception e) {
-                log.warning("[forgotPassword] BigQuery save failed for " + mobile + ": " + e.getMessage());
-            }
-        }).start();
+        try {
+            user.setResetOtp(otp);
+            user.setOtpExpiry(expiry);
+            userRepository.save(user);
+        } catch (Exception e) {
+            log.warning("[forgotPassword] DB save failed for " + mobile + ": " + e.getMessage());
+        }
 
         // In production: send OTP via SMS service
         log.info("[DEV] OTP for " + mobile + ": " + otp);
@@ -148,11 +141,9 @@ public class AuthService {
     }
 
     public ApiResponse<String> verifyOTP(String mobile, String otp) {
-        // Verify against in-memory store (avoids BigQuery consistency issues)
         String cachedOtp = otpStore.get(mobile);
 
         if (cachedOtp == null || !cachedOtp.equals(otp)) {
-            // Fallback: check BigQuery in case server was restarted
             User user = userRepository.findByMobile(mobile).orElse(null);
             if (user == null) return ApiResponse.error("Mobile number not registered.");
             String dbOtp = user.getResetOtp();

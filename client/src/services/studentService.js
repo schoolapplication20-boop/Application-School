@@ -12,7 +12,6 @@ const normalizeStudent = (s) => ({
   class:            s.class            ?? s.className   ?? '',
   section:          s.section          ?? '',
   dob:              s.dob              ?? s.dateOfBirth ?? '',
-  bloodGroup:       s.bloodGroup       ?? '',
   status:           s.status           ?? (s.isActive === false ? 'Inactive' : s.isActive === true ? 'Active' : 'Active'),
   photo:            s.photo            ?? s.photoUrl    ?? null,
   fatherName:       s.fatherName       ?? s.parentName  ?? '',

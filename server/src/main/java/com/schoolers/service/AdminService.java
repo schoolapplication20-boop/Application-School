@@ -132,7 +132,6 @@ public class AdminService {
                 .rollNumber(rollNumber)
                 .className(className)
                 .section(section)
-                .bloodGroup(str(body, "bloodGroup", null))
                 .parentName(str(body, "parentName", str(body, "fatherName", str(body, "parent", ""))))
                 .parentMobile(str(body, "parentMobile", str(body, "fatherPhone", str(body, "mobile", ""))))
                 .motherName(str(body, "motherName", null))
@@ -193,8 +192,6 @@ public class AdminService {
                     student.setClassName(targetClass);
                     student.setSection(targetSection);
                     student.setRollNumber(targetRoll);
-                    if (body.containsKey("bloodGroup"))
-                        student.setBloodGroup(str(body, "bloodGroup", student.getBloodGroup()));
                     if (body.containsKey("parentName") || body.containsKey("fatherName"))
                         student.setParentName(str(body, "parentName", str(body, "fatherName", student.getParentName())));
                     if (body.containsKey("parentMobile") || body.containsKey("fatherPhone"))
@@ -559,7 +556,7 @@ public class AdminService {
                 .map(classRoom -> {
                     String className = resolveClassName(classRoom.getName());
                     String section = normalizeSection(classRoom.getSection());
-                    long deletedStudents = studentRepository.deleteByClassNameIgnoreCaseAndSectionIgnoreCase(className, section);
+                    int deletedStudents = studentRepository.deleteByClassNameIgnoreCaseAndSectionIgnoreCase(className, section);
                     classRoomRepository.deleteById(classRoom.getId());
                     log.info("[deleteClass] Deleted class " + className + "-" + section + " and removed " + deletedStudents + " linked students");
                     return ApiResponse.success("Class deleted", "Deleted");
