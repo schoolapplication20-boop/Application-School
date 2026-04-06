@@ -165,6 +165,7 @@ export const teacherAPI = {
   getMarks: (studentId) => api.get(`/api/teacher/marks/${studentId}`),
   addMarks: (data) => api.post('/api/teacher/marks', data),
   updateMarks: (id, data) => api.put(`/api/teacher/marks/${id}`, data),
+  deleteMarks: (id) => api.delete(`/api/teacher/marks/${id}`),
 };
 
 // ============================================

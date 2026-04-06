@@ -457,4 +457,10 @@ public class TeacherService {
                 })
                 .orElse(ApiResponse.error("Marks record not found"));
     }
+
+    public ApiResponse<String> deleteMarks(Long id) {
+        if (!marksRepository.existsById(id)) return ApiResponse.error("Marks record not found");
+        marksRepository.deleteById(id);
+        return ApiResponse.success("Marks deleted", "Deleted");
+    }
 }

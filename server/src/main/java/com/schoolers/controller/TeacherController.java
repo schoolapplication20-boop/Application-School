@@ -200,4 +200,10 @@ public class TeacherController {
         ApiResponse<Marks> response = teacherService.updateMarks(id, marks);
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
     }
+
+    @DeleteMapping("/marks/{id}")
+    public ResponseEntity<ApiResponse<String>> deleteMarks(@PathVariable Long id) {
+        ApiResponse<String> response = teacherService.deleteMarks(id);
+        return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
+    }
 }
