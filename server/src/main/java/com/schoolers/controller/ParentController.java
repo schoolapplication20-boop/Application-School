@@ -35,7 +35,21 @@ public class ParentController {
         return u.getId().equals(parentId) || u.getRole().name().equals("SUPER_ADMIN") || u.getRole().name().equals("ADMIN");
     }
 
-    // Child Info
+    /** Returns children for the currently authenticated parent (resolves from JWT — no path param needed). */
+    @GetMapping("/me/children")
+    public ResponseEntity<ApiResponse<List<Student>>> getMyChildren() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) return ResponseEntity.status(401).body(ApiResponse.error("Not authenticated."));
+        var userOpt = userRepository.findByEmailIgnoreCase(auth.getName());
+        if (userOpt.isEmpty()) return ResponseEntity.status(403).body(ApiResponse.error("User not found."));
+        Long parentId = userOpt.get().getId();
+        ApiResponse<List<Student>> response = parentService.getChildByParentId(parentId);
+        // Return empty list (not 404) when no children yet
+        if (!response.isSuccess()) return ResponseEntity.ok(ApiResponse.success(List.of()));
+        return ResponseEntity.ok(response);
+    }
+
+    // Child Info (kept for backward compatibility / admin use)
     @GetMapping("/child/{parentId}")
     public ResponseEntity<ApiResponse<List<Student>>> getChildInfo(@PathVariable Long parentId) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();

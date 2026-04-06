@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+
 import { useNotifications } from '../context/NotificationContext';
 import '../styles/sidebar.css';
 
 const Navbar = ({ onMenuToggle }) => {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, logout } = useAuth();
   const { notifications, unreadCount, markRead, markAllRead, removeNotification, loadFromServer } = useNotifications();
 
   // Load server notifications on mount and poll every 30 seconds
@@ -261,22 +262,24 @@ const Navbar = ({ onMenuToggle }) => {
                 <div style={{ fontSize: '14px', fontWeight: 700, color: '#2d3748' }}>{user?.name}</div>
                 <div style={{ fontSize: '12px', color: '#a0aec0' }}>{user?.email}</div>
               </div>
-              {[
-                { icon: 'person', label: 'My Profile', action: () => { setShowDropdown(false); setShowProfile(true); } },
-                { icon: 'lock', label: 'Change Password', action: () => { setShowDropdown(false); navigate('/reset-password'); } },
-              ].map(item => (
-                <div key={item.label} style={{
-                  padding: '12px 20px', display: 'flex', alignItems: 'center', gap: '10px',
-                  cursor: 'pointer', color: '#4a5568', fontSize: '14px', transition: 'background 0.2s'
-                }}
-                  onClick={item.action}
-                  onMouseEnter={e => e.currentTarget.style.background = '#f7fafc'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                >
-                  <span className="material-icons" style={{ fontSize: '18px', color: '#a0aec0' }}>{item.icon}</span>
-                  {item.label}
-                </div>
-              ))}
+              <div
+                style={{ padding: '12px 20px', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', color: '#4a5568', fontSize: '14px', transition: 'background 0.2s' }}
+                onClick={() => { setShowDropdown(false); setShowProfile(true); }}
+                onMouseEnter={e => e.currentTarget.style.background = '#f7fafc'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                <span className="material-icons" style={{ fontSize: '18px', color: '#a0aec0' }}>person</span>
+                My Profile
+              </div>
+              <div
+                style={{ padding: '12px 20px', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', color: '#e53e3e', fontSize: '14px', transition: 'background 0.2s', borderTop: '1px solid #f0f4f8' }}
+                onClick={() => { setShowDropdown(false); logout(); navigate('/login'); }}
+                onMouseEnter={e => e.currentTarget.style.background = '#fff5f5'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                <span className="material-icons" style={{ fontSize: '18px', color: '#e53e3e' }}>logout</span>
+                Logout
+              </div>
             </div>
           )}
         </div>

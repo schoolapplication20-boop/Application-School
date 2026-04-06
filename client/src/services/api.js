@@ -96,6 +96,7 @@ export const adminAPI = {
   createStudent: (data) => api.post('/api/admin/students', data),
   updateStudent: (id, data) => api.put(`/api/admin/students/${id}`, data),
   deleteStudent: (id) => api.delete(`/api/admin/students/${id}`),
+  getStudentCredentials: (id) => api.get(`/api/admin/students/${id}/credentials`),
 
   // Teachers
   getTeachers: (params) => api.get('/api/admin/teachers', { params }),
@@ -171,7 +172,9 @@ export const teacherAPI = {
 // ============================================
 
 export const parentAPI = {
-  // Child Info
+  // Child Info — resolves from JWT (no parentId param needed)
+  getMyChildren: () => api.get('/api/parent/me/children'),
+  // Legacy — kept for admin use
   getChildInfo: (parentId) => api.get(`/api/parent/child/${parentId}`),
 
   // Attendance
@@ -192,6 +195,17 @@ export const parentAPI = {
   // Messages
   getMessages: (parentId) => api.get(`/api/parent/messages/${parentId}`),
   sendMessage: (data) => api.post('/api/parent/messages', data),
+};
+
+// ============================================
+// STUDENT APIs
+// ============================================
+
+export const studentAPI = {
+  getMyProfile:    ()       => api.get('/api/student/me'),
+  getMyAttendance: (params) => api.get('/api/student/attendance', { params }),
+  getMyMarks:      ()       => api.get('/api/student/marks'),
+  getMyFees:       ()       => api.get('/api/student/fees'),
 };
 
 // ============================================
@@ -242,10 +256,11 @@ export const transportAPI = {
 // ============================================
 
 export const timetableAPI = {
-  getAll:     (params) => api.get('/api/timetable', { params }),
-  create:     (data)     => api.post('/api/timetable', data),
-  update:     (id, data) => api.put(`/api/timetable/${id}`, data),
-  delete:     (id)       => api.delete(`/api/timetable/${id}`),
+  getAll:      (params)     => api.get('/api/timetable', { params }),
+  create:      (data)       => api.post('/api/timetable', data),
+  update:      (id, data)   => api.put(`/api/timetable/${id}`, data),
+  delete:      (id)         => api.delete(`/api/timetable/${id}`),
+  bulkCreate:  (data)       => api.post('/api/timetable/bulk', data),
 };
 
 // ============================================
@@ -316,6 +331,23 @@ export const salaryAPI = {
   update:     (id, data)   => api.put(`/api/salary/${id}`, data),
   pay:        (id, data)   => api.patch(`/api/salary/${id}/pay`, data),
   delete:     (id)         => api.delete(`/api/salary/${id}`),
+};
+
+// ============================================
+// DIARY APIs
+// ============================================
+
+export const diaryAPI = {
+  // Super Admin / Admin: all entries with optional filters
+  getAll:       (params)     => api.get('/api/diary', { params }),
+  // Teacher / Parent: entries for a specific class
+  getByClass:   (className)  => api.get(`/api/diary/class/${encodeURIComponent(className)}`),
+  // Teacher: upload diary entry (body contains base64 imageUrl)
+  create:       (data)       => api.post('/api/diary', data),
+  // Admin / Super Admin: update review status + comment
+  updateReview: (id, data)   => api.patch(`/api/diary/${id}/review`, data),
+  // Admin / Super Admin: delete entry
+  delete:       (id)         => api.delete(`/api/diary/${id}`),
 };
 
 // ============================================

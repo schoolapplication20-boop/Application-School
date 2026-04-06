@@ -165,6 +165,61 @@ export default function SuperAdminDashboard() {
         </div>
       </div>
 
+      {/* Teachers List */}
+      <div className="data-table-card" style={{ marginBottom: '24px' }}>
+        <div style={{ fontWeight: 700, fontSize: '15px', color: '#2d3748', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span className="material-icons" style={{ color: '#3182ce', fontSize: '20px' }}>school</span>
+          Teachers
+          <span style={{ marginLeft: 'auto', background: '#3182ce20', color: '#2c5282', padding: '2px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 700 }}>{teachers.length} teachers</span>
+        </div>
+        {teachers.length === 0 ? (
+          <div className="empty-state" style={{ padding: '32px' }}>
+            <span className="material-icons" style={{ fontSize: 40, color: '#e2e8f0', display: 'block', marginBottom: 8 }}>school</span>
+            <p style={{ color: '#a0aec0' }}>No teachers added yet.</p>
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table className="data-table">
+              <thead>
+                <tr><th>Teacher</th><th>Employee ID</th><th>Subject</th><th>Department</th><th>Classes</th><th>Status</th></tr>
+              </thead>
+              <tbody>
+                {teachers.map(t => (
+                  <tr key={t.id}>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#3182ce,#2c5282)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '12px', fontWeight: 700, flexShrink: 0 }}>
+                          {(t.name || '').split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase() || '?'}
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '13px' }}>{t.name || '—'}</div>
+                          <div style={{ fontSize: '11px', color: '#a0aec0' }}>{t.email || '—'}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td style={{ fontSize: '12px', fontFamily: 'monospace', color: '#4a5568' }}>{t.empId || t.employeeId || '—'}</td>
+                    <td>
+                      {(t.subject || t.subjects) ? (
+                        <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 600, background: '#3182ce15', color: '#2c5282' }}>
+                          {t.subject || t.subjects}
+                        </span>
+                      ) : '—'}
+                    </td>
+                    <td style={{ fontSize: '12px', color: '#718096' }}>{t.department || '—'}</td>
+                    <td style={{ fontSize: '12px', color: '#718096' }}>{t.classes || t.assignedClasses || '—'}</td>
+                    <td>
+                      <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 700, background: t.status === 'Active' ? '#f0fff4' : '#fff5f5', color: t.status === 'Active' ? '#276749' : '#e53e3e' }}>
+                        {t.status || 'Active'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       {/* Student Stats */}
       <div className="data-table-card">
         <div style={{ fontWeight: 700, fontSize: '15px', color: '#2d3748', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>

@@ -30,6 +30,8 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
 
     List<Student> findByParentId(Long parentId);
 
+    Optional<Student> findByStudentUserId(Long studentUserId);
+
     long countByIsActive(Boolean isActive);
 
     @Query("SELECT s FROM Student s WHERE s.isActive = true AND (LOWER(s.name) LIKE LOWER(CONCAT('%',:search,'%')) OR LOWER(s.rollNumber) LIKE LOWER(CONCAT('%',:search,'%')))")

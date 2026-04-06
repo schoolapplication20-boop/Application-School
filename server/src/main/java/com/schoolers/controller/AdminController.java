@@ -62,8 +62,8 @@ public class AdminController {
     }
 
     @PostMapping("/students")
-    public ResponseEntity<ApiResponse<Student>> createStudent(@RequestBody Map<String, Object> body) {
-        ApiResponse<Student> response = adminService.createStudent(body);
+    public ResponseEntity<ApiResponse<Map<String, Object>>> createStudent(@RequestBody Map<String, Object> body) {
+        ApiResponse<Map<String, Object>> response = adminService.createStudent(body);
         return response.isSuccess() ? ResponseEntity.status(201).body(response) : ResponseEntity.badRequest().body(response);
     }
 
@@ -77,6 +77,12 @@ public class AdminController {
     public ResponseEntity<ApiResponse<String>> deleteStudent(@PathVariable Long id) {
         ApiResponse<String> response = adminService.deleteStudent(id);
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
+    }
+
+    @GetMapping("/students/{id}/credentials")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getStudentCredentials(@PathVariable Long id) {
+        ApiResponse<Map<String, Object>> response = adminService.getStudentCredentials(id);
+        return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
     // ===== Teachers =====

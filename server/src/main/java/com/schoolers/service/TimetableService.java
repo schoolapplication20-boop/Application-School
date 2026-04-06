@@ -5,7 +5,9 @@ import com.schoolers.model.Timetable;
 import com.schoolers.repository.TimetableRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -78,6 +80,95 @@ public class TimetableService {
                     return ApiResponse.success("Timetable entry updated", timetableRepository.save(entry));
                 })
                 .orElse(ApiResponse.error("Timetable entry not found"));
+    }
+
+    @Transactional
+    public ApiResponse<List<Timetable>> createBulk(List<Map<String, Object>> body) {
+        List<Timetable> toSave    = new ArrayList<>();
+        List<Timetable> existing  = timetableRepository.findAll();
+        List<Timetable> batchSoFar = new ArrayList<>();
+        List<String>    conflicts  = new ArrayList<>();
+
+        for (int i = 0; i < body.size(); i++) {
+            Map<String, Object> item = body.get(i);
+            String classSection = str(item, "classSection", null);
+            String subject      = str(item, "subject",      null);
+            String day          = str(item, "day",          null);
+            String startTime    = str(item, "startTime",    null);
+            String endTime      = str(item, "endTime",      null);
+            Long   teacherId    = longVal(item, "teacherId", null);
+            String teacherName  = str(item, "teacherName",  "");
+            String room         = str(item, "room",         null);
+
+            if (classSection == null || subject == null || day == null
+                    || startTime == null || endTime == null) {
+                conflicts.add("Entry " + (i + 1) + ": missing required fields");
+                continue;
+            }
+            int ns = toMin(startTime), ne = toMin(endTime);
+            if (ns >= ne) {
+                conflicts.add("Entry " + (i + 1) + " (" + classSection + " " + day + "): end time must be after start time");
+                continue;
+            }
+
+            // Teacher overlap — vs DB
+            if (teacherId != null) {
+                for (Timetable e : existing) {
+                    if (teacherId.equals(e.getTeacherId()) && day.equals(e.getDay())
+                            && ns < toMin(e.getEndTime()) && ne > toMin(e.getStartTime())) {
+                        conflicts.add("Entry " + (i + 1) + ": Teacher '" + teacherName + "' overlaps '"
+                                + e.getSubject() + "' (" + e.getClassSection() + ") on " + day
+                                + " " + e.getStartTime() + "–" + e.getEndTime());
+                    }
+                }
+                // Teacher overlap — within batch
+                for (Timetable e : batchSoFar) {
+                    if (teacherId.equals(e.getTeacherId()) && day.equals(e.getDay())
+                            && ns < toMin(e.getEndTime()) && ne > toMin(e.getStartTime())) {
+                        conflicts.add("Entry " + (i + 1) + ": Teacher '" + teacherName + "' batch conflict on "
+                                + day + " " + startTime + "–" + endTime);
+                    }
+                }
+            }
+
+            // Room overlap — vs DB
+            if (room != null && !room.isBlank()) {
+                for (Timetable e : existing) {
+                    if (room.equals(e.getRoom()) && day.equals(e.getDay())
+                            && ns < toMin(e.getEndTime()) && ne > toMin(e.getStartTime())) {
+                        conflicts.add("Entry " + (i + 1) + ": Room '" + room + "' already booked on "
+                                + day + " " + e.getStartTime() + "–" + e.getEndTime());
+                    }
+                }
+                // Room overlap — within batch
+                for (Timetable e : batchSoFar) {
+                    if (room.equals(e.getRoom()) && day.equals(e.getDay())
+                            && ns < toMin(e.getEndTime()) && ne > toMin(e.getStartTime())) {
+                        conflicts.add("Entry " + (i + 1) + ": Room '" + room + "' batch conflict on " + day);
+                    }
+                }
+            }
+
+            Timetable entry = Timetable.builder()
+                    .teacherId(teacherId)
+                    .teacherName(teacherName)
+                    .classSection(classSection)
+                    .subject(subject)
+                    .day(day)
+                    .startTime(startTime)
+                    .endTime(endTime)
+                    .room(room)
+                    .build();
+            toSave.add(entry);
+            batchSoFar.add(entry);
+        }
+
+        if (!conflicts.isEmpty()) {
+            return ApiResponse.error("Conflicts detected: " + String.join("; ", conflicts));
+        }
+
+        List<Timetable> saved = timetableRepository.saveAll(toSave);
+        return ApiResponse.success(saved.size() + " timetable entries created", saved);
     }
 
     public ApiResponse<String> delete(Long id) {

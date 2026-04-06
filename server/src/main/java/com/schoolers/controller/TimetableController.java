@@ -49,4 +49,21 @@ public class TimetableController {
         var response = timetableService.delete(id);
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
     }
+
+    @PostMapping("/bulk")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<?> createBulk(@RequestBody List<Map<String, Object>> body) {
+        if (body == null || body.isEmpty()) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("No entries provided"));
+        }
+        try {
+            var response = timetableService.createBulk(body);
+            return response.isSuccess()
+                    ? ResponseEntity.status(201).body(response)
+                    : ResponseEntity.badRequest().body(response);
+        } catch (Exception ex) {
+            return ResponseEntity.status(500)
+                    .body(ApiResponse.error("Failed to save timetable entries: " + ex.getMessage()));
+        }
+    }
 }

@@ -58,9 +58,16 @@ public class AuthService {
                 }
                 username = request.getEmail().trim().toLowerCase();
                 user = userRepository.findByEmailIgnoreCase(username).orElse(null);
+
+                // If not found by email, try the explicit username column (student login)
                 if (user == null) {
-                    log.warning("[login] Email not found in DB: " + username);
-                    return ApiResponse.error("No account found with this email. Please contact admin to create your account.");
+                    user = userRepository.findByUsername(username).orElse(null);
+                    if (user != null) username = user.getEmail();
+                }
+
+                if (user == null) {
+                    log.warning("[login] Email/username not found in DB: " + username);
+                    return ApiResponse.error("No account found with this email or username. Please contact admin.");
                 }
             }
 

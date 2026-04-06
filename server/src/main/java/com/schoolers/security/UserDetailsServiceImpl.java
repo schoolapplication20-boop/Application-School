@@ -19,10 +19,11 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        // Username can be email or mobile
+        // Lookup order: email → mobile → username column (student login)
         String normalizedUsername = username != null ? username.trim().toLowerCase() : username;
         User user = userRepository.findByEmailIgnoreCase(normalizedUsername)
                 .or(() -> userRepository.findByMobile(username))
+                .or(() -> userRepository.findByUsername(normalizedUsername))
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
 
         return new org.springframework.security.core.userdetails.User(

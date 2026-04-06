@@ -125,7 +125,8 @@ const mockStudents = [
 ];
 
 const EMPTY_FORM = {
-  name: '', rollNo: '', class: '', section: '', dob: '', status: 'Active', photo: null,
+  name: '', rollNo: '', admissionNumber: '', class: '', section: '', dob: '', status: 'Active', photo: null,
+  studentEmail: '',
   fatherName: '', fatherPhone: '',
   motherName: '', motherPhone: '',
   guardianName: '', guardianPhone: '',
@@ -199,6 +200,29 @@ function DocUpload({ label, required, fileData, fileName, inputRef, onChange, on
   );
 }
 
+// ─── Credential Card (same pattern as Teachers) ───────────────────────────────
+function CredentialCard({ label, value, mono }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    navigator.clipboard.writeText(value).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+  return (
+    <div style={{ background: '#f7fafc', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 11, color: '#a0aec0', fontWeight: 600, marginBottom: 2 }}>{label}</div>
+        <div style={{ fontSize: 14, fontWeight: 700, color: '#2d3748', fontFamily: mono ? 'monospace' : 'inherit', wordBreak: 'break-all' }}>{value}</div>
+      </div>
+      <button onClick={copy} title="Copy" style={{ border: 'none', background: copied ? '#f0fff4' : '#e2e8f0', borderRadius: 7, padding: '6px 8px', cursor: 'pointer', color: copied ? '#76C442' : '#718096', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, fontFamily: 'Poppins, sans-serif', flexShrink: 0, transition: 'all 0.2s' }}>
+        <span className="material-icons" style={{ fontSize: 15 }}>{copied ? 'check' : 'content_copy'}</span>
+        {copied ? 'Copied' : 'Copy'}
+      </button>
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function Students() {
   const [students, setStudents]         = useState([]);
@@ -216,6 +240,10 @@ export default function Students() {
   const [deleteTarget, setDeleteTarget] = useState(null); // full student object
   const [toast, setToast]               = useState(null);
   const [saving, setSaving]             = useState(false);
+  const [showCred, setShowCred]         = useState(false);   // after-add credentials
+  const [newCredential, setNewCredential] = useState(null);  // { name, email, mobile, password }
+  const [viewCredTarget, setViewCredTarget] = useState(null); // { studentName, username, tempPassword, firstLogin }
+  const [loadingCred, setLoadingCred]   = useState(false);
   const [photoPreview, setPhotoPreview] = useState(null);
   const [apiStatus, setApiStatus]       = useState(null); // 'live' | 'offline'
   const [loadingStudents, setLoadingStudents] = useState(true);
@@ -297,6 +325,11 @@ export default function Students() {
     if (!formData.name.trim())            e.name        = 'Student name is required';
     if (!formData.rollNo.trim())          e.rollNo      = 'Roll number is required';
     if (!formData.class.trim())           e.class       = 'Class is required';
+    if (!editStudent) {
+      if (!formData.studentEmail.trim())  e.studentEmail = 'Student login email is required';
+      else if (!/^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(formData.studentEmail.trim()))
+        e.studentEmail = 'Enter a valid email address';
+    }
     if (!formData.fatherName.trim())      e.fatherName  = "Father's name is required";
     if (!formData.motherName.trim())      e.motherName  = "Mother's name is required";
     if (!formData.fatherPhone.trim())     e.fatherPhone = "Father's phone is required";
@@ -378,11 +411,13 @@ export default function Students() {
     const payload = {
       name:             formData.name,
       rollNo:           formData.rollNo,
+      admissionNumber:  formData.admissionNumber,
       class:            formData.class,
       section:          formData.section,
       dob:              formData.dob,
       status:           formData.status,
       photo:            formData.photo,
+      studentEmail:     formData.studentEmail,
       fatherName:       formData.fatherName,
       fatherPhone:      formData.fatherPhone,
       motherName:       formData.motherName,
@@ -410,7 +445,23 @@ export default function Students() {
       } else {
         const result = await apiCreateStudent(payload);
         if (!result.success) { showToast(result.message || 'Failed to add student', 'error'); return; }
-        showToast('Student added successfully');
+        setShowModal(false);
+        loadStudents();
+        const d = result.data || {};
+        setNewCredential({
+          studentName:     formData.name,
+          studentEmail:    d.studentEmail || null,
+          studentPassword: d.studentTempPassword || null,
+          // parent (only if newly created)
+          newParentCreated: !!d.newParentCreated,
+          parentName:      formData.fatherName || formData.name + "'s Parent",
+          parentEmail:     d.parentEmail || null,
+          parentMobile:    d.parentMobile || null,
+          parentPassword:  d.parentTempPassword || null,
+        });
+        setShowCred(true);
+        showToast('Student added successfully. Login credentials generated.');
+        return;
       }
       setShowModal(false);
       loadStudents();
@@ -428,6 +479,26 @@ export default function Students() {
       loadStudents();
     } else {
       showToast('Failed to delete student', 'error');
+    }
+  };
+
+  const handleViewCredentials = async (student) => {
+    setLoadingCred(true);
+    try {
+      const res = await adminAPI.getStudentCredentials(student.id);
+      const d = res.data?.data || {};
+      setViewCredTarget({
+        studentName: student.name,
+        email:        d.email,
+        tempPassword: d.tempPassword,
+        firstLogin:  d.firstLogin,
+        isActive:    d.isActive,
+      });
+    } catch (err) {
+      const msg = err.response?.data?.message || err.response?.data?.error || 'Could not load credentials';
+      showToast(msg, 'error');
+    } finally {
+      setLoadingCred(false);
     }
   };
 
@@ -563,6 +634,11 @@ export default function Students() {
                       <button className="action-btn action-btn-edit" onClick={() => openEditModal(s)} title="Edit">
                         <span className="material-icons">edit</span>
                       </button>
+                      <button className="action-btn" title="View Login Credentials"
+                        onClick={() => handleViewCredentials(s)}
+                        style={{ color: '#6d28d9', background: '#f5f3ff', border: '1px solid #ddd6fe' }}>
+                        <span className="material-icons" style={{ fontSize: 16 }}>key</span>
+                      </button>
                       <button className="action-btn action-btn-delete" onClick={() => setDeleteTarget(s)} title="Delete">
                         <span className="material-icons">delete</span>
                       </button>
@@ -646,13 +722,29 @@ export default function Students() {
                         onChange={set('name')} />
                       {errors.name && <div className="invalid-feedback">{errors.name}</div>}
                     </div>
-                    <div className="col-md-6">
+                    <div className="col-md-4">
                       <label className="form-label fw-medium small">Roll Number *</label>
                       <input type="text" className={`form-control form-control-sm ${errors.rollNo ? 'is-invalid' : ''}`}
                         placeholder="e.g., S001" value={formData.rollNo}
                         onChange={set('rollNo')} />
                       {errors.rollNo && <div className="invalid-feedback">{errors.rollNo}</div>}
                     </div>
+                    <div className="col-md-4">
+                      <label className="form-label fw-medium small">Admission Number</label>
+                      <input type="text" className="form-control form-control-sm"
+                        placeholder="e.g., ADM2024001" value={formData.admissionNumber}
+                        onChange={set('admissionNumber')} />
+                    </div>
+                    {!editStudent && (
+                      <div className="col-md-8">
+                        <label className="form-label fw-medium small">Student Login Email *</label>
+                        <input type="email" className={`form-control form-control-sm ${errors.studentEmail ? 'is-invalid' : ''}`}
+                          placeholder="e.g., student@gmail.com (used to log in)"
+                          value={formData.studentEmail}
+                          onChange={set('studentEmail')} />
+                        {errors.studentEmail && <div className="invalid-feedback">{errors.studentEmail}</div>}
+                      </div>
+                    )}
                     <div className="col-md-3">
                       <label className="form-label fw-medium small">Class *</label>
                       <select
@@ -881,6 +973,8 @@ export default function Students() {
                   <ViewRow label="Date of Birth" value={formatDOB(selectedStudent.dob)} />
                   <ViewRow label="Class / Section" value={`Class ${selectedStudent.class}${selectedStudent.section ? `-${selectedStudent.section}` : ''}`} />
                   <ViewRow label="Roll Number" value={selectedStudent.rollNo} mono />
+                  <ViewRow label="Admission Number" value={selectedStudent.admissionNumber} mono />
+                  {selectedStudent.bloodGroup && <ViewRow label="Blood Group" value={selectedStudent.bloodGroup} />}
                 </ViewSection>
 
                 {/* Parents */}
@@ -958,6 +1052,144 @@ export default function Students() {
                   Yes, Delete
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── View Existing Student Credentials Modal ─────────────────────── */}
+      {viewCredTarget && (
+        <div className="modal-overlay">
+          <div className="modal-container" style={{ maxWidth: 420 }}>
+            <div className="modal-header" style={{ background: 'linear-gradient(135deg,#6d28d9,#4c1d95)', color: '#fff' }}>
+              <span className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span className="material-icons" style={{ fontSize: 18 }}>key</span>
+                Student Login Credentials
+              </span>
+              <button className="modal-close" onClick={() => setViewCredTarget(null)} style={{ color: '#fff', opacity: 0.8 }}>
+                <span className="material-icons">close</span>
+              </button>
+            </div>
+
+            <div className="modal-body" style={{ padding: '24px' }}>
+              <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#f5f3ff', border: '3px solid #ddd6fe', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px' }}>
+                  <span className="material-icons" style={{ fontSize: 26, color: '#6d28d9' }}>school</span>
+                </div>
+                <h3 style={{ margin: '0 0 2px', fontWeight: 800, fontSize: 15, color: '#2d3748' }}>{viewCredTarget.studentName}</h3>
+                <span style={{ fontSize: 11, padding: '2px 10px', borderRadius: 20, background: viewCredTarget.isActive ? '#f0fff4' : '#fff5f5', color: viewCredTarget.isActive ? '#38a169' : '#e53e3e', fontWeight: 700 }}>
+                  {viewCredTarget.isActive ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+                <CredentialCard label="Login Email" value={viewCredTarget.email} />
+                {viewCredTarget.firstLogin && viewCredTarget.tempPassword ? (
+                  <CredentialCard label="Temporary Password" value={viewCredTarget.tempPassword} mono />
+                ) : (
+                  <div style={{ background: '#f7fafc', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '10px 14px' }}>
+                    <div style={{ fontSize: 11, color: '#a0aec0', fontWeight: 600, marginBottom: 4 }}>Password</div>
+                    <div style={{ fontSize: 13, color: '#718096', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span className="material-icons" style={{ fontSize: 15, color: '#38a169' }}>check_circle</span>
+                      Student has already logged in and changed their password.
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {viewCredTarget.firstLogin && (
+                <div style={{ background: '#fffbeb', border: '1.5px solid #fef3c7', borderRadius: 10, padding: '10px 14px', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                  <span className="material-icons" style={{ fontSize: 15, color: '#d69e2e', flexShrink: 0, marginTop: 1 }}>warning</span>
+                  <p style={{ margin: 0, fontSize: 12, color: '#92400e', lineHeight: 1.5 }}>
+                    Student has <strong>not logged in yet</strong>. This temporary password will disappear after first login.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="modal-footer">
+              <button onClick={() => setViewCredTarget(null)}
+                style={{ padding: '10px 28px', background: '#6d28d9', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, cursor: 'pointer', fontFamily: 'Poppins, sans-serif' }}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Student + Parent Credentials Modal ──────────────────────────── */}
+      {showCred && newCredential && (
+        <div className="modal-overlay">
+          <div className="modal-container" style={{ maxWidth: 480 }}>
+
+            {/* Header */}
+            <div className="modal-header" style={{ background: 'linear-gradient(135deg,#76C442,#5aa832)', color: '#fff' }}>
+              <span className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span className="material-icons" style={{ fontSize: 18 }}>key</span>
+                Login Credentials Generated
+              </span>
+              <button className="modal-close" onClick={() => setShowCred(false)} style={{ color: '#fff', opacity: 0.8 }}>
+                <span className="material-icons">close</span>
+              </button>
+            </div>
+
+            <div className="modal-body" style={{ padding: '24px', maxHeight: '72vh', overflowY: 'auto' }}>
+
+              {/* Success banner */}
+              <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                <div style={{ width: 60, height: 60, borderRadius: '50%', background: '#f0fff4', border: '3px solid #9ae6b4', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px' }}>
+                  <span className="material-icons" style={{ fontSize: 30, color: '#38a169' }}>check_circle</span>
+                </div>
+                <h3 style={{ margin: '0 0 4px', fontWeight: 800, color: '#2d3748', fontSize: 16 }}>
+                  Student Added Successfully!
+                </h3>
+                <p style={{ margin: 0, fontSize: 13, color: '#718096' }}>
+                  Credentials have been generated for <strong>{newCredential.studentName}</strong>. Share them securely.
+                </p>
+              </div>
+
+              {/* ── Student Credentials ── */}
+              {newCredential.studentEmail && (
+                <div style={{ marginBottom: 18 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                    <div style={{ width: 28, height: 28, borderRadius: 7, background: '#ebf8ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span className="material-icons" style={{ fontSize: 15, color: '#3182ce' }}>school</span>
+                    </div>
+                    <span style={{ fontWeight: 700, fontSize: 13, color: '#2d3748', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Student Login</span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <CredentialCard label="Login Email" value={newCredential.studentEmail} />
+                    <CredentialCard label="Password" value={newCredential.studentPassword} mono />
+                  </div>
+                </div>
+              )}
+
+              {/* Copy All */}
+              <button
+                onClick={() => {
+                  const text = `Student Login\nEmail: ${newCredential.studentEmail}\nPassword: ${newCredential.studentPassword}`;
+                  navigator.clipboard.writeText(text);
+                  showToast('Credentials copied to clipboard');
+                }}
+                style={{ width: '100%', padding: '9px', border: '1.5px solid #e2e8f0', borderRadius: 8, background: '#f7fafc', fontWeight: 600, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, color: '#4a5568', marginBottom: 14 }}>
+                <span className="material-icons" style={{ fontSize: 16 }}>content_copy</span>
+                Copy All Credentials
+              </button>
+
+              {/* Warning */}
+              <div style={{ background: '#fffbeb', border: '1.5px solid #fef3c7', borderRadius: 10, padding: '10px 14px', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                <span className="material-icons" style={{ fontSize: 16, color: '#d69e2e', flexShrink: 0, marginTop: 1 }}>warning</span>
+                <p style={{ margin: 0, fontSize: 12, color: '#92400e', lineHeight: 1.5 }}>
+                  These passwords are shown <strong>only once</strong>. Passwords are stored securely (bcrypt hashed). Share directly with the student — they can reset after first login.
+                </p>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button onClick={() => setShowCred(false)}
+                style={{ padding: '10px 32px', background: '#76C442', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, cursor: 'pointer', fontFamily: 'Poppins, sans-serif' }}>
+                Done
+              </button>
             </div>
           </div>
         </div>

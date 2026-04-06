@@ -17,8 +17,9 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "users",
         uniqueConstraints = {
-            @UniqueConstraint(name = "uk_users_email",  columnNames = "email"),
-            @UniqueConstraint(name = "uk_users_mobile", columnNames = "mobile")
+            @UniqueConstraint(name = "uk_users_email",    columnNames = "email"),
+            @UniqueConstraint(name = "uk_users_mobile",   columnNames = "mobile"),
+            @UniqueConstraint(name = "uk_users_username", columnNames = "username")
         })
 @Data
 @Builder
@@ -38,6 +39,21 @@ public class User {
     @Email
     @Column(nullable = false, length = 150)
     private String email;
+
+    /**
+     * Login username — populated only for STUDENT accounts.
+     * Format: firstname + lastname + last4OfAdmissionNumber (e.g. rahulsharma0045).
+     * Unique across all users.
+     */
+    @Column(name = "username", length = 60)
+    private String username;
+
+    /**
+     * Foreign key to students.id — set only when role = STUDENT.
+     * Allows direct lookup of which student this login belongs to.
+     */
+    @Column(name = "student_id")
+    private Long studentId;
 
     @Column(length = 15)
     private String mobile;
@@ -83,6 +99,6 @@ public class User {
     private LocalDateTime updatedAt;
 
     public enum Role {
-        SUPER_ADMIN, ADMIN, TEACHER, PARENT
+        SUPER_ADMIN, ADMIN, TEACHER, PARENT, STUDENT
     }
 }

@@ -53,6 +53,7 @@ export default function TeacherDashboard() {
   const [assignedClasses, setAssignedClasses] = useState([]);   // ClassRoom objects from real API
   const [classStudents,   setClassStudents]   = useState([]);
   const [todaySchedule,   setTodaySchedule]   = useState([]);
+  const [todayAttendance, setTodayAttendance] = useState(null); // { present, total } or null
 
   // ── Load teacher data on mount ───────────────────────────────────────────────
   useEffect(() => {
@@ -103,6 +104,29 @@ export default function TeacherDashboard() {
     });
   }, [user]);
 
+  // ── Fetch today's attendance for assigned classes ────────────────────────────
+  useEffect(() => {
+    if (!assignedClasses.length) return;
+    const today = new Date().toISOString().split('T')[0];
+    Promise.all(
+      assignedClasses.map(cls =>
+        teacherAPI.getAttendanceSummary(cls.id, today).catch(() => null)
+      )
+    ).then(results => {
+      let totalPresent = 0, totalStudents = 0, hasData = false;
+      results.forEach(res => {
+        const s = res?.data?.data;
+        if (s && s.total > 0) {
+          hasData = true;
+          totalPresent += (s.present || 0);
+          totalStudents += (s.total || 0);
+        }
+      });
+      if (hasData) setTodayAttendance({ present: totalPresent, total: totalStudents });
+      else setTodayAttendance(null);
+    });
+  }, [assignedClasses]);
+
   // ── Derived stats ─────────────────────────────────────────────────────────────
   const stats = useMemo(() => [
     {
@@ -115,8 +139,10 @@ export default function TeacherDashboard() {
       isText: assignedClasses.length === 1,
     },
     {
-      title: 'My Students',
-      value: classStudents.filter(s => s.status !== 'Inactive').length,
+      title: todayAttendance ? 'Present Today' : 'My Students',
+      value: todayAttendance
+        ? `${todayAttendance.present}/${todayAttendance.total}`
+        : classStudents.filter(s => s.status !== 'Inactive').length,
       icon: 'school',
       color: '#3182ce',
     },
@@ -133,7 +159,7 @@ export default function TeacherDashboard() {
       color: '#805ad5',
       isText: true,
     },
-  ], [assignedClasses, classStudents, todaySchedule, teacherProfile, user]);
+  ], [assignedClasses, classStudents, todaySchedule, teacherProfile, user, todayAttendance]);
 
   // ── Students grouped by class ────────────────────────────────────────────────
   const studentsByClass = useMemo(() => {
@@ -153,12 +179,6 @@ export default function TeacherDashboard() {
     <Layout pageTitle="Teacher Dashboard">
       {/* Page Header */}
       <div className="page-header">
-        <h1>Teacher Dashboard</h1>
-        <p>
-          Welcome back, <strong>{user?.name}</strong>!
-          {teacherProfile?.subject && ` · ${teacherProfile.subject}`}
-          &nbsp;·&nbsp;{new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}
-        </p>
       </div>
 
       {/* Stats */}
@@ -186,10 +206,10 @@ export default function TeacherDashboard() {
           <h6 className="fw-bold mb-3">Quick Actions</h6>
           <div className="d-flex gap-2 flex-wrap">
             {[
-              { label: 'Mark Attendance', icon: 'fact_check',    path: '/teacher/attendance',  color: '#76C442' },
-              { label: 'My Schedule',     icon: 'calendar_today', path: '/teacher/schedule',    color: '#4361ee' },
-              { label: 'Assignments',     icon: 'assignment',     path: '/teacher/assignments', color: '#ed8936' },
-              { label: 'Student Marks',   icon: 'grade',          path: '/teacher/marks',       color: '#805ad5' },
+              { label: 'Mark Attendance', icon: 'fact_check',    path: '/teacher/attendance', color: '#76C442' },
+              { label: 'My Schedule',     icon: 'calendar_today', path: '/teacher/schedule',   color: '#4361ee' },
+              { label: 'Student Marks',   icon: 'grade',          path: '/teacher/marks',      color: '#805ad5' },
+              { label: 'Homework',        icon: 'menu_book',      path: '/teacher/homework',   color: '#ed8936' },
             ].map(action => (
               <button
                 key={action.label}

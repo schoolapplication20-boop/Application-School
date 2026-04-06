@@ -31,11 +31,17 @@ public class Student {
     @Column(name = "roll_number", nullable = false, length = 20)
     private String rollNumber;
 
+    @Column(name = "admission_number", length = 30)
+    private String admissionNumber;
+
     @Column(name = "class_name", nullable = false, length = 10)
     private String className;
 
     @Column(length = 5)
     private String section;
+
+    @Column(name = "student_user_id")
+    private Long studentUserId;
 
     @Column(name = "parent_id")
     private Long parentId;
@@ -87,6 +93,9 @@ public class Student {
 
     @Column(name = "bonafide_document_name", length = 255)
     private String bonafideDocumentName;
+
+    @Column(name = "blood_group", length = 10)
+    private String bloodGroup;
 
     @Column(name = "is_active")
     @Builder.Default

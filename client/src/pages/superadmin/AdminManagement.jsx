@@ -19,7 +19,6 @@ const MODULES = [
   { key: 'leave',        label: 'Leave Management',   icon: 'event_busy',             desc: 'Student & teacher leave' },
   { key: 'examination',  label: 'Exam & Certificates', icon: 'verified',               desc: 'Hall tickets, certificates & exam schedules' },
   { key: 'timetable',   label: 'Timetable',           icon: 'schedule',               desc: 'View and manage class timetables' },
-  { key: 'parents',     label: 'Parents',             icon: 'family_restroom',        desc: 'Manage parent accounts and credentials' },
 ];
 
 const DEFAULT_PERMS = Object.fromEntries(MODULES.map(m => [m.key, false]));

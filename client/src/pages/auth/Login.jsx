@@ -22,6 +22,7 @@ const Login = () => {
     ADMIN:       '/admin/dashboard',
     TEACHER:     '/teacher/dashboard',
     PARENT:      '/parent/dashboard',
+    STUDENT:     '/student/dashboard',
   };
 
   const navigateByRole = (registeredUser) => {
@@ -34,14 +35,18 @@ const Login = () => {
 
   const handleEmailLogin = async (e) => {
     e.preventDefault();
-    if (!emailForm.email.trim()) { setError('Please enter your email address.'); return; }
+    if (!emailForm.email.trim()) { setError('Please enter your email or username.'); return; }
     if (!emailForm.password)    { setError('Please enter your password.'); return; }
     setIsLoading(true);
     setError('');
 
+    // If the user typed a plain username (no @), treat as student username
+    const rawInput = emailForm.email.trim();
+    const loginEmail = rawInput.includes('@') ? rawInput.toLowerCase() : rawInput.toLowerCase();
+
     try {
       const { user: loggedInUser, token } = await apiLoginWithEmail(
-        emailForm.email.trim().toLowerCase(),
+        loginEmail,
         emailForm.password,
       );
       login(loggedInUser, token);
@@ -103,13 +108,13 @@ const Login = () => {
 
           <form onSubmit={handleEmailLogin}>
             <div className="form-group">
-              <label className="form-label">Email Address</label>
+              <label className="form-label">Email</label>
               <div className="input-wrapper">
-                <span className="material-icons input-icon-left">email</span>
-                <input type="email" name="email" className="form-control has-left-icon"
+                <span className="material-icons input-icon-left">person</span>
+                <input type="text" name="email" className="form-control has-left-icon"
                   placeholder="Enter your email" value={emailForm.email}
                   onChange={e => { setEmailForm({ ...emailForm, email: e.target.value }); setError(''); }}
-                  autoComplete="email" autoFocus />
+                  autoComplete="username" autoFocus />
               </div>
             </div>
             <div className="form-group">

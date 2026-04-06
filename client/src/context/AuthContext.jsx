@@ -111,6 +111,7 @@ export const AuthProvider = ({ children }) => {
       case 'ADMIN':       return '/admin/dashboard';
       case 'TEACHER':     return '/teacher/dashboard';
       case 'PARENT':      return '/parent/dashboard';
+      case 'STUDENT':     return '/student/dashboard';
       default:            return '/login';
     }
   }, [user]);

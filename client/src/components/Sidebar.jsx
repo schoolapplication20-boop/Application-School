@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import '../styles/sidebar.css';
 
@@ -24,13 +24,13 @@ const adminNavItems = [
 // Super-Admin-only items (platform management)
 const superAdminOnlyItems = [
   { path: '/superadmin/admins', icon: 'manage_accounts', label: 'Admin Management', permKey: null },
+  { path: '/superadmin/diary',  icon: 'photo_library',   label: 'Diary Monitoring',  permKey: null },
 ];
 
 const teacherNavItems = [
   { path: '/teacher/dashboard',       icon: 'dashboard',      label: 'Dashboard' },
   { path: '/teacher/schedule',        icon: 'calendar_today', label: 'My Schedule' },
   { path: '/teacher/attendance',      icon: 'fact_check',     label: 'Attendance' },
-  { path: '/teacher/assignments',     icon: 'assignment',     label: 'Assignments' },
   { path: '/teacher/homework',        icon: 'menu_book',      label: 'Homework' },
   { path: '/teacher/marks',           icon: 'grade',          label: 'Marks' },
   { path: '/teacher/messages',        icon: 'chat',           label: 'Messages' },
@@ -39,20 +39,31 @@ const teacherNavItems = [
   { path: '/teacher/examination',     icon: 'verified',       label: 'Exam & Certificates' },
 ];
 
+const studentNavItems = [
+  { path: '/student/dashboard',   icon: 'dashboard',      label: 'Dashboard' },
+  { path: '/student/attendance',  icon: 'fact_check',     label: 'Attendance' },
+  { path: '/student/assignments', icon: 'assignment',     label: 'Assignments' },
+  { path: '/student/diary',       icon: 'photo_library',  label: 'Class Diary' },
+  { path: '/student/fees',        icon: 'payments',       label: 'Pay Fees' },
+  { path: '/student/leave',       icon: 'event_busy',     label: 'Leave Request' },
+  { path: '/student/messages',    icon: 'chat',           label: 'Messages' },
+  { path: '/student/examination', icon: 'verified',       label: 'Hall Ticket & Certs' },
+];
+
 const parentNavItems = [
-  { path: '/parent/dashboard',    icon: 'dashboard',    label: 'Dashboard' },
-  { path: '/parent/performance',  icon: 'bar_chart',    label: 'My Child' },
-  { path: '/parent/attendance',   icon: 'fact_check',   label: 'Attendance' },
-  { path: '/parent/assignments',  icon: 'assignment',   label: 'Assignments' },
-  { path: '/parent/pay-fees',     icon: 'payments',     label: 'Pay Fees' },
-  { path: '/parent/leave',        icon: 'event_busy',   label: 'Leave Request' },
-  { path: '/parent/messages',     icon: 'chat',         label: 'Messages', badge: 2 },
-  { path: '/parent/examination',  icon: 'verified',     label: 'Hall Ticket & Certs' },
+  { path: '/parent/dashboard',    icon: 'dashboard',      label: 'Dashboard' },
+  { path: '/parent/performance',  icon: 'bar_chart',      label: 'My Child' },
+  { path: '/parent/attendance',   icon: 'fact_check',     label: 'Attendance' },
+  { path: '/parent/assignments',  icon: 'assignment',     label: 'Assignments' },
+  { path: '/parent/diary',        icon: 'photo_library',  label: "Class Diary" },
+  { path: '/parent/pay-fees',     icon: 'payments',       label: 'Pay Fees' },
+  { path: '/parent/leave',        icon: 'event_busy',     label: 'Leave Request' },
+  { path: '/parent/messages',     icon: 'chat',           label: 'Messages', badge: 2 },
+  { path: '/parent/examination',  icon: 'verified',       label: 'Hall Ticket & Certs' },
 ];
 
 const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
+  const { user } = useAuth();
 
   /**
    * Returns the nav sections to render.
@@ -63,7 +74,7 @@ const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
   const getNavSections = () => {
     switch (user?.role) {
       case 'SUPER_ADMIN': {
-        const [first, ...rest] = adminNavItems;
+        const [first, ...rest] = adminNavItems.filter(item => item.path !== '/admin/parents');
         return [
           { label: 'Navigation', items: [first, ...superAdminOnlyItems, ...rest] },
         ];
@@ -93,14 +104,12 @@ const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
       case 'PARENT':
         return [{ label: 'Navigation', items: parentNavItems }];
 
+      case 'STUDENT':
+        return [{ label: 'Navigation', items: studentNavItems }];
+
       default:
         return [];
     }
-  };
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
   };
 
   const getInitials = (name) => {
@@ -169,29 +178,6 @@ const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
         ))}
 
         <div style={{ flex: 1 }} />
-
-        {!collapsed && <div className="nav-section-label" style={{ marginTop: '16px' }}>Account</div>}
-
-        {(user?.role === 'TEACHER' || user?.role === 'PARENT') && (
-          <NavLink
-            to="/reset-password"
-            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-            data-tooltip="Reset Password"
-          >
-            <span className="material-icons">lock_reset</span>
-            <span className="nav-label">Reset Password</span>
-          </NavLink>
-        )}
-
-        <button
-          className="nav-item nav-logout"
-          onClick={handleLogout}
-          data-tooltip="Logout"
-          style={{ width: '100%', border: 'none', background: 'none', textAlign: 'left', marginTop: '4px', cursor: 'pointer' }}
-        >
-          <span className="material-icons">logout</span>
-          <span className="nav-label">Logout</span>
-        </button>
       </nav>
 
       {/* User Info */}

@@ -12,10 +12,15 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
     Optional<User> findByEmailIgnoreCase(String email);
     Optional<User> findByMobile(String mobile);
+    Optional<User> findByUsername(String username);
     boolean existsByEmail(String email);
     boolean existsByEmailIgnoreCase(String email);
     boolean existsByMobile(String mobile);
+    boolean existsByUsername(String username);
     boolean existsByMobileAndIdNot(String mobile, Long id);
     boolean existsByEmailIgnoreCaseAndIdNot(String email, Long id);
     List<User> findByRole(User.Role role);
+
+    /** Find the login account directly linked to a student record */
+    java.util.Optional<User> findByStudentId(Long studentId);
 }

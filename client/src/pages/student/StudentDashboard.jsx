@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import LineChartComponent from '../../components/Charts/LineChartComponent';
 import { useAuth } from '../../context/AuthContext';
-import { parentAPI } from '../../services/api';
+import { studentAPI } from '../../services/api';
 
 const gradeBg    = { 'A+': '#f0fff4', 'A': '#f0fff4', 'B+': '#ebf8ff', 'B': '#ebf8ff', 'C': '#fffaf0', 'F': '#fff5f5' };
 const gradeColor = { 'A+': '#276749', 'A': '#276749', 'B+': '#2b6cb0', 'B': '#2b6cb0', 'C': '#c05621', 'F': '#c53030' };
@@ -16,53 +16,37 @@ const fmtDate = (d) => {
   catch { return d; }
 };
 
-export default function ParentDashboard() {
+export default function StudentDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const [children,    setChildren]    = useState([]);
-  const [selectedIdx, setSelectedIdx] = useState(0);
-  const [attendance,  setAttendance]  = useState([]);
-  const [marks,       setMarks]       = useState([]);
-  const [fees,        setFees]        = useState([]);
-  const [loading,     setLoading]     = useState(true);
+  const [profile,    setProfile]    = useState(null);
+  const [attendance, setAttendance] = useState([]);
+  const [marks,      setMarks]      = useState([]);
+  const [fees,       setFees]       = useState([]);
+  const [loading,    setLoading]    = useState(true);
 
-  // Load children on mount
   useEffect(() => {
-    if (!user?.id) return;
-    parentAPI.getMyChildren()
-      .then(res => {
-        const list = res.data?.data ?? [];
-        setChildren(list);
-      })
-      .catch(() => setChildren([]))
-      .finally(() => setLoading(false));
-  }, [user?.id]);
-
-  const child = children[selectedIdx] ?? null;
-
-  // Load child-specific data whenever selected child changes
-  useEffect(() => {
-    if (!child?.id) { setAttendance([]); setMarks([]); setFees([]); return; }
-
     const today     = new Date();
     const startDate = new Date(today.getFullYear(), today.getMonth() - 2, 1).toISOString().split('T')[0];
     const endDate   = today.toISOString().split('T')[0];
 
     Promise.all([
-      parentAPI.getChildAttendance(child.id, { startDate, endDate }).catch(() => ({ data: { data: [] } })),
-      parentAPI.getChildMarks(child.id).catch(() => ({ data: { data: [] } })),
-      parentAPI.getChildFees(child.id).catch(() => ({ data: { data: [] } })),
-    ]).then(([attRes, marksRes, feesRes]) => {
+      studentAPI.getMyProfile().catch(() => ({ data: { data: null } })),
+      studentAPI.getMyAttendance({ startDate, endDate }).catch(() => ({ data: { data: [] } })),
+      studentAPI.getMyMarks().catch(() => ({ data: { data: [] } })),
+      studentAPI.getMyFees().catch(() => ({ data: { data: [] } })),
+    ]).then(([profileRes, attRes, marksRes, feesRes]) => {
+      setProfile(profileRes.data?.data ?? null);
       setAttendance(attRes.data?.data  ?? []);
       setMarks(marksRes.data?.data     ?? []);
       setFees(feesRes.data?.data       ?? []);
-    });
-  }, [child?.id]);
+    }).finally(() => setLoading(false));
+  }, []);
 
-  // ── Derived stats ───────────────────────────────────────────────────────────
-  const presentDays = attendance.filter(a => a.status === 'PRESENT').length;
-  const workingDays = attendance.filter(a => a.status !== 'HOLIDAY').length;
+  // ── Derived stats ─────────────────────────────────────────────────────────
+  const presentDays   = attendance.filter(a => a.status === 'PRESENT').length;
+  const workingDays   = attendance.filter(a => a.status !== 'HOLIDAY').length;
   const attendancePct = workingDays > 0 ? Math.round((presentDays / workingDays) * 100) : 0;
 
   const totalFee   = fees.reduce((s, f) => s + (f.amount || 0), 0);
@@ -72,12 +56,10 @@ export default function ParentDashboard() {
 
   const recentMarks = [...marks].sort((a, b) => new Date(b.examDate || 0) - new Date(a.examDate || 0)).slice(0, 5);
 
-  // Build monthly attendance trend from last 3 months of data
   const trendMap = {};
   attendance.forEach(a => {
     if (!a.date) return;
-    const d = new Date(a.date);
-    const key = d.toLocaleDateString('en-IN', { month: 'short' });
+    const key = new Date(a.date).toLocaleDateString('en-IN', { month: 'short' });
     if (!trendMap[key]) trendMap[key] = { present: 0, total: 0 };
     if (a.status !== 'HOLIDAY') trendMap[key].total++;
     if (a.status === 'PRESENT') trendMap[key].present++;
@@ -97,9 +79,15 @@ export default function ParentDashboard() {
     return 'C';
   })();
 
+  // Display name and info — fall back to user object if profile not loaded yet
+  const displayName  = profile?.name || user?.name || 'Student';
+  const classSection = profile
+    ? `${profile.className || ''}${profile.section ? `-${profile.section}` : ''}`.trim() || '—'
+    : '—';
+
   if (loading) {
     return (
-      <Layout pageTitle="Parent Dashboard">
+      <Layout pageTitle="Student Dashboard">
         <div style={{ textAlign: 'center', padding: '80px 20px', color: '#a0aec0' }}>
           <span className="material-icons" style={{ fontSize: 48, display: 'block', marginBottom: 12 }}>hourglass_empty</span>
           Loading…
@@ -108,52 +96,18 @@ export default function ParentDashboard() {
     );
   }
 
-  if (!child) {
-    return (
-      <Layout pageTitle="Parent Dashboard">
-        <div style={{ textAlign: 'center', padding: '80px 20px' }}>
-          <span className="material-icons" style={{ fontSize: 64, color: '#e2e8f0', display: 'block', marginBottom: 12 }}>child_care</span>
-          <h3 style={{ fontSize: 18, fontWeight: 700, color: '#4a5568' }}>No children linked to your account</h3>
-          <p style={{ fontSize: 13, color: '#a0aec0', marginTop: 6 }}>
-            Please contact the school admin to link your mobile number to your child's profile.
-          </p>
-        </div>
-      </Layout>
-    );
-  }
-
   return (
-    <Layout pageTitle="Parent Dashboard">
-      <div className="page-header">
-        <h1>My Child's Overview</h1>
-        <p>Track your child's academic progress, attendance and more</p>
-      </div>
-
-      {/* Child selector (if multiple children) */}
-      {children.length > 1 && (
-        <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
-          {children.map((c, i) => (
-            <button key={c.id} onClick={() => setSelectedIdx(i)} style={{
-              padding: '8px 18px', borderRadius: 20, border: `2px solid ${i === selectedIdx ? '#76C442' : '#e2e8f0'}`,
-              background: i === selectedIdx ? '#76C44220' : '#fff', color: i === selectedIdx ? '#276749' : '#718096',
-              fontWeight: 700, fontSize: 13, cursor: 'pointer',
-            }}>
-              {c.name}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Child Info Card */}
+    <Layout pageTitle="Student Dashboard">
+      {/* Student Info Card */}
       <div className="child-info-card">
-        <div className="child-photo">{getInitials(child.name)}</div>
+        <div className="child-photo">{getInitials(displayName)}</div>
         <div className="child-details">
-          <h2>{child.name}</h2>
-          <div className="child-class">Class {child.className}{child.section ? `-${child.section}` : ''}</div>
+          <h2>{displayName}</h2>
+          <div className="child-class">
+            {classSection !== '—' ? `Class ${classSection}` : 'Class not assigned'}
+          </div>
           <div className="child-tags">
-            <span className="child-tag">Roll No: {child.rollNumber || '—'}</span>
-            {child.dateOfBirth && <span className="child-tag">DOB: {fmtDate(child.dateOfBirth)}</span>}
-            {child.bloodGroup  && <span className="child-tag">Blood: {child.bloodGroup}</span>}
+            {profile?.bloodGroup && <span className="child-tag">Blood: {profile.bloodGroup}</span>}
           </div>
         </div>
         <div style={{ marginLeft: 'auto', textAlign: 'center', background: 'rgba(255,255,255,0.2)', borderRadius: '16px', padding: '16px 24px' }}>
@@ -165,10 +119,10 @@ export default function ParentDashboard() {
       {/* Stats */}
       <div className="stats-grid" style={{ marginBottom: '24px' }}>
         {[
-          { title: 'Attendance',  value: `${attendancePct}%`, icon: 'fact_check', color: '#76C442' },
-          { title: 'Days Present', value: presentDays,         icon: 'check_circle', color: '#3182ce' },
-          { title: 'Fee Due',     value: `₹${pendingFee.toLocaleString()}`, icon: 'payments', color: '#e53e3e' },
-          { title: 'Total Marks', value: marks.length > 0 ? `${marks.reduce((s,m)=>s+m.marks,0)}/${marks.reduce((s,m)=>s+m.maxMarks,0)}` : '—', icon: 'grade', color: '#805ad5' },
+          { title: 'Attendance',   value: `${attendancePct}%`, icon: 'fact_check',   color: '#76C442' },
+          { title: 'Days Present', value: presentDays,          icon: 'check_circle', color: '#3182ce' },
+          { title: 'Fee Due',      value: `₹${pendingFee.toLocaleString()}`, icon: 'payments', color: '#e53e3e' },
+          { title: 'Total Marks',  value: marks.length > 0 ? `${marks.reduce((s,m)=>s+m.marks,0)}/${marks.reduce((s,m)=>s+m.maxMarks,0)}` : '—', icon: 'grade', color: '#805ad5' },
         ].map((s, i) => (
           <div key={i} className="stat-card card-hover">
             <div className="stat-icon" style={{ backgroundColor: s.color + '15' }}>
@@ -224,7 +178,7 @@ export default function ParentDashboard() {
             ) : (
               <div style={{ fontSize: '14px', fontWeight: 600, color: '#76C442', marginBottom: '16px' }}>All fees paid!</div>
             )}
-            <button onClick={() => navigate('/parent/pay-fees')} style={{ display: 'block', width: '100%', padding: '10px', background: '#76C442', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: 600, cursor: 'pointer' }}>
+            <button onClick={() => navigate('/student/fees')} style={{ display: 'block', width: '100%', padding: '10px', background: '#76C442', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: 600, cursor: 'pointer' }}>
               {nextDue ? 'Pay Now' : 'View Fees'}
             </button>
           </div>
@@ -236,7 +190,6 @@ export default function ParentDashboard() {
         <div className="data-table-card">
           <div className="data-table-header">
             <span className="data-table-title">Recent Marks</span>
-            <button className="btn-view-all" onClick={() => navigate('/parent/performance')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#76C442', fontWeight: 600 }}>View All →</button>
           </div>
           {recentMarks.length === 0 ? (
             <div style={{ padding: '32px 0', textAlign: 'center', color: '#a0aec0', fontSize: 13 }}>No marks recorded yet</div>
@@ -275,16 +228,16 @@ export default function ParentDashboard() {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '8px 0' }}>
             {[
-              { label: 'View Attendance',   icon: 'fact_check',   path: '/parent/attendance',  color: '#76C442' },
-              { label: 'Performance',       icon: 'grade',        path: '/parent/performance', color: '#805ad5' },
-              { label: 'Pay Fees',          icon: 'payments',     path: '/parent/pay-fees',    color: '#e53e3e' },
-              { label: 'Leave Request',     icon: 'event_busy',   path: '/parent/leave',       color: '#ed8936' },
-              { label: 'Hall Ticket',       icon: 'verified',     path: '/parent/examination', color: '#3182ce' },
-              { label: 'Class Diary',       icon: 'photo_library',path: '/parent/diary',       color: '#38b2ac' },
+              { label: 'View Attendance', icon: 'fact_check',    path: '/student/attendance',  color: '#76C442' },
+              { label: 'Assignments',     icon: 'assignment',     path: '/student/assignments', color: '#805ad5' },
+              { label: 'Pay Fees',        icon: 'payments',       path: '/student/fees',        color: '#e53e3e' },
+              { label: 'Leave Request',   icon: 'event_busy',     path: '/student/leave',       color: '#ed8936' },
+              { label: 'Hall Ticket',     icon: 'verified',       path: '/student/examination', color: '#3182ce' },
+              { label: 'Class Diary',     icon: 'photo_library',  path: '/student/diary',       color: '#38b2ac' },
             ].map(item => (
               <div key={item.path} onClick={() => navigate(item.path)} style={{
                 display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px',
-                borderRadius: 10, border: '1px solid #f0f4f8', cursor: 'pointer', transition: 'background 0.15s',
+                borderRadius: 10, border: '1px solid #f0f4f8', cursor: 'pointer',
               }}
                 onMouseEnter={e => e.currentTarget.style.background = '#f7fafc'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}

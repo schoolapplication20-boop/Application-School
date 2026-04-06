@@ -5,8 +5,6 @@ import { useNotifications } from '../../context/NotificationContext';
 import { useAuth } from '../../context/AuthContext';
 import { parentAPI } from '../../services/api';
 
-const ANNUAL_FEE = 45000;
-
 export default function PayFees() {
   const { user } = useAuth();
   const { addNotification } = useNotifications();
@@ -24,6 +22,7 @@ export default function PayFees() {
   const [toast, setToast]               = useState(null);
   const [paying, setPaying]             = useState(false);
   const [studentId, setStudentId]       = useState(null);
+  const [childName, setChildName]       = useState('');
   const receiptRef = useRef(null);
 
   const showToast = (message, type = 'success') => {
@@ -36,8 +35,7 @@ export default function PayFees() {
     if (!id) return;
     try {
       const res = await parentAPI.getChildFees(id);
-      const data = res.data;
-      setFees(Array.isArray(data) ? data : []);
+      setFees(res.data?.data ?? []);
     } catch (err) {
       console.error('Failed to load fees', err);
     }
@@ -45,12 +43,14 @@ export default function PayFees() {
 
   useEffect(() => {
     if (!user?.id) return;
-    parentAPI.getChildInfo(user.id)
+    parentAPI.getMyChildren()
       .then(res => {
-        const child = res.data;
-        const sid = child?.id || child?.studentId;
+        const list = res.data?.data ?? [];
+        const child = list[0] ?? null;
+        const sid = child?.id;
         if (sid) {
           setStudentId(sid);
+          setChildName(child.name || '');
           loadFees(sid);
         }
       })
@@ -59,6 +59,7 @@ export default function PayFees() {
 
   const totalPaid    = fees.filter(f => f.status === 'PAID').reduce((a, f) => a + f.amount, 0);
   const totalPending = fees.filter(f => f.status !== 'PAID').reduce((a, f) => a + f.amount, 0);
+  const totalFee     = fees.reduce((a, f) => a + f.amount, 0);
   const pendingFees  = fees.filter(f => f.status !== 'PAID');
 
   const toggleCheck = (id) => setCheckedFees(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -175,7 +176,7 @@ export default function PayFees() {
 
       <div className="page-header">
         <h1>Fee Payment</h1>
-        <p>Manage and pay Arjun's school fees</p>
+        <p>Manage and pay {childName ? `${childName}'s` : "your child's"} school fees</p>
       </div>
 
       {/* Stats */}
@@ -183,7 +184,7 @@ export default function PayFees() {
         {[
           { label: 'Total Paid',     value: `₹${totalPaid.toLocaleString()}`,     color: '#76C442', icon: 'check_circle' },
           { label: 'Pending Amount', value: `₹${totalPending.toLocaleString()}`,   color: '#e53e3e', icon: 'pending_actions' },
-          { label: 'Annual Fee',     value: `₹${ANNUAL_FEE.toLocaleString()}`,     color: '#3182ce', icon: 'payments' },
+          { label: 'Annual Fee',     value: `₹${totalFee.toLocaleString()}`,     color: '#3182ce', icon: 'payments' },
         ].map(c => (
           <div key={c.label} className="stat-card">
             <div className="stat-icon" style={{ backgroundColor: c.color + '15' }}>
@@ -200,19 +201,19 @@ export default function PayFees() {
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
           <div>
             <div style={{ fontSize: '14px', opacity: 0.85, marginBottom: '4px' }}>Annual Fee Payment Progress</div>
-            <div style={{ fontSize: '32px', fontWeight: 800 }}>{Math.round((totalPaid / ANNUAL_FEE) * 100)}% Paid</div>
+            <div style={{ fontSize: '32px', fontWeight: 800 }}>{Math.round((totalPaid / totalFee) * 100)}% Paid</div>
           </div>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: '12px', opacity: 0.75 }}>Remaining</div>
-            <div style={{ fontSize: '24px', fontWeight: 700 }}>₹{(ANNUAL_FEE - totalPaid).toLocaleString()}</div>
+            <div style={{ fontSize: '24px', fontWeight: 700 }}>₹{(totalFee - totalPaid).toLocaleString()}</div>
           </div>
         </div>
         <div style={{ height: '10px', background: 'rgba(255,255,255,0.2)', borderRadius: '5px', overflow: 'hidden' }}>
-          <div style={{ height: '100%', background: '#fff', borderRadius: '5px', width: `${Math.min((totalPaid / ANNUAL_FEE) * 100, 100)}%`, transition: 'width 0.5s' }} />
+          <div style={{ height: '100%', background: '#fff', borderRadius: '5px', width: `${Math.min((totalPaid / totalFee) * 100, 100)}%`, transition: 'width 0.5s' }} />
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '12px', opacity: 0.8 }}>
           <span>₹{totalPaid.toLocaleString()} paid</span>
-          <span>₹{ANNUAL_FEE.toLocaleString()} total</span>
+          <span>₹{totalFee.toLocaleString()} total</span>
         </div>
       </div>
 

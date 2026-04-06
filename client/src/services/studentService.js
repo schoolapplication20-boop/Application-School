@@ -12,14 +12,16 @@ const normalizeStudent = (s) => ({
   class:            s.class            ?? s.className   ?? '',
   section:          s.section          ?? '',
   dob:              s.dob              ?? s.dateOfBirth ?? '',
+  admissionNumber:  s.admissionNumber  ?? s.admission_number ?? '',
+  bloodGroup:       s.bloodGroup       ?? '',
   status:           s.status           ?? (s.isActive === false ? 'Inactive' : s.isActive === true ? 'Active' : 'Active'),
   photo:            s.photo            ?? s.photoUrl    ?? null,
   fatherName:       s.fatherName       ?? s.parentName  ?? '',
   fatherPhone:      s.fatherPhone      ?? s.parentMobile ?? s.parentPhone ?? '',
   motherName:       s.motherName       ?? '',
-  motherPhone:      s.motherPhone      ?? '',
+  motherPhone:      s.motherPhone      ?? s.motherMobile ?? '',
   guardianName:     s.guardianName     ?? '',
-  guardianPhone:    s.guardianPhone    ?? '',
+  guardianPhone:    s.guardianPhone    ?? s.guardianMobile ?? '',
   permanentAddress: s.permanentAddress ?? s.address     ?? '',
   alternateAddress: s.alternateAddress ?? '',
   idProof:          s.idProof          ?? null,
@@ -51,8 +53,22 @@ export const createStudent = async (studentData) => {
   try {
     const res = await adminAPI.createStudent(studentData);
     const backendData = res.data?.data ?? {};
-    const saved = normalizeStudent({ ...studentData, ...backendData });
-    return { success: true, data: saved, message: res.data?.message };
+    // backendData shape: { student, studentUsername, studentTempPassword, newParentCreated, parentEmail, parentMobile, parentTempPassword }
+    const studentObj = backendData.student ?? backendData;
+    const saved = normalizeStudent({ ...studentData, ...studentObj });
+    return {
+      success: true,
+      data: {
+        ...saved,
+        studentEmail:       backendData.studentEmail       ?? null,
+        studentTempPassword: backendData.studentTempPassword ?? null,
+        newParentCreated:   backendData.newParentCreated   ?? false,
+        parentEmail:        backendData.parentEmail        ?? null,
+        parentMobile:       backendData.parentMobile       ?? null,
+        parentTempPassword: backendData.parentTempPassword ?? null,
+      },
+      message: res.data?.message,
+    };
   } catch (err) {
     const msg = err.response?.data?.message || 'Failed to save student. Please try again.';
     return { success: false, message: msg };

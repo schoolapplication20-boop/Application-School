@@ -20,6 +20,8 @@ public interface MarksRepository extends JpaRepository<Marks, Long> {
     @Query("SELECT AVG((CAST(m.marks AS double) / m.maxMarks) * 100) FROM Marks m WHERE m.studentId = :sid AND m.maxMarks > 0")
     Double findAveragePercentageByStudentId(@Param("sid") Long studentId);
 
+    long countByStudentId(Long studentId);
+
     @Modifying @Transactional
     void deleteByStudentId(Long studentId);
 

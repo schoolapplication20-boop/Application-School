@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.interceptor.TransactionAspectSupport;
 
 import java.math.BigDecimal;
 import java.security.SecureRandom;
@@ -71,6 +72,104 @@ public class AdminService {
         return sb.toString();
     }
 
+    /**
+     * Generates a secure password guaranteed to have at least one uppercase,
+     * one lowercase, one digit, and one special character (min 8 chars).
+     */
+    private String generateStudentPassword() {
+        String upper   = "ABCDEFGHJKMNPQRSTUVWXYZ";
+        String lower   = "abcdefghjkmnpqrstuvwxyz";
+        String digits  = "23456789";
+        String special = "@#$!";
+        String all     = upper + lower + digits + special;
+
+        char[] pwd = new char[10];
+        pwd[0] = upper .charAt(RANDOM.nextInt(upper.length()));
+        pwd[1] = lower .charAt(RANDOM.nextInt(lower.length()));
+        pwd[2] = digits.charAt(RANDOM.nextInt(digits.length()));
+        pwd[3] = special.charAt(RANDOM.nextInt(special.length()));
+        for (int i = 4; i < 10; i++) pwd[i] = all.charAt(RANDOM.nextInt(all.length()));
+        // shuffle
+        for (int i = 9; i > 0; i--) {
+            int j = RANDOM.nextInt(i + 1);
+            char tmp = pwd[i]; pwd[i] = pwd[j]; pwd[j] = tmp;
+        }
+        return new String(pwd);
+    }
+
+    /**
+     * Derives a deterministic username:
+     * firstName + lastName + last4OfAdmissionNumber (all lowercase, letters/digits only).
+     * Falls back to rollNumber suffix if admission number is absent.
+     */
+    private String buildStudentUsername(String fullName, String admissionNumber, String rollNumber) {
+        String[] parts = (fullName == null ? "student" : fullName.trim()).split("\\s+");
+        String first = parts[0].toLowerCase().replaceAll("[^a-z0-9]", "");
+        String last  = parts.length > 1 ? parts[parts.length - 1].toLowerCase().replaceAll("[^a-z0-9]", "") : "";
+        String suffix;
+        String src = (admissionNumber != null && !admissionNumber.isBlank()) ? admissionNumber.trim() : rollNumber;
+        if (src != null && src.length() >= 4) {
+            suffix = src.substring(src.length() - 4).toLowerCase().replaceAll("[^a-z0-9]", "");
+        } else {
+            suffix = src != null ? src.toLowerCase().replaceAll("[^a-z0-9]", "") : String.valueOf(RANDOM.nextInt(9000) + 1000);
+        }
+        return first + last + suffix;
+    }
+
+    /** Result wrapper for student user creation. loginEmail is what the student uses to log in. */
+    private record StudentUserResult(User user, String loginEmail, String rawPassword) {}
+
+    /**
+     * Creates a User row for a student.
+     * If studentEmail is a valid real email, it is used as the login email directly (same as teacher flow).
+     * Otherwise falls back to generating an internal username@student.schoolers.local email.
+     * Throws on DB error so the caller's @Transactional rolls back cleanly.
+     */
+    private StudentUserResult createStudentUser(String fullName, String admissionNumber,
+                                                String rollNumber, Long studentId, String studentEmail) {
+        String email;
+        String username = buildStudentUsername(fullName, admissionNumber, rollNumber);
+
+        // Handle username collisions by appending a counter
+        int attempt = 0;
+        String candidateUsername = username;
+        while (userRepository.existsByUsername(candidateUsername)) {
+            attempt++;
+            candidateUsername = username + attempt;
+        }
+        username = candidateUsername;
+
+        if (studentEmail != null && !studentEmail.isBlank()
+                && EMAIL_PATTERN.matcher(studentEmail.trim().toLowerCase()).matches()) {
+            // Use the real email provided by admin (teacher-style login)
+            email = studentEmail.trim().toLowerCase();
+        } else {
+            // Fallback: generate internal email from username
+            email = username + "@student.schoolers.local";
+            while (userRepository.existsByEmailIgnoreCase(email)) {
+                username = username + "_s";
+                email = username + "@student.schoolers.local";
+            }
+        }
+
+        String rawPassword = generateStudentPassword();
+        User saved = userRepository.save(User.builder()
+                .name(fullName != null ? fullName.trim() : "Student")
+                .email(email)
+                .username(username)
+                .studentId(studentId)
+                .password(passwordEncoder.encode(rawPassword))
+                .tempPassword(rawPassword)
+                .role(User.Role.STUDENT)
+                .isActive(true)
+                .firstLogin(true)
+                .build());
+
+        log.info("[createStudentUser] Saved STUDENT user id=" + saved.getId()
+                + " email=" + email + " studentId=" + studentId);
+        return new StudentUserResult(saved, email, rawPassword);
+    }
+
     private LocalDate parseDate(String dateStr) {
         if (dateStr == null || dateStr.isBlank()) return null;
         String[] formats = {"yyyy-MM-dd", "dd MMM yyyy", "dd/MM/yyyy", "MM/dd/yyyy"};
@@ -112,7 +211,7 @@ public class AdminService {
     }
 
     @Transactional
-    public ApiResponse<Student> createStudent(Map<String, Object> body) {
+    public ApiResponse<Map<String, Object>> createStudent(Map<String, Object> body) {
         // Accept both camelCase frontend fields and snake_case backend fields
         String rollNumber = str(body, "rollNumber", str(body, "rollNo", null));
         if (rollNumber == null || rollNumber.isBlank())
@@ -120,16 +219,42 @@ public class AdminService {
         rollNumber = rollNumber.trim();
 
         String name = str(body, "name", null);
-        if (name == null || name.isBlank()) return ApiResponse.error("Student name is required");
+        if (name == null || name.isBlank()) return ApiResponse.<Map<String, Object>>error("Student name is required");
+
+        // Student login email (required, real email — same flow as teacher)
+        String studentEmail = str(body, "studentEmail", null);
+        if (studentEmail == null || studentEmail.isBlank())
+            return ApiResponse.<Map<String, Object>>error("Student login email is required");
+        studentEmail = studentEmail.trim().toLowerCase();
+        if (!EMAIL_PATTERN.matcher(studentEmail).matches())
+            return ApiResponse.<Map<String, Object>>error("Please enter a valid email address for student login");
+
+        // If email already exists, check if it belongs to an orphaned student account
+        // (student record was deleted but the user account was left behind). If so, clean it up.
+        final String finalStudentEmail = studentEmail;
+        userRepository.findByEmailIgnoreCase(studentEmail).ifPresent(existingUser -> {
+            if (existingUser.getRole() != null && existingUser.getRole().name().equals("STUDENT")) {
+                boolean hasLinkedStudent = studentRepository.findByStudentUserId(existingUser.getId()).isPresent();
+                if (!hasLinkedStudent) {
+                    log.info("[createStudent] Cleaning up orphaned student user id=" + existingUser.getId() + " email=" + finalStudentEmail);
+                    userRepository.deleteById(existingUser.getId());
+                    userRepository.flush();
+                }
+            }
+        });
+
+        if (userRepository.existsByEmailIgnoreCase(studentEmail))
+            return ApiResponse.<Map<String, Object>>error("Email '" + studentEmail + "' is already registered. Use a different email.");
 
         String className = resolveClassName(str(body, "className", str(body, "class", "")));
         String section   = normalizeSection(str(body, "section", ""));
         if (studentRepository.findDuplicateInClass(rollNumber, className, section).isPresent())
-            return ApiResponse.error("Roll number " + rollNumber + " already exists in " + (className.isBlank() ? "this class" : className) + (section.isBlank() ? "" : " – " + section));
+            return ApiResponse.<Map<String, Object>>error("Roll number " + rollNumber + " already exists in " + (className.isBlank() ? "this class" : className) + (section.isBlank() ? "" : " – " + section));
 
         Student student = Student.builder()
                 .name(name)
                 .rollNumber(rollNumber)
+                .admissionNumber(str(body, "admissionNumber", null))
                 .className(className)
                 .section(section)
                 .parentName(str(body, "parentName", str(body, "fatherName", str(body, "parent", ""))))
@@ -152,17 +277,123 @@ public class AdminService {
                 .build();
 
         try {
+            // Step 1: Link to parent user — must be inside the try-catch so any JPA exception
+            //         propagates cleanly and does NOT silently mark the transaction rollback-only
+            String parentMobile = student.getParentMobile();
+            ParentUserResult parentResult = null;
+            if (parentMobile != null && !parentMobile.isBlank()) {
+                parentResult = findOrCreateParentUser(
+                    parentMobile.trim(),
+                    student.getParentName() != null ? student.getParentName() : name + "'s Parent"
+                );
+                if (parentResult != null) {
+                    student.setParentId(parentResult.user().getId());
+                }
+            }
+
+            // Step 2: Save the student record to obtain its generated ID
             Student saved = studentRepository.save(student);
-            log.info("[createStudent] Saved student id=" + saved.getId() + " roll=" + rollNumber);
             ensureClassExists(saved.getClassName(), saved.getSection());
-            return ApiResponse.success("Student created successfully", saved);
+
+            // Step 3: Create the student User account
+            StudentUserResult studentUserResult = createStudentUser(
+                    name, saved.getAdmissionNumber(), rollNumber, saved.getId(), studentEmail);
+
+            // Step 4: Back-patch the student row with the user ID
+            if (studentUserResult != null) {
+                saved.setStudentUserId(studentUserResult.user().getId());
+                saved = studentRepository.save(saved);
+            }
+
+            log.info("[createStudent] Saved student id=" + saved.getId() + " roll=" + rollNumber
+                    + (saved.getStudentUserId() != null ? " studentUserId=" + saved.getStudentUserId() : "")
+                    + (saved.getParentId() != null ? " parentId=" + saved.getParentId() : ""));
+
+            Map<String, Object> responseData = new LinkedHashMap<>();
+            responseData.put("student", saved);
+
+            // Student credentials
+            if (studentUserResult != null) {
+                responseData.put("studentEmail", studentUserResult.loginEmail());
+                responseData.put("studentTempPassword", studentUserResult.rawPassword());
+            }
+
+            // Parent credentials (only when a new parent account was created)
+            if (parentResult != null && parentResult.isNew()) {
+                responseData.put("newParentCreated", true);
+                responseData.put("parentEmail", parentResult.user().getEmail());
+                responseData.put("parentMobile", parentResult.user().getMobile());
+                responseData.put("parentTempPassword", parentResult.user().getTempPassword());
+            } else {
+                responseData.put("newParentCreated", false);
+            }
+            return ApiResponse.success("Student created successfully", responseData);
+        } catch (DataIntegrityViolationException e) {
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+            // The top-level message rarely has useful detail; the root cause does
+            String detail = e.getMostSpecificCause() != null
+                    ? (e.getMostSpecificCause().getMessage() != null ? e.getMostSpecificCause().getMessage() : "")
+                    : (e.getMessage() != null ? e.getMessage() : "");
+            String lowerDetail = detail.toLowerCase();
+            String msg;
+            if (lowerDetail.contains("roll_number") || lowerDetail.contains("uq_roll_class_section")) {
+                msg = "Roll number " + rollNumber + " already exists in " + className
+                        + (section.isBlank() ? "" : " – " + section);
+            } else if (lowerDetail.contains("uk_users_email") || lowerDetail.contains("(email)")) {
+                msg = "Email '" + studentEmail + "' is already registered. Please use a different email.";
+            } else if (lowerDetail.contains("uk_users_mobile") || lowerDetail.contains("(mobile)")) {
+                msg = "A phone number entered is already registered. Please check parent details.";
+            } else if (lowerDetail.contains("duplicate") || lowerDetail.contains("unique")) {
+                msg = "A duplicate entry was detected. Please check all fields and try again.";
+            } else {
+                msg = "Database error: " + detail;
+            }
+            log.severe("[createStudent] DataIntegrity error: " + detail);
+            return ApiResponse.<Map<String, Object>>error(msg);
+
         } catch (Exception e) {
-            String msg = e.getMessage() != null && e.getMessage().contains("roll_number")
-                ? "Roll number " + rollNumber + " already exists in " + className + (section.isBlank() ? "" : " – " + section)
-                : "Failed to save student. Please try again.";
-            log.severe("[createStudent] DB error: " + e.getMessage());
-            return ApiResponse.error(msg);
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+            String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+            log.severe("[createStudent] Unexpected error: " + msg);
+            return ApiResponse.<Map<String, Object>>error("Failed to save student: " + msg);
         }
+    }
+
+    /** Result wrapper so callers know whether the parent account was freshly created. */
+    private record ParentUserResult(User user, boolean isNew) {}
+
+    /** Find an existing PARENT user by mobile or create one.
+     *  Returns null when the mobile belongs to a non-PARENT role (non-fatal).
+     *  Throws on unexpected DB errors so the caller's transaction rolls back cleanly. */
+    private ParentUserResult findOrCreateParentUser(String mobile, String name) {
+        // 1. Existing user with this mobile
+        User existing = userRepository.findByMobile(mobile).orElse(null);
+        if (existing != null) {
+            if (existing.getRole() == User.Role.PARENT) return new ParentUserResult(existing, false);
+            // Mobile already used by another role — skip parent link, don't fail student creation
+            log.warning("[findOrCreateParentUser] Mobile " + mobile + " already used by role " + existing.getRole());
+            return null;
+        }
+        // 2. Create a new PARENT user; use mobile as the unique email seed
+        String email = mobile + "@parent.schoolers.local";
+        if (userRepository.existsByEmailIgnoreCase(email)) {
+            // Email already exists — fetch and reuse that parent account
+            User found = userRepository.findByEmailIgnoreCase(email).orElse(null);
+            return found != null ? new ParentUserResult(found, false) : null;
+        }
+        String tempPwd = generatePassword();
+        User saved = userRepository.save(User.builder()
+                .name(name)
+                .email(email)
+                .mobile(mobile)
+                .password(passwordEncoder.encode(tempPwd))
+                .tempPassword(tempPwd)
+                .role(User.Role.PARENT)
+                .isActive(true)
+                .firstLogin(true)
+                .build());
+        log.info("[findOrCreateParentUser] Created PARENT user id=" + saved.getId() + " mobile=" + mobile);
+        return new ParentUserResult(saved, true);
     }
 
     @Transactional
@@ -188,14 +419,22 @@ public class AdminService {
                                         (targetSection.isBlank() ? "" : " – " + targetSection));
                             });
 
-                    if (body.containsKey("name"))          student.setName(str(body, "name", student.getName()));
+                    if (body.containsKey("name"))            student.setName(str(body, "name", student.getName()));
+                    if (body.containsKey("admissionNumber")) student.setAdmissionNumber(str(body, "admissionNumber", student.getAdmissionNumber()));
                     student.setClassName(targetClass);
                     student.setSection(targetSection);
                     student.setRollNumber(targetRoll);
                     if (body.containsKey("parentName") || body.containsKey("fatherName"))
                         student.setParentName(str(body, "parentName", str(body, "fatherName", student.getParentName())));
-                    if (body.containsKey("parentMobile") || body.containsKey("fatherPhone"))
-                        student.setParentMobile(str(body, "parentMobile", str(body, "fatherPhone", student.getParentMobile())));
+                    if (body.containsKey("parentMobile") || body.containsKey("fatherPhone")) {
+                        String newMobile = str(body, "parentMobile", str(body, "fatherPhone", student.getParentMobile()));
+                        student.setParentMobile(newMobile);
+                        if (newMobile != null && !newMobile.isBlank()) {
+                            ParentUserResult parentResult = findOrCreateParentUser(newMobile.trim(),
+                                student.getParentName() != null ? student.getParentName() : student.getName() + "'s Parent");
+                            if (parentResult != null) student.setParentId(parentResult.user().getId());
+                        }
+                    }
                     if (body.containsKey("motherName"))
                         student.setMotherName(str(body, "motherName", student.getMotherName()));
                     if (body.containsKey("motherMobile") || body.containsKey("motherPhone"))
@@ -231,27 +470,138 @@ public class AdminService {
                     return ApiResponse.success("Student updated", saved);
                 })
                 .orElse(ApiResponse.error("Student not found"));
-        } catch (IllegalArgumentException e) {
-            return ApiResponse.error(e.getMessage());
+        } catch (DataIntegrityViolationException e) {
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+            String detail = e.getMostSpecificCause() != null && e.getMostSpecificCause().getMessage() != null
+                    ? e.getMostSpecificCause().getMessage() : e.getMessage();
+            String lower = detail != null ? detail.toLowerCase() : "";
+            String msg = lower.contains("roll_number") || lower.contains("uq_roll_class_section")
+                    ? "Roll number already exists in this class/section."
+                    : lower.contains("(mobile)") || lower.contains("uk_users_mobile")
+                        ? "A phone number is already registered. Please check parent details."
+                        : lower.contains("duplicate") || lower.contains("unique")
+                            ? "A duplicate entry was detected. Please check all fields."
+                            : "Database error: " + detail;
+            return ApiResponse.error(msg);
+        } catch (Exception e) {
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+            return ApiResponse.error(e.getMessage() != null ? e.getMessage() : "Failed to update student. Please try again.");
         }
     }
 
-    @Transactional
+    /**
+     * Deletes a student and ALL related records atomically.
+     *
+     * Deletion order (child → parent to satisfy FK constraints):
+     *   1. marks, hall_tickets, certificates
+     *   2. attendance, fee_payments, fees, transport_fees, transport_student_assignments
+     *   3. leave_requests
+     *   4. student row
+     *   5. linked User login account (resolved via studentUserId on Student OR studentId on User)
+     *
+     * The entire operation runs inside a single @Transactional boundary.
+     * If the login-account deletion throws, the exception propagates and Spring
+     * rolls back the whole transaction — no partial deletes, no orphan records.
+     */
+    @Transactional(rollbackFor = Exception.class)
     public ApiResponse<String> deleteStudent(Long id) {
-        return studentRepository.findById(id).map(student -> {
-            // Cascade: delete all related records first
-            marksRepository.deleteByStudentId(id);
-            hallTicketRepository.deleteByStudentId(id);
-            certificateRepository.deleteByStudentId(id);
-            transportStudentAssignmentRepository.deleteByStudentId(id);
-            attendanceRepository.deleteByStudentId(id);
-            feePaymentRepository.deleteByStudentId(id);
-            feeRepository.deleteByStudentId(id);
-            transportFeeRepository.deleteByStudentId(id);
-            studentRepository.deleteById(id);
-            log.info("[deleteStudent] Deleted student id=" + id + " and all related records");
-            return ApiResponse.success("Student deleted successfully", "Deleted");
-        }).orElse(ApiResponse.error("Student not found with id: " + id));
+        Student student = studentRepository.findById(id).orElse(null);
+        if (student == null) {
+            log.warning("[deleteStudent] Student not found id=" + id);
+            return ApiResponse.error("Student not found with id: " + id);
+        }
+
+        String studentName = student.getName();
+        Long linkedUserId = student.getStudentUserId();
+
+        log.info("[deleteStudent] START — studentId=" + id
+                + " name=" + studentName
+                + " linkedUserId=" + linkedUserId);
+
+        // ── Step 1: Academic / result records ──────────────────────────────────
+        int marks       = (int) marksRepository.countByStudentId(id);
+        marksRepository.deleteByStudentId(id);
+        log.info("[deleteStudent] marks deleted=" + marks);
+
+        hallTicketRepository.deleteByStudentId(id);
+        certificateRepository.deleteByStudentId(id);
+        log.info("[deleteStudent] hall tickets & certificates deleted");
+
+        // ── Step 2: Attendance, fees, transport ───────────────────────────────
+        attendanceRepository.deleteByStudentId(id);
+        feePaymentRepository.deleteByStudentId(id);
+        feeRepository.deleteByStudentId(id);
+        transportFeeRepository.deleteByStudentId(id);
+        transportStudentAssignmentRepository.deleteByStudentId(id);
+        log.info("[deleteStudent] attendance, fees, transport records deleted");
+
+        // ── Step 3: Leave requests ────────────────────────────────────────────
+        leaveRequestRepository.deleteByRequesterId(id);
+        log.info("[deleteStudent] leave requests deleted");
+
+        // ── Step 4: Delete the student row ────────────────────────────────────
+        studentRepository.deleteById(id);
+        studentRepository.flush();
+        log.info("[deleteStudent] student row deleted id=" + id);
+
+        // ── Step 5: Delete the linked User login account ──────────────────────
+        // Resolve via student.studentUserId first; fall back to user.studentId FK.
+        com.schoolers.model.User loginUser = null;
+        if (linkedUserId != null) {
+            loginUser = userRepository.findById(linkedUserId).orElse(null);
+        }
+        if (loginUser == null) {
+            // Fallback: find by the studentId column on the User row
+            loginUser = userRepository.findByStudentId(id).orElse(null);
+        }
+
+        if (loginUser != null) {
+            Long userId    = loginUser.getId();
+            String email   = loginUser.getEmail();
+            // This delete is NOT wrapped in try/catch — any failure propagates
+            // and Spring rolls back the entire transaction automatically.
+            userRepository.deleteById(userId);
+            userRepository.flush();
+            log.info("[deleteStudent] login account deleted userId=" + userId + " email=" + email);
+        } else {
+            log.warning("[deleteStudent] No login account found for studentId=" + id
+                    + " (studentUserId=" + linkedUserId + ") — skipping user deletion");
+        }
+
+        log.info("[deleteStudent] COMPLETE — studentId=" + id + " name=" + studentName);
+        return ApiResponse.success("Student and login account deleted successfully", "Deleted");
+    }
+
+    /** Returns the student's login username and temp password (only while firstLogin is still true).
+     *  If the student has no linked user account, one is auto-created on demand. */
+    @Transactional
+    public ApiResponse<Map<String, Object>> getStudentCredentials(Long studentId) {
+        return studentRepository.findById(studentId).map(student -> {
+            // Auto-create credentials if the student has no linked user account
+            if (student.getStudentUserId() == null) {
+                StudentUserResult result = createStudentUser(
+                        student.getName(), student.getAdmissionNumber(), student.getRollNumber(), student.getId(), null);
+                if (result == null)
+                    return ApiResponse.<Map<String, Object>>error("Could not create login account for this student.");
+                student.setStudentUserId(result.user().getId());
+                studentRepository.save(student);
+                Map<String, Object> creds = new LinkedHashMap<>();
+                creds.put("email", result.loginEmail());
+                creds.put("firstLogin", true);
+                creds.put("tempPassword", result.rawPassword());
+                creds.put("isActive", true);
+                return ApiResponse.success("Login account created and credentials retrieved", creds);
+            }
+            return userRepository.findById(student.getStudentUserId()).map(user -> {
+                Map<String, Object> creds = new LinkedHashMap<>();
+                creds.put("email", user.getEmail());
+                creds.put("firstLogin", Boolean.TRUE.equals(user.getFirstLogin()));
+                // Only expose plain-text password while the student hasn't logged in yet
+                creds.put("tempPassword", Boolean.TRUE.equals(user.getFirstLogin()) ? user.getTempPassword() : null);
+                creds.put("isActive", user.getIsActive());
+                return ApiResponse.success("Credentials retrieved", creds);
+            }).orElse(ApiResponse.<Map<String, Object>>error("Student user account not found."));
+        }).orElse(ApiResponse.<Map<String, Object>>error("Student not found."));
     }
 
     // ── Teachers ───────────────────────────────────────────────────────────
@@ -982,19 +1332,15 @@ public class AdminService {
             return;
         }
 
-        try {
-            classRoomRepository.save(ClassRoom.builder()
-                    .name(normalized)
-                    .section(sec)
-                    .capacity(40)
-                    .isActive(true)
-                    .build());
-            log.info("[ensureClassExists] Auto-created class: " + normalized + "-" + sec);
-        } catch (Exception e) {
-            // Log full detail — never fail student creation because of a class side-effect
-            log.severe("[ensureClassExists] Unexpected error for " + normalized + "-" + sec
-                    + " | " + e.getClass().getName() + ": " + e.getMessage());
-        }
+        // No try-catch here — let exceptions propagate so the caller's @Transactional
+        // can call setRollbackOnly() cleanly instead of leaving the session corrupt.
+        classRoomRepository.save(ClassRoom.builder()
+                .name(normalized)
+                .section(sec)
+                .capacity(40)
+                .isActive(true)
+                .build());
+        log.info("[ensureClassExists] Auto-created class: " + normalized + "-" + sec);
     }
 
     // ── Helper ─────────────────────────────────────────────────────────────
