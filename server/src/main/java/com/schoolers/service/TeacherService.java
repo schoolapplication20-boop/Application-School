@@ -37,7 +37,30 @@ public class TeacherService {
     // ── Classes ────────────────────────────────────────────────────────────────
 
     public ApiResponse<List<ClassRoom>> getTeacherClasses(Long teacherId) {
-        return ApiResponse.success(classRoomRepository.findByTeacherId(teacherId));
+        // 1. Classrooms directly linked (class teachers via primaryClassId)
+        List<ClassRoom> linked = new ArrayList<>(classRoomRepository.findByTeacherId(teacherId));
+
+        // 2. Classrooms from the teacher's free-text `classes` field (subject teachers)
+        Teacher teacher = teacherRepository.findById(teacherId).orElse(null);
+        if (teacher != null && teacher.getClasses() != null && !teacher.getClasses().isBlank()) {
+            for (String entry : teacher.getClasses().split(",")) {
+                String trimmed = entry.trim();
+                if (trimmed.isEmpty()) continue;
+                // Support both "6 - A" and "6-A" formats
+                String[] parts = trimmed.split("\\s*-\\s*", 2);
+                if (parts.length == 2) {
+                    String name = parts[0].trim();
+                    String section = parts[1].trim();
+                    classRoomRepository.findByNameIgnoreCaseAndSectionIgnoreCase(name, section)
+                        .ifPresent(cls -> {
+                            if (linked.stream().noneMatch(c -> c.getId().equals(cls.getId()))) {
+                                linked.add(cls);
+                            }
+                        });
+                }
+            }
+        }
+        return ApiResponse.success(linked);
     }
 
     public ApiResponse<Map<String, Object>> getTeacherProfile(Long teacherId) {
@@ -367,7 +390,8 @@ public class TeacherService {
         ClassRoom classRoom = classRoomRepository.findById(classId).orElse(null);
         if (classRoom == null) return ApiResponse.error("Class not found");
 
-        boolean isClassTeacher = "CLASS_TEACHER".equalsIgnoreCase(teacher.getTeacherType());
+        boolean isClassTeacher = "CLASS_TEACHER".equalsIgnoreCase(teacher.getTeacherType())
+                || "BOTH".equalsIgnoreCase(teacher.getTeacherType());
         if (requireClassTeacher && !isClassTeacher) {
             return ApiResponse.error("Only class teachers can manage this module");
         }

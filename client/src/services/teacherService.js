@@ -17,6 +17,7 @@ const normalizeTeacher = (t) => ({
   qualification:  t.qualification || '',
   experience:     t.experience || '',
   joining:        t.joiningDate || t.joining || '',
+  createdAt:      t.createdAt   || '',
   status:         t.isActive === false ? 'Inactive' : (t.status || 'Active'),
   teacherType:    t.teacherType || 'SUBJECT_TEACHER',
   primaryClassId: t.primaryClassId || null,

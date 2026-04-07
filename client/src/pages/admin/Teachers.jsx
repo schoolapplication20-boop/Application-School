@@ -15,7 +15,6 @@ import { generateRandomPassword } from '../../utils/passwordGenerator';
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const SUBJECTS = ['Mathematics','Science','English','Social Studies','Hindi','Computer Science','Biology','Chemistry','Physics','Accountancy','Economics','Commerce'];
-const CLASSES  = ['6-A','6-B','7-A','7-B','8-A','8-B','9-A','9-B','10-A','10-B','11-A','11-B','12-A','12-B'];
 
 const SUBJECT_COLOR = {
   Mathematics: '#76C442', Science: '#3182ce', English: '#805ad5',
@@ -182,8 +181,8 @@ export default function Teachers() {
       else if (form.password.length < 6) e.password = 'Password must be at least 6 characters';
     }
 
-    if (form.teacherType === 'CLASS_TEACHER' && !form.primaryClassId)
-      e.primaryClassId = 'Please select the primary class for this class teacher';
+    if ((form.teacherType === 'CLASS_TEACHER' || form.teacherType === 'BOTH') && !form.primaryClassId)
+      e.primaryClassId = 'Please select the primary class for this teacher';
 
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -201,8 +200,10 @@ export default function Teachers() {
         email:          form.email,
         mobile:         form.mobile,
         subject:        form.subject,
+        department:     form.department,
         classes:        form.classes,
         qualification:  form.qualification,
+        experience:     form.experience,
         joiningDate:    form.joining,
         status:         form.status,
         idProof:        form.idProof,
@@ -210,7 +211,7 @@ export default function Teachers() {
         otherDoc:       form.otherDoc,
         otherDocName:   form.otherDocName,
         teacherType:    form.teacherType,
-        primaryClassId: form.teacherType === 'CLASS_TEACHER' ? (form.primaryClassId ? Number(form.primaryClassId) : null) : null,
+        primaryClassId: (form.teacherType === 'CLASS_TEACHER' || form.teacherType === 'BOTH') ? (form.primaryClassId ? Number(form.primaryClassId) : null) : null,
       });
       if (!result.success) { showToast(result.message || 'Failed to update teacher', 'error'); return; }
       const updated = teachers.map(t => t.id === editTeacher.id ? { ...t, ...form } : t);
@@ -238,7 +239,7 @@ export default function Teachers() {
         otherDocName:   form.otherDocName,
         password:       form.password,
         teacherType:    form.teacherType,
-        primaryClassId: form.teacherType === 'CLASS_TEACHER' ? (form.primaryClassId ? Number(form.primaryClassId) : null) : null,
+        primaryClassId: (form.teacherType === 'CLASS_TEACHER' || form.teacherType === 'BOTH') ? (form.primaryClassId ? Number(form.primaryClassId) : null) : null,
       });
       if (!result.success) { showToast(result.message || 'Failed to add teacher', 'error'); return; }
 
@@ -442,16 +443,16 @@ export default function Teachers() {
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                         <span style={{
                           display: 'inline-block', padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 700,
-                          background: t.teacherType === 'CLASS_TEACHER' ? '#76C44218' : '#e2e8f0',
-                          color: t.teacherType === 'CLASS_TEACHER' ? '#276749' : '#718096',
+                          background: t.teacherType === 'CLASS_TEACHER' ? '#76C44218' : t.teacherType === 'BOTH' ? '#3182ce18' : '#e2e8f0',
+                          color: t.teacherType === 'CLASS_TEACHER' ? '#276749' : t.teacherType === 'BOTH' ? '#2b6cb0' : '#718096',
                         }}>
-                          {t.teacherType === 'CLASS_TEACHER' ? 'Class Teacher' : 'Subject Teacher'}
+                          {t.teacherType === 'CLASS_TEACHER' ? 'Class Teacher' : t.teacherType === 'BOTH' ? 'Class + Subject' : 'Subject Teacher'}
                         </span>
                         {t.primaryClassId && classList.length > 0 && (() => {
-                          const cls = classList.find(c => c.id === t.primaryClassId);
-                          return cls ? <span style={{ fontSize: 11, color: '#4a5568', fontWeight: 600 }}>{cls.name}{cls.section ? `-${cls.section}` : ''}</span> : null;
+                          const cls = classList.find(c => Number(c.id) === Number(t.primaryClassId));
+                          return cls ? <span style={{ fontSize: 11, color: '#4a5568', fontWeight: 600 }}>{cls.name}{cls.section ? ` - ${cls.section}` : ''}</span> : null;
                         })()}
-                        {!t.primaryClassId && t.classes && <span style={{ fontSize: 11, color: '#a0aec0' }}>{t.classes}</span>}
+                        {t.classes && <span style={{ fontSize: 11, color: '#a0aec0' }}>{t.classes}</span>}
                       </div>
                     </td>
                     <td style={{ fontSize: 12, color: '#718096' }}>{t.experience || '—'}</td>
@@ -609,10 +610,11 @@ export default function Teachers() {
                     >
                       <option value="SUBJECT_TEACHER">Subject Teacher</option>
                       <option value="CLASS_TEACHER">Class Teacher</option>
+                      <option value="BOTH">Class Teacher + Subject Teacher</option>
                     </select>
                   </Field>
 
-                  {form.teacherType === 'CLASS_TEACHER' ? (
+                  {(form.teacherType === 'CLASS_TEACHER' || form.teacherType === 'BOTH') ? (
                     <Field label="Primary Class" required error={errors.primaryClassId}>
                       <select
                         style={{ ...inputStyle(!!errors.primaryClassId), cursor: 'pointer' }}
@@ -640,6 +642,19 @@ export default function Teachers() {
                       />
                       <p style={{ margin: '4px 0 0', fontSize: 11, color: '#a0aec0' }}>
                         Comma-separated list of classes this teacher teaches.
+                      </p>
+                    </Field>
+                  )}
+                  {form.teacherType === 'BOTH' && (
+                    <Field label="Other Classes Taught" optional>
+                      <input
+                        style={inputStyle(false)}
+                        placeholder="e.g., 9-A, 10-B, 11-C"
+                        value={form.classes}
+                        onChange={e => setForm({ ...form, classes: e.target.value })}
+                      />
+                      <p style={{ margin: '4px 0 0', fontSize: 11, color: '#a0aec0' }}>
+                        Additional classes this teacher teaches as a subject teacher.
                       </p>
                     </Field>
                   )}
@@ -921,7 +936,7 @@ export default function Teachers() {
                   { icon: 'work',       label: 'Experience',    value: viewTeacher.experience || '—' },
                   { icon: 'business',   label: 'Department',    value: viewTeacher.department || '—' },
                   { icon: 'event',      label: 'Joining Date',  value: viewTeacher.joining || '—' },
-                  { icon: 'class',      label: 'Classes',       value: viewTeacher.classes || '—', full: true },
+                  { icon: 'class',      label: 'Classes',       value: (() => { const cls = classList.find(c => Number(c.id) === Number(viewTeacher.primaryClassId)); return cls ? `${cls.name}${cls.section ? ` - ${cls.section}` : ''}` : (viewTeacher.classes || '—'); })(), full: true },
                   { icon: 'calendar_today', label: 'Added On',  value: viewTeacher.createdAt || '—' },
                 ].map(row => (
                   <div key={row.label} style={{ gridColumn: row.full ? '1/-1' : 'auto', display: 'flex', gap: 8, alignItems: 'flex-start', padding: '10px 12px', background: '#f7fafc', borderRadius: 8 }}>
@@ -964,13 +979,16 @@ export default function Teachers() {
                 Select the classes to assign to this teacher:
               </p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
-                {CLASSES.map(cls => {
-                  const active = assignClasses.includes(cls);
+                {classList.length === 0 ? (
+                  <p style={{ fontSize: 13, color: '#a0aec0', margin: 0 }}>No classes found. Please create classes first.</p>
+                ) : classList.map(c => {
+                  const label = `${c.name}${c.section ? ` - ${c.section}` : ''}`;
+                  const active = assignClasses.includes(label);
                   return (
-                    <button key={cls} type="button"
-                      onClick={() => setAssignClasses(prev => active ? prev.filter(c => c !== cls) : [...prev, cls])}
+                    <button key={c.id} type="button"
+                      onClick={() => setAssignClasses(prev => active ? prev.filter(x => x !== label) : [...prev, label])}
                       style={{ padding: '6px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: `1.5px solid ${active ? '#76C442' : '#e2e8f0'}`, background: active ? '#76C442' : '#fff', color: active ? '#fff' : '#718096', transition: 'all 0.15s' }}>
-                      {cls}
+                      {label}
                     </button>
                   );
                 })}

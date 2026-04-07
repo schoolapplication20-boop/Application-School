@@ -636,8 +636,8 @@ public class AdminService {
                 : generatePassword();
 
         String teacherType = normalizeTeacherType(req.getTeacherType());
-        Long primaryClassId = "CLASS_TEACHER".equals(teacherType) ? req.getPrimaryClassId() : null;
-        if ("CLASS_TEACHER".equals(teacherType) && primaryClassId == null)
+        Long primaryClassId = isClassTeacherRole(teacherType) ? req.getPrimaryClassId() : null;
+        if (isClassTeacherRole(teacherType) && primaryClassId == null)
             return ApiResponse.error("Primary class is required for a class teacher");
 
         String empId = (req.getEmpId() != null && !req.getEmpId().isBlank())
@@ -741,7 +741,7 @@ public class AdminService {
                     if (req.getJoiningDate() != null)   teacher.setJoiningDate(parseDate(req.getJoiningDate()));
                     if (req.getStatus() != null)        teacher.setIsActive(!"Inactive".equalsIgnoreCase(req.getStatus()));
                     if (req.getTeacherType() != null)   teacher.setTeacherType(normalizeTeacherType(req.getTeacherType()));
-                    if (!"CLASS_TEACHER".equalsIgnoreCase(teacher.getTeacherType())) {
+                    if (!isClassTeacherRole(teacher.getTeacherType())) {
                         teacher.setPrimaryClassId(null);
                     } else if (req.getPrimaryClassId() != null || teacher.getPrimaryClassId() != null) {
                         teacher.setPrimaryClassId(req.getPrimaryClassId());
@@ -1508,7 +1508,13 @@ public class AdminService {
     private String normalizeTeacherType(String teacherType) {
         if (teacherType == null || teacherType.isBlank()) return "SUBJECT_TEACHER";
         String normalized = teacherType.trim().toUpperCase();
-        return "CLASS_TEACHER".equals(normalized) ? "CLASS_TEACHER" : "SUBJECT_TEACHER";
+        if ("CLASS_TEACHER".equals(normalized)) return "CLASS_TEACHER";
+        if ("BOTH".equals(normalized)) return "BOTH";
+        return "SUBJECT_TEACHER";
+    }
+
+    private boolean isClassTeacherRole(String teacherType) {
+        return "CLASS_TEACHER".equalsIgnoreCase(teacherType) || "BOTH".equalsIgnoreCase(teacherType);
     }
 
     private void syncPrimaryClassAssignment(Teacher teacher, Long previousPrimaryClassId) {
