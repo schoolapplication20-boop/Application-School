@@ -54,6 +54,8 @@ public class AdminService {
     @Autowired private CertificateRepository certificateRepository;
     @Autowired private TransportStudentAssignmentRepository transportStudentAssignmentRepository;
     @Autowired private TransportFeeRepository transportFeeRepository;
+    @Autowired private ClassFeeStructureRepository classFeeStructureRepository;
+    @Autowired private StudentFeeAssignmentRepository studentFeeAssignmentRepository;
 
     private static final String CHARS = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#$!";
     private static final SecureRandom RANDOM = new SecureRandom();
@@ -277,20 +279,13 @@ public class AdminService {
                 .build();
 
         try {
-            // Step 1: Link to parent user — must be inside the try-catch so any JPA exception
-            //         propagates cleanly and does NOT silently mark the transaction rollback-only
+            // Step 1: Link to existing parent user by mobile — do NOT auto-create a parent account
             String parentMobile = student.getParentMobile();
-            ParentUserResult parentResult = null;
             if (parentMobile != null && !parentMobile.isBlank()) {
-                parentResult = findOrCreateParentUser(
-                    parentMobile.trim(),
-                    student.getParentName() != null ? student.getParentName() : name + "'s Parent"
-                );
-                if (parentResult != null) {
-                    student.setParentId(parentResult.user().getId());
-                }
+                userRepository.findByMobile(parentMobile.trim())
+                        .filter(u -> u.getRole() == User.Role.PARENT)
+                        .ifPresent(u -> student.setParentId(u.getId()));
             }
-
             // Step 2: Save the student record to obtain its generated ID
             Student saved = studentRepository.save(student);
             ensureClassExists(saved.getClassName(), saved.getSection());
@@ -318,15 +313,7 @@ public class AdminService {
                 responseData.put("studentTempPassword", studentUserResult.rawPassword());
             }
 
-            // Parent credentials (only when a new parent account was created)
-            if (parentResult != null && parentResult.isNew()) {
-                responseData.put("newParentCreated", true);
-                responseData.put("parentEmail", parentResult.user().getEmail());
-                responseData.put("parentMobile", parentResult.user().getMobile());
-                responseData.put("parentTempPassword", parentResult.user().getTempPassword());
-            } else {
-                responseData.put("newParentCreated", false);
-            }
+            responseData.put("newParentCreated", false);
             return ApiResponse.success("Student created successfully", responseData);
         } catch (DataIntegrityViolationException e) {
             TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
@@ -357,43 +344,6 @@ public class AdminService {
             log.severe("[createStudent] Unexpected error: " + msg);
             return ApiResponse.<Map<String, Object>>error("Failed to save student: " + msg);
         }
-    }
-
-    /** Result wrapper so callers know whether the parent account was freshly created. */
-    private record ParentUserResult(User user, boolean isNew) {}
-
-    /** Find an existing PARENT user by mobile or create one.
-     *  Returns null when the mobile belongs to a non-PARENT role (non-fatal).
-     *  Throws on unexpected DB errors so the caller's transaction rolls back cleanly. */
-    private ParentUserResult findOrCreateParentUser(String mobile, String name) {
-        // 1. Existing user with this mobile
-        User existing = userRepository.findByMobile(mobile).orElse(null);
-        if (existing != null) {
-            if (existing.getRole() == User.Role.PARENT) return new ParentUserResult(existing, false);
-            // Mobile already used by another role — skip parent link, don't fail student creation
-            log.warning("[findOrCreateParentUser] Mobile " + mobile + " already used by role " + existing.getRole());
-            return null;
-        }
-        // 2. Create a new PARENT user; use mobile as the unique email seed
-        String email = mobile + "@parent.schoolers.local";
-        if (userRepository.existsByEmailIgnoreCase(email)) {
-            // Email already exists — fetch and reuse that parent account
-            User found = userRepository.findByEmailIgnoreCase(email).orElse(null);
-            return found != null ? new ParentUserResult(found, false) : null;
-        }
-        String tempPwd = generatePassword();
-        User saved = userRepository.save(User.builder()
-                .name(name)
-                .email(email)
-                .mobile(mobile)
-                .password(passwordEncoder.encode(tempPwd))
-                .tempPassword(tempPwd)
-                .role(User.Role.PARENT)
-                .isActive(true)
-                .firstLogin(true)
-                .build());
-        log.info("[findOrCreateParentUser] Created PARENT user id=" + saved.getId() + " mobile=" + mobile);
-        return new ParentUserResult(saved, true);
     }
 
     @Transactional
@@ -430,9 +380,12 @@ public class AdminService {
                         String newMobile = str(body, "parentMobile", str(body, "fatherPhone", student.getParentMobile()));
                         student.setParentMobile(newMobile);
                         if (newMobile != null && !newMobile.isBlank()) {
-                            ParentUserResult parentResult = findOrCreateParentUser(newMobile.trim(),
-                                student.getParentName() != null ? student.getParentName() : student.getName() + "'s Parent");
-                            if (parentResult != null) student.setParentId(parentResult.user().getId());
+                            // Link to existing PARENT user only — do NOT auto-create one
+                            Long parentId = userRepository.findByMobile(newMobile.trim())
+                                    .filter(u -> u.getRole() == User.Role.PARENT)
+                                    .map(User::getId)
+                                    .orElse(null);
+                            student.setParentId(parentId);
                         }
                     }
                     if (body.containsKey("motherName"))
@@ -1099,23 +1052,269 @@ public class AdminService {
         return ApiResponse.success("Fee record deleted", "Deleted");
     }
 
-    // ── Expenses ───────────────────────────────────────────────────────────
+    // ── Class Fee Structure ─────────────────────────────────────────────────
 
-    public ApiResponse<List<Expense>> getExpenses() {
-        return ApiResponse.success(expenseRepository.findAll());
+    public ApiResponse<List<ClassFeeStructure>> getClassFeeStructures() {
+        return ApiResponse.success(classFeeStructureRepository.findAll());
     }
 
-    public ApiResponse<Expense> createExpense(Expense expense) {
-        return ApiResponse.success("Expense recorded", expenseRepository.save(expense));
+    @Transactional
+    public ApiResponse<ClassFeeStructure> saveClassFeeStructure(Map<String, Object> body) {
+        String className   = str(body, "className", null);
+        String academicYear = str(body, "academicYear", "2024-25");
+        if (className == null || className.isBlank()) return ApiResponse.error("Class name is required");
+
+        ClassFeeStructure cfs = classFeeStructureRepository
+                .findByClassNameAndAcademicYear(className, academicYear)
+                .orElse(ClassFeeStructure.builder().className(className).academicYear(academicYear).build());
+
+        try {
+            if (body.containsKey("tuitionFee"))   cfs.setTuitionFee(new BigDecimal(body.get("tuitionFee").toString()));
+            if (body.containsKey("transportFee"))  cfs.setTransportFee(new BigDecimal(body.get("transportFee").toString()));
+            if (body.containsKey("labFee"))        cfs.setLabFee(new BigDecimal(body.get("labFee").toString()));
+            if (body.containsKey("examFee"))       cfs.setExamFee(new BigDecimal(body.get("examFee").toString()));
+            if (body.containsKey("sportsFee"))     cfs.setSportsFee(new BigDecimal(body.get("sportsFee").toString()));
+            if (body.containsKey("otherFee"))      cfs.setOtherFee(new BigDecimal(body.get("otherFee").toString()));
+        } catch (Exception e) {
+            return ApiResponse.error("Invalid fee amount");
+        }
+        return ApiResponse.success("Fee structure saved", classFeeStructureRepository.save(cfs));
+    }
+
+    @Transactional
+    public ApiResponse<String> deleteClassFeeStructure(Long id) {
+        if (!classFeeStructureRepository.existsById(id)) return ApiResponse.error("Fee structure not found");
+        classFeeStructureRepository.deleteById(id);
+        return ApiResponse.success("Fee structure deleted", "Deleted");
+    }
+
+    // ── Student Fee Assignment ───────────────────────────────────────────────
+
+    public ApiResponse<List<StudentFeeAssignment>> getAllStudentFeeAssignments() {
+        return ApiResponse.success(studentFeeAssignmentRepository.findAllByOrderByCreatedAtDesc());
+    }
+
+    public ApiResponse<StudentFeeAssignment> getStudentFeeAssignment(Long studentId) {
+        return studentFeeAssignmentRepository.findFirstByStudentIdOrderByCreatedAtDesc(studentId)
+                .map(a -> ApiResponse.success(a))
+                .orElse(ApiResponse.error("No fee assignment found for this student"));
+    }
+
+    public ApiResponse<List<FeePayment>> getAssignmentPayments(Long assignmentId) {
+        return ApiResponse.success(
+                feePaymentRepository.findByAssignmentIdOrderByPaymentDateDescCreatedAtDesc(assignmentId));
+    }
+
+    @Transactional
+    public ApiResponse<StudentFeeAssignment> assignStudentFee(Map<String, Object> body) {
+        try {
+            Object sidObj = body.get("studentId");
+            if (sidObj == null) return ApiResponse.error("Student ID is required");
+            Long studentId;
+            try { studentId = Long.parseLong(sidObj.toString()); }
+            catch (Exception e) { return ApiResponse.error("Invalid student ID"); }
+
+            if (body.get("totalFee") == null || body.get("totalFee").toString().isBlank())
+                return ApiResponse.error("Total fee is required");
+            BigDecimal totalFee;
+            try {
+                totalFee = new BigDecimal(body.get("totalFee").toString());
+                if (totalFee.compareTo(BigDecimal.ZERO) <= 0) return ApiResponse.error("Total fee must be greater than zero");
+            } catch (Exception e) {
+                return ApiResponse.error("Invalid total fee amount");
+            }
+
+            Student student = studentRepository.findById(studentId).orElse(null);
+            if (student == null) return ApiResponse.error("Student not found with ID: " + studentId);
+
+            String academicYear = str(body, "academicYear", "2024-25");
+            if (academicYear == null || academicYear.isBlank()) academicYear = "2024-25";
+
+            StudentFeeAssignment assignment = studentFeeAssignmentRepository
+                    .findByStudentIdAndAcademicYear(studentId, academicYear)
+                    .orElse(StudentFeeAssignment.builder()
+                            .studentId(studentId)
+                            .academicYear(academicYear)
+                            .paidAmount(BigDecimal.ZERO)
+                            .status(StudentFeeAssignment.Status.PENDING)
+                            .build());
+
+            assignment.setStudentName(student.getName());
+            assignment.setRollNumber(student.getRollNumber());
+            assignment.setClassName(student.getClassName());
+            assignment.setTotalFee(totalFee);
+
+            String remarks = str(body, "remarks", null);
+            assignment.setRemarks(remarks != null && !remarks.isBlank() ? remarks : null);
+
+            // Parse dueDate only if non-empty
+            String dueDateStr = str(body, "dueDate", null);
+            if (dueDateStr != null && !dueDateStr.isBlank()) {
+                try { assignment.setDueDate(LocalDate.parse(dueDateStr)); } catch (Exception ignored) {}
+            }
+
+            // Optional term fees
+            try {
+                if (body.get("term1Fee") != null && !body.get("term1Fee").toString().isBlank())
+                    assignment.setTerm1Fee(new BigDecimal(body.get("term1Fee").toString()));
+                else assignment.setTerm1Fee(null);
+                if (body.get("term2Fee") != null && !body.get("term2Fee").toString().isBlank())
+                    assignment.setTerm2Fee(new BigDecimal(body.get("term2Fee").toString()));
+                else assignment.setTerm2Fee(null);
+                if (body.get("term3Fee") != null && !body.get("term3Fee").toString().isBlank())
+                    assignment.setTerm3Fee(new BigDecimal(body.get("term3Fee").toString()));
+                else assignment.setTerm3Fee(null);
+            } catch (Exception ignored) {}
+
+            // Recalculate status
+            BigDecimal paid = assignment.getPaidAmount() != null ? assignment.getPaidAmount() : BigDecimal.ZERO;
+            if (paid.compareTo(totalFee) >= 0) assignment.setStatus(StudentFeeAssignment.Status.PAID);
+            else if (paid.compareTo(BigDecimal.ZERO) > 0) assignment.setStatus(StudentFeeAssignment.Status.PARTIAL);
+            else assignment.setStatus(StudentFeeAssignment.Status.PENDING);
+
+            return ApiResponse.success("Fee assigned", studentFeeAssignmentRepository.save(assignment));
+        } catch (Exception e) {
+            log.severe("[assignStudentFee] Unexpected error: " + e.getMessage());
+            return ApiResponse.error("Failed to save assignment: " + e.getMessage());
+        }
+    }
+
+    @Transactional
+    public ApiResponse<StudentFeeAssignment> collectAssignmentFee(Long assignmentId, Map<String, Object> body) {
+        StudentFeeAssignment assignment = studentFeeAssignmentRepository.findById(assignmentId).orElse(null);
+        if (assignment == null) return ApiResponse.error("Fee assignment not found");
+
+        BigDecimal amountPaid;
+        try {
+            amountPaid = new BigDecimal(body.get("amountPaid").toString());
+        } catch (Exception e) {
+            return ApiResponse.error("Invalid amount");
+        }
+        if (amountPaid.compareTo(BigDecimal.ZERO) <= 0) return ApiResponse.error("Amount must be greater than zero");
+
+        BigDecimal currentPaid = assignment.getPaidAmount() != null ? assignment.getPaidAmount() : BigDecimal.ZERO;
+        BigDecimal due = assignment.getTotalFee().subtract(currentPaid);
+        if (amountPaid.compareTo(due) > 0) return ApiResponse.error("Amount exceeds due balance of ₹" + due);
+
+        String receiptNumber = str(body, "receiptNumber", null);
+        if (receiptNumber == null || receiptNumber.isBlank()) return ApiResponse.error("Receipt number is required");
+        receiptNumber = receiptNumber.trim();
+        if (feePaymentRepository.existsByReceiptNumber(receiptNumber))
+            return ApiResponse.error("Duplicate receipt number: " + receiptNumber);
+
+        String paidDateStr = str(body, "paidDate", null);
+        LocalDate paymentDate = LocalDate.now();
+        if (paidDateStr != null) {
+            try { paymentDate = LocalDate.parse(paidDateStr); } catch (Exception ignored) {}
+        }
+
+        BigDecimal newPaid = currentPaid.add(amountPaid);
+        assignment.setPaidAmount(newPaid);
+        if (newPaid.compareTo(assignment.getTotalFee()) >= 0) assignment.setStatus(StudentFeeAssignment.Status.PAID);
+        else assignment.setStatus(StudentFeeAssignment.Status.PARTIAL);
+
+        StudentFeeAssignment saved = studentFeeAssignmentRepository.save(assignment);
+
+        String term = str(body, "term", null);
+        feePaymentRepository.save(FeePayment.builder()
+                .feeId(0L)                          // 0 = new assignment-based payment (fee_id NOT NULL legacy constraint)
+                .assignmentId(saved.getId())
+                .studentId(saved.getStudentId())
+                .studentName(saved.getStudentName())
+                .rollNumber(saved.getRollNumber())
+                .className(saved.getClassName())
+                .feeType("Fee Payment")
+                .term(term != null && !term.isBlank() ? term : null)
+                .amountPaid(amountPaid)
+                .paymentDate(paymentDate)
+                .paymentMode("CASH")
+                .receiptNumber(receiptNumber)
+                .receivedBy(str(body, "receivedBy", null))
+                .remarks(str(body, "remarks", null))
+                .build());
+
+        return ApiResponse.success("Payment recorded", saved);
+    }
+
+    public ApiResponse<List<FeePayment>> getAllFeePayments() {
+        return ApiResponse.success(
+                feePaymentRepository.findAll(
+                        org.springframework.data.domain.Sort.by(
+                                org.springframework.data.domain.Sort.Direction.DESC, "createdAt")));
+    }
+
+    // ── Expenses ───────────────────────────────────────────────────────────
+
+    public ApiResponse<List<Expense>> getExpenses(
+            String status, String dateFrom, String dateTo, String search) {
+
+        // Pass raw strings to the native-query repository — null means "no filter"
+        String statusParam   = (status   != null && !status.isBlank())   ? status.toUpperCase()  : null;
+        String dateFromParam = (dateFrom != null && !dateFrom.isBlank()) ? dateFrom              : null;
+        String dateToParam   = (dateTo   != null && !dateTo.isBlank())   ? dateTo                : null;
+        String searchParam   = (search   != null && !search.isBlank())   ? search.trim()         : null;
+
+        return ApiResponse.success(
+                expenseRepository.findFiltered(statusParam, dateFromParam, dateToParam, searchParam));
+    }
+
+    public ApiResponse<Expense> createExpense(Map<String, Object> body) {
+        try {
+            String title = str(body, "title", "");
+            if (title.isBlank()) return ApiResponse.error("Title is required");
+
+            String amtRaw = body.get("amount") != null ? body.get("amount").toString() : "";
+            if (amtRaw.isBlank()) return ApiResponse.error("Amount is required");
+
+            BigDecimal amount;
+            try { amount = new BigDecimal(amtRaw); }
+            catch (Exception e) { return ApiResponse.error("Invalid amount"); }
+            if (amount.compareTo(BigDecimal.ZERO) <= 0) return ApiResponse.error("Amount must be greater than 0");
+
+            if (body.get("date") == null || body.get("date").toString().isBlank())
+                return ApiResponse.error("Date is required");
+
+            LocalDate date;
+            try { date = LocalDate.parse(body.get("date").toString()); }
+            catch (Exception e) { return ApiResponse.error("Invalid date format"); }
+
+            Expense.PaymentStatus status = Expense.PaymentStatus.UNPAID;
+            try { status = Expense.PaymentStatus.valueOf(str(body, "status", "UNPAID").toUpperCase()); }
+            catch (Exception ignored) {}
+
+            Expense expense = Expense.builder()
+                    .title(title)
+                    .amount(amount)
+                    .date(date)
+                    .paymentMode(str(body, "paymentMode", null))
+                    .status(status)
+                    .description(str(body, "description", null))
+                    .addedBy(str(body, "addedBy", "Admin"))
+                    .addedById(body.get("addedById") != null ? Long.parseLong(body.get("addedById").toString()) : null)
+                    .build();
+
+            return ApiResponse.success("Expense recorded", expenseRepository.save(expense));
+        } catch (Exception e) {
+            return ApiResponse.error("Failed to create expense: " + e.getMessage());
+        }
     }
 
     public ApiResponse<Expense> updateExpense(Long id, Map<String, Object> body) {
         return expenseRepository.findById(id)
                 .map(expense -> {
-                    if (body.containsKey("category"))    expense.setCategory(str(body, "category", expense.getCategory()));
+                    if (body.containsKey("title"))       expense.setTitle(str(body, "title", expense.getTitle()));
                     if (body.containsKey("description")) expense.setDescription(str(body, "description", expense.getDescription()));
+                    if (body.containsKey("paymentMode")) expense.setPaymentMode(str(body, "paymentMode", expense.getPaymentMode()));
+                    if (body.containsKey("status") && body.get("status") != null) {
+                        try { expense.setStatus(Expense.PaymentStatus.valueOf(body.get("status").toString().toUpperCase())); }
+                        catch (Exception ignored) {}
+                    }
                     if (body.containsKey("amount") && body.get("amount") != null) {
-                        try { expense.setAmount(new java.math.BigDecimal(body.get("amount").toString())); }
+                        try { expense.setAmount(new BigDecimal(body.get("amount").toString())); }
+                        catch (Exception ignored) {}
+                    }
+                    if (body.containsKey("date") && body.get("date") != null) {
+                        try { expense.setDate(LocalDate.parse(body.get("date").toString())); }
                         catch (Exception ignored) {}
                     }
                     return ApiResponse.success("Expense updated", expenseRepository.save(expense));
@@ -1127,6 +1326,23 @@ public class AdminService {
         if (!expenseRepository.existsById(id)) return ApiResponse.error("Expense not found");
         expenseRepository.deleteById(id);
         return ApiResponse.success("Expense deleted", "Deleted");
+    }
+
+    public ApiResponse<Map<String, Object>> getExpenseSummary() {
+        LocalDate now = LocalDate.now();
+        int month = now.getMonthValue(), year = now.getYear();
+
+        BigDecimal total  = expenseRepository.sumByMonth(month, year);
+        BigDecimal paid   = expenseRepository.sumPaidByMonth(month, year);
+        BigDecimal unpaid = expenseRepository.sumUnpaidByMonth(month, year);
+
+        Map<String, Object> summary = new HashMap<>();
+        summary.put("totalMonthly", total  != null ? total  : BigDecimal.ZERO);
+        summary.put("totalPaid",    paid   != null ? paid   : BigDecimal.ZERO);
+        summary.put("totalUnpaid",  unpaid != null ? unpaid : BigDecimal.ZERO);
+        summary.put("currentMonth", now.getMonth().getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.ENGLISH));
+        summary.put("currentYear",  year);
+        return ApiResponse.success(summary);
     }
 
     // ── Parents ────────────────────────────────────────────────────────────

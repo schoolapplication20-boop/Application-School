@@ -11,6 +11,7 @@ import java.util.List;
 @Repository
 public interface FeePaymentRepository extends JpaRepository<FeePayment, Long> {
     List<FeePayment> findByStudentIdOrderByPaymentDateDescCreatedAtDesc(Long studentId);
+    List<FeePayment> findByAssignmentIdOrderByPaymentDateDescCreatedAtDesc(Long assignmentId);
     boolean existsByReceiptNumber(String receiptNumber);
 
     @Modifying @Transactional

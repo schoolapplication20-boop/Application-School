@@ -24,17 +24,27 @@ public class Expense {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 50)
-    private String category;
+    /** Free-text title — user types anything e.g. "Salaries March 2026" */
+    @Column(nullable = false, length = 255)
+    private String title;
 
-    @Column(nullable = false, precision = 10, scale = 2)
+    @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal amount;
-
-    @Column(columnDefinition = "TEXT")
-    private String description;
 
     @Column(nullable = false)
     private LocalDate date;
+
+    /** Cash / UPI / Bank Transfer */
+    @Column(name = "payment_mode", length = 30)
+    private String paymentMode;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    @Builder.Default
+    private PaymentStatus status = PaymentStatus.UNPAID;
+
+    @Column(columnDefinition = "TEXT")
+    private String description;
 
     @Column(name = "added_by", length = 100)
     private String addedBy;
@@ -49,4 +59,8 @@ public class Expense {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    public enum PaymentStatus {
+        PAID, UNPAID
+    }
 }

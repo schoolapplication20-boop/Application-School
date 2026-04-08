@@ -23,8 +23,12 @@ public class FeePayment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "fee_id", nullable = false)
+    @Column(name = "fee_id")
     private Long feeId;
+
+    /** References StudentFeeAssignment.id when payment is made via the new system */
+    @Column(name = "assignment_id")
+    private Long assignmentId;
 
     @Column(name = "student_id", nullable = false)
     private Long studentId;
@@ -55,6 +59,10 @@ public class FeePayment {
 
     @Column(name = "received_by", length = 100)
     private String receivedBy;
+
+    /** Which term this payment covers, e.g. "Term 1", "Term 2", "Full Payment" */
+    @Column(name = "term", length = 30)
+    private String term;
 
     @Column(columnDefinition = "TEXT")
     private String remarks;

@@ -396,6 +396,7 @@ export default function Teachers() {
                 <th>Emp ID</th>
                 <th>Subject / Dept</th>
                 <th>Classes</th>
+                <th>Assigned Classes</th>
                 <th>Experience</th>
                 <th>Joining</th>
                 <th>Status</th>
@@ -404,7 +405,7 @@ export default function Teachers() {
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={8}>
+                <tr><td colSpan={9}>
                   <div className="empty-state">
                     <span className="material-icons" style={{ fontSize: 48, color: '#e2e8f0', display: 'block', marginBottom: 8 }}>search_off</span>
                     <h3 style={{ color: '#a0aec0' }}>No teachers found</h3>
@@ -440,19 +441,24 @@ export default function Teachers() {
                       </div>
                     </td>
                     <td>
+                      <span style={{
+                        display: 'inline-block', padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 700,
+                        background: t.teacherType === 'CLASS_TEACHER' ? '#76C44218' : t.teacherType === 'BOTH' ? '#3182ce18' : '#e2e8f0',
+                        color: t.teacherType === 'CLASS_TEACHER' ? '#276749' : t.teacherType === 'BOTH' ? '#2b6cb0' : '#718096',
+                      }}>
+                        {t.teacherType === 'CLASS_TEACHER' ? 'Class Teacher' : t.teacherType === 'BOTH' ? 'Class + Subject' : 'Subject Teacher'}
+                      </span>
+                    </td>
+                    <td>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                        <span style={{
-                          display: 'inline-block', padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 700,
-                          background: t.teacherType === 'CLASS_TEACHER' ? '#76C44218' : t.teacherType === 'BOTH' ? '#3182ce18' : '#e2e8f0',
-                          color: t.teacherType === 'CLASS_TEACHER' ? '#276749' : t.teacherType === 'BOTH' ? '#2b6cb0' : '#718096',
-                        }}>
-                          {t.teacherType === 'CLASS_TEACHER' ? 'Class Teacher' : t.teacherType === 'BOTH' ? 'Class + Subject' : 'Subject Teacher'}
-                        </span>
                         {t.primaryClassId && classList.length > 0 && (() => {
                           const cls = classList.find(c => Number(c.id) === Number(t.primaryClassId));
                           return cls ? <span style={{ fontSize: 11, color: '#4a5568', fontWeight: 600 }}>{cls.name}{cls.section ? ` - ${cls.section}` : ''}</span> : null;
                         })()}
-                        {t.classes && <span style={{ fontSize: 11, color: '#a0aec0' }}>{t.classes}</span>}
+                        {t.classes && t.classes.split(',').map(s => s.trim()).filter(Boolean).map((cls, i) => (
+                          <span key={i} style={{ fontSize: 11, color: '#4a5568', fontWeight: 600 }}>{cls}</span>
+                        ))}
+                        {!t.primaryClassId && !t.classes && <span style={{ fontSize: 11, color: '#a0aec0' }}>—</span>}
                       </div>
                     </td>
                     <td style={{ fontSize: 12, color: '#718096' }}>{t.experience || '—'}</td>
@@ -610,7 +616,6 @@ export default function Teachers() {
                     >
                       <option value="SUBJECT_TEACHER">Subject Teacher</option>
                       <option value="CLASS_TEACHER">Class Teacher</option>
-                      <option value="BOTH">Class Teacher + Subject Teacher</option>
                     </select>
                   </Field>
 

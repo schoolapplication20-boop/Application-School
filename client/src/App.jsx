@@ -40,7 +40,6 @@ import TeacherLeaveRequest from './pages/teacher/TeacherLeaveRequest';
 // Super Admin Pages
 import SuperAdminDashboard from './pages/superadmin/SuperAdminDashboard';
 import AdminManagement from './pages/superadmin/AdminManagement';
-import DiaryMonitoring from './pages/superadmin/DiaryMonitoring';
 import Timetable from './pages/admin/Timetable';
 
 // Examination & Certificates Pages
@@ -101,7 +100,6 @@ function App() {
             {/* Super Admin Routes */}
             <Route path="/superadmin/dashboard"       element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']}><SuperAdminDashboard /></ProtectedRoute>} />
             <Route path="/superadmin/admins"          element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']}><AdminManagement /></ProtectedRoute>} />
-            <Route path="/superadmin/diary"           element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']}><DiaryMonitoring /></ProtectedRoute>} />
 
             {/* Teacher Routes */}
             <Route path="/teacher/dashboard" element={<ProtectedRoute allowedRoles={['TEACHER']}><TeacherDashboard /></ProtectedRoute>} />

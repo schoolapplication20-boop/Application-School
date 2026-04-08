@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import Toast from '../../components/Toast';
-import { applicationAPI } from '../../services/api';
+import { applicationAPI, adminAPI } from '../../services/api';
 
 // Normalize API response: convert PENDING→Pending, format dateApplied from createdAt
 const normalizeApp = (app) => ({
@@ -20,7 +20,7 @@ const normalizeApp = (app) => ({
 });
 
 const emptyForm = {
-  studentName: '', dob: '', gender: 'Male', classApplied: 'Class 6',
+  studentName: '', dob: '', gender: 'Male', classApplied: '',
   fatherName: '', fatherPhone: '',
   motherName: '', motherPhone: '',
   guardianName: '', guardianPhone: '',
@@ -84,6 +84,7 @@ const Applications = () => {
   const [formErrors, setFormErrors]     = useState({});
   const [toast, setToast]               = useState(null);
   const [saving, setSaving]             = useState(false);
+  const [classList, setClassList]       = useState([]);
 
   const idProofRef   = useRef(null);
   const tcRef        = useRef(null);
@@ -108,6 +109,13 @@ const Applications = () => {
   }, []);
 
   useEffect(() => { loadApplications(); }, [loadApplications]);
+
+  useEffect(() => {
+    adminAPI.getClasses().then(res => {
+      const data = res.data?.data ?? res.data ?? [];
+      setClassList(Array.isArray(data) ? data : []);
+    }).catch(() => setClassList([]));
+  }, []);
 
   const filtered = applications.filter(a => {
     const matchTab = activeTab === 'All' || a.status === activeTab;
@@ -387,7 +395,10 @@ const Applications = () => {
                   <div>
                     <label style={{ fontSize: '13px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '4px' }}>Class Applied</label>
                     <select style={iStyle()} value={formData.classApplied} onChange={e => setFormData({ ...formData, classApplied: e.target.value })}>
-                      {['Nursery','LKG','UKG','Class 1','Class 2','Class 3','Class 4','Class 5','Class 6','Class 7','Class 8','Class 9','Class 10','Class 11','Class 12'].map(c => <option key={c}>{c}</option>)}
+                      <option value="">Select a class</option>
+                      {[...new Set(classList.map(c => c.name))].map(name => (
+                        <option key={name} value={name}>{name}</option>
+                      ))}
                     </select>
                   </div>
 

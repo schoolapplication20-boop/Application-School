@@ -112,7 +112,7 @@ export const adminAPI = {
   updateClass: (id, data) => api.put(`/api/admin/classes/${id}`, data),
   deleteClass: (id) => api.delete(`/api/admin/classes/${id}`),
 
-  // Fees
+  // Fees (legacy)
   getFees: (params) => api.get('/api/admin/fees', { params }),
   getFeesByStudent: (studentId) => api.get(`/api/admin/fees/student/${studentId}`),
   collectFee: (id, data) => api.post(`/api/admin/fees/${id}/collect`, data),
@@ -120,11 +120,26 @@ export const adminAPI = {
   updateFee: (id, data) => api.put(`/api/admin/fees/${id}`, data),
   deleteFee: (id) => api.delete(`/api/admin/fees/${id}`),
 
+  // Class Fee Structure
+  getClassFeeStructures: () => api.get('/api/admin/class-fees'),
+  saveClassFeeStructure: (data) => api.post('/api/admin/class-fees', data),
+  deleteClassFeeStructure: (id) => api.delete(`/api/admin/class-fees/${id}`),
+
+  // Student Fee Assignments
+  getAllStudentFeeAssignments: () => api.get('/api/admin/student-fee-assignments'),
+  getStudentFeeAssignment: (studentId) => api.get(`/api/admin/student-fee-assignments/student/${studentId}`),
+  assignStudentFee: (data) => api.post('/api/admin/student-fee-assignments', data),
+  getAssignmentPayments: (assignmentId) => api.get(`/api/admin/student-fee-assignments/${assignmentId}/payments`),
+  collectAssignmentFee: (assignmentId, data) => api.post(`/api/admin/student-fee-assignments/${assignmentId}/collect`, data),
+  getAllFeePayments: () => api.get('/api/admin/fee-payments'),
+
   // Student search for fee collection
   searchStudentsForFee: (q) => api.get('/api/admin/students/search', { params: { q } }),
 
   // Expenses
   getExpenses: (params) => api.get('/api/admin/expenses', { params }),
+  getExpense: (id) => api.get(`/api/admin/expenses/${id}`),
+  getExpenseSummary: () => api.get('/api/admin/expenses/summary'),
   createExpense: (data) => api.post('/api/admin/expenses', data),
   updateExpense: (id, data) => api.put(`/api/admin/expenses/${id}`, data),
   deleteExpense: (id) => api.delete(`/api/admin/expenses/${id}`),
@@ -327,11 +342,17 @@ export const applicationAPI = {
 // ============================================
 
 export const salaryAPI = {
-  getAll:     (params)     => api.get('/api/salary', { params }),
-  create:     (data)       => api.post('/api/salary', data),
-  update:     (id, data)   => api.put(`/api/salary/${id}`, data),
-  pay:        (id, data)   => api.patch(`/api/salary/${id}/pay`, data),
-  delete:     (id)         => api.delete(`/api/salary/${id}`),
+  getAll:          (params)    => api.get('/api/salary', { params }),
+  create:          (data)      => api.post('/api/salary', data),
+  update:          (id, data)  => api.put(`/api/salary/${id}`, data),
+  delete:          (id)        => api.delete(`/api/salary/${id}`),
+  updateLeaves:    (id, data)  => api.patch(`/api/salary/${id}/leaves`, data),
+  collectPayment:  (id, data)  => api.post(`/api/salary/${id}/collect`, data),
+  getPayments:     (id)        => api.get(`/api/salary/${id}/payments`),
+  getAllPayments:   ()          => api.get('/api/salary/payments'),
+  getHolidays:     ()          => api.get('/api/salary/holidays'),
+  addHoliday:      (data)      => api.post('/api/salary/holidays', data),
+  deleteHoliday:   (id)        => api.delete(`/api/salary/holidays/${id}`),
 };
 
 // ============================================

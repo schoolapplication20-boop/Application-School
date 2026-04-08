@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Layout from '../../components/Layout';
 import Toast from '../../components/Toast';
 import { adminAPI } from '../../services/api';
@@ -6,14 +6,8 @@ import { useAuth } from '../../context/AuthContext';
 
 /* ── helpers ── */
 const todayStr = () => new Date().toISOString().split('T')[0];
-
-const genReceiptNo = () => {
-  const ts  = Date.now().toString().slice(-7);
-  const rnd = Math.random().toString(36).slice(2, 5).toUpperCase();
-  return `RCP-${ts}-${rnd}`;
-};
-
-const fmt = (n) => Number(n || 0).toLocaleString('en-IN');
+const fmt = (n) => Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const genReceipt = () => `RCP-${Date.now().toString().slice(-7)}-${Math.random().toString(36).slice(2,5).toUpperCase()}`;
 
 const StatusBadge = ({ status }) => {
   const map = {
@@ -23,593 +17,439 @@ const StatusBadge = ({ status }) => {
     OVERDUE: { bg: '#fff5f5', color: '#9b2c2c', label: 'Overdue' },
   };
   const s = map[status] || map.PENDING;
-  return (
-    <span style={{ padding: '3px 10px', background: s.bg, color: s.color, borderRadius: '20px', fontSize: '11px', fontWeight: 700 }}>
-      {s.label}
-    </span>
-  );
+  return <span style={{ padding: '3px 10px', background: s.bg, color: s.color, borderRadius: 20, fontSize: 11, fontWeight: 700 }}>{s.label}</span>;
 };
 
 /* ══════════════════════════════════════════════════════════════════ */
-const CollectFee = () => {
+export default function CollectFee() {
   const { user } = useAuth();
 
   /* search */
-  const [query, setQuery]           = useState('');
-  const [suggestions, setSuggestions] = useState([]);
-  const [showDrop, setShowDrop]     = useState(false);
-  const [searching, setSearching]   = useState(false);
-  const [student, setStudent]       = useState(null);
+  const [query, setQuery]               = useState('');
+  const [suggestions, setSuggestions]   = useState([]);
+  const [showDrop, setShowDrop]         = useState(false);
+  const [searching, setSearching]       = useState(false);
+  const [student, setStudent]           = useState(null);
 
-  /* fee list */
-  const [fees, setFees]             = useState([]);
-  const [feesLoading, setFeesLoading] = useState(false);
-  const [selectedFee, setSelectedFee] = useState(null);
+  /* assignment data */
+  const [assignment, setAssignment]     = useState(null);  // StudentFeeAssignment
+  const [payments, setPayments]         = useState([]);    // FeePayment[]
+  const [loadingFee, setLoadingFee]     = useState(false);
 
   /* payment form */
-  const [amountPaid, setAmountPaid] = useState('');
-  const [payDate, setPayDate]       = useState(todayStr());
-  const [receiptNo, setReceiptNo]   = useState(genReceiptNo());
-  const [remarks, setRemarks]       = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const [amount, setAmount]             = useState('');
+  const [payDate, setPayDate]           = useState(todayStr());
+  const [receiptNo, setReceiptNo]       = useState(genReceipt());
+  const [term, setTerm]                 = useState('');
+  const [remarks, setRemarks]           = useState('');
+  const [paying, setPaying]             = useState(false);
 
-  /* success */
-  const [lastPayment, setLastPayment] = useState(null);
-  const [showHistory, setShowHistory] = useState(false);
+  /* receipt modal */
+  const [receiptData, setReceiptData]   = useState(null);
 
-  /* toast */
-  const [toast, setToast] = useState(null);
-  const showToast = (message, type = 'success') => setToast({ message, type });
+  const [toast, setToast]               = useState(null);
+  const searchRef                       = useRef(null);
+  const printRef                        = useRef(null);
 
-  const searchTimerRef = useRef(null);
-  const receivedByVal  = user?.name || 'Admin';
+  const showToast = (msg, type = 'success') => setToast({ message: msg, type });
 
-  /* ── live search ── */
-  const doSearch = useCallback(async (q) => {
-    if (!q.trim()) { setSuggestions([]); setShowDrop(false); return; }
-    setSearching(true);
-    try {
-      const res  = await adminAPI.searchStudentsForFee(q.trim());
-      const list = res.data?.data ?? res.data ?? [];
-      setSuggestions(Array.isArray(list) ? list.slice(0, 10) : []);
-      setShowDrop(true);
-    } catch {
-      setSuggestions([]);
-    } finally {
-      setSearching(false);
-    }
-  }, []);
+  /* ── student search ── */
+  useEffect(() => {
+    if (!query || query.length < 2) { setSuggestions([]); setShowDrop(false); return; }
+    const t = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const res = await adminAPI.searchStudentsForFee(query);
+        setSuggestions(res.data?.data ?? []);
+        setShowDrop(true);
+      } catch { } finally { setSearching(false); }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [query]);
 
-  const handleQueryChange = (e) => {
-    const val = e.target.value;
-    setQuery(val);
-    setStudent(null);
-    setSelectedFee(null);
-    setLastPayment(null);
-    clearTimeout(searchTimerRef.current);
-    searchTimerRef.current = setTimeout(() => doSearch(val), 300);
-  };
-
-  /* ── select student ── */
-  const selectStudent = async (s) => {
+  /* ── load assignment when student selected ── */
+  const selectStudent = useCallback(async (s) => {
     setStudent(s);
     setQuery(s.name);
     setShowDrop(false);
-    setSuggestions([]);
-    setSelectedFee(null);
-    setLastPayment(null);
-    setFeesLoading(true);
-    try {
-      const res = await adminAPI.getFeesByStudent(s.id);
-      setFees(res.data?.data ?? res.data ?? []);
-    } catch {
-      showToast('Failed to load fee records.', 'error');
-      setFees([]);
-    } finally {
-      setFeesLoading(false);
-    }
-  };
-
-  /* ── select fee ── */
-  const handleSelectFee = (fee) => {
-    if (fee.status === 'PAID') return;
-    setSelectedFee(fee);
-    setLastPayment(null);
-    const pending = Number(fee.amount || 0) - Number(fee.paidAmount || 0);
-    setAmountPaid(pending > 0 ? String(pending) : '');
-    setPayDate(todayStr());
-    setReceiptNo(genReceiptNo());
+    setAssignment(null);
+    setPayments([]);
+    setAmount('');
+    setReceiptNo(genReceipt());
+    setTerm('');
     setRemarks('');
-  };
-
-  /* ── submit ── */
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!selectedFee) return;
-    const amt = parseFloat(amountPaid);
-    if (!amt || amt <= 0) { showToast('Amount must be greater than 0.', 'error'); return; }
-    const pending = Number(selectedFee.amount || 0) - Number(selectedFee.paidAmount || 0);
-    if (amt > pending + 0.001) {
-      showToast(`Amount ₹${fmt(amt)} exceeds pending balance ₹${fmt(pending)}.`, 'error');
-      return;
-    }
-    setSubmitting(true);
+    setLoadingFee(true);
     try {
-      const rno = receiptNo;
-      const res = await adminAPI.collectFee(selectedFee.id, {
-        amountPaid:    amt,
-        paidDate:      payDate,
-        receiptNumber: rno,
-        receivedBy:    receivedByVal,
-        remarks:       remarks || null,
-      });
-      const updated = res.data?.data ?? res.data;
-      setLastPayment({ ...updated, justPaid: amt, receiptNo: rno });
-      showToast(`₹${fmt(amt)} collected. Receipt: ${rno}`);
-
-      /* refresh fees */
-      const feeRes  = await adminAPI.getFeesByStudent(student.id);
-      const newFees = feeRes.data?.data ?? feeRes.data ?? [];
-      setFees(newFees);
-      setSelectedFee(newFees.find(f => f.id === selectedFee.id) || null);
-    } catch (err) {
-      showToast(err.response?.data?.message || 'Payment failed. Please try again.', 'error');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  /* close dropdown on outside click */
-  useEffect(() => {
-    const h = (e) => { if (!e.target.closest('.cf-search-wrap')) setShowDrop(false); };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
+      const [aRes, pRes] = await Promise.all([
+        adminAPI.getStudentFeeAssignment(s.id),
+        adminAPI.getStudentFeeAssignment(s.id).then(r => {
+          const assignId = r.data?.data?.id;
+          return assignId ? adminAPI.getAssignmentPayments(assignId) : { data: { data: [] } };
+        }),
+      ]);
+      const a = aRes.data?.data;
+      setAssignment(a || null);
+      setPayments(pRes.data?.data ?? []);
+      if (a) {
+        const due = Number(a.totalFee || 0) - Number(a.paidAmount || 0);
+        setAmount(due > 0 ? String(due) : '');
+      }
+    } catch { setAssignment(null); } finally { setLoadingFee(false); }
   }, []);
 
-  const pendingAmt = selectedFee
-    ? Math.max(0, Number(selectedFee.amount || 0) - Number(selectedFee.paidAmount || 0))
+  /* ── collect payment ── */
+  const handleCollect = async () => {
+    if (!assignment) { showToast('No fee assignment found for this student', 'error'); return; }
+    const amt = Number(amount);
+    const due = Number(assignment.totalFee || 0) - Number(assignment.paidAmount || 0);
+    if (!amt || amt <= 0) { showToast('Enter a valid amount', 'error'); return; }
+    if (amt > due) { showToast(`Amount exceeds due balance ₹${fmt(due)}`, 'error'); return; }
+
+    setPaying(true);
+    try {
+      const res = await adminAPI.collectAssignmentFee(assignment.id, {
+        amountPaid:    amt,
+        paidDate:      payDate,
+        receiptNumber: receiptNo,
+        receivedBy:    user?.name || user?.email || 'Admin',
+        term:          term || null,
+        remarks,
+      });
+      const updated = res.data?.data;
+      const newPaid = Number(updated?.paidAmount || 0);
+      const newDue  = Number(updated?.totalFee || 0) - newPaid;
+
+      setReceiptData({
+        receiptNo,
+        date:        payDate,
+        studentName: student.name,
+        rollNo:      student.rollNumber,
+        className:   student.className,
+        totalFee:    updated?.totalFee,
+        amountPaid:  amt,
+        paidSoFar:   newPaid,
+        dueAmount:   newDue,
+        status:      updated?.status,
+        receivedBy:  user?.name || user?.email || 'Admin',
+        term:        term || null,
+        remarks,
+      });
+
+      setAssignment(updated);
+      // reload payments
+      const pRes = await adminAPI.getAssignmentPayments(assignment.id);
+      setPayments(pRes.data?.data ?? []);
+      setAmount('');
+      setReceiptNo(genReceipt());
+      setTerm('');
+      setRemarks('');
+      showToast('Payment recorded successfully');
+    } catch (err) {
+      showToast(err?.response?.data?.message || 'Payment failed', 'error');
+    } finally { setPaying(false); }
+  };
+
+  /* ── print receipt ── */
+  const printReceipt = () => {
+    if (!receiptData) return;
+    const w = window.open('', '_blank');
+    const d = receiptData;
+    w.document.write(`
+      <!DOCTYPE html><html><head><title>Fee Receipt</title>
+      <style>
+        * { margin:0;padding:0;box-sizing:border-box; }
+        body { font-family: 'Arial', sans-serif; padding: 30px; color: #1a202c; }
+        .logo { text-align:center; margin-bottom:8px; }
+        .school-name { font-size:22px; font-weight:800; color:#276749; text-align:center; }
+        .receipt-title { font-size:15px; font-weight:600; text-align:center; color:#718096; margin:4px 0 20px; }
+        .divider { border:none; border-top:2px solid #e2e8f0; margin:14px 0; }
+        .dashed { border-top:1px dashed #a0aec0; margin:14px 0; }
+        .row { display:flex; justify-content:space-between; margin-bottom:8px; font-size:14px; }
+        .label { color:#718096; }
+        .value { font-weight:600; color:#1a202c; }
+        .amount-box { background:#f0fff4; border:2px solid #76C442; border-radius:8px; padding:14px 20px; margin:16px 0; text-align:center; }
+        .amount-label { font-size:12px; color:#276749; text-transform:uppercase; letter-spacing:0.05em; }
+        .amount-value { font-size:30px; font-weight:800; color:#276749; }
+        .watermark { font-size:50px; font-weight:900; color:#76C44220; text-align:center; margin:10px 0; letter-spacing:8px; text-transform:uppercase; }
+        .footer { margin-top:30px; display:flex; justify-content:space-between; font-size:12px; color:#718096; }
+        .sig-line { border-top:1px solid #2d3748; padding-top:6px; width:180px; font-size:11px; color:#718096; }
+        @media print { body { padding: 20px; } }
+      </style>
+      </head><body>
+      <div class="school-name">SCHOOL MANAGEMENT SYSTEM</div>
+      <div class="receipt-title">Fee Payment Receipt</div>
+      <hr class="divider"/>
+      <div class="row"><span class="label">Receipt No.</span><span class="value" style="font-family:monospace">${d.receiptNo}</span></div>
+      <div class="row"><span class="label">Date</span><span class="value">${d.date}</span></div>
+      <hr class="dashed"/>
+      <div class="row"><span class="label">Student Name</span><span class="value">${d.studentName}</span></div>
+      <div class="row"><span class="label">Roll Number</span><span class="value">${d.rollNo || '—'}</span></div>
+      <div class="row"><span class="label">Class</span><span class="value">${d.className}</span></div>
+      <hr class="dashed"/>
+      <div class="row"><span class="label">Total Assigned Fee</span><span class="value">₹${fmt(d.totalFee)}</span></div>
+      <div class="row"><span class="label">Previously Paid</span><span class="value">₹${fmt(Number(d.paidSoFar) - Number(d.amountPaid))}</span></div>
+      <div class="watermark">${d.status === 'PAID' ? 'PAID' : ''}</div>
+      <div class="amount-box">
+        <div class="amount-label">Amount Received (Cash)</div>
+        <div class="amount-value">₹${fmt(d.amountPaid)}</div>
+      </div>
+      <div class="row"><span class="label">Total Paid to Date</span><span class="value">₹${fmt(d.paidSoFar)}</span></div>
+      <div class="row"><span class="label">Balance Due</span><span class="value" style="color:${d.dueAmount > 0 ? '#e53e3e':'#276749'}">${d.dueAmount > 0 ? '₹'+fmt(d.dueAmount) : 'NIL'}</span></div>
+      <div class="row"><span class="label">Payment Mode</span><span class="value">Cash</span></div>
+      ${d.term ? `<div class="row"><span class="label">Term</span><span class="value" style="color:#2b6cb0;font-weight:700">${d.term}</span></div>` : ''}
+      ${d.remarks ? `<div class="row"><span class="label">Remarks</span><span class="value">${d.remarks}</span></div>` : ''}
+      <div class="footer">
+        <span>Generated: ${new Date().toLocaleString('en-IN')}</span>
+        <div>
+          <div class="sig-line">Received By: ${d.receivedBy}</div>
+        </div>
+      </div>
+      </body></html>
+    `);
+    w.document.close();
+    w.focus();
+    setTimeout(() => { w.print(); }, 400);
+  };
+
+  const due = assignment ? Math.max(0, Number(assignment.totalFee || 0) - Number(assignment.paidAmount || 0)) : 0;
+  const paidPct = assignment && Number(assignment.totalFee) > 0
+    ? Math.min(100, (Number(assignment.paidAmount || 0) / Number(assignment.totalFee)) * 100)
     : 0;
 
-  /* ══════════════════ RENDER ══════════════════ */
   return (
     <Layout pageTitle="Collect Fee">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-      <div className="page-header">
-        <h1>Fee Collection</h1>
-        <p>Cash-only · Search student → select fee → collect</p>
-      </div>
-
-      {/* ── Search bar ── */}
-      <div style={{ maxWidth: student ? '100%' : '640px', margin: student ? '0' : '0 auto' }}>
-        <div className="chart-card" style={{ marginBottom: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div className="cf-search-wrap" style={{ position: 'relative', flex: 1 }}>
-              <span className="material-icons"
-                style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#a0aec0', fontSize: '20px', pointerEvents: 'none' }}>
-                search
-              </span>
-              <input
-                type="text"
-                value={query}
-                onChange={handleQueryChange}
-                onFocus={() => suggestions.length > 0 && setShowDrop(true)}
-                placeholder="Search by name, admission no., or phone…"
-                autoFocus
-                style={{ width: '100%', padding: '12px 12px 12px 44px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px', outline: 'none', fontFamily: 'Poppins, sans-serif', boxSizing: 'border-box' }}
-              />
-
-              {showDrop && (
-                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: '10px', boxShadow: '0 8px 24px rgba(0,0,0,.12)', zIndex: 200, marginTop: '4px', overflow: 'hidden' }}>
-                  {searching && (
-                    <div style={{ padding: '14px', textAlign: 'center', color: '#a0aec0', fontSize: '13px' }}>Searching…</div>
-                  )}
-                  {!searching && query.trim() && suggestions.length === 0 && (
-                    <div style={{ padding: '16px', textAlign: 'center', color: '#a0aec0', fontSize: '13px' }}>
-                      <span className="material-icons" style={{ display: 'block', fontSize: '26px', marginBottom: '4px' }}>search_off</span>
-                      No students found for "{query}"
-                    </div>
-                  )}
-                  {!searching && suggestions.map((s, i) => (
-                    <div key={s.id || i}
-                      onClick={() => selectStudent(s)}
-                      style={{ padding: '11px 16px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', borderBottom: i < suggestions.length - 1 ? '1px solid #f7fafc' : 'none' }}
-                      onMouseEnter={e => e.currentTarget.style.background = '#f0fff4'}
-                      onMouseLeave={e => e.currentTarget.style.background = '#fff'}
-                    >
-                      <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: 'linear-gradient(135deg,#76C442,#5fa832)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '12px', fontWeight: 700, flexShrink: 0 }}>
-                        {s.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 700, fontSize: '14px', color: '#2d3748' }}>{s.name}</div>
-                        <div style={{ fontSize: '12px', color: '#a0aec0' }}>
-                          Adm: {s.rollNumber} · Class {s.className}{s.section ? `-${s.section}` : ''}
-                          {s.parentMobile && <> · {s.parentMobile}</>}
-                        </div>
-                      </div>
-                      <span className="material-icons" style={{ color: '#76C442', fontSize: '18px' }}>chevron_right</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {student && (
-              <button
-                onClick={() => { setStudent(null); setQuery(''); setSelectedFee(null); setLastPayment(null); setFees([]); }}
-                style={{ padding: '11px 16px', border: '1.5px solid #e2e8f0', borderRadius: '10px', background: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
-                <span className="material-icons" style={{ fontSize: '16px' }}>close</span> Clear
-              </button>
-            )}
-          </div>
+      <div style={{ padding: '20px 24px' }}>
+        {/* Header */}
+        <div style={{ marginBottom: 24 }}>
+          <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#1a202c' }}>Collect Fee</h2>
+          <p style={{ margin: 0, fontSize: 13, color: '#a0aec0' }}>Search a student, review their fee, and collect cash payment</p>
         </div>
 
-        {/* ── Main grid (shown after student selected) ── */}
-        {student && (
-          <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: '24px', alignItems: 'start' }}>
+        {/* Search Bar */}
+        <div style={{ position: 'relative', maxWidth: 560, marginBottom: 28 }}>
+          <span className="material-icons" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#a0aec0', fontSize: 20 }}>search</span>
+          <input
+            ref={searchRef}
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder="Search student by name, roll number, or phone..."
+            style={{ width: '100%', padding: '12px 14px 12px 40px', border: '2px solid #e2e8f0', borderRadius: 10, fontSize: 14, outline: 'none', boxSizing: 'border-box', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
+            onFocus={() => suggestions.length > 0 && setShowDrop(true)}
+            onBlur={() => setTimeout(() => setShowDrop(false), 180)}
+          />
+          {searching && <span style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', color: '#a0aec0', fontSize: 12 }}>Searching...</span>}
+          {showDrop && suggestions.length > 0 && (
+            <div style={{ position: 'absolute', left: 0, right: 0, top: '100%', marginTop: 4, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.14)', zIndex: 100, maxHeight: 240, overflowY: 'auto' }}>
+              {suggestions.map(s => (
+                <div key={s.id} onMouseDown={() => selectStudent(s)}
+                     style={{ padding: '11px 16px', cursor: 'pointer', borderBottom: '1px solid #f0f4f8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                     onMouseEnter={e => e.currentTarget.style.background = '#f7fafc'}
+                     onMouseLeave={e => e.currentTarget.style.background = '#fff'}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: '#2d3748' }}>{s.name}</div>
+                    <div style={{ fontSize: 12, color: '#a0aec0' }}>{s.className} · Roll: {s.rollNumber}</div>
+                  </div>
+                  <span className="material-icons" style={{ color: '#76C442', fontSize: 18 }}>chevron_right</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
-            {/* ══ LEFT: student info + fee list ══ */}
-            <div>
-              {/* Student info */}
-              <div className="chart-card" style={{ marginBottom: '18px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                  <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg,#76C442,#5fa832)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '16px', fontWeight: 700, flexShrink: 0 }}>
-                    {student.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+        {/* Main content */}
+        {!student ? (
+          <div style={{ textAlign: 'center', padding: '60px 20px', color: '#a0aec0' }}>
+            <span className="material-icons" style={{ fontSize: 56, display: 'block', marginBottom: 12, color: '#e2e8f0' }}>point_of_sale</span>
+            <p style={{ fontSize: 15, fontWeight: 600 }}>Search for a student to begin fee collection</p>
+          </div>
+        ) : loadingFee ? (
+          <div style={{ textAlign: 'center', padding: 40, color: '#a0aec0' }}>Loading fee details...</div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: 20, alignItems: 'start' }}>
+
+            {/* Left: Student & Fee Info */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+              {/* Student card */}
+              <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 20 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
+                  <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'linear-gradient(135deg, #76C442, #5fa832)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 18, fontWeight: 800 }}>
+                    {(student.name || '?')[0].toUpperCase()}
                   </div>
                   <div>
-                    <div style={{ fontSize: '15px', fontWeight: 700, color: '#2d3748' }}>{student.name}</div>
-                    <div style={{ fontSize: '12px', color: '#718096' }}>
-                      Adm: {student.rollNumber} · Class {student.className}{student.section ? `-${student.section}` : ''}
-                    </div>
+                    <div style={{ fontWeight: 800, fontSize: 15, color: '#1a202c' }}>{student.name}</div>
+                    <div style={{ fontSize: 12, color: '#a0aec0' }}>{student.className} · Roll: {student.rollNumber}</div>
                   </div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '7px' }}>
-                  {[
-                    ['Name',     student.name],
-                    ['Adm. No.', student.rollNumber],
-                    ['Class',    student.className],
-                    ['Section',  student.section || '—'],
-                    ['Parent',   student.parentName || '—'],
-                    ['Phone',    student.parentMobile || '—'],
-                  ].map(([k, v]) => (
-                    <div key={k} style={{ padding: '7px 9px', background: '#f7fafc', borderRadius: '8px' }}>
-                      <div style={{ fontSize: '10px', color: '#a0aec0', textTransform: 'uppercase', marginBottom: '2px' }}>{k}</div>
-                      <div style={{ fontSize: '12px', fontWeight: 600, color: '#2d3748' }}>{v}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
 
-              {/* Fee records list */}
-              <div className="chart-card">
-                <div style={{ fontWeight: 700, fontSize: '14px', color: '#2d3748', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span className="material-icons" style={{ color: '#76C442', fontSize: '18px' }}>receipt_long</span>
-                  Fee Records
-                  {fees.length > 0 && (
-                    <span style={{ marginLeft: 'auto', background: '#76C44220', color: '#276749', padding: '2px 9px', borderRadius: '20px', fontSize: '11px', fontWeight: 700 }}>
-                      {fees.length}
-                    </span>
-                  )}
-                </div>
-
-                {feesLoading && (
-                  <div style={{ textAlign: 'center', padding: '24px', color: '#a0aec0', fontSize: '13px' }}>Loading…</div>
-                )}
-                {!feesLoading && fees.length === 0 && (
-                  <div style={{ textAlign: 'center', padding: '24px', color: '#a0aec0', fontSize: '13px' }}>
-                    <span className="material-icons" style={{ display: 'block', fontSize: '28px', marginBottom: '6px' }}>inbox</span>
-                    No fee records found
+                {!assignment ? (
+                  <div style={{ textAlign: 'center', padding: '20px 0', color: '#a0aec0' }}>
+                    <span className="material-icons" style={{ fontSize: 32, display: 'block', marginBottom: 6 }}>info</span>
+                    <p style={{ fontSize: 13 }}>No fee assigned to this student yet.</p>
+                    <p style={{ fontSize: 12 }}>Go to <strong>Fees &amp; Payments</strong> → <strong>Student Fees</strong> → <strong>Assign Fee</strong>.</p>
                   </div>
-                )}
+                ) : (
+                  <>
+                    {/* Fee summary */}
+                    <div style={{ borderTop: '1px solid #f0f4f8', paddingTop: 14 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                        <span style={{ fontSize: 13, color: '#718096' }}>Total Fee</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: '#2d3748' }}>₹{fmt(assignment.totalFee)}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                        <span style={{ fontSize: 13, color: '#718096' }}>Paid</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: '#276749' }}>₹{fmt(assignment.paidAmount)}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 14 }}>
+                        <span style={{ fontSize: 13, color: '#718096' }}>Due</span>
+                        <span style={{ fontSize: 14, fontWeight: 800, color: due > 0 ? '#e53e3e' : '#276749' }}>₹{fmt(due)}</span>
+                      </div>
 
-                {!feesLoading && fees.map(fee => {
-                  const total   = Number(fee.amount || 0);
-                  const paid    = Number(fee.paidAmount || 0);
-                  const pending = total - paid;
-                  const isSel   = selectedFee?.id === fee.id;
-                  return (
-                    <div key={fee.id}
-                      onClick={() => handleSelectFee(fee)}
-                      style={{
-                        padding: '11px', marginBottom: '8px', borderRadius: '10px',
-                        border: `1.5px solid ${isSel ? '#76C442' : '#e2e8f0'}`,
-                        background: isSel ? '#f0fff4' : '#fafafa',
-                        cursor: fee.status !== 'PAID' ? 'pointer' : 'default',
-                        transition: 'border-color 0.15s, background 0.15s',
-                        opacity: fee.status === 'PAID' ? 0.75 : 1,
-                      }}
-                      onMouseEnter={e => { if (fee.status !== 'PAID' && !isSel) e.currentTarget.style.borderColor = '#76C44270'; }}
-                      onMouseLeave={e => { if (!isSel) e.currentTarget.style.borderColor = '#e2e8f0'; }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                        <span style={{ fontWeight: 600, fontSize: '13px', color: '#2d3748' }}>{fee.feeType || 'Fee'}</span>
-                        <StatusBadge status={fee.status} />
+                      {/* Progress bar */}
+                      <div style={{ background: '#f0f4f8', borderRadius: 6, height: 8, overflow: 'hidden', marginBottom: 8 }}>
+                        <div style={{ width: `${paidPct}%`, height: '100%', background: paidPct >= 100 ? '#76C442' : '#f6ad55', borderRadius: 6, transition: 'width 0.4s' }} />
                       </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '5px' }}>
-                        {[['Total', total], ['Paid', paid], ['Pending', pending]].map(([k, v]) => (
-                          <div key={k} style={{ textAlign: 'center', padding: '5px', background: '#fff', borderRadius: '6px' }}>
-                            <div style={{ fontSize: '12px', fontWeight: 700, color: '#2d3748' }}>₹{fmt(v)}</div>
-                            <div style={{ fontSize: '10px', color: '#a0aec0' }}>{k}</div>
-                          </div>
-                        ))}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#a0aec0' }}>
+                        <span>{paidPct.toFixed(0)}% paid</span>
+                        <StatusBadge status={assignment.status} />
                       </div>
-                      {fee.dueDate && (
-                        <div style={{ fontSize: '11px', color: '#a0aec0', marginTop: '6px' }}>Due: {fee.dueDate}</div>
-                      )}
-                      {isSel && fee.status !== 'PAID' && (
-                        <div style={{ fontSize: '11px', color: '#76C442', fontWeight: 600, marginTop: '6px', textAlign: 'center' }}>
-                          ✓ Selected · fill payment form →
+                    </div>
+
+                    {/* Payment form */}
+                    {due > 0 && (
+                      <div style={{ borderTop: '1px solid #f0f4f8', paddingTop: 16, marginTop: 8 }}>
+                        <h4 style={{ margin: '0 0 14px', fontSize: 13, fontWeight: 700, color: '#2d3748' }}>Collect Cash Payment</h4>
+
+                        <div style={{ marginBottom: 12 }}>
+                          <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Amount (₹) *</label>
+                          <input
+                            type="number" min="1" max={due} value={amount}
+                            onChange={e => setAmount(e.target.value)}
+                            placeholder={`Max ₹${fmt(due)}`}
+                            style={{ width: '100%', padding: '9px 12px', border: '2px solid #76C442', borderRadius: 8, fontSize: 15, fontWeight: 700, outline: 'none', boxSizing: 'border-box' }}
+                          />
                         </div>
-                      )}
-                    </div>
-                  );
-                })}
+                        <div style={{ marginBottom: 12 }}>
+                          <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Payment Date *</label>
+                          <input type="date" value={payDate} max={todayStr()} onChange={e => setPayDate(e.target.value)}
+                            style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
+                        </div>
+                        <div style={{ marginBottom: 12 }}>
+                          <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Term</label>
+                          <select value={term} onChange={e => setTerm(e.target.value)}
+                            style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box', background: '#fff' }}>
+                            <option value="">— Select Term (optional) —</option>
+                            <option value="Term 1">Term 1</option>
+                            <option value="Term 2">Term 2</option>
+                            <option value="Term 3">Term 3</option>
+                            <option value="Full Payment">Full Payment</option>
+                            <option value="Advance">Advance</option>
+                          </select>
+                        </div>
+                        <div style={{ marginBottom: 12 }}>
+                          <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Receipt No.</label>
+                          <input value={receiptNo} readOnly
+                            style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 12, fontFamily: 'monospace', background: '#f7fafc', boxSizing: 'border-box' }} />
+                        </div>
+                        <div style={{ marginBottom: 16 }}>
+                          <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Remarks</label>
+                          <input value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="Optional"
+                            style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
+                        </div>
+
+                        <button onClick={handleCollect} disabled={paying}
+                          style={{ width: '100%', padding: '12px', background: '#76C442', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 800, fontSize: 14, cursor: 'pointer', opacity: paying ? 0.7 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                          <span className="material-icons" style={{ fontSize: 18 }}>payments</span>
+                          {paying ? 'Processing...' : `Collect ₹${amount ? fmt(amount) : '—'}`}
+                        </button>
+                      </div>
+                    )}
+
+                    {assignment.status === 'PAID' && (
+                      <div style={{ marginTop: 14, padding: '12px', background: '#f0fff4', border: '1.5px solid #76C44240', borderRadius: 8, textAlign: 'center', color: '#276749', fontWeight: 700, fontSize: 13 }}>
+                        ✓ Fee fully paid
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             </div>
 
-            {/* ══ RIGHT: payment form / success / history ══ */}
-            <div>
+            {/* Right: Receipt + Payment History */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-              {/* No fee selected placeholder */}
-              {!lastPayment && !selectedFee && !feesLoading && fees.length > 0 && (
-                <div className="chart-card" style={{ textAlign: 'center', padding: '48px 24px', marginBottom: '20px' }}>
-                  <span className="material-icons" style={{ fontSize: '52px', color: '#e2e8f0', display: 'block', marginBottom: '12px' }}>point_of_sale</span>
-                  <div style={{ fontSize: '14px', color: '#a0aec0' }}>Select a pending fee record on the left to collect payment</div>
-                </div>
-              )}
-
-              {/* Fully paid fee selected */}
-              {!lastPayment && selectedFee?.status === 'PAID' && (
-                <div className="chart-card" style={{ textAlign: 'center', padding: '32px 24px', marginBottom: '20px' }}>
-                  <span className="material-icons" style={{ fontSize: '48px', color: '#76C442', display: 'block', marginBottom: '12px' }}>check_circle</span>
-                  <div style={{ fontSize: '15px', fontWeight: 700, color: '#276749' }}>This fee is fully paid</div>
-                  <div style={{ fontSize: '13px', color: '#a0aec0', marginTop: '6px' }}>Select another pending fee record</div>
-                </div>
-              )}
-
-              {/* Payment form */}
-              {!lastPayment && selectedFee && selectedFee.status !== 'PAID' && (
-                <div className="chart-card" style={{ marginBottom: '20px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
-                    <span className="material-icons" style={{ color: '#76C442', fontSize: '20px' }}>payments</span>
-                    <span style={{ fontWeight: 700, fontSize: '15px', color: '#2d3748' }}>
-                      Payment — {selectedFee.feeType || 'Fee'}
-                    </span>
-                    {/* Cash badge */}
-                    <div style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '5px 12px', background: '#f0fff4', border: '1px solid #c6f6d5', borderRadius: '8px' }}>
-                      <span className="material-icons" style={{ fontSize: '15px', color: '#76C442' }}>payments</span>
-                      <span style={{ fontSize: '12px', fontWeight: 700, color: '#276749' }}>CASH</span>
-                    </div>
+              {/* Receipt card */}
+              {receiptData && (
+                <div style={{ background: '#fff', border: '2px solid #76C442', borderRadius: 12, padding: 24 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                    <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#276749' }}>Payment Confirmed</h3>
+                    <button onClick={printReceipt}
+                      style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 16px', background: '#276749', color: '#fff', border: 'none', borderRadius: 7, fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
+                      <span className="material-icons" style={{ fontSize: 16 }}>print</span> Print Receipt
+                    </button>
                   </div>
-
-                  {/* Pending summary banner */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', background: '#fff5f5', border: '1px solid #fed7d7', borderRadius: '10px', marginBottom: '20px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 13 }}>
                     {[
-                      ['Total Fee',   selectedFee.amount],
-                      ['Paid So Far', selectedFee.paidAmount],
-                      ['Pending',     pendingAmt],
+                      ['Receipt No', receiptData.receiptNo],
+                      ['Date', receiptData.date],
+                      ['Student', receiptData.studentName],
+                      ['Class', receiptData.className],
+                      ...(receiptData.term ? [['Term', receiptData.term]] : []),
+                      ['Amount Paid', `₹${fmt(receiptData.amountPaid)}`],
+                      ['Total Paid', `₹${fmt(receiptData.paidSoFar)}`],
+                      ['Balance Due', receiptData.dueAmount > 0 ? `₹${fmt(receiptData.dueAmount)}` : 'NIL'],
+                      ['Status', receiptData.status],
                     ].map(([k, v]) => (
-                      <div key={k} style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '15px', fontWeight: 800, color: k === 'Pending' ? '#c53030' : '#2d3748' }}>₹{fmt(v)}</div>
-                        <div style={{ fontSize: '10px', color: '#a0aec0', marginTop: '2px' }}>{k}</div>
+                      <div key={k} style={{ background: '#f7fafc', borderRadius: 6, padding: '8px 12px' }}>
+                        <div style={{ fontSize: 11, color: '#a0aec0', fontWeight: 600 }}>{k}</div>
+                        <div style={{ fontWeight: 700, color: k === 'Amount Paid' ? '#276749' : k === 'Balance Due' ? (receiptData.dueAmount > 0 ? '#e53e3e' : '#276749') : '#2d3748', fontFamily: k === 'Receipt No' ? 'monospace' : 'inherit', fontSize: k === 'Amount Paid' ? 15 : 13 }}>{v}</div>
                       </div>
                     ))}
-                  </div>
-
-                  <form onSubmit={handleSubmit}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-                      {/* Amount paid */}
-                      <div>
-                        <label className="form-label">Amount Paid (₹) <span style={{ color: '#e53e3e' }}>*</span></label>
-                        <input
-                          type="number" min="1" max={pendingAmt} step="0.01"
-                          value={amountPaid}
-                          onChange={e => setAmountPaid(e.target.value)}
-                          required
-                          style={{ padding: '11px 12px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '15px', width: '100%', outline: 'none', fontFamily: 'Poppins, sans-serif', boxSizing: 'border-box', fontWeight: 700 }}
-                        />
-                        <div style={{ fontSize: '11px', color: '#a0aec0', marginTop: '4px' }}>Max: ₹{fmt(pendingAmt)}</div>
-                      </div>
-
-                      {/* Payment date */}
-                      <div>
-                        <label className="form-label">Payment Date <span style={{ color: '#e53e3e' }}>*</span></label>
-                        <input
-                          type="date" value={payDate}
-                          onChange={e => setPayDate(e.target.value)}
-                          required
-                          style={{ padding: '11px 12px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px', width: '100%', outline: 'none', fontFamily: 'Poppins, sans-serif', boxSizing: 'border-box' }}
-                        />
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-                      {/* Receipt No (read-only) */}
-                      <div>
-                        <label className="form-label">Receipt No. (auto-generated)</label>
-                        <input type="text" value={receiptNo} readOnly
-                          style={{ padding: '11px 12px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '12px', width: '100%', background: '#f7fafc', color: '#718096', fontFamily: 'monospace', boxSizing: 'border-box', cursor: 'not-allowed' }} />
-                      </div>
-
-                      {/* Received by (read-only) */}
-                      <div>
-                        <label className="form-label">Received By (auto-filled)</label>
-                        <input type="text" value={receivedByVal} readOnly
-                          style={{ padding: '11px 12px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '13px', width: '100%', background: '#f7fafc', color: '#718096', fontFamily: 'Poppins, sans-serif', boxSizing: 'border-box', cursor: 'not-allowed' }} />
-                      </div>
-                    </div>
-
-                    {/* Remarks */}
-                    <div style={{ marginBottom: '20px' }}>
-                      <label className="form-label">Remarks (optional)</label>
-                      <textarea value={remarks} onChange={e => setRemarks(e.target.value)}
-                        placeholder="Any notes about this payment…" rows={2}
-                        style={{ padding: '11px 12px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '13px', width: '100%', outline: 'none', fontFamily: 'Poppins, sans-serif', resize: 'vertical', boxSizing: 'border-box' }} />
-                    </div>
-
-                    <button type="submit" disabled={submitting}
-                      style={{ width: '100%', padding: '14px', background: submitting ? '#a0aec0' : '#76C442', border: 'none', borderRadius: '10px', color: '#fff', fontWeight: 700, fontSize: '15px', cursor: submitting ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                      <span className="material-icons">{submitting ? 'hourglass_empty' : 'payments'}</span>
-                      {submitting ? 'Processing…' : `Collect ₹${fmt(amountPaid || 0)} in CASH`}
-                    </button>
-                  </form>
-                </div>
-              )}
-
-              {/* ── Success card ── */}
-              {lastPayment && (
-                <div className="chart-card no-print" style={{ marginBottom: '20px' }}>
-                  <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-                    <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#f0fff4', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
-                      <span className="material-icons" style={{ color: '#76C442', fontSize: '32px' }}>check_circle</span>
-                    </div>
-                    <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#2d3748', margin: '0 0 6px' }}>Payment Successful!</h3>
-                    <p style={{ fontSize: '13px', color: '#718096', margin: '0 0 4px' }}>
-                      ₹{fmt(lastPayment.justPaid)} collected in CASH · {lastPayment.paidDate || payDate}
-                    </p>
-                    <p style={{ fontSize: '12px', color: '#a0aec0', margin: 0 }}>
-                      Receipt: <strong style={{ color: '#76C442', fontFamily: 'monospace' }}>{lastPayment.receiptNo}</strong>
-                    </p>
-                  </div>
-
-                  {/* Updated fee summary */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '10px', marginBottom: '20px' }}>
-                    {[
-                      { label: 'Total',   value: lastPayment.amount,      color: '#3182ce' },
-                      { label: 'Paid',    value: lastPayment.paidAmount,   color: '#76C442' },
-                      { label: 'Pending', value: Number(lastPayment.amount || 0) - Number(lastPayment.paidAmount || 0), color: '#e53e3e' },
-                    ].map(item => (
-                      <div key={item.label} style={{ padding: '10px', background: '#f7fafc', borderRadius: '10px', textAlign: 'center' }}>
-                        <div style={{ fontSize: '14px', fontWeight: 800, color: item.color }}>₹{fmt(item.value)}</div>
-                        <div style={{ fontSize: '10px', color: '#a0aec0', marginTop: '2px' }}>{item.label}</div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                    <button onClick={() => window.print()}
-                      style={{ flex: 1, minWidth: '120px', padding: '11px', background: '#76C442', border: 'none', borderRadius: '10px', color: '#fff', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '13px' }}>
-                      <span className="material-icons" style={{ fontSize: '17px' }}>print</span> Print Receipt
-                    </button>
-                    <button onClick={() => setShowHistory(h => !h)}
-                      style={{ flex: 1, minWidth: '120px', padding: '11px', border: '1.5px solid #e2e8f0', borderRadius: '10px', background: '#fff', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '13px' }}>
-                      <span className="material-icons" style={{ fontSize: '17px' }}>history</span>
-                      {showHistory ? 'Hide' : 'View'} History
-                    </button>
-                    <button onClick={() => { setLastPayment(null); setSelectedFee(null); setAmountPaid(''); setReceiptNo(genReceiptNo()); setRemarks(''); }}
-                      style={{ flex: 1, minWidth: '120px', padding: '11px', border: '1.5px solid #76C442', borderRadius: '10px', background: '#f0fff4', color: '#276749', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '13px' }}>
-                      <span className="material-icons" style={{ fontSize: '17px' }}>add_circle_outline</span> New Payment
-                    </button>
                   </div>
                 </div>
               )}
 
-              {/* ── Payment history table ── */}
-              {(showHistory || (!lastPayment && !selectedFee && fees.length > 0)) && !feesLoading && fees.length > 0 && (
-                <div className="chart-card">
-                  <div style={{ fontWeight: 700, fontSize: '14px', color: '#2d3748', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span className="material-icons" style={{ color: '#76C442', fontSize: '18px' }}>history</span>
-                    Payment History — {student.name}
-                  </div>
-                  <div style={{ overflowX: 'auto' }}>
-                    <table className="data-table">
-                      <thead>
-                        <tr>
-                          <th>Fee Type</th>
-                          <th>Total</th>
-                          <th>Paid</th>
-                          <th>Pending</th>
-                          <th>Status</th>
-                          <th>Due Date</th>
-                          <th>Receipt</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {fees.map(f => (
-                          <tr key={f.id}>
-                            <td style={{ fontWeight: 600, fontSize: '13px' }}>{f.feeType || '—'}</td>
-                            <td>₹{fmt(f.amount)}</td>
-                            <td style={{ color: '#76C442', fontWeight: 600 }}>₹{fmt(f.paidAmount)}</td>
-                            <td style={{ color: '#e53e3e', fontWeight: 600 }}>
-                              ₹{fmt(Math.max(0, Number(f.amount || 0) - Number(f.paidAmount || 0)))}
-                            </td>
-                            <td><StatusBadge status={f.status} /></td>
-                            <td style={{ fontSize: '12px', color: '#a0aec0' }}>{f.dueDate || '—'}</td>
-                            <td style={{ fontSize: '11px', fontFamily: 'monospace', color: '#718096' }}>{f.receiptNumber || '—'}</td>
-                          </tr>
+              {/* Payment history */}
+              <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden' }}>
+                <div style={{ padding: '14px 20px', borderBottom: '1px solid #f0f4f8' }}>
+                  <span style={{ fontWeight: 700, fontSize: 15, color: '#2d3748' }}>Payment History</span>
+                </div>
+                {payments.length === 0 ? (
+                  <div style={{ padding: 30, textAlign: 'center', color: '#a0aec0', fontSize: 13 }}>No payments recorded yet.</div>
+                ) : (
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                    <thead>
+                      <tr style={{ background: '#f7fafc' }}>
+                        {['Date','Term','Amount','Receipt No','Received By','Remarks'].map(h => (
+                          <th key={h} style={{ padding: '9px 14px', textAlign: h === 'Amount' ? 'right' : 'left', fontWeight: 700, color: '#718096', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '1px solid #e2e8f0' }}>{h}</th>
                         ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {payments.map(p => (
+                        <tr key={p.id} style={{ borderBottom: '1px solid #f0f4f8' }}>
+                          <td style={{ padding: '10px 14px', color: '#4a5568', whiteSpace: 'nowrap' }}>{p.paymentDate}</td>
+                          <td style={{ padding: '10px 14px' }}>
+                            {p.term ? (
+                              <span style={{ padding: '2px 8px', background: '#ebf8ff', color: '#2b6cb0', borderRadius: 12, fontSize: 11, fontWeight: 700 }}>{p.term}</span>
+                            ) : '—'}
+                          </td>
+                          <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 700, color: '#276749' }}>₹{fmt(p.amountPaid)}</td>
+                          <td style={{ padding: '10px 14px', fontFamily: 'monospace', fontSize: 11, color: '#718096' }}>{p.receiptNumber}</td>
+                          <td style={{ padding: '10px 14px', color: '#4a5568' }}>{p.receivedBy || '—'}</td>
+                          <td style={{ padding: '10px 14px', color: '#a0aec0' }}>{p.remarks || '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
             </div>
           </div>
         )}
       </div>
-
-      {/* ── Print receipt (print-only) ── */}
-      {lastPayment && (
-        <div className="print-only" style={{ padding: '40px', fontFamily: 'Arial, sans-serif', maxWidth: '580px', margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: '20px', position: 'relative' }}>
-            <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#2d3748', margin: 0 }}>School Management System</h1>
-            <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#76C442', margin: '8px 0 0' }}>CASH FEE RECEIPT</h2>
-            <div style={{ position: 'absolute', top: '8px', right: '8px', width: '68px', height: '68px', border: '4px solid #76C44240', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ color: '#76C44260', fontWeight: 800, fontSize: '14px', transform: 'rotate(-20deg)', display: 'inline-block' }}>PAID</span>
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '7px', marginBottom: '18px' }}>
-            {[
-              ['Receipt No',  lastPayment.receiptNo || lastPayment.receiptNumber],
-              ['Date',        lastPayment.paidDate || payDate],
-              ['Student',     student?.name],
-              ['Adm. No.',    student?.rollNumber],
-              ['Class',       `${student?.className || ''}${student?.section ? '-' + student.section : ''}`],
-              ['Section',     student?.section || '—'],
-              ['Received By', lastPayment.receivedBy || receivedByVal],
-              ['Mode',        'CASH'],
-            ].map(([k, v]) => (
-              <div key={k} style={{ padding: '7px 10px', background: '#f7fafc', borderRadius: '6px' }}>
-                <div style={{ fontSize: '9px', color: '#a0aec0', textTransform: 'uppercase' }}>{k}</div>
-                <div style={{ fontSize: '12px', fontWeight: 600, color: '#2d3748' }}>{v}</div>
-              </div>
-            ))}
-          </div>
-
-          <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '12px' }}>
-            <thead>
-              <tr style={{ background: '#f0f4f8' }}>
-                <th style={{ padding: '9px 12px', fontSize: '11px', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>Fee Description</th>
-                <th style={{ padding: '9px 12px', fontSize: '11px', textAlign: 'right', borderBottom: '1px solid #e2e8f0' }}>Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td style={{ padding: '10px 12px', fontSize: '13px', borderBottom: '1px solid #f0f4f8' }}>{lastPayment.feeType || 'Fee Payment'}</td>
-                <td style={{ padding: '10px 12px', fontSize: '13px', textAlign: 'right', fontWeight: 700, borderBottom: '1px solid #f0f4f8' }}>₹{fmt(lastPayment.justPaid)}</td>
-              </tr>
-              <tr style={{ background: '#f0fff4' }}>
-                <td style={{ padding: '10px 12px', fontWeight: 700 }}>Total Paid This Transaction</td>
-                <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 800, color: '#76C442', fontSize: '15px' }}>₹{fmt(lastPayment.justPaid)}</td>
-              </tr>
-            </tbody>
-          </table>
-
-          {lastPayment.remarks && (
-            <div style={{ fontSize: '12px', color: '#718096', marginBottom: '12px' }}>
-              <strong>Remarks:</strong> {lastPayment.remarks}
-            </div>
-          )}
-
-          <div style={{ marginTop: '32px', paddingTop: '12px', borderTop: '1px dashed #e2e8f0', display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#a0aec0' }}>
-            <div>Computer-generated receipt · Do not alter</div>
-            <div>Authorized Signature: ________________</div>
-          </div>
-        </div>
-      )}
     </Layout>
   );
-};
-
-export default CollectFee;
+}

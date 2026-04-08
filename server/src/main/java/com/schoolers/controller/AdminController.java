@@ -192,15 +192,77 @@ public class AdminController {
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
     }
 
+    // ===== Class Fee Structure =====
+    @GetMapping("/class-fees")
+    public ResponseEntity<?> getClassFeeStructures() {
+        return ResponseEntity.ok(adminService.getClassFeeStructures());
+    }
+
+    @PostMapping("/class-fees")
+    public ResponseEntity<?> saveClassFeeStructure(@RequestBody Map<String, Object> body) {
+        var response = adminService.saveClassFeeStructure(body);
+        return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
+    }
+
+    @DeleteMapping("/class-fees/{id}")
+    public ResponseEntity<?> deleteClassFeeStructure(@PathVariable Long id) {
+        var response = adminService.deleteClassFeeStructure(id);
+        return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
+    }
+
+    // ===== Student Fee Assignments =====
+    @GetMapping("/student-fee-assignments")
+    public ResponseEntity<?> getAllStudentFeeAssignments() {
+        return ResponseEntity.ok(adminService.getAllStudentFeeAssignments());
+    }
+
+    @GetMapping("/student-fee-assignments/student/{studentId}")
+    public ResponseEntity<?> getStudentFeeAssignment(@PathVariable Long studentId) {
+        var response = adminService.getStudentFeeAssignment(studentId);
+        return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/student-fee-assignments/{assignmentId}/payments")
+    public ResponseEntity<?> getAssignmentPayments(@PathVariable Long assignmentId) {
+        return ResponseEntity.ok(adminService.getAssignmentPayments(assignmentId));
+    }
+
+    @GetMapping("/fee-payments")
+    public ResponseEntity<?> getAllFeePayments() {
+        return ResponseEntity.ok(adminService.getAllFeePayments());
+    }
+
+    @PostMapping("/student-fee-assignments")
+    public ResponseEntity<?> assignStudentFee(@RequestBody Map<String, Object> body) {
+        var response = adminService.assignStudentFee(body);
+        return response.isSuccess() ? ResponseEntity.status(201).body(response) : ResponseEntity.badRequest().body(response);
+    }
+
+    @PostMapping("/student-fee-assignments/{assignmentId}/collect")
+    public ResponseEntity<?> collectAssignmentFee(@PathVariable Long assignmentId, @RequestBody Map<String, Object> body) {
+        var response = adminService.collectAssignmentFee(assignmentId, body);
+        return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
+    }
+
     // ===== Expenses =====
     @GetMapping("/expenses")
-    public ResponseEntity<ApiResponse<List<Expense>>> getExpenses() {
-        return ResponseEntity.ok(adminService.getExpenses());
+    public ResponseEntity<ApiResponse<List<Expense>>> getExpenses(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String dateFrom,
+            @RequestParam(required = false) String dateTo,
+            @RequestParam(required = false) String search) {
+        return ResponseEntity.ok(adminService.getExpenses(status, dateFrom, dateTo, search));
+    }
+
+    @GetMapping("/expenses/summary")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getExpenseSummary() {
+        return ResponseEntity.ok(adminService.getExpenseSummary());
     }
 
     @PostMapping("/expenses")
-    public ResponseEntity<ApiResponse<Expense>> createExpense(@RequestBody Expense expense) {
-        return ResponseEntity.status(201).body(adminService.createExpense(expense));
+    public ResponseEntity<ApiResponse<Expense>> createExpense(@RequestBody Map<String, Object> body) {
+        ApiResponse<Expense> response = adminService.createExpense(body);
+        return response.isSuccess() ? ResponseEntity.status(201).body(response) : ResponseEntity.badRequest().body(response);
     }
 
     @PutMapping("/expenses/{id}")

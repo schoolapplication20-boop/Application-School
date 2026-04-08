@@ -9,6 +9,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -66,6 +67,35 @@ public class Salary {
     @Column(length = 10)
     private String year;
 
+    // Attendance-based fields
+    @Column(name = "total_days_in_month")
+    @Builder.Default
+    private Integer totalDaysInMonth = 0;
+
+    @Column(name = "total_working_days")
+    @Builder.Default
+    private Integer totalWorkingDays = 0;
+
+    @Column(name = "leaves_taken")
+    @Builder.Default
+    private Integer leavesTaken = 0;
+
+    @Column(name = "worked_days")
+    @Builder.Default
+    private Integer workedDays = 0;
+
+    @Column(name = "per_day_salary", precision = 10, scale = 2)
+    @Builder.Default
+    private BigDecimal perDaySalary = BigDecimal.ZERO;
+
+    @Column(name = "calculated_salary", precision = 10, scale = 2)
+    @Builder.Default
+    private BigDecimal calculatedSalary = BigDecimal.ZERO;
+
+    @Column(name = "paid_amount", precision = 10, scale = 2)
+    @Builder.Default
+    private BigDecimal paidAmount = BigDecimal.ZERO;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 15)
     @Builder.Default
@@ -84,6 +114,22 @@ public class Salary {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Transient
+    public BigDecimal getGross() {
+        BigDecimal b = basic != null ? basic : BigDecimal.ZERO;
+        BigDecimal h = hra != null ? hra : BigDecimal.ZERO;
+        BigDecimal d = da != null ? da : BigDecimal.ZERO;
+        BigDecimal m = medical != null ? medical : BigDecimal.ZERO;
+        return b.add(h).add(d).add(m);
+    }
+
+    @Transient
+    public BigDecimal getDueAmount() {
+        BigDecimal calc = calculatedSalary != null ? calculatedSalary : BigDecimal.ZERO;
+        BigDecimal paid = paidAmount != null ? paidAmount : BigDecimal.ZERO;
+        return calc.subtract(paid).max(BigDecimal.ZERO);
+    }
 
     public enum Status {
         PAID, PENDING, PROCESSING
