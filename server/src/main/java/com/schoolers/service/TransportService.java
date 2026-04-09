@@ -6,6 +6,7 @@ import com.schoolers.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -19,6 +20,7 @@ public class TransportService {
     @Autowired private TransportStopRepository stopRepository;
     @Autowired private TransportStudentAssignmentRepository assignmentRepository;
     @Autowired private TransportFeeRepository feeRepository;
+    @Autowired private StudentTransportRepository studentTransportRepository;
 
     // ── Buses ──────────────────────────────────────────────────────────────────
 
@@ -33,6 +35,8 @@ public class TransportService {
 
         TransportBus bus = TransportBus.builder()
                 .busNo(busNo)
+                .model(str(body, "model", null))
+                .year(str(body, "year", null))
                 .capacity(intVal(body, "capacity", 40))
                 .currentStudents(intVal(body, "currentStudents", 0))
                 .driver(str(body, "driver", null))
@@ -46,6 +50,8 @@ public class TransportService {
     public ApiResponse<TransportBus> updateBus(Long id, Map<String, Object> body) {
         return busRepository.findById(id)
                 .map(bus -> {
+                    if (body.containsKey("model"))           bus.setModel(str(body, "model", bus.getModel()));
+                    if (body.containsKey("year"))            bus.setYear(str(body, "year", bus.getYear()));
                     if (body.containsKey("capacity"))        bus.setCapacity(intVal(body, "capacity", bus.getCapacity()));
                     if (body.containsKey("currentStudents")) bus.setCurrentStudents(intVal(body, "currentStudents", bus.getCurrentStudents()));
                     if (body.containsKey("driver"))          bus.setDriver(str(body, "driver", bus.getDriver()));
@@ -291,6 +297,74 @@ public class TransportService {
         if (!feeRepository.existsById(id)) return ApiResponse.error("Transport fee not found");
         feeRepository.deleteById(id);
         return ApiResponse.success("Transport fee deleted", "Deleted");
+    }
+
+    // ── Student Transport Details ──────────────────────────────────────────────
+
+    public ApiResponse<List<StudentTransport>> getStudentTransports() {
+        return ApiResponse.success(studentTransportRepository.findAll());
+    }
+
+    public ApiResponse<StudentTransport> getStudentTransportById(Long id) {
+        return studentTransportRepository.findById(id)
+                .map(st -> ApiResponse.success(st))
+                .orElse(ApiResponse.error("Record not found"));
+    }
+
+    public ApiResponse<StudentTransport> createStudentTransport(Map<String, Object> body) {
+        Long studentId = longVal(body, "studentId", null);
+        if (studentId == null) return ApiResponse.error("Student ID is required");
+
+        boolean transportNeeded = Boolean.TRUE.equals(body.get("transportNeeded"));
+
+        StudentTransport st = StudentTransport.builder()
+                .studentId(studentId)
+                .studentName(str(body, "studentName", null))
+                .studentClass(str(body, "studentClass", null))
+                .transportNeeded(transportNeeded)
+                .pickupLocation(str(body, "pickupLocation", null))
+                .dropLocation(str(body, "dropLocation", null))
+                .routeId(longVal(body, "routeId", null))
+                .routeName(str(body, "routeName", null))
+                .stopId(longVal(body, "stopId", null))
+                .stopName(str(body, "stopName", null))
+                .pickupTime(str(body, "pickupTime", null))
+                .dropTime(str(body, "dropTime", null))
+                .fee(body.get("fee") != null ? new BigDecimal(body.get("fee").toString()) : BigDecimal.ZERO)
+                .emergencyContact(str(body, "emergencyContact", null))
+                .notes(str(body, "notes", null))
+                .status(str(body, "status", "Active"))
+                .build();
+        return ApiResponse.success("Student transport record created", studentTransportRepository.save(st));
+    }
+
+    public ApiResponse<StudentTransport> updateStudentTransport(Long id, Map<String, Object> body) {
+        return studentTransportRepository.findById(id)
+                .map(st -> {
+                    if (body.containsKey("studentName"))      st.setStudentName(str(body, "studentName", st.getStudentName()));
+                    if (body.containsKey("studentClass"))     st.setStudentClass(str(body, "studentClass", st.getStudentClass()));
+                    if (body.containsKey("transportNeeded"))  st.setTransportNeeded(Boolean.TRUE.equals(body.get("transportNeeded")));
+                    if (body.containsKey("pickupLocation"))   st.setPickupLocation(str(body, "pickupLocation", st.getPickupLocation()));
+                    if (body.containsKey("dropLocation"))     st.setDropLocation(str(body, "dropLocation", st.getDropLocation()));
+                    if (body.containsKey("routeId"))          st.setRouteId(longVal(body, "routeId", st.getRouteId()));
+                    if (body.containsKey("routeName"))        st.setRouteName(str(body, "routeName", st.getRouteName()));
+                    if (body.containsKey("stopId"))           st.setStopId(longVal(body, "stopId", st.getStopId()));
+                    if (body.containsKey("stopName"))         st.setStopName(str(body, "stopName", st.getStopName()));
+                    if (body.containsKey("pickupTime"))       st.setPickupTime(str(body, "pickupTime", st.getPickupTime()));
+                    if (body.containsKey("dropTime"))         st.setDropTime(str(body, "dropTime", st.getDropTime()));
+                    if (body.containsKey("fee"))              st.setFee(body.get("fee") != null ? new BigDecimal(body.get("fee").toString()) : st.getFee());
+                    if (body.containsKey("emergencyContact")) st.setEmergencyContact(str(body, "emergencyContact", st.getEmergencyContact()));
+                    if (body.containsKey("notes"))            st.setNotes(str(body, "notes", st.getNotes()));
+                    if (body.containsKey("status"))           st.setStatus(str(body, "status", st.getStatus()));
+                    return ApiResponse.success("Student transport updated", studentTransportRepository.save(st));
+                })
+                .orElse(ApiResponse.error("Record not found"));
+    }
+
+    public ApiResponse<String> deleteStudentTransport(Long id) {
+        if (!studentTransportRepository.existsById(id)) return ApiResponse.error("Record not found");
+        studentTransportRepository.deleteById(id);
+        return ApiResponse.success("Student transport record deleted", "Deleted");
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────────

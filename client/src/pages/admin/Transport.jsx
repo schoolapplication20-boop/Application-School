@@ -19,23 +19,24 @@ const statusColor = {
   Inactive: 'status-absent',
   Maintenance: 'status-pending',
   'On Leave': 'status-pending',
-  Pending: 'status-pending',
-  Paid: 'status-paid',
-  Overdue: 'status-overdue',
+  Pending: 'status-pending', PENDING: 'status-pending',
+  Paid:    'status-paid',    PAID:    'status-paid',
+  Overdue: 'status-overdue', OVERDUE: 'status-overdue',
 };
 
+// Tabs in logical setup order: Route → Stops → Bus → Driver → Student → Fees
 const TABS = [
-  { key: 'buses',    label: 'Buses',   icon: 'directions_bus' },
-  { key: 'routes',   label: 'Routes',  icon: 'route' },
-  { key: 'drivers',  label: 'Drivers', icon: 'badge' },
-  { key: 'students', label: 'Students',icon: 'people' },
-  { key: 'stops',    label: 'Stops',   icon: 'place' },
-  { key: 'fees',     label: 'Fees',    icon: 'payments' },
+  { key: 'routes',   label: 'Routes',   icon: 'route' },
+  { key: 'stops',    label: 'Stops',    icon: 'place' },
+  { key: 'buses',    label: 'Buses',    icon: 'directions_bus' },
+  { key: 'drivers',  label: 'Drivers',  icon: 'badge' },
+  { key: 'students', label: 'Students', icon: 'people' },
+  { key: 'fees',     label: 'Fees',     icon: 'payments' },
 ];
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function Transport() {
-  const [activeTab, setActiveTab] = useState('buses');
+  const [activeTab, setActiveTab] = useState('routes');
   const [toast, setToast] = useState(null);
 
   // Data stores
@@ -129,7 +130,7 @@ export default function Transport() {
       {activeTab === 'drivers' && (
         <DriversPanel
           drivers={drivers} setDrivers={setDrivers}
-          buses={buses} showToast={showToast}
+          buses={buses} students={students} showToast={showToast}
         />
       )}
       {activeTab === 'students' && (
@@ -143,7 +144,7 @@ export default function Transport() {
         <StopsPanel stops={stops} setStops={setStops} routes={routes} showToast={showToast} />
       )}
       {activeTab === 'fees' && (
-        <FeesPanel fees={fees} setFees={setFees} showToast={showToast} />
+        <FeesPanel fees={fees} setFees={setFees} students={students} showToast={showToast} />
       )}
     </Layout>
   );
@@ -250,11 +251,13 @@ function BusesPanel({ buses, setBuses, routes, drivers, showToast }) {
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
-  const [form, setForm] = useState({ busNo: '', model: '', year: '', capacity: '', driverId: '', routeId: '', status: 'Active' });
+  // driver / route stored as STRING names (what the DB column holds)
+  const EMPTY_BUS = { busNo: '', model: '', year: '', capacity: '', driver: '', route: '', status: 'Active' };
+  const [form, setForm] = useState(EMPTY_BUS);
   const [errors, setErrors] = useState({});
 
   const filtered = buses.filter(b =>
-    (!search || b.busNo.toLowerCase().includes(search.toLowerCase()) || b.model.toLowerCase().includes(search.toLowerCase())) &&
+    (!search || b.busNo?.toLowerCase().includes(search.toLowerCase()) || b.model?.toLowerCase().includes(search.toLowerCase())) &&
     (!filterStatus || b.status === filterStatus)
   );
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
@@ -263,58 +266,56 @@ function BusesPanel({ buses, setBuses, routes, drivers, showToast }) {
   const validate = () => {
     const e = {};
     if (!form.busNo.trim()) e.busNo = 'Bus number is required';
-    if (!form.model.trim()) e.model = 'Model is required';
     if (!form.capacity || isNaN(form.capacity) || +form.capacity <= 0) e.capacity = 'Valid capacity is required';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
-  const openAdd = () => { setEditItem(null); setForm({ busNo: '', model: '', year: '', capacity: '', driverId: '', routeId: '', status: 'Active' }); setErrors({}); setShowModal(true); };
-  const openEdit = (item) => { setEditItem(item); setForm({ ...item }); setErrors({}); setShowModal(true); };
+  const openAdd  = () => { setEditItem(null); setForm(EMPTY_BUS); setErrors({}); setShowModal(true); };
+  const openEdit = (item) => {
+    setEditItem(item);
+    setForm({ busNo: item.busNo || '', model: item.model || '', year: item.year || '', capacity: item.capacity || '', driver: item.driver || '', route: item.route || '', status: item.status || 'Active' });
+    setErrors({});
+    setShowModal(true);
+  };
 
   const handleSave = async (e) => {
     e.preventDefault();
     if (!validate()) return;
-    let updated;
-    if (editItem) {
-      await updateBus(editItem.id, form);
-      updated = buses.map(b => b.id === editItem.id ? { ...b, ...form } : b);
-      showToast('Bus updated successfully');
-    } else {
-      const created = await createBus({ id: nextId(buses), ...form });
-      updated = [...buses, created];
-      showToast('Bus added successfully');
-    }
-    setBuses(updated);
-    setShowModal(false);
+    const payload = { busNo: form.busNo, model: form.model, year: form.year, capacity: Number(form.capacity), driver: form.driver, route: form.route, status: form.status };
+    try {
+      if (editItem) {
+        await updateBus(editItem.id, payload);
+        setBuses(prev => prev.map(b => b.id === editItem.id ? { ...b, ...payload } : b));
+        showToast('Bus updated successfully');
+      } else {
+        const created = await createBus(payload);
+        setBuses(prev => [...prev, created]);
+        showToast('Bus added successfully');
+      }
+      setShowModal(false);
+    } catch (err) { showToast(err?.response?.data?.message || 'Failed to save bus', 'error'); }
   };
 
   const handleDelete = async (id) => {
-    await deleteBus(id);
-    const updated = buses.filter(b => b.id !== id);
-    setBuses(updated);
+    try {
+      await deleteBus(id);
+      setBuses(prev => prev.filter(b => b.id !== id));
+      showToast('Bus removed', 'warning');
+    } catch { showToast('Failed to delete bus', 'error'); }
     setDeleteId(null);
-    showToast('Bus removed', 'warning');
   };
-
-  const driverName = (id) => drivers.find(d => d.id === +id)?.name || '—';
-  const routeName  = (id) => routes.find(r => r.id === +id)?.name || '—';
 
   return (
     <>
       <TableCard
         onAdd={openAdd} addLabel="Add Bus" addIcon="directions_bus"
         searchValue={search} onSearch={v => { setSearch(v); setPage(1); }} searchPlaceholder="Search bus number or model…"
-        filters={[
-          { value: filterStatus, onChange: v => { setFilterStatus(v); setPage(1); }, options: [{ value: '', label: 'All Status' }, { value: 'Active', label: 'Active' }, { value: 'Maintenance', label: 'Maintenance' }, { value: 'Inactive', label: 'Inactive' }] },
-        ]}
+        filters={[{ value: filterStatus, onChange: v => { setFilterStatus(v); setPage(1); }, options: [{ value: '', label: 'All Status' }, { value: 'Active', label: 'Active' }, { value: 'Maintenance', label: 'Maintenance' }, { value: 'Inactive', label: 'Inactive' }] }]}
       >
         <table className="data-table">
           <thead>
-            <tr>
-              <th>Bus No</th><th>Model</th><th>Year</th><th>Capacity</th>
-              <th>Driver</th><th>Route</th><th>Status</th><th>Actions</th>
-            </tr>
+            <tr><th>Bus No</th><th>Model</th><th>Year</th><th>Capacity</th><th>Driver</th><th>Route</th><th>Status</th><th>Actions</th></tr>
           </thead>
           <tbody>
             {paginated.length === 0 ? (
@@ -322,15 +323,11 @@ function BusesPanel({ buses, setBuses, routes, drivers, showToast }) {
             ) : paginated.map(b => (
               <tr key={b.id}>
                 <td style={{ fontWeight: 700, fontFamily: 'monospace', color: '#2d3748' }}>{b.busNo}</td>
-                <td>{b.model}</td>
+                <td>{b.model || '—'}</td>
                 <td>{b.year || '—'}</td>
-                <td>
-                  <span style={{ background: '#ebf8ff', color: '#2b6cb0', padding: '2px 10px', borderRadius: 12, fontWeight: 600, fontSize: 12 }}>
-                    {b.capacity} seats
-                  </span>
-                </td>
-                <td>{driverName(b.driverId)}</td>
-                <td style={{ fontSize: 12, color: '#718096' }}>{routeName(b.routeId)}</td>
+                <td><span style={{ background: '#ebf8ff', color: '#2b6cb0', padding: '2px 10px', borderRadius: 12, fontWeight: 600, fontSize: 12 }}>{b.capacity} seats</span></td>
+                <td>{b.driver || '—'}</td>
+                <td style={{ fontSize: 12, color: '#718096' }}>{b.route || '—'}</td>
                 <td><span className={`status-badge ${statusColor[b.status] || 'status-pending'}`}>{b.status}</span></td>
                 <td>
                   <div className="action-btns">
@@ -348,51 +345,52 @@ function BusesPanel({ buses, setBuses, routes, drivers, showToast }) {
       {showModal && (
         <Modal title={editItem ? 'Edit Bus' : 'Add New Bus'} onClose={() => setShowModal(false)} onSubmit={handleSave} submitLabel={editItem ? 'Update Bus' : 'Add Bus'} size="modal-lg">
           <div className="row g-3">
-            <div className="col-md-6">
+            <div className="col-md-4">
               <label className="form-label fw-medium small">Bus Number *</label>
               <input type="text" className={`form-control form-control-sm ${errors.busNo ? 'is-invalid' : ''}`}
                 placeholder="e.g., BUS-001" value={form.busNo}
                 onChange={e => setForm({ ...form, busNo: e.target.value })} />
               {errors.busNo && <div className="invalid-feedback">{errors.busNo}</div>}
             </div>
-            <div className="col-md-6">
-              <label className="form-label fw-medium small">Model *</label>
-              <input type="text" className={`form-control form-control-sm ${errors.model ? 'is-invalid' : ''}`}
+            <div className="col-md-4">
+              <label className="form-label fw-medium small">Model</label>
+              <input type="text" className="form-control form-control-sm"
                 placeholder="e.g., Tata Starbus" value={form.model}
                 onChange={e => setForm({ ...form, model: e.target.value })} />
-              {errors.model && <div className="invalid-feedback">{errors.model}</div>}
             </div>
-            <div className="col-md-4">
+            <div className="col-md-2">
               <label className="form-label fw-medium small">Year</label>
               <input type="number" className="form-control form-control-sm"
                 placeholder="e.g., 2021" value={form.year} min="2000" max="2030"
                 onChange={e => setForm({ ...form, year: e.target.value })} />
             </div>
-            <div className="col-md-4">
-              <label className="form-label fw-medium small">Seating Capacity *</label>
+            <div className="col-md-2">
+              <label className="form-label fw-medium small">Capacity *</label>
               <input type="number" className={`form-control form-control-sm ${errors.capacity ? 'is-invalid' : ''}`}
-                placeholder="e.g., 40" value={form.capacity} min="1"
+                placeholder="40" value={form.capacity} min="1"
                 onChange={e => setForm({ ...form, capacity: e.target.value })} />
               {errors.capacity && <div className="invalid-feedback">{errors.capacity}</div>}
             </div>
+            <div className="col-md-6">
+              <label className="form-label fw-medium small">Assign Driver</label>
+              <select className="form-select form-select-sm" value={form.driver}
+                onChange={e => setForm({ ...form, driver: e.target.value })}>
+                <option value="">— Select Driver —</option>
+                {drivers.map(d => <option key={d.id} value={d.name}>{d.name}{d.license ? ` (${d.license})` : ''}</option>)}
+              </select>
+            </div>
             <div className="col-md-4">
+              <label className="form-label fw-medium small">Assign Route</label>
+              <select className="form-select form-select-sm" value={form.route}
+                onChange={e => setForm({ ...form, route: e.target.value })}>
+                <option value="">— Select Route —</option>
+                {routes.map(r => <option key={r.id} value={r.name}>{r.name}</option>)}
+              </select>
+            </div>
+            <div className="col-md-2">
               <label className="form-label fw-medium small">Status</label>
               <select className="form-select form-select-sm" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
                 <option>Active</option><option>Maintenance</option><option>Inactive</option>
-              </select>
-            </div>
-            <div className="col-md-6">
-              <label className="form-label fw-medium small">Assign Driver</label>
-              <select className="form-select form-select-sm" value={form.driverId || ''} onChange={e => setForm({ ...form, driverId: e.target.value })}>
-                <option value="">— Select Driver —</option>
-                {drivers.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-              </select>
-            </div>
-            <div className="col-md-6">
-              <label className="form-label fw-medium small">Assign Route</label>
-              <select className="form-select form-select-sm" value={form.routeId || ''} onChange={e => setForm({ ...form, routeId: e.target.value })}>
-                <option value="">— Select Route —</option>
-                {routes.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
               </select>
             </div>
           </div>
@@ -411,57 +409,68 @@ function RoutesPanel({ routes, setRoutes, showToast }) {
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
-  const [form, setForm] = useState({ name: '', start: '', end: '', distance: '', stops: '', status: 'Active' });
+  const EMPTY_ROUTE = { name: '', area: '', distance: '', stops: '', pickupTime: '', dropTime: '' };
+  const [form, setForm] = useState(EMPTY_ROUTE);
   const [errors, setErrors] = useState({});
 
-  const filtered = routes.filter(r => !search || r.name.toLowerCase().includes(search.toLowerCase()) || r.start.toLowerCase().includes(search.toLowerCase()) || r.end.toLowerCase().includes(search.toLowerCase()));
+  const filtered = routes.filter(r => !search ||
+    r.name?.toLowerCase().includes(search.toLowerCase()) ||
+    r.area?.toLowerCase().includes(search.toLowerCase())
+  );
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
   const validate = () => {
     const e = {};
-    if (!form.name.trim())  e.name  = 'Route name is required';
-    if (!form.start.trim()) e.start = 'Start point is required';
-    if (!form.end.trim())   e.end   = 'End point is required';
+    if (!form.name.trim()) e.name = 'Route name is required';
+    if (!form.area.trim()) e.area = 'Area / zone is required';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
-  const openAdd  = () => { setEditItem(null); setForm({ name: '', start: '', end: '', distance: '', stops: '', status: 'Active' }); setErrors({}); setShowModal(true); };
-  const openEdit = (item) => { setEditItem(item); setForm({ ...item }); setErrors({}); setShowModal(true); };
+  const openAdd  = () => { setEditItem(null); setForm(EMPTY_ROUTE); setErrors({}); setShowModal(true); };
+  const openEdit = (item) => {
+    setEditItem(item);
+    setForm({ name: item.name || '', area: item.area || '', distance: item.distance || '', stops: item.stops || '', pickupTime: item.pickupTime || '', dropTime: item.dropTime || '' });
+    setErrors({});
+    setShowModal(true);
+  };
 
   const handleSave = async (e) => {
     e.preventDefault();
     if (!validate()) return;
-    let updated;
-    if (editItem) {
-      await updateRoute(editItem.id, form);
-      updated = routes.map(r => r.id === editItem.id ? { ...r, ...form } : r);
-      showToast('Route updated successfully');
-    } else {
-      const created = await createRoute({ id: nextId(routes), ...form });
-      updated = [...routes, created];
-      showToast('Route added successfully');
-    }
-    setRoutes(updated);
-    setShowModal(false);
+    const payload = { name: form.name, area: form.area, distance: form.distance, stops: form.stops ? Number(form.stops) : 0, pickupTime: form.pickupTime, dropTime: form.dropTime };
+    try {
+      let saved;
+      if (editItem) {
+        saved = await updateRoute(editItem.id, payload);
+        setRoutes(prev => prev.map(r => r.id === editItem.id ? { ...r, ...payload, id: editItem.id } : r));
+        showToast('Route updated successfully');
+      } else {
+        saved = await createRoute(payload);
+        setRoutes(prev => [...prev, saved]);
+        showToast('Route added successfully');
+      }
+      setShowModal(false);
+    } catch { showToast('Failed to save route', 'error'); }
   };
 
   const handleDelete = async (id) => {
-    await deleteRoute(id);
-    const updated = routes.filter(r => r.id !== id);
-    setRoutes(updated);
+    try {
+      await deleteRoute(id);
+      setRoutes(prev => prev.filter(r => r.id !== id));
+      showToast('Route removed', 'warning');
+    } catch { showToast('Failed to delete route', 'error'); }
     setDeleteId(null);
-    showToast('Route removed', 'warning');
   };
 
   return (
     <>
       <TableCard onAdd={openAdd} addLabel="Add Route" addIcon="add_road"
-        searchValue={search} onSearch={v => { setSearch(v); setPage(1); }} searchPlaceholder="Search routes…">
+        searchValue={search} onSearch={v => { setSearch(v); setPage(1); }} searchPlaceholder="Search route name or area…">
         <table className="data-table">
           <thead>
-            <tr><th>Route Name</th><th>Start Point</th><th>End Point</th><th>Distance</th><th>Stops</th><th>Status</th><th>Actions</th></tr>
+            <tr><th>Route Name</th><th>Area / Zone</th><th>Distance</th><th>Stops</th><th>Pickup</th><th>Drop</th><th>Actions</th></tr>
           </thead>
           <tbody>
             {paginated.length === 0 ? (
@@ -476,11 +485,11 @@ function RoutesPanel({ routes, setRoutes, showToast }) {
                     <span style={{ fontWeight: 600, color: '#2d3748' }}>{r.name}</span>
                   </div>
                 </td>
-                <td style={{ fontSize: 13 }}>{r.start}</td>
-                <td style={{ fontSize: 13 }}>{r.end}</td>
+                <td style={{ fontSize: 13 }}>{r.area || '—'}</td>
                 <td><span style={{ background: '#f0fff4', color: '#276749', padding: '2px 10px', borderRadius: 12, fontWeight: 600, fontSize: 12 }}>{r.distance || '—'}</span></td>
                 <td style={{ fontWeight: 700, color: '#3182ce' }}>{r.stops || 0}</td>
-                <td><span className={`status-badge ${statusColor[r.status] || 'status-pending'}`}>{r.status}</span></td>
+                <td style={{ fontWeight: 600, color: '#276749', fontSize: 13 }}>{r.pickupTime || '—'}</td>
+                <td style={{ fontWeight: 600, color: '#c05621', fontSize: 13 }}>{r.dropTime || '—'}</td>
                 <td>
                   <div className="action-btns">
                     <button className="action-btn action-btn-edit" onClick={() => openEdit(r)} title="Edit"><span className="material-icons">edit</span></button>
@@ -497,26 +506,19 @@ function RoutesPanel({ routes, setRoutes, showToast }) {
       {showModal && (
         <Modal title={editItem ? 'Edit Route' : 'Add New Route'} onClose={() => setShowModal(false)} onSubmit={handleSave} submitLabel={editItem ? 'Update Route' : 'Add Route'} size="modal-lg">
           <div className="row g-3">
-            <div className="col-12">
+            <div className="col-md-6">
               <label className="form-label fw-medium small">Route Name *</label>
               <input type="text" className={`form-control form-control-sm ${errors.name ? 'is-invalid' : ''}`}
-                placeholder="e.g., Route A – North" value={form.name}
+                placeholder="e.g., Route A – North Zone" value={form.name}
                 onChange={e => setForm({ ...form, name: e.target.value })} />
               {errors.name && <div className="invalid-feedback">{errors.name}</div>}
             </div>
             <div className="col-md-6">
-              <label className="form-label fw-medium small">Start Point *</label>
-              <input type="text" className={`form-control form-control-sm ${errors.start ? 'is-invalid' : ''}`}
-                placeholder="e.g., School Gate" value={form.start}
-                onChange={e => setForm({ ...form, start: e.target.value })} />
-              {errors.start && <div className="invalid-feedback">{errors.start}</div>}
-            </div>
-            <div className="col-md-6">
-              <label className="form-label fw-medium small">End Point *</label>
-              <input type="text" className={`form-control form-control-sm ${errors.end ? 'is-invalid' : ''}`}
-                placeholder="e.g., Sector 14" value={form.end}
-                onChange={e => setForm({ ...form, end: e.target.value })} />
-              {errors.end && <div className="invalid-feedback">{errors.end}</div>}
+              <label className="form-label fw-medium small">Area / Zone *</label>
+              <input type="text" className={`form-control form-control-sm ${errors.area ? 'is-invalid' : ''}`}
+                placeholder="e.g., School Gate → Sector 14" value={form.area}
+                onChange={e => setForm({ ...form, area: e.target.value })} />
+              {errors.area && <div className="invalid-feedback">{errors.area}</div>}
             </div>
             <div className="col-md-4">
               <label className="form-label fw-medium small">Distance</label>
@@ -530,11 +532,15 @@ function RoutesPanel({ routes, setRoutes, showToast }) {
                 placeholder="e.g., 6" value={form.stops} min="0"
                 onChange={e => setForm({ ...form, stops: e.target.value })} />
             </div>
-            <div className="col-md-4">
-              <label className="form-label fw-medium small">Status</label>
-              <select className="form-select form-select-sm" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
-                <option>Active</option><option>Inactive</option>
-              </select>
+            <div className="col-md-2">
+              <label className="form-label fw-medium small">Pickup Time</label>
+              <input type="time" className="form-control form-control-sm" value={form.pickupTime}
+                onChange={e => setForm({ ...form, pickupTime: e.target.value })} />
+            </div>
+            <div className="col-md-2">
+              <label className="form-label fw-medium small">Drop Time</label>
+              <input type="time" className="form-control form-control-sm" value={form.dropTime}
+                onChange={e => setForm({ ...form, dropTime: e.target.value })} />
             </div>
           </div>
         </Modal>
@@ -546,18 +552,21 @@ function RoutesPanel({ routes, setRoutes, showToast }) {
 }
 
 // ─── DRIVERS Panel ────────────────────────────────────────────────────────────
-function DriversPanel({ drivers, setDrivers, buses, showToast }) {
+function DriversPanel({ drivers, setDrivers, buses, students, showToast }) {
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [page, setPage] = useState(1);
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
-  const [form, setForm] = useState({ name: '', license: '', phone: '', experience: '', busId: '', status: 'Active' });
+  const [viewStudentsDriver, setViewStudentsDriver] = useState(null); // driver whose students to show
+  // DB columns: name, license, mobile, bus (bus number string), experience, status
+  const EMPTY_DRIVER = { name: '', license: '', mobile: '', experience: '', bus: '', status: 'Active' };
+  const [form, setForm] = useState(EMPTY_DRIVER);
   const [errors, setErrors] = useState({});
 
   const filtered = drivers.filter(d =>
-    (!search || d.name.toLowerCase().includes(search.toLowerCase()) || d.license.toLowerCase().includes(search.toLowerCase())) &&
+    (!search || d.name?.toLowerCase().includes(search.toLowerCase()) || d.license?.toLowerCase().includes(search.toLowerCase())) &&
     (!filterStatus || d.status === filterStatus)
   );
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
@@ -567,41 +576,47 @@ function DriversPanel({ drivers, setDrivers, buses, showToast }) {
     const e = {};
     if (!form.name.trim())    e.name    = 'Name is required';
     if (!form.license.trim()) e.license = 'License number is required';
-    if (form.phone && !/^\d{10}$/.test(form.phone)) e.phone = 'Must be 10 digits';
+    if (form.mobile && !/^\d{10}$/.test(form.mobile)) e.mobile = 'Must be 10 digits';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
-  const openAdd  = () => { setEditItem(null); setForm({ name: '', license: '', phone: '', experience: '', busId: '', status: 'Active' }); setErrors({}); setShowModal(true); };
-  const openEdit = (item) => { setEditItem(item); setForm({ ...item }); setErrors({}); setShowModal(true); };
+  const openAdd  = () => { setEditItem(null); setForm(EMPTY_DRIVER); setErrors({}); setShowModal(true); };
+  const openEdit = (item) => {
+    setEditItem(item);
+    setForm({ name: item.name || '', license: item.license || '', mobile: item.mobile || '', experience: item.experience || '', bus: item.bus || '', status: item.status || 'Active' });
+    setErrors({});
+    setShowModal(true);
+  };
 
   const handleSave = async (e) => {
     e.preventDefault();
     if (!validate()) return;
-    let updated;
-    if (editItem) {
-      await updateDriver(editItem.id, form);
-      updated = drivers.map(d => d.id === editItem.id ? { ...d, ...form } : d);
-      showToast('Driver updated successfully');
-    } else {
-      const created = await createDriver({ id: nextId(drivers), ...form });
-      updated = [...drivers, created];
-      showToast('Driver added successfully');
-    }
-    setDrivers(updated);
-    setShowModal(false);
+    const payload = { name: form.name, license: form.license, mobile: form.mobile, experience: form.experience, bus: form.bus, status: form.status };
+    try {
+      if (editItem) {
+        await updateDriver(editItem.id, payload);
+        setDrivers(prev => prev.map(d => d.id === editItem.id ? { ...d, ...payload } : d));
+        showToast('Driver updated successfully');
+      } else {
+        const created = await createDriver(payload);
+        setDrivers(prev => [...prev, created]);
+        showToast('Driver added successfully');
+      }
+      setShowModal(false);
+    } catch { showToast('Failed to save driver', 'error'); }
   };
 
   const handleDelete = async (id) => {
-    await deleteDriver(id);
-    const updated = drivers.filter(d => d.id !== id);
-    setDrivers(updated);
+    try {
+      await deleteDriver(id);
+      setDrivers(prev => prev.filter(d => d.id !== id));
+      showToast('Driver removed', 'warning');
+    } catch { showToast('Failed to delete driver', 'error'); }
     setDeleteId(null);
-    showToast('Driver removed', 'warning');
   };
 
-  const busNo = (id) => buses.find(b => b.id === +id)?.busNo || '—';
-  const getInitials = (n) => n.split(' ').map(x => x[0]).join('').toUpperCase().slice(0, 2);
+  const getInitials = (n) => (n || '?').split(' ').map(x => x[0]).join('').toUpperCase().slice(0, 2);
 
   return (
     <>
@@ -624,12 +639,16 @@ function DriversPanel({ drivers, setDrivers, buses, showToast }) {
                   </div>
                 </td>
                 <td style={{ fontFamily: 'monospace', fontSize: 12, color: '#718096', fontWeight: 600 }}>{d.license}</td>
-                <td style={{ fontSize: 13 }}>{d.phone || '—'}</td>
+                <td style={{ fontSize: 13 }}>{d.mobile || '—'}</td>
                 <td><span style={{ background: '#faf5ff', color: '#6b46c1', padding: '2px 10px', borderRadius: 12, fontWeight: 600, fontSize: 12 }}>{d.experience || '—'}</span></td>
-                <td style={{ fontWeight: 700, fontFamily: 'monospace', color: '#2d3748' }}>{busNo(d.busId)}</td>
+                <td style={{ fontWeight: 700, fontFamily: 'monospace', color: '#2d3748' }}>{d.bus || '—'}</td>
                 <td><span className={`status-badge ${statusColor[d.status] || 'status-pending'}`}>{d.status}</span></td>
                 <td>
                   <div className="action-btns">
+                    <button className="action-btn" style={{ background: '#ebf8ff', color: '#2b6cb0' }}
+                      onClick={() => setViewStudentsDriver(d)} title="View Assigned Students">
+                      <span className="material-icons">people</span>
+                    </button>
                     <button className="action-btn action-btn-edit" onClick={() => openEdit(d)} title="Edit"><span className="material-icons">edit</span></button>
                     <button className="action-btn action-btn-delete" onClick={() => setDeleteId(d.id)} title="Delete"><span className="material-icons">delete</span></button>
                   </div>
@@ -640,6 +659,58 @@ function DriversPanel({ drivers, setDrivers, buses, showToast }) {
         </table>
         <Paginator current={page} total={totalPages} onChange={setPage} />
       </TableCard>
+
+      {/* ── Assigned Students Modal ── */}
+      {viewStudentsDriver && (() => {
+        const busStudents = (students || []).filter(s => s.busNo === viewStudentsDriver.bus);
+        return (
+          <div className="modal-overlay" onClick={() => setViewStudentsDriver(null)}>
+            <div className="modal-container modal-lg" onClick={e => e.stopPropagation()}>
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  <span className="material-icons" style={{ fontSize: 20, verticalAlign: 'middle', marginRight: 8 }}>people</span>
+                  Students assigned to {viewStudentsDriver.name}
+                  {viewStudentsDriver.bus && <span style={{ fontWeight: 400, fontSize: 13, marginLeft: 8, color: '#718096' }}>— Bus {viewStudentsDriver.bus}</span>}
+                </h5>
+                <button className="modal-close" onClick={() => setViewStudentsDriver(null)}>
+                  <span className="material-icons">close</span>
+                </button>
+              </div>
+              <div className="modal-body">
+                {busStudents.length === 0 ? (
+                  <div className="empty-state" style={{ padding: '32px 0' }}>
+                    <span className="material-icons" style={{ fontSize: 40, color: '#cbd5e0' }}>people_outline</span>
+                    <h3 style={{ marginTop: 8, color: '#a0aec0', fontSize: 15 }}>No students assigned to this bus</h3>
+                  </div>
+                ) : (
+                  <table className="data-table">
+                    <thead>
+                      <tr><th>#</th><th>Student ID</th><th>Student Name</th><th>Route</th><th>Boarding Stop</th></tr>
+                    </thead>
+                    <tbody>
+                      {busStudents.map((s, i) => (
+                        <tr key={s.id}>
+                          <td style={{ color: '#a0aec0', fontSize: 12 }}>{i + 1}</td>
+                          <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{s.studentId}</td>
+                          <td style={{ fontWeight: 600, color: '#2d3748' }}>{s.studentName}</td>
+                          <td style={{ fontSize: 12, color: '#718096' }}>{s.routeName || '—'}</td>
+                          <td style={{ fontSize: 12, color: '#718096' }}>{s.stopName || '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+              <div className="modal-footer">
+                <span style={{ fontSize: 13, color: '#718096' }}>
+                  {busStudents.length} student{busStudents.length !== 1 ? 's' : ''} on this bus
+                </span>
+                <button className="btn btn-sm btn-secondary" onClick={() => setViewStudentsDriver(null)}>Close</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {showModal && (
         <Modal title={editItem ? 'Edit Driver' : 'Add New Driver'} onClose={() => setShowModal(false)} onSubmit={handleSave} submitLabel={editItem ? 'Update Driver' : 'Add Driver'} size="modal-lg">
@@ -659,11 +730,11 @@ function DriversPanel({ drivers, setDrivers, buses, showToast }) {
               {errors.license && <div className="invalid-feedback">{errors.license}</div>}
             </div>
             <div className="col-md-4">
-              <label className="form-label fw-medium small">Phone (10 digits)</label>
-              <input type="tel" className={`form-control form-control-sm ${errors.phone ? 'is-invalid' : ''}`}
-                placeholder="10-digit number" value={form.phone} maxLength={10} inputMode="numeric"
-                onChange={e => setForm({ ...form, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })} />
-              {errors.phone && <div className="invalid-feedback">{errors.phone}</div>}
+              <label className="form-label fw-medium small">Mobile (10 digits)</label>
+              <input type="tel" className={`form-control form-control-sm ${errors.mobile ? 'is-invalid' : ''}`}
+                placeholder="10-digit number" value={form.mobile} maxLength={10} inputMode="numeric"
+                onChange={e => setForm({ ...form, mobile: e.target.value.replace(/\D/g, '').slice(0, 10) })} />
+              {errors.mobile && <div className="invalid-feedback">{errors.mobile}</div>}
             </div>
             <div className="col-md-4">
               <label className="form-label fw-medium small">Experience</label>
@@ -679,9 +750,10 @@ function DriversPanel({ drivers, setDrivers, buses, showToast }) {
             </div>
             <div className="col-12">
               <label className="form-label fw-medium small">Assign to Bus</label>
-              <select className="form-select form-select-sm" value={form.busId || ''} onChange={e => setForm({ ...form, busId: e.target.value })}>
+              <select className="form-select form-select-sm" value={form.bus}
+                onChange={e => setForm({ ...form, bus: e.target.value })}>
                 <option value="">— Select Bus —</option>
-                {buses.map(b => <option key={b.id} value={b.id}>{b.busNo} – {b.model}</option>)}
+                {buses.map(b => <option key={b.id} value={b.busNo}>{b.busNo}{b.model ? ` – ${b.model}` : ''}</option>)}
               </select>
             </div>
           </div>
@@ -701,46 +773,85 @@ function StudentsPanel({ students, setStudents, routes, stops, buses, showToast 
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
-  const [form, setForm] = useState({ studentName: '', rollNo: '', routeId: '', stopId: '', busId: '', status: 'Active' });
+  const EMPTY_STUDENT = { studentId: '', studentName: '', routeId: '', routeName: '', stopId: '', stopName: '', busId: '', busNo: '' };
+  const [form, setForm] = useState(EMPTY_STUDENT);
   const [errors, setErrors] = useState({});
 
-  const filteredStops = stops.filter(s => !form.routeId || s.routeId === +form.routeId);
+  const filteredStops = stops.filter(s => !form.routeId || String(s.routeId) === String(form.routeId));
 
   const filtered = students.filter(s =>
-    (!search || s.studentName.toLowerCase().includes(search.toLowerCase()) || s.rollNo.toLowerCase().includes(search.toLowerCase())) &&
-    (!filterRoute || s.routeId === +filterRoute)
+    (!search || s.studentName?.toLowerCase().includes(search.toLowerCase()) || String(s.studentId).includes(search)) &&
+    (!filterRoute || String(s.routeId) === String(filterRoute))
   );
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
   const validate = () => {
     const e = {};
+    if (!form.studentId)          e.studentId  = 'Student ID is required';
     if (!form.studentName.trim()) e.studentName = 'Student name is required';
-    if (!form.rollNo.trim())      e.rollNo      = 'Roll number is required';
     if (!form.routeId)            e.routeId     = 'Please select a route';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
-  const openAdd  = () => { setEditItem(null); setForm({ studentName: '', rollNo: '', routeId: '', stopId: '', busId: '', status: 'Active' }); setErrors({}); setShowModal(true); };
-  const openEdit = (item) => { setEditItem(item); setForm({ ...item }); setErrors({}); setShowModal(true); };
+  const openAdd  = () => { setEditItem(null); setForm(EMPTY_STUDENT); setErrors({}); setShowModal(true); };
+  const openEdit = (item) => {
+    setEditItem(item);
+    setForm({
+      studentId:   item.studentId   || '',
+      studentName: item.studentName || '',
+      routeId:     item.routeId     || '',
+      routeName:   item.routeName   || '',
+      stopId:      item.stopId      || '',
+      stopName:    item.stopName    || '',
+      busId:       item.busId       || '',
+      busNo:       item.busNo       || '',
+    });
+    setErrors({});
+    setShowModal(true);
+  };
+
+  // When route/stop/bus dropdowns change, also populate the name fields
+  const setRoute = (id) => {
+    const r = routes.find(r => String(r.id) === String(id));
+    setForm(f => ({ ...f, routeId: id, routeName: r?.name || '', stopId: '', stopName: '' }));
+  };
+  const setStop = (id) => {
+    const s = stops.find(s => String(s.id) === String(id));
+    setForm(f => ({ ...f, stopId: id, stopName: s?.name || '' }));
+  };
+  const setBus = (id) => {
+    const b = buses.find(b => String(b.id) === String(id));
+    setForm(f => ({ ...f, busId: id, busNo: b?.busNo || '' }));
+  };
 
   const handleSave = async (e) => {
     e.preventDefault();
     if (!validate()) return;
     try {
+      const payload = {
+        studentId:   Number(form.studentId),
+        studentName: form.studentName,
+        routeId:     form.routeId  ? Number(form.routeId)  : null,
+        routeName:   form.routeName,
+        stopId:      form.stopId   ? Number(form.stopId)   : null,
+        stopName:    form.stopName,
+        busId:       form.busId    ? Number(form.busId)    : null,
+        busNo:       form.busNo,
+      };
       if (editItem) {
-        await updateStudentAssignment(editItem.id, form);
+        await updateStudentAssignment(editItem.id, payload);
         showToast('Student transport updated successfully');
       } else {
-        await assignStudent(form);
+        await assignStudent(payload);
         showToast('Student assigned to transport successfully');
       }
       const data = await fetchStudentAssignments();
       setStudents(data);
       setShowModal(false);
-    } catch {
-      showToast('Failed to save. Please try again.', 'error');
+    } catch (err) {
+      showToast(err?.response?.data?.message || 'Failed to save. Please try again.', 'error');
     }
   };
 
@@ -768,7 +879,7 @@ function StudentsPanel({ students, setStudents, routes, stops, buses, showToast 
         filters={[{ value: filterRoute, onChange: v => { setFilterRoute(v); setPage(1); }, options: [{ value: '', label: 'All Routes' }, ...routes.map(r => ({ value: r.id, label: r.name }))] }]}>
         <table className="data-table">
           <thead>
-            <tr><th>Student</th><th>Roll No</th><th>Route</th><th>Stop</th><th>Bus</th><th>Status</th><th>Actions</th></tr>
+            <tr><th>Student</th><th>Student ID</th><th>Route</th><th>Stop</th><th>Bus</th><th>Actions</th></tr>
           </thead>
           <tbody>
             {paginated.length === 0 ? (
@@ -781,15 +892,14 @@ function StudentsPanel({ students, setStudents, routes, stops, buses, showToast 
                     <span className="student-name">{s.studentName}</span>
                   </div>
                 </td>
-                <td style={{ fontFamily: 'monospace', fontSize: 12, color: '#718096', fontWeight: 600 }}>{s.rollNo}</td>
+                <td style={{ fontFamily: 'monospace', fontSize: 12, color: '#718096', fontWeight: 600 }}>ID: {s.studentId}</td>
                 <td style={{ fontSize: 12, color: '#4a5568' }}>{routeName(s.routeId)}</td>
                 <td>
                   <span style={{ background: '#fff5f7', color: '#805ad5', padding: '2px 10px', borderRadius: 12, fontWeight: 600, fontSize: 12 }}>
                     {stopName(s.stopId)}
                   </span>
                 </td>
-                <td style={{ fontWeight: 700, fontFamily: 'monospace', color: '#2d3748' }}>{busNo(s.busId)}</td>
-                <td><span className={`status-badge ${statusColor[s.status] || 'status-pending'}`}>{s.status}</span></td>
+                <td style={{ fontWeight: 700, fontFamily: 'monospace', color: '#2d3748' }}>{s.busNo || busNo(s.busId)}</td>
                 <td>
                   <div className="action-btns">
                     <button className="action-btn action-btn-edit" onClick={() => openEdit(s)} title="Edit"><span className="material-icons">edit</span></button>
@@ -806,47 +916,42 @@ function StudentsPanel({ students, setStudents, routes, stops, buses, showToast 
       {showModal && (
         <Modal title={editItem ? 'Edit Transport Assignment' : 'Assign Student to Transport'} onClose={() => setShowModal(false)} onSubmit={handleSave} submitLabel={editItem ? 'Update' : 'Assign'} size="modal-lg">
           <div className="row g-3">
-            <div className="col-md-6">
+            <div className="col-md-4">
+              <label className="form-label fw-medium small">Student ID *</label>
+              <input type="number" className={`form-control form-control-sm ${errors.studentId ? 'is-invalid' : ''}`}
+                placeholder="e.g., 1001" value={form.studentId} min="1"
+                onChange={e => { setForm(f => ({ ...f, studentId: e.target.value })); if (errors.studentId) setErrors(ev => ({ ...ev, studentId: '' })); }} />
+              {errors.studentId && <div className="invalid-feedback">{errors.studentId}</div>}
+            </div>
+            <div className="col-md-8">
               <label className="form-label fw-medium small">Student Name *</label>
               <input type="text" className={`form-control form-control-sm ${errors.studentName ? 'is-invalid' : ''}`}
                 placeholder="Full name" value={form.studentName}
-                onChange={e => setForm({ ...form, studentName: e.target.value })} />
+                onChange={e => { setForm(f => ({ ...f, studentName: e.target.value })); if (errors.studentName) setErrors(ev => ({ ...ev, studentName: '' })); }} />
               {errors.studentName && <div className="invalid-feedback">{errors.studentName}</div>}
-            </div>
-            <div className="col-md-6">
-              <label className="form-label fw-medium small">Roll Number *</label>
-              <input type="text" className={`form-control form-control-sm ${errors.rollNo ? 'is-invalid' : ''}`}
-                placeholder="e.g., S001" value={form.rollNo}
-                onChange={e => setForm({ ...form, rollNo: e.target.value })} />
-              {errors.rollNo && <div className="invalid-feedback">{errors.rollNo}</div>}
             </div>
             <div className="col-md-6">
               <label className="form-label fw-medium small">Route *</label>
               <select className={`form-select form-select-sm ${errors.routeId ? 'is-invalid' : ''}`}
-                value={form.routeId || ''} onChange={e => setForm({ ...form, routeId: e.target.value, stopId: '' })}>
+                value={form.routeId || ''} onChange={e => { setRoute(e.target.value); if (errors.routeId) setErrors(ev => ({ ...ev, routeId: '' })); }}>
                 <option value="">— Select Route —</option>
-                {routes.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                {routes.map(r => <option key={r.id} value={r.id}>{r.name}{r.area ? ` (${r.area})` : ''}</option>)}
               </select>
               {errors.routeId && <div className="invalid-feedback">{errors.routeId}</div>}
             </div>
             <div className="col-md-6">
               <label className="form-label fw-medium small">Boarding Stop</label>
-              <select className="form-select form-select-sm" value={form.stopId || ''} onChange={e => setForm({ ...form, stopId: e.target.value })}>
-                <option value="">— Select Stop —</option>
-                {filteredStops.map(s => <option key={s.id} value={s.id}>{s.name} ({s.pickupTime})</option>)}
+              <select className="form-select form-select-sm" value={form.stopId || ''} onChange={e => setStop(e.target.value)}
+                disabled={!form.routeId}>
+                <option value="">{form.routeId ? '— Select Stop —' : '— Select route first —'}</option>
+                {filteredStops.map(s => <option key={s.id} value={s.id}>{s.name}{s.timing ? ` (${s.timing})` : ''}</option>)}
               </select>
             </div>
-            <div className="col-md-6">
+            <div className="col-md-12">
               <label className="form-label fw-medium small">Bus</label>
-              <select className="form-select form-select-sm" value={form.busId || ''} onChange={e => setForm({ ...form, busId: e.target.value })}>
-                <option value="">— Select Bus —</option>
-                {buses.map(b => <option key={b.id} value={b.id}>{b.busNo} – {b.model}</option>)}
-              </select>
-            </div>
-            <div className="col-md-6">
-              <label className="form-label fw-medium small">Status</label>
-              <select className="form-select form-select-sm" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
-                <option>Active</option><option>Inactive</option>
+              <select className="form-select form-select-sm" value={form.busId || ''} onChange={e => setBus(e.target.value)}>
+                <option value="">— Select Bus (optional) —</option>
+                {buses.map(b => <option key={b.id} value={b.id}>{b.busNo}{b.route ? ` — ${b.route}` : ''} (cap: {b.capacity})</option>)}
               </select>
             </div>
           </div>
@@ -865,10 +970,10 @@ function StopsPanel({ stops, setStops, routes, showToast }) {
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
-  const [form, setForm] = useState({ name: '', routeId: '', order: '', pickupTime: '', dropTime: '' });
+  const [form, setForm] = useState({ name: '', routeId: '', stopOrder: '', timing: '' });
   const [errors, setErrors] = useState({});
 
-  const filtered = stops.filter(s => !filterRoute || s.routeId === +filterRoute);
+  const filtered = stops.filter(s => !filterRoute || String(s.routeId) === String(filterRoute));
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
@@ -880,18 +985,32 @@ function StopsPanel({ stops, setStops, routes, showToast }) {
     return Object.keys(e).length === 0;
   };
 
-  const openAdd  = () => { setEditItem(null); setForm({ name: '', routeId: '', order: '', pickupTime: '', dropTime: '' }); setErrors({}); setShowModal(true); };
-  const openEdit = (item) => { setEditItem(item); setForm({ ...item }); setErrors({}); setShowModal(true); };
+  const EMPTY_STOP = { name: '', routeId: '', stopOrder: '', timing: '' };
+  const openAdd  = () => { setEditItem(null); setForm(EMPTY_STOP); setErrors({}); setShowModal(true); };
+  const openEdit = (item) => {
+    setEditItem(item);
+    setForm({ name: item.name || '', routeId: item.routeId || '', stopOrder: item.stopOrder || '', timing: item.timing || '' });
+    setErrors({});
+    setShowModal(true);
+  };
 
   const handleSave = async (e) => {
     e.preventDefault();
     if (!validate()) return;
     try {
+      const selectedRoute = routes.find(r => String(r.id) === String(form.routeId));
+      const payload = {
+        name:      form.name,
+        routeId:   form.routeId ? Number(form.routeId) : null,
+        routeName: selectedRoute?.name || '',
+        stopOrder: form.stopOrder ? Number(form.stopOrder) : 0,
+        timing:    form.timing,
+      };
       if (editItem) {
-        await updateStop(editItem.id, form);
+        await updateStop(editItem.id, payload);
         showToast('Stop updated successfully');
       } else {
-        await createStop(form);
+        await createStop(payload);
         showToast('Stop added successfully');
       }
       const data = await fetchStops();
@@ -914,7 +1033,7 @@ function StopsPanel({ stops, setStops, routes, showToast }) {
     setDeleteId(null);
   };
 
-  const routeName = (id) => routes.find(r => r.id === +id)?.name || '—';
+  const routeName = (id) => routes.find(r => String(r.id) === String(id))?.name || '—';
 
   return (
     <>
@@ -922,11 +1041,11 @@ function StopsPanel({ stops, setStops, routes, showToast }) {
         filters={[{ value: filterRoute, onChange: v => { setFilterRoute(v); setPage(1); }, options: [{ value: '', label: 'All Routes' }, ...routes.map(r => ({ value: r.id, label: r.name }))] }]}>
         <table className="data-table">
           <thead>
-            <tr><th>#</th><th>Stop Name</th><th>Route</th><th>Order</th><th>Pickup Time</th><th>Drop Time</th><th>Actions</th></tr>
+            <tr><th>#</th><th>Stop Name</th><th>Route</th><th>Order</th><th>Timing</th><th>Actions</th></tr>
           </thead>
           <tbody>
             {paginated.length === 0 ? (
-              <tr><td colSpan={7}><div className="empty-state"><span className="material-icons">place</span><h3>No stops found</h3></div></td></tr>
+              <tr><td colSpan={6}><div className="empty-state"><span className="material-icons">place</span><h3>No stops found</h3></div></td></tr>
             ) : paginated.map((s, idx) => (
               <tr key={s.id}>
                 <td style={{ color: '#a0aec0', fontSize: 12 }}>{(page - 1) * ITEMS_PER_PAGE + idx + 1}</td>
@@ -939,11 +1058,10 @@ function StopsPanel({ stops, setStops, routes, showToast }) {
                 <td style={{ fontSize: 12, color: '#718096' }}>{routeName(s.routeId)}</td>
                 <td>
                   <span style={{ background: '#ebf8ff', color: '#2b6cb0', padding: '2px 10px', borderRadius: 12, fontWeight: 700, fontSize: 12 }}>
-                    Stop {s.order || '—'}
+                    Stop {s.stopOrder || '—'}
                   </span>
                 </td>
-                <td style={{ fontWeight: 600, color: '#276749', fontSize: 13 }}>{s.pickupTime || '—'}</td>
-                <td style={{ fontWeight: 600, color: '#c05621', fontSize: 13 }}>{s.dropTime || '—'}</td>
+                <td style={{ fontWeight: 600, color: '#276749', fontSize: 13 }}>{s.timing || '—'}</td>
                 <td>
                   <div className="action-btns">
                     <button className="action-btn action-btn-edit" onClick={() => openEdit(s)} title="Edit"><span className="material-icons">edit</span></button>
@@ -972,25 +1090,20 @@ function StopsPanel({ stops, setStops, routes, showToast }) {
               <select className={`form-select form-select-sm ${errors.routeId ? 'is-invalid' : ''}`}
                 value={form.routeId || ''} onChange={e => setForm({ ...form, routeId: e.target.value })}>
                 <option value="">— Select Route —</option>
-                {routes.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                {routes.map(r => <option key={r.id} value={r.id}>{r.name}{r.area ? ` — ${r.area}` : ''}</option>)}
               </select>
               {errors.routeId && <div className="invalid-feedback">{errors.routeId}</div>}
             </div>
-            <div className="col-md-6">
+            <div className="col-md-3">
               <label className="form-label fw-medium small">Stop Order</label>
               <input type="number" className="form-control form-control-sm"
-                placeholder="e.g., 1" value={form.order} min="1"
-                onChange={e => setForm({ ...form, order: e.target.value })} />
+                placeholder="e.g., 1" value={form.stopOrder} min="1"
+                onChange={e => setForm({ ...form, stopOrder: e.target.value })} />
             </div>
-            <div className="col-md-6">
-              <label className="form-label fw-medium small">Pickup Time</label>
-              <input type="time" className="form-control form-control-sm" value={form.pickupTime}
-                onChange={e => setForm({ ...form, pickupTime: e.target.value })} />
-            </div>
-            <div className="col-md-6">
-              <label className="form-label fw-medium small">Drop Time</label>
-              <input type="time" className="form-control form-control-sm" value={form.dropTime}
-                onChange={e => setForm({ ...form, dropTime: e.target.value })} />
+            <div className="col-md-3">
+              <label className="form-label fw-medium small">Timing</label>
+              <input type="time" className="form-control form-control-sm" value={form.timing}
+                onChange={e => setForm({ ...form, timing: e.target.value })} />
             </div>
           </div>
         </Modal>
@@ -1002,56 +1115,78 @@ function StopsPanel({ stops, setStops, routes, showToast }) {
 }
 
 // ─── FEES Panel ───────────────────────────────────────────────────────────────
-function FeesPanel({ fees, setFees, showToast }) {
+function FeesPanel({ fees, setFees, students, showToast }) {
   const [filterStatus, setFilterStatus] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
-  const [form, setForm] = useState({ studentName: '', rollNo: '', amount: '', month: '', dueDate: '', status: 'Pending', paidOn: '' });
+  const EMPTY_FEE = { studentId: '', studentName: '', busNo: '', route: '', amount: '', month: '' };
+  const [form, setForm] = useState(EMPTY_FEE);
   const [errors, setErrors] = useState({});
 
+  // Backend status enum: PAID, PENDING, OVERDUE
   const filtered = fees.filter(f =>
-    (!search || f.studentName.toLowerCase().includes(search.toLowerCase()) || f.rollNo.toLowerCase().includes(search.toLowerCase())) &&
+    (!search || f.studentName?.toLowerCase().includes(search.toLowerCase()) || String(f.studentId).includes(search)) &&
     (!filterStatus || f.status === filterStatus)
   );
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
   const totalAmount  = fees.reduce((s, f) => s + (+f.amount || 0), 0);
-  const collectedAmt = fees.filter(f => f.status === 'Paid').reduce((s, f) => s + (+f.amount || 0), 0);
+  const collectedAmt = fees.filter(f => f.status === 'PAID').reduce((s, f) => s + (+f.amount || 0), 0);
   const pendingAmt   = totalAmount - collectedAmt;
 
   const validate = () => {
     const e = {};
+    if (!form.studentId)          e.studentId  = 'Student ID is required';
     if (!form.studentName.trim()) e.studentName = 'Student name is required';
     if (!form.amount || isNaN(form.amount) || +form.amount <= 0) e.amount = 'Valid amount is required';
-    if (!form.month.trim())   e.month   = 'Month is required';
-    if (!form.dueDate)        e.dueDate = 'Due date is required';
+    if (!form.month.trim())       e.month      = 'Month is required';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
-  const openAdd  = () => { setEditItem(null); setForm({ studentName: '', rollNo: '', amount: '', month: '', dueDate: '', status: 'Pending', paidOn: '' }); setErrors({}); setShowModal(true); };
-  const openEdit = (item) => { setEditItem(item); setForm({ ...item }); setErrors({}); setShowModal(true); };
+  const openAdd  = () => { setEditItem(null); setForm(EMPTY_FEE); setErrors({}); setShowModal(true); };
+  const openEdit = (item) => {
+    setEditItem(item);
+    setForm({
+      studentId:   item.studentId   || '',
+      studentName: item.studentName || '',
+      busNo:       item.busNo       || '',
+      route:       item.route       || '',
+      amount:      item.amount      || '',
+      month:       item.month       || '',
+    });
+    setErrors({});
+    setShowModal(true);
+  };
 
   const handleSave = async (e) => {
     e.preventDefault();
     if (!validate()) return;
     try {
+      const payload = {
+        studentId:   Number(form.studentId),
+        studentName: form.studentName,
+        busNo:       form.busNo,
+        route:       form.route,
+        amount:      Number(form.amount),
+        month:       form.month,
+      };
       if (editItem) {
-        await updateTransportFee(editItem.id, form);
+        await updateTransportFee(editItem.id, payload);
         showToast('Fee record updated successfully');
       } else {
-        await createTransportFee(form);
+        await createTransportFee(payload);
         showToast('Fee record added successfully');
       }
       const data = await fetchTransportFees();
       setFees(data);
       setShowModal(false);
-    } catch {
-      showToast('Failed to save fee record. Please try again.', 'error');
+    } catch (err) {
+      showToast(err?.response?.data?.message || 'Failed to save fee record. Please try again.', 'error');
     }
   };
 
@@ -1102,11 +1237,11 @@ function FeesPanel({ fees, setFees, showToast }) {
       </div>
 
       <TableCard onAdd={openAdd} addLabel="Add Fee" addIcon="add"
-        searchValue={search} onSearch={v => { setSearch(v); setPage(1); }} searchPlaceholder="Search student or roll no…"
-        filters={[{ value: filterStatus, onChange: v => { setFilterStatus(v); setPage(1); }, options: [{ value: '', label: 'All Status' }, { value: 'Paid', label: 'Paid' }, { value: 'Pending', label: 'Pending' }, { value: 'Overdue', label: 'Overdue' }] }]}>
+        searchValue={search} onSearch={v => { setSearch(v); setPage(1); }} searchPlaceholder="Search by student name or ID…"
+        filters={[{ value: filterStatus, onChange: v => { setFilterStatus(v); setPage(1); }, options: [{ value: '', label: 'All Status' }, { value: 'PAID', label: 'Paid' }, { value: 'PENDING', label: 'Pending' }, { value: 'OVERDUE', label: 'Overdue' }] }]}>
         <table className="data-table">
           <thead>
-            <tr><th>Student</th><th>Month</th><th>Amount</th><th>Due Date</th><th>Status</th><th>Paid On</th><th>Actions</th></tr>
+            <tr><th>Student</th><th>Route / Bus</th><th>Month</th><th>Amount</th><th>Status</th><th>Paid On</th><th>Actions</th></tr>
           </thead>
           <tbody>
             {paginated.length === 0 ? (
@@ -1116,17 +1251,20 @@ function FeesPanel({ fees, setFees, showToast }) {
                 <td>
                   <div>
                     <div style={{ fontWeight: 600, color: '#2d3748', fontSize: 13 }}>{f.studentName}</div>
-                    <div style={{ fontSize: 11, color: '#a0aec0' }}>{f.rollNo}</div>
+                    <div style={{ fontSize: 11, color: '#a0aec0' }}>ID: {f.studentId}</div>
                   </div>
+                </td>
+                <td style={{ fontSize: 12, color: '#718096' }}>
+                  <div>{f.route || '—'}</div>
+                  <div style={{ fontSize: 11 }}>{f.busNo || ''}</div>
                 </td>
                 <td style={{ fontSize: 13 }}>{f.month}</td>
                 <td style={{ fontWeight: 700, color: '#2d3748' }}>{fmt(f.amount)}</td>
-                <td style={{ fontSize: 12, color: '#718096' }}>{f.dueDate || '—'}</td>
                 <td><span className={`status-badge ${statusColor[f.status] || 'status-pending'}`}>{f.status}</span></td>
-                <td style={{ fontSize: 12, color: '#718096' }}>{f.paidOn || '—'}</td>
+                <td style={{ fontSize: 12, color: '#718096' }}>{f.paidDate || '—'}</td>
                 <td>
                   <div className="action-btns">
-                    {f.status !== 'Paid' && (
+                    {f.status !== 'PAID' && (
                       <button className="action-btn" style={{ background: '#f0fff4', color: '#276749' }} onClick={() => markPaid(f.id)} title="Mark Paid">
                         <span className="material-icons">check_circle</span>
                       </button>
@@ -1145,7 +1283,38 @@ function FeesPanel({ fees, setFees, showToast }) {
       {showModal && (
         <Modal title={editItem ? 'Edit Fee Record' : 'Add Transport Fee'} onClose={() => setShowModal(false)} onSubmit={handleSave} submitLabel={editItem ? 'Update' : 'Add Fee'} size="modal-lg">
           <div className="row g-3">
-            <div className="col-md-6">
+            {!editItem && students && students.length > 0 && (
+              <div className="col-12">
+                <label className="form-label fw-medium small">Select Assigned Student</label>
+                <select className="form-select form-select-sm"
+                  value=""
+                  onChange={e => {
+                    const s = students.find(st => String(st.studentId) === e.target.value);
+                    if (s) setForm(f => ({
+                      ...f,
+                      studentId:   s.studentId  || '',
+                      studentName: s.studentName || '',
+                      busNo:       s.busNo       || '',
+                      route:       s.routeName   || '',
+                    }));
+                  }}>
+                  <option value="">— Pick from assigned students —</option>
+                  {students.map(s => (
+                    <option key={s.id} value={s.studentId}>
+                      {s.studentName} (ID: {s.studentId}){s.routeName ? ` — ${s.routeName}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <div className="col-md-4">
+              <label className="form-label fw-medium small">Student ID *</label>
+              <input type="number" className={`form-control form-control-sm ${errors.studentId ? 'is-invalid' : ''}`}
+                placeholder="e.g., 1001" value={form.studentId} min="1"
+                onChange={e => setForm({ ...form, studentId: e.target.value })} />
+              {errors.studentId && <div className="invalid-feedback">{errors.studentId}</div>}
+            </div>
+            <div className="col-md-8">
               <label className="form-label fw-medium small">Student Name *</label>
               <input type="text" className={`form-control form-control-sm ${errors.studentName ? 'is-invalid' : ''}`}
                 placeholder="Full name" value={form.studentName}
@@ -1153,10 +1322,16 @@ function FeesPanel({ fees, setFees, showToast }) {
               {errors.studentName && <div className="invalid-feedback">{errors.studentName}</div>}
             </div>
             <div className="col-md-6">
-              <label className="form-label fw-medium small">Roll Number</label>
+              <label className="form-label fw-medium small">Route Name</label>
               <input type="text" className="form-control form-control-sm"
-                placeholder="e.g., S001" value={form.rollNo}
-                onChange={e => setForm({ ...form, rollNo: e.target.value })} />
+                placeholder="e.g., Route A — North Zone" value={form.route}
+                onChange={e => setForm({ ...form, route: e.target.value })} />
+            </div>
+            <div className="col-md-6">
+              <label className="form-label fw-medium small">Bus Number</label>
+              <input type="text" className="form-control form-control-sm"
+                placeholder="e.g., BUS-001" value={form.busNo}
+                onChange={e => setForm({ ...form, busNo: e.target.value })} />
             </div>
             <div className="col-md-4">
               <label className="form-label fw-medium small">Amount (₹) *</label>
@@ -1165,33 +1340,13 @@ function FeesPanel({ fees, setFees, showToast }) {
                 onChange={e => setForm({ ...form, amount: e.target.value })} />
               {errors.amount && <div className="invalid-feedback">{errors.amount}</div>}
             </div>
-            <div className="col-md-4">
+            <div className="col-md-8">
               <label className="form-label fw-medium small">Month *</label>
               <input type="text" className={`form-control form-control-sm ${errors.month ? 'is-invalid' : ''}`}
                 placeholder="e.g., April 2026" value={form.month}
                 onChange={e => setForm({ ...form, month: e.target.value })} />
               {errors.month && <div className="invalid-feedback">{errors.month}</div>}
             </div>
-            <div className="col-md-4">
-              <label className="form-label fw-medium small">Due Date *</label>
-              <input type="date" className={`form-control form-control-sm ${errors.dueDate ? 'is-invalid' : ''}`}
-                value={form.dueDate}
-                onChange={e => setForm({ ...form, dueDate: e.target.value })} />
-              {errors.dueDate && <div className="invalid-feedback">{errors.dueDate}</div>}
-            </div>
-            <div className="col-md-6">
-              <label className="form-label fw-medium small">Status</label>
-              <select className="form-select form-select-sm" value={form.status} onChange={e => setForm({ ...form, status: e.target.value, paidOn: e.target.value === 'Paid' ? (form.paidOn || new Date().toISOString().split('T')[0]) : form.paidOn })}>
-                <option>Pending</option><option>Paid</option><option>Overdue</option>
-              </select>
-            </div>
-            {form.status === 'Paid' && (
-              <div className="col-md-6">
-                <label className="form-label fw-medium small">Paid On</label>
-                <input type="date" className="form-control form-control-sm" value={form.paidOn}
-                  onChange={e => setForm({ ...form, paidOn: e.target.value })} />
-              </div>
-            )}
           </div>
         </Modal>
       )}

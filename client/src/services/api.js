@@ -265,6 +265,13 @@ export const transportAPI = {
   updateTransportFee: (id, data) => api.put(`/api/transport/fees/${id}`, data),
   deleteTransportFee: (id)       => api.delete(`/api/transport/fees/${id}`),
   markFeePaid:        (id)       => api.patch(`/api/transport/fees/${id}/pay`),
+
+  // Student Transport Details
+  getStudentTransports:    ()         => api.get('/api/transport/student-transport'),
+  getStudentTransportById: (id)       => api.get(`/api/transport/student-transport/${id}`),
+  createStudentTransport:  (data)     => api.post('/api/transport/student-transport', data),
+  updateStudentTransport:  (id, data) => api.put(`/api/transport/student-transport/${id}`, data),
+  deleteStudentTransport:  (id)       => api.delete(`/api/transport/student-transport/${id}`),
 };
 
 // ============================================

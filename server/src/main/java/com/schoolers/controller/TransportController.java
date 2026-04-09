@@ -169,4 +169,34 @@ public class TransportController {
         var response = transportService.deleteTransportFee(id);
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
     }
+
+    // Student Transport Details
+    @GetMapping("/student-transport")
+    public ResponseEntity<ApiResponse<List<com.schoolers.model.StudentTransport>>> getStudentTransports() {
+        return ResponseEntity.ok(transportService.getStudentTransports());
+    }
+
+    @GetMapping("/student-transport/{id}")
+    public ResponseEntity<?> getStudentTransportById(@PathVariable Long id) {
+        var response = transportService.getStudentTransportById(id);
+        return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
+    }
+
+    @PostMapping("/student-transport")
+    public ResponseEntity<?> createStudentTransport(@RequestBody Map<String, Object> body) {
+        var response = transportService.createStudentTransport(body);
+        return response.isSuccess() ? ResponseEntity.status(201).body(response) : ResponseEntity.badRequest().body(response);
+    }
+
+    @PutMapping("/student-transport/{id}")
+    public ResponseEntity<?> updateStudentTransport(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        var response = transportService.updateStudentTransport(id, body);
+        return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
+    }
+
+    @DeleteMapping("/student-transport/{id}")
+    public ResponseEntity<?> deleteStudentTransport(@PathVariable Long id) {
+        var response = transportService.deleteStudentTransport(id);
+        return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
+    }
 }

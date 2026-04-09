@@ -23,7 +23,9 @@ const adminNavItems = [
 
 // Super-Admin-only items (platform management)
 const superAdminOnlyItems = [
-  { path: '/superadmin/admins', icon: 'manage_accounts', label: 'Admin Management', permKey: null },
+  { path: '/superadmin/admins',            icon: 'manage_accounts',  label: 'Admin Management',     permKey: null },
+  { path: '/superadmin/student-transport', icon: 'directions_bus',   label: 'Student Transport',    permKey: null },
+  { path: '/superadmin/exam-schedule',     icon: 'event_note',       label: 'Exam Schedule',        permKey: null },
 ];
 
 const teacherNavItems = [

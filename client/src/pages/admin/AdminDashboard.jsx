@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import StatCard from '../../components/StatCard';
@@ -6,22 +6,22 @@ import BarChartComponent from '../../components/Charts/BarChartComponent';
 import LineChartComponent from '../../components/Charts/LineChartComponent';
 import Toast from '../../components/Toast';
 import { useAuth } from '../../context/AuthContext';
-import { superAdminAPI } from '../../services/api';
+import { adminAPI, superAdminAPI, applicationAPI } from '../../services/api';
 import { getLogs } from '../../services/activityLog';
 
 const revenueData = [
-  { name: 'Jan', revenue: 125000, expenses: 48000 },
-  { name: 'Feb', revenue: 118000, expenses: 52000 },
-  { name: 'Mar', revenue: 132000, expenses: 44000 },
-  { name: 'Apr', revenue: 141000, expenses: 56000 },
-  { name: 'May', revenue: 138000, expenses: 50000 },
-  { name: 'Jun', revenue: 155000, expenses: 62000 },
-  { name: 'Jul', revenue: 148000, expenses: 58000 },
-  { name: 'Aug', revenue: 162000, expenses: 64000 },
-  { name: 'Sep', revenue: 175000, expenses: 70000 },
-  { name: 'Oct', revenue: 169000, expenses: 67000 },
-  { name: 'Nov', revenue: 182000, expenses: 72000 },
-  { name: 'Dec', revenue: 195000, expenses: 78000 },
+  { name: 'Jan', revenue: 0, expenses: 0 },
+  { name: 'Feb', revenue: 0, expenses: 0 },
+  { name: 'Mar', revenue: 0, expenses: 0 },
+  { name: 'Apr', revenue: 0, expenses: 0 },
+  { name: 'May', revenue: 0, expenses: 0 },
+  { name: 'Jun', revenue: 0, expenses: 0 },
+  { name: 'Jul', revenue: 0, expenses: 0 },
+  { name: 'Aug', revenue: 0, expenses: 0 },
+  { name: 'Sep', revenue: 0, expenses: 0 },
+  { name: 'Oct', revenue: 0, expenses: 0 },
+  { name: 'Nov', revenue: 0, expenses: 0 },
+  { name: 'Dec', revenue: 0, expenses: 0 },
 ];
 
 const attendanceData = [
@@ -39,21 +39,11 @@ const attendanceData = [
   { name: 'Dec', attendance: 88 },
 ];
 
-const initialApplications = [
-  { id: 1, name: 'Aarav Sharma', class: 'Class 6', parent: 'Ramesh Sharma', mobile: '9876543210', date: '14 Mar 2025', status: 'Pending' },
-  { id: 2, name: 'Priya Nair', class: 'Class 9', parent: 'Sunil Nair', mobile: '9876543211', date: '13 Mar 2025', status: 'Pending' },
-  { id: 3, name: 'Karthik Reddy', class: 'Class 11', parent: 'Venkat Reddy', mobile: '9876543212', date: '12 Mar 2025', status: 'Approved' },
-  { id: 4, name: 'Divya Menon', class: 'Class 7', parent: 'Anil Menon', mobile: '9876543213', date: '11 Mar 2025', status: 'Pending' },
-  { id: 5, name: 'Rohan Gupta', class: 'Class 10', parent: 'Vikram Gupta', mobile: '9876543214', date: '10 Mar 2025', status: 'Rejected' },
-];
-
-const recentFees = [
-  { id: 1, student: 'Arjun Patel', class: '10-A', amount: 15000, type: 'Tuition', date: '15 Mar 2025', method: 'UPI' },
-  { id: 2, student: 'Sneha Gupta', class: '9-B', amount: 12000, type: 'Tuition', date: '15 Mar 2025', method: 'Cash' },
-  { id: 3, student: 'Ravi Kumar', class: '8-C', amount: 8500, type: 'Transport', date: '14 Mar 2025', method: 'Bank Transfer' },
-  { id: 4, student: 'Ananya Singh', class: '10-B', amount: 15000, type: 'Tuition', date: '14 Mar 2025', method: 'Cheque' },
-  { id: 5, student: 'Kiran Reddy', class: '7-A', amount: 10000, type: 'Tuition', date: '13 Mar 2025', method: 'UPI' },
-];
+const fmtDate = (d) => {
+  if (!d) return '—';
+  try { return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }); }
+  catch { return d; }
+};
 
 const getInitials = (name) => name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
@@ -63,8 +53,77 @@ export default function AdminDashboard() {
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
 
   const [chartPeriod, setChartPeriod] = useState('12M');
-  const [applications, setApplications] = useState(initialApplications);
   const [toast, setToast] = useState(null);
+
+  // ── Recent Applications (real DB) ──
+  const [applications,     setApplications]     = useState([]);
+  const [appsLoading,      setAppsLoading]      = useState(true);
+
+  // ── Recent Fee Payments (real DB) ──
+  const [recentFees,       setRecentFees]       = useState([]);
+  const [feesLoading,      setFeesLoading]      = useState(true);
+
+  // ── Real-time dashboard counts from backend ──
+  const [dbStats,    setDbStats]    = useState(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [statsError,   setStatsError]   = useState(null);
+  const [lastRefresh,  setLastRefresh]  = useState(null);
+  const [refreshing,   setRefreshing]   = useState(false);
+
+  const fetchDashboardStats = useCallback(async (silent = false) => {
+    if (silent) setRefreshing(true);
+    else setStatsLoading(true);
+    setStatsError(null);
+    try {
+      const res = await adminAPI.getDashboardStats();
+      const data = res.data?.data ?? res.data ?? {};
+      setDbStats(data);
+      setLastRefresh(new Date());
+    } catch (err) {
+      setStatsError(err?.response?.data?.message || 'Failed to load dashboard data');
+    } finally {
+      setStatsLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchDashboardStats();
+    // Auto-refresh every 60 s
+    const timer = setInterval(() => fetchDashboardStats(true), 60000);
+    return () => clearInterval(timer);
+  }, [fetchDashboardStats]);
+
+  // ── Fetch recent applications ──────────────────────────────────────────────
+  useEffect(() => {
+    setAppsLoading(true);
+    applicationAPI.getAll()
+      .then(res => {
+        const list = res.data?.data ?? res.data ?? [];
+        // Sort by createdAt descending, take latest 5
+        const sorted = [...(Array.isArray(list) ? list : [])]
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+          .slice(0, 5);
+        setApplications(sorted);
+      })
+      .catch(() => setApplications([]))
+      .finally(() => setAppsLoading(false));
+  }, []);
+
+  // ── Fetch recent fee payments ──────────────────────────────────────────────
+  useEffect(() => {
+    setFeesLoading(true);
+    adminAPI.getAllFeePayments()
+      .then(res => {
+        const list = res.data?.data ?? res.data ?? [];
+        const sorted = [...(Array.isArray(list) ? list : [])]
+          .sort((a, b) => new Date(b.createdAt || b.paymentDate) - new Date(a.createdAt || a.paymentDate))
+          .slice(0, 5);
+        setRecentFees(sorted);
+      })
+      .catch(() => setRecentFees([]))
+      .finally(() => setFeesLoading(false));
+  }, []);
 
   // Super Admin only state
   const [admins, setAdmins] = useState([]);
@@ -90,38 +149,100 @@ export default function AdminDashboard() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const handleApprove = (id) => {
-    setApplications(prev => prev.map(a => a.id === id ? { ...a, status: 'Approved' } : a));
-    showToast('Application approved successfully');
+  const handleApprove = async (id) => {
+    try {
+      await applicationAPI.updateStatus(id, { status: 'APPROVED' });
+      setApplications(prev => prev.map(a => a.id === id ? { ...a, status: 'APPROVED' } : a));
+      fetchDashboardStats(true); // refresh pending count
+      showToast('Application approved successfully');
+    } catch { showToast('Failed to approve application', 'error'); }
   };
 
-  const handleReject = (id) => {
-    setApplications(prev => prev.map(a => a.id === id ? { ...a, status: 'Rejected' } : a));
-    showToast('Application rejected', 'warning');
+  const handleReject = async (id) => {
+    try {
+      await applicationAPI.updateStatus(id, { status: 'REJECTED' });
+      setApplications(prev => prev.map(a => a.id === id ? { ...a, status: 'REJECTED' } : a));
+      fetchDashboardStats(true);
+      showToast('Application rejected', 'warning');
+    } catch { showToast('Failed to reject application', 'error'); }
   };
 
   const stats = [
-    { title: 'Total Students', value: 1284, icon: 'school', color: '#76C442', change: 8, changeType: 'positive' },
-    { title: 'Total Teachers', value: 48, icon: 'person', color: '#3182ce', change: 4, changeType: 'positive' },
-    { title: 'Pending Applications', value: applications.filter(a => a.status === 'Pending').length, icon: 'assignment_ind', color: '#805ad5', change: 3, changeType: 'positive' },
-    { title: 'Monthly Revenue', value: 195000, icon: 'payments', color: '#38a169', change: 12, changeType: 'positive', prefix: '₹' },
-    { title: 'Fee Collection Today', value: 60500, icon: 'point_of_sale', color: '#dd6b20', change: 0, changeType: 'neutral', prefix: '₹' },
-    { title: 'Monthly Expenses', value: 78000, icon: 'receipt_long', color: '#e53e3e', change: 5, changeType: 'negative', prefix: '₹' },
+    {
+      title: 'Total Students',
+      value: statsLoading ? '…' : (dbStats?.totalStudents ?? 0),
+      icon: 'school', color: '#76C442',
+    },
+    {
+      title: 'Total Teachers',
+      value: statsLoading ? '…' : (dbStats?.totalTeachers ?? 0),
+      icon: 'person', color: '#3182ce',
+    },
+    {
+      title: 'Total Classes',
+      value: statsLoading ? '…' : (dbStats?.totalClasses ?? 0),
+      icon: 'class', color: '#805ad5',
+    },
+    {
+      title: 'Total Exams',
+      value: statsLoading ? '…' : (dbStats?.totalExams ?? 0),
+      icon: 'event_note', color: '#dd6b20',
+    },
+    {
+      title: 'Total Revenue',
+      value: statsLoading ? '…' : Math.round(Number(dbStats?.totalRevenue ?? 0)),
+      icon: 'payments', color: '#38a169',
+      prefix: '₹',
+    },
+    {
+      title: 'Total Expenses',
+      value: statsLoading ? '…' : Math.round(Number(dbStats?.totalExpenses ?? 0)),
+      icon: 'receipt_long', color: '#e53e3e',
+      prefix: '₹',
+    },
   ];
 
   const statusBadge = (status) => {
-    const map = { Approved: 'success', Pending: 'warning', Rejected: 'danger' };
-    return <span className={`badge bg-${map[status] || 'secondary'}`}>{status}</span>;
+    const map = { APPROVED: 'success', PENDING: 'warning', REJECTED: 'danger', Approved: 'success', Pending: 'warning', Rejected: 'danger' };
+    const label = { APPROVED: 'Approved', PENDING: 'Pending', REJECTED: 'Rejected' };
+    return <span className={`badge bg-${map[status] || 'secondary'}`}>{label[status] || status}</span>;
   };
 
   return (
     <Layout pageTitle="Admin Dashboard">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-      <div className="page-header">
-        <h1>Dashboard Overview</h1>
-        <p>Welcome back! Here's what's happening with your school today.</p>
+      <div className="page-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <h1>Dashboard Overview</h1>
+          <p>
+            Welcome back! Here's what's happening with your school today.
+            {lastRefresh && (
+              <span style={{ marginLeft: 10, fontSize: 11, color: '#a0aec0', fontWeight: 400 }}>
+                Last updated: {lastRefresh.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            )}
+          </p>
+        </div>
+        <button
+          onClick={() => fetchDashboardStats(true)}
+          disabled={refreshing || statsLoading}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 9, border: '1px solid #e2e8f0', background: '#fff', color: '#4a5568', cursor: (refreshing || statsLoading) ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap' }}>
+          <span className="material-icons" style={{ fontSize: 16, transition: 'transform 0.3s', transform: refreshing ? 'rotate(360deg)' : 'none' }}>refresh</span>
+          {refreshing ? 'Refreshing…' : 'Refresh'}
+        </button>
       </div>
+
+      {/* API Error Banner */}
+      {statsError && (
+        <div style={{ background: '#fff5f5', border: '1px solid #feb2b2', borderRadius: 10, padding: '12px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span className="material-icons" style={{ color: '#c53030', fontSize: 20 }}>error_outline</span>
+          <span style={{ color: '#c53030', fontSize: 13, fontWeight: 600, flex: 1 }}>{statsError}</span>
+          <button onClick={() => fetchDashboardStats()} style={{ padding: '5px 14px', borderRadius: 8, border: 'none', background: '#c53030', color: '#fff', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* Stats Cards */}
       <div className="stats-grid">
@@ -275,10 +396,10 @@ export default function AdminDashboard() {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {[
-            { title: 'Active Classes', value: '24', icon: 'class', color: '#76C442', desc: 'Across 8 grades' },
-            { title: 'Avg Attendance', value: '91%', icon: 'fact_check', color: '#3182ce', desc: 'This month' },
-            { title: 'Pending Fees', value: '₹2.4L', icon: 'pending_actions', color: '#e53e3e', desc: '34 students' },
-            { title: 'New Admissions', value: '28', icon: 'person_add', color: '#805ad5', desc: 'This month' },
+            { title: 'Total Classes',   value: statsLoading ? '…' : (dbStats?.totalClasses ?? 0),             icon: 'class',          color: '#76C442', desc: 'Active classrooms' },
+            { title: 'Total Exams',     value: statsLoading ? '…' : (dbStats?.totalExams ?? 0),               icon: 'event_note',     color: '#3182ce', desc: 'Exam schedules' },
+            { title: 'Pending Apps',    value: statsLoading ? '…' : (dbStats?.pendingApplications ?? 0),      icon: 'pending_actions',color: '#e53e3e', desc: 'Awaiting review' },
+            { title: 'Hall Tickets',    value: statsLoading ? '…' : (dbStats?.totalHallTickets ?? 0),         icon: 'confirmation_number', color: '#805ad5', desc: 'Generated' },
           ].map(item => (
             <div key={item.title} className="chart-card" style={{ padding: '16px 20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
@@ -289,7 +410,9 @@ export default function AdminDashboard() {
                   <span className="material-icons" style={{ color: item.color, fontSize: '22px' }}>{item.icon}</span>
                 </div>
                 <div>
-                  <div style={{ fontSize: '20px', fontWeight: 700, color: '#2d3748' }}>{item.value}</div>
+                  <div style={{ fontSize: '20px', fontWeight: 700, color: '#2d3748' }}>
+                    {typeof item.value === 'number' ? item.value.toLocaleString('en-IN') : item.value}
+                  </div>
                   <div style={{ fontSize: '13px', fontWeight: 600, color: '#4a5568' }}>{item.title}</div>
                   <div style={{ fontSize: '11px', color: '#a0aec0' }}>{item.desc}</div>
                 </div>
@@ -316,90 +439,116 @@ export default function AdminDashboard() {
 
       {/* Bottom Tables */}
       <div className="tables-section">
-        {/* Recent Applications */}
+        {/* Recent Applications — real DB data */}
         <div className="data-table-card">
           <div className="data-table-header">
             <span className="data-table-title">Recent Applications</span>
             <button className="btn-view-all" onClick={() => navigate('/admin/applications')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#76C442', fontWeight: 600 }}>View All →</button>
           </div>
           <div style={{ overflowX: 'auto' }}>
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Student</th>
-                  <th>Class</th>
-                  <th>Parent</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {applications.slice(0, 5).map(a => (
-                  <tr key={a.id}>
-                    <td>
-                      <div className="student-cell">
-                        <div className="student-avatar-sm">{getInitials(a.name)}</div>
-                        <div>
-                          <div className="student-name">{a.name}</div>
-                          <div className="student-class">{a.date}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td style={{ fontSize: 13, fontWeight: 600 }}>{a.class}</td>
-                    <td style={{ fontSize: 13, color: '#718096' }}>{a.parent}</td>
-                    <td>{statusBadge(a.status)}</td>
-                    <td>
-                      {a.status === 'Pending' && (
-                        <div className="d-flex gap-1">
-                          <button className="btn btn-success btn-sm py-0 px-2" style={{ fontSize: 11 }} onClick={() => handleApprove(a.id)}>Approve</button>
-                          <button className="btn btn-danger btn-sm py-0 px-2" style={{ fontSize: 11 }} onClick={() => handleReject(a.id)}>Reject</button>
-                        </div>
-                      )}
-                    </td>
+            {appsLoading ? (
+              <div style={{ textAlign: 'center', padding: '32px 0', color: '#a0aec0', fontSize: 13 }}>
+                <span className="material-icons" style={{ fontSize: 28, display: 'block', marginBottom: 6, opacity: 0.4 }}>hourglass_top</span>
+                Loading applications…
+              </div>
+            ) : applications.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '32px 0', color: '#a0aec0', fontSize: 13 }}>
+                <span className="material-icons" style={{ fontSize: 32, display: 'block', marginBottom: 6, color: '#e2e8f0' }}>assignment_ind</span>
+                No applications yet
+              </div>
+            ) : (
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Student</th>
+                    <th>Class</th>
+                    <th>Parent</th>
+                    <th>Status</th>
+                    <th>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {applications.map(a => (
+                    <tr key={a.id}>
+                      <td>
+                        <div className="student-cell">
+                          <div className="student-avatar-sm">{getInitials(a.studentName || '')}</div>
+                          <div>
+                            <div className="student-name">{a.studentName}</div>
+                            <div className="student-class">{fmtDate(a.createdAt)}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td style={{ fontSize: 13, fontWeight: 600 }}>Class {a.classApplied}</td>
+                      <td style={{ fontSize: 13, color: '#718096' }}>{a.fatherName || a.guardianName || '—'}</td>
+                      <td>{statusBadge(a.status)}</td>
+                      <td>
+                        {(a.status === 'PENDING' || a.status === 'Pending') && (
+                          <div className="d-flex gap-1">
+                            <button className="btn btn-success btn-sm py-0 px-2" style={{ fontSize: 11 }} onClick={() => handleApprove(a.id)}>Approve</button>
+                            <button className="btn btn-danger btn-sm py-0 px-2" style={{ fontSize: 11 }} onClick={() => handleReject(a.id)}>Reject</button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
 
-        {/* Recent Fee Collections */}
+        {/* Recent Fee Collections — real DB data */}
         <div className="data-table-card">
           <div className="data-table-header">
-            <span className="data-table-title">Fee Collections Today</span>
+            <span className="data-table-title">Recent Fee Collections</span>
             <button className="btn-view-all" onClick={() => navigate('/admin/collect-fee')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#76C442', fontWeight: 600 }}>Collect Fee →</button>
           </div>
           <div style={{ overflowX: 'auto' }}>
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Student</th>
-                  <th>Amount</th>
-                  <th>Method</th>
-                  <th>Type</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentFees.map(f => (
-                  <tr key={f.id}>
-                    <td>
-                      <div className="student-cell">
-                        <div className="student-avatar-sm">{getInitials(f.student)}</div>
-                        <div>
-                          <div className="student-name">{f.student}</div>
-                          <div className="student-class">{f.class}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td style={{ fontWeight: 700, color: '#2d3748' }}>₹{f.amount.toLocaleString()}</td>
-                    <td>
-                      <span className="badge bg-light text-dark" style={{ fontSize: 11 }}>{f.method}</span>
-                    </td>
-                    <td style={{ fontSize: 13, color: '#718096' }}>{f.type}</td>
+            {feesLoading ? (
+              <div style={{ textAlign: 'center', padding: '32px 0', color: '#a0aec0', fontSize: 13 }}>
+                <span className="material-icons" style={{ fontSize: 28, display: 'block', marginBottom: 6, opacity: 0.4 }}>hourglass_top</span>
+                Loading payments…
+              </div>
+            ) : recentFees.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '32px 0', color: '#a0aec0', fontSize: 13 }}>
+                <span className="material-icons" style={{ fontSize: 32, display: 'block', marginBottom: 6, color: '#e2e8f0' }}>payments</span>
+                No fee collections yet
+              </div>
+            ) : (
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Student</th>
+                    <th>Amount</th>
+                    <th>Method</th>
+                    <th>Type</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {recentFees.map(f => (
+                    <tr key={f.id}>
+                      <td>
+                        <div className="student-cell">
+                          <div className="student-avatar-sm">{getInitials(f.studentName || '')}</div>
+                          <div>
+                            <div className="student-name">{f.studentName}</div>
+                            <div className="student-class">{f.className || fmtDate(f.paymentDate)}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td style={{ fontWeight: 700, color: '#2d3748' }}>
+                        ₹{Number(f.amountPaid || 0).toLocaleString('en-IN')}
+                      </td>
+                      <td>
+                        <span className="badge bg-light text-dark" style={{ fontSize: 11 }}>{f.paymentMode || '—'}</span>
+                      </td>
+                      <td style={{ fontSize: 13, color: '#718096' }}>{f.feeType || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       </div>

@@ -25,6 +25,12 @@ public class TransportBus {
     @Column(name = "bus_no", nullable = false, unique = true, length = 20)
     private String busNo;
 
+    @Column(length = 100)
+    private String model;
+
+    @Column(length = 10)
+    private String year;
+
     @Column(nullable = false)
     @Builder.Default
     private Integer capacity = 40;

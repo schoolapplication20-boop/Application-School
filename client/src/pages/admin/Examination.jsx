@@ -8,8 +8,6 @@ import '../../styles/examination.css';
 
 const EXAM_TYPES   = ['ANNUAL', 'HALFYEARLY', 'QUARTERLY', 'MIDTERM', 'UNIT_TEST'];
 const CERT_TYPES   = ['BONAFIDE', 'TRANSFER', 'COURSE_COMPLETION', 'MARKS_MEMO'];
-const CLASSES      = ['1','2','3','4','5','6','7','8','9','10','11','12'];
-const SECTIONS     = ['A','B','C','D'];
 
 const certLabel = { BONAFIDE: 'Bonafide', TRANSFER: 'Transfer Certificate', COURSE_COMPLETION: 'Course Completion', MARKS_MEMO: 'Marks Memo' };
 const examTypeLabel = { ANNUAL: 'Annual', HALFYEARLY: 'Half Yearly', QUARTERLY: 'Quarterly', MIDTERM: 'Mid Term', UNIT_TEST: 'Unit Test' };
@@ -75,8 +73,13 @@ export default function Examination() {
   const [hallTickets, setHallTickets] = useState([]);
   const [certificates, setCertificates] = useState([]);
   const [students,   setStudents]   = useState([]);
+  const [classrooms, setClassrooms] = useState([]);
   const [loading,    setLoading]    = useState(true);
   const [toast,      setToast]      = useState(null);
+
+  // DB-derived class/section lists (replaces hardcoded constants)
+  const dbClasses  = [...new Set(classrooms.map(c => c.name))].sort((a, b) => Number(a) - Number(b));
+  const dbSections = [...new Set(classrooms.map(c => c.section).filter(Boolean))].sort();
 
   // Filters
   const [search,      setSearch]      = useState('');
@@ -94,12 +97,18 @@ export default function Examination() {
   const [editSched,       setEditSched]       = useState(null);
 
   // Forms
-  const emptySchedForm = { examName: '', examType: 'ANNUAL', className: '', section: '', subject: '', examDate: today(), startTime: '09:00', endTime: '12:00', hallNumber: '', maxMarks: 100, instructions: '' };
+  const emptySchedForm = { examName: '', examType: 'ANNUAL', className: '', section: '', status: 'SCHEDULED', instructions: '' };
   const emptyHtForm    = { studentId: '', examName: '', examType: 'ANNUAL', academicYear: '2023-2024' };
   const emptyBulkForm  = { className: '', section: '', examName: '', examType: 'ANNUAL', academicYear: '2023-2024' };
   const emptyCertForm  = { studentId: '', certificateType: 'BONAFIDE', purpose: '', academicYear: '2023-2024' };
 
-  const [schedForm,  setSchedForm]  = useState(emptySchedForm);
+  const newSubjectRow = () => ({ _id: Math.random().toString(36).slice(2), subject: '', examDate: today(), startTime: '09:00', endTime: '12:00', hallNumber: '', maxMarks: 100 });
+
+  const [schedForm,    setSchedForm]    = useState(emptySchedForm);
+  const [subjectRows,  setSubjectRows]  = useState([newSubjectRow()]);
+  const [rowErrors,    setRowErrors]    = useState({});
+  const [schedErrors,  setSchedErrors]  = useState({});
+  const [bulkProgress, setBulkProgress] = useState(null); // { done, total }
   const [htForm,     setHtForm]     = useState(emptyHtForm);
   const [bulkForm,   setBulkForm]   = useState(emptyBulkForm);
   const [certForm,   setCertForm]   = useState(emptyCertForm);
@@ -131,6 +140,13 @@ export default function Examination() {
       setStudents(Array.isArray(arr) ? arr : []);
     } catch {
       setStudents([]);
+    }
+    try {
+      const cRes = await adminAPI.getClasses();
+      const cData = cRes.data?.data ?? cRes.data ?? [];
+      setClassrooms(Array.isArray(cData) ? cData : []);
+    } catch {
+      setClassrooms([]);
     }
     setLoading(false);
   }, []);
@@ -172,35 +188,81 @@ export default function Examination() {
   // ─── Schedule CRUD ──────────────────────────────────────────────────────────
   const handleOpenSchedModal = (sched = null) => {
     setEditSched(sched);
-    setSchedForm(sched ? { ...sched } : emptySchedForm);
+    setSchedErrors({});
+    setRowErrors({});
+    setBulkProgress(null);
+    if (sched) {
+      setSchedForm({ examName: sched.examName || '', examType: sched.examType || 'ANNUAL', className: sched.className || '', section: sched.section || '', status: sched.status || 'SCHEDULED', instructions: sched.instructions || '' });
+      setSubjectRows([{ _id: 'edit', subject: sched.subject || '', examDate: sched.examDate || today(), startTime: sched.startTime || '09:00', endTime: sched.endTime || '12:00', hallNumber: sched.hallNumber || '', maxMarks: sched.maxMarks || 100 }]);
+    } else {
+      setSchedForm(emptySchedForm);
+      setSubjectRows([newSubjectRow()]);
+    }
     setShowSchedModal(true);
   };
 
   const handleSaveSchedule = async () => {
-    if (!schedForm.examName || !schedForm.className || !schedForm.subject) {
-      showToast('Please fill all required fields', 'error'); return;
+    // ── Validate common fields ──
+    const ce = {};
+    if (!schedForm.examName.trim()) ce.examName  = 'Required';
+    if (!schedForm.className)       ce.className = 'Required';
+    setSchedErrors(ce);
+
+    // ── Validate each subject row ──
+    const re = {};
+    const seen = new Set();
+    subjectRows.forEach(row => {
+      const e = {};
+      if (!row.subject)            e.subject    = 'Required';
+      if (!row.examDate)           e.examDate   = 'Required';
+      if (!row.startTime)          e.startTime  = 'Required';
+      if (!row.endTime)            e.endTime    = 'Required';
+      if (row.startTime && row.endTime && row.endTime <= row.startTime) e.endTime = 'Must be after start';
+      if (!row.hallNumber.trim())  e.hallNumber = 'Required';
+      if (!row.maxMarks || isNaN(row.maxMarks) || +row.maxMarks < 1) e.maxMarks = 'Invalid';
+      if (row.subject && seen.has(row.subject)) e.subject = 'Duplicate subject';
+      if (row.subject) seen.add(row.subject);
+      if (Object.keys(e).length) re[row._id] = e;
+    });
+    setRowErrors(re);
+
+    if (Object.keys(ce).length || Object.keys(re).length) {
+      showToast('Please fix the errors highlighted below', 'error'); return;
     }
+
     setSaving(true);
-    try {
-      if (editSched) {
-        await examinationAPI.updateSchedule(editSched.id, schedForm);
+    if (editSched) {
+      // ── Single update ──
+      const row = subjectRows[0];
+      try {
+        await examinationAPI.updateSchedule(editSched.id, { ...schedForm, subject: row.subject, examDate: row.examDate, startTime: row.startTime, endTime: row.endTime, hallNumber: row.hallNumber, maxMarks: Number(row.maxMarks) });
         showToast('Exam schedule updated');
-      } else {
-        await examinationAPI.createSchedule(schedForm);
-        showToast('Exam schedule created');
-      }
-      setShowSchedModal(false);
-      loadAll();
-    } catch {
-      // Optimistic local update for demo
-      if (editSched) {
-        setSchedules(prev => prev.map(s => s.id === editSched.id ? { ...s, ...schedForm } : s));
+        setShowSchedModal(false);
+        loadAll();
+      } catch {
+        setSchedules(prev => prev.map(s => s.id === editSched.id ? { ...s, ...schedForm, subject: row.subject } : s));
         showToast('Schedule updated (offline mode)');
-      } else {
-        setSchedules(prev => [...prev, { id: Date.now(), ...schedForm, status: 'SCHEDULED' }]);
-        showToast('Schedule added (offline mode)');
+        setShowSchedModal(false);
       }
-      setShowSchedModal(false);
+    } else {
+      // ── Bulk create — one API call per subject row ──
+      let succeeded = 0; let failed = 0;
+      setBulkProgress({ done: 0, total: subjectRows.length });
+      for (let i = 0; i < subjectRows.length; i++) {
+        const row = subjectRows[i];
+        try {
+          await examinationAPI.createSchedule({ ...schedForm, subject: row.subject, examDate: row.examDate, startTime: row.startTime, endTime: row.endTime, hallNumber: row.hallNumber, maxMarks: Number(row.maxMarks) });
+          succeeded++;
+        } catch { failed++; }
+        setBulkProgress({ done: i + 1, total: subjectRows.length });
+      }
+      if (failed === 0) {
+        showToast(`${succeeded} exam schedule${succeeded > 1 ? 's' : ''} created successfully`);
+        setShowSchedModal(false); loadAll();
+      } else {
+        showToast(`${succeeded} created, ${failed} failed`, 'error');
+      }
+      setBulkProgress(null);
     }
     setSaving(false);
   };
@@ -449,7 +511,7 @@ export default function Examination() {
         </div>
         <select className="exam-filter-select" value={filterClass} onChange={e => setFilterClass(e.target.value)}>
           <option value="">All Classes</option>
-          {CLASSES.map(c => <option key={c} value={c}>Class {c}</option>)}
+          {dbClasses.map(c => <option key={c} value={c}>Class {c}</option>)}
         </select>
         <select className="exam-filter-select" value={filterType} onChange={e => setFilterType(e.target.value)}>
           <option value="">All Types</option>
@@ -582,81 +644,199 @@ export default function Examination() {
 
       {/* ── SCHEDULE MODAL ── */}
       {showSchedModal && (
-        <div className="exam-modal-overlay" onClick={e => e.target === e.currentTarget && setShowSchedModal(false)}>
-          <div className="exam-modal">
+        <div className="exam-modal-overlay" onClick={e => e.target === e.currentTarget && !saving && setShowSchedModal(false)}>
+          <div className="exam-modal" style={{ maxWidth: 860, width: '95vw' }}>
             <div className="exam-modal-header">
-              <h2><span className="material-icons">event_note</span>{editSched ? 'Edit' : 'Add'} Exam Schedule</h2>
-              <button className="exam-modal-close" onClick={() => setShowSchedModal(false)}><span className="material-icons">close</span></button>
+              <h2>
+                <span className="material-icons">calendar_month</span>
+                {editSched ? 'Edit Exam Schedule' : 'Create Timetable — Bulk Schedule'}
+              </h2>
+              <button className="exam-modal-close" onClick={() => !saving && setShowSchedModal(false)}>
+                <span className="material-icons">close</span>
+              </button>
             </div>
-            <div className="exam-modal-body">
-              <div className="exam-form-grid">
-                <div className="exam-form-group span-2">
-                  <label>Exam Name *</label>
-                  <input placeholder="e.g. Annual Exam 2024" value={schedForm.examName} onChange={e => setSchedForm(f => ({ ...f, examName: e.target.value }))} />
+
+            <div className="exam-modal-body" style={{ maxHeight: '72vh', overflowY: 'auto' }}>
+
+              {/* ── Section 1: Common Details ── */}
+              <div style={{ background: '#f0f7ff', borderRadius: 10, padding: '16px 18px', marginBottom: 20, border: '1px solid #bee3f8' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 14, fontSize: 13, fontWeight: 700, color: '#2b6cb0' }}>
+                  <span className="material-icons" style={{ fontSize: 17 }}>info</span>
+                  Common Details — apply to all subjects below
                 </div>
-                <div className="exam-form-group">
-                  <label>Exam Type *</label>
-                  <select value={schedForm.examType} onChange={e => setSchedForm(f => ({ ...f, examType: e.target.value }))}>
-                    {EXAM_TYPES.map(t => <option key={t} value={t}>{examTypeLabel[t]}</option>)}
-                  </select>
-                </div>
-                <div className="exam-form-group">
-                  <label>Class *</label>
-                  <select value={schedForm.className} onChange={e => setSchedForm(f => ({ ...f, className: e.target.value }))}>
-                    <option value="">Select Class</option>
-                    {CLASSES.map(c => <option key={c} value={c}>Class {c}</option>)}
-                  </select>
-                </div>
-                <div className="exam-form-group">
-                  <label>Section</label>
-                  <select value={schedForm.section} onChange={e => setSchedForm(f => ({ ...f, section: e.target.value }))}>
-                    <option value="">All Sections</option>
-                    {SECTIONS.map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </div>
-                <div className="exam-form-group">
-                  <label>Subject *</label>
-                  <input placeholder="e.g. Mathematics" value={schedForm.subject} onChange={e => setSchedForm(f => ({ ...f, subject: e.target.value }))} />
-                </div>
-                <div className="exam-form-group">
-                  <label>Exam Date *</label>
-                  <input type="date" value={schedForm.examDate} onChange={e => setSchedForm(f => ({ ...f, examDate: e.target.value }))} />
-                </div>
-                <div className="exam-form-group">
-                  <label>Start Time *</label>
-                  <input type="time" value={schedForm.startTime} onChange={e => setSchedForm(f => ({ ...f, startTime: e.target.value }))} />
-                </div>
-                <div className="exam-form-group">
-                  <label>End Time *</label>
-                  <input type="time" value={schedForm.endTime} onChange={e => setSchedForm(f => ({ ...f, endTime: e.target.value }))} />
-                </div>
-                <div className="exam-form-group">
-                  <label>Hall Number *</label>
-                  <input placeholder="e.g. H-101" value={schedForm.hallNumber} onChange={e => setSchedForm(f => ({ ...f, hallNumber: e.target.value }))} />
-                </div>
-                <div className="exam-form-group">
-                  <label>Max Marks</label>
-                  <input type="number" min="1" max="200" value={schedForm.maxMarks} onChange={e => setSchedForm(f => ({ ...f, maxMarks: e.target.value }))} />
-                </div>
-                {editSched && (
+                <div className="exam-form-grid">
+                  <div className="exam-form-group span-2">
+                    <label>Exam / Timetable Name *</label>
+                    <input
+                      placeholder="e.g. Mid Term Examination 2026"
+                      value={schedForm.examName}
+                      onChange={e => setSchedForm(f => ({ ...f, examName: e.target.value }))}
+                      style={{ borderColor: schedErrors.examName ? '#fc8181' : undefined }}
+                    />
+                    {schedErrors.examName && <span style={{ color: '#c53030', fontSize: 11 }}>{schedErrors.examName}</span>}
+                  </div>
                   <div className="exam-form-group">
-                    <label>Status</label>
-                    <select value={schedForm.status} onChange={e => setSchedForm(f => ({ ...f, status: e.target.value }))}>
-                      {['SCHEDULED','ONGOING','COMPLETED','CANCELLED'].map(s => <option key={s} value={s}>{s}</option>)}
+                    <label>Exam Type</label>
+                    <select value={schedForm.examType} onChange={e => setSchedForm(f => ({ ...f, examType: e.target.value }))}>
+                      {EXAM_TYPES.map(t => <option key={t} value={t}>{examTypeLabel[t]}</option>)}
                     </select>
                   </div>
-                )}
-                <div className="exam-form-group span-2">
-                  <label>Instructions</label>
-                  <textarea placeholder="Special instructions for students…" value={schedForm.instructions} onChange={e => setSchedForm(f => ({ ...f, instructions: e.target.value }))} />
+                  <div className="exam-form-group">
+                    <label>Class *</label>
+                    <select
+                      value={schedForm.className}
+                      onChange={e => setSchedForm(f => ({ ...f, className: e.target.value }))}
+                      style={{ borderColor: schedErrors.className ? '#fc8181' : undefined }}
+                    >
+                      <option value="">Select Class</option>
+                      {dbClasses.map(c => <option key={c} value={c}>Class {c}</option>)}
+                    </select>
+                    {schedErrors.className && <span style={{ color: '#c53030', fontSize: 11 }}>{schedErrors.className}</span>}
+                  </div>
+                  <div className="exam-form-group">
+                    <label>Section</label>
+                    <select value={schedForm.section} onChange={e => setSchedForm(f => ({ ...f, section: e.target.value }))}>
+                      <option value="">All Sections</option>
+                      {dbSections.map(s => <option key={s} value={s}>Section {s}</option>)}
+                    </select>
+                  </div>
+                  {editSched && (
+                    <div className="exam-form-group">
+                      <label>Status</label>
+                      <select value={schedForm.status} onChange={e => setSchedForm(f => ({ ...f, status: e.target.value }))}>
+                        {['SCHEDULED','ONGOING','COMPLETED','CANCELLED'].map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </div>
+                  )}
+                  <div className="exam-form-group span-2">
+                    <label>Instructions / Notes</label>
+                    <textarea
+                      placeholder="e.g. Bring your admit card. No electronic devices allowed."
+                      value={schedForm.instructions}
+                      onChange={e => setSchedForm(f => ({ ...f, instructions: e.target.value }))}
+                      style={{ minHeight: 56 }}
+                    />
+                  </div>
                 </div>
               </div>
+
+              {/* ── Section 2: Subject Rows ── */}
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, fontWeight: 700, color: '#276749' }}>
+                    <span className="material-icons" style={{ fontSize: 17 }}>menu_book</span>
+                    {editSched ? 'Subject Details' : `Subject Schedule (${subjectRows.length} subject${subjectRows.length !== 1 ? 's' : ''})`}
+                  </div>
+                  {!editSched && (
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <label style={{ fontSize: 11, color: '#718096', fontWeight: 600 }}>Apply date to all:</label>
+                      <input type="date" defaultValue={today()}
+                        onChange={e => setSubjectRows(rows => rows.map(r => ({ ...r, examDate: e.target.value })))}
+                        style={{ padding: '5px 8px', borderRadius: 7, border: '1px solid #e2e8f0', fontSize: 12 }} />
+                      <button
+                        type="button"
+                        onClick={() => setSubjectRows(r => [...r, newSubjectRow()])}
+                        style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 12px', borderRadius: 8, border: 'none', background: '#276749', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
+                        <span className="material-icons" style={{ fontSize: 15 }}>add</span>Add Subject
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Table header */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1.3fr 90px 90px 1.1fr 74px 32px', gap: 0, background: '#f0f4f8', borderRadius: '8px 8px 0 0', border: '1px solid #e2e8f0', borderBottom: 'none', padding: '8px 10px', fontSize: 11, fontWeight: 700, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  <div>Subject *</div><div>Exam Date *</div><div>Start</div><div>End</div><div>Hall / Room *</div><div style={{ textAlign: 'center' }}>Marks</div><div></div>
+                </div>
+
+                {/* Rows */}
+                <div style={{ border: '1px solid #e2e8f0', borderRadius: '0 0 8px 8px', overflow: 'hidden' }}>
+                  {subjectRows.map((row, idx) => {
+                    const re = rowErrors[row._id] || {};
+                    const cs = (err) => ({ width: '100%', padding: '7px 9px', borderRadius: 6, border: `1px solid ${err ? '#fc8181' : '#e2e8f0'}`, fontSize: 12, outline: 'none', background: '#fff', boxSizing: 'border-box' });
+                    return (
+                      <div key={row._id} style={{ display: 'grid', gridTemplateColumns: '1.8fr 1.3fr 90px 90px 1.1fr 74px 32px', gap: 0, padding: '8px 10px', borderBottom: idx < subjectRows.length - 1 ? '1px solid #f0f4f8' : 'none', background: idx % 2 === 0 ? '#fff' : '#fafbff', alignItems: 'start' }}>
+                        {/* Subject */}
+                        <div style={{ paddingRight: 6 }}>
+                          <select value={row.subject} onChange={e => setSubjectRows(rows => rows.map(r => r._id === row._id ? { ...r, subject: e.target.value } : r))} style={cs(re.subject)}>
+                            <option value="">— Select —</option>
+                            {['Mathematics','Science','English','Hindi','Social Studies','Physics','Chemistry','Biology','History','Geography','Computer Science','Physical Education','Art','Music','Sanskrit','Economics','Accountancy','Business Studies'].map(s => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                          {re.subject && <div style={{ color: '#c53030', fontSize: 10, marginTop: 2 }}>{re.subject}</div>}
+                        </div>
+                        {/* Date */}
+                        <div style={{ paddingRight: 6 }}>
+                          <input type="date" value={row.examDate} onChange={e => setSubjectRows(rows => rows.map(r => r._id === row._id ? { ...r, examDate: e.target.value } : r))} style={cs(re.examDate)} />
+                          {re.examDate && <div style={{ color: '#c53030', fontSize: 10, marginTop: 2 }}>{re.examDate}</div>}
+                        </div>
+                        {/* Start */}
+                        <div style={{ paddingRight: 6 }}>
+                          <input type="time" value={row.startTime} onChange={e => setSubjectRows(rows => rows.map(r => r._id === row._id ? { ...r, startTime: e.target.value } : r))} style={cs(re.startTime)} />
+                        </div>
+                        {/* End */}
+                        <div style={{ paddingRight: 6 }}>
+                          <input type="time" value={row.endTime} onChange={e => setSubjectRows(rows => rows.map(r => r._id === row._id ? { ...r, endTime: e.target.value } : r))} style={cs(re.endTime)} />
+                          {re.endTime && <div style={{ color: '#c53030', fontSize: 10, marginTop: 2 }}>{re.endTime}</div>}
+                        </div>
+                        {/* Hall */}
+                        <div style={{ paddingRight: 6 }}>
+                          <input type="text" value={row.hallNumber} placeholder="e.g. Hall A" onChange={e => setSubjectRows(rows => rows.map(r => r._id === row._id ? { ...r, hallNumber: e.target.value } : r))} style={cs(re.hallNumber)} />
+                          {re.hallNumber && <div style={{ color: '#c53030', fontSize: 10, marginTop: 2 }}>{re.hallNumber}</div>}
+                        </div>
+                        {/* Max Marks */}
+                        <div style={{ paddingRight: 6 }}>
+                          <input type="number" value={row.maxMarks} min={1} max={1000} onChange={e => setSubjectRows(rows => rows.map(r => r._id === row._id ? { ...r, maxMarks: e.target.value } : r))} style={{ ...cs(re.maxMarks), textAlign: 'center' }} />
+                        </div>
+                        {/* Remove */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {!editSched && subjectRows.length > 1 && (
+                            <button type="button" onClick={() => setSubjectRows(rows => rows.filter(r => r._id !== row._id))}
+                              style={{ background: '#fff5f5', border: '1px solid #fed7d7', borderRadius: 6, width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#c53030', padding: 0 }}>
+                              <span className="material-icons" style={{ fontSize: 15 }}>remove</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Add more — bottom dashed button */}
+                {!editSched && (
+                  <button type="button" onClick={() => setSubjectRows(r => [...r, newSubjectRow()])}
+                    style={{ marginTop: 8, width: '100%', padding: '8px', borderRadius: 8, border: '2px dashed #bee3f8', background: '#f0f9ff', color: '#2b6cb0', fontWeight: 600, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                    <span className="material-icons" style={{ fontSize: 17 }}>add_circle_outline</span>
+                    Add Another Subject
+                  </button>
+                )}
+
+                {/* Progress bar */}
+                {bulkProgress && (
+                  <div style={{ marginTop: 14, background: '#f0f9ff', borderRadius: 8, padding: '10px 14px', border: '1px solid #bee3f8' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 600, color: '#2b6cb0', marginBottom: 6 }}>
+                      <span>Saving schedules…</span>
+                      <span>{bulkProgress.done} / {bulkProgress.total}</span>
+                    </div>
+                    <div style={{ background: '#bee3f8', borderRadius: 99, height: 7, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', background: '#3182ce', borderRadius: 99, width: `${(bulkProgress.done / bulkProgress.total) * 100}%`, transition: 'width 0.3s' }} />
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="exam-modal-footer">
-              <button className="btn-exam-secondary" onClick={() => setShowSchedModal(false)}>Cancel</button>
-              <button className="btn-exam-primary" onClick={handleSaveSchedule} disabled={saving}>
-                {saving ? 'Saving…' : editSched ? 'Update Schedule' : 'Create Schedule'}
-              </button>
+
+            <div className="exam-modal-footer" style={{ justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 12, color: '#a0aec0' }}>
+                {!editSched && `${subjectRows.length} subject${subjectRows.length !== 1 ? 's' : ''} will be saved as separate entries`}
+              </span>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button className="btn-exam-secondary" onClick={() => !saving && setShowSchedModal(false)} disabled={saving}>Cancel</button>
+                <button className="btn-exam-primary" onClick={handleSaveSchedule} disabled={saving}>
+                  {saving
+                    ? (bulkProgress ? `Saving ${bulkProgress.done}/${bulkProgress.total}…` : 'Saving…')
+                    : editSched ? 'Update Schedule' : `Save ${subjectRows.length} Schedule${subjectRows.length > 1 ? 's' : ''}`
+                  }
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -726,14 +906,14 @@ export default function Examination() {
                   <label>Class *</label>
                   <select value={bulkForm.className} onChange={e => setBulkForm(f => ({ ...f, className: e.target.value }))}>
                     <option value="">Select Class</option>
-                    {CLASSES.map(c => <option key={c} value={c}>Class {c}</option>)}
+                    {dbClasses.map(c => <option key={c} value={c}>Class {c}</option>)}
                   </select>
                 </div>
                 <div className="exam-form-group">
                   <label>Section</label>
                   <select value={bulkForm.section} onChange={e => setBulkForm(f => ({ ...f, section: e.target.value }))}>
                     <option value="">All Sections</option>
-                    {SECTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                    {dbSections.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
                 <div className="exam-form-group span-2">
