@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
 import { setAuthToken, clearAuthToken } from '../services/api';
 import api from '../services/api';
 
@@ -27,6 +27,11 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken]         = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  // schoolRef allows SchoolContext to register itself so AuthContext can
+  // push school data on login without creating a circular dependency.
+  const schoolSetterRef = useRef(null);
+  const registerSchoolSetter = useCallback((fn) => { schoolSetterRef.current = fn; }, []);
+
   const login = useCallback((userData, authToken) => {
     setAuthToken(authToken);
 
@@ -36,6 +41,11 @@ export const AuthProvider = ({ children }) => {
 
     setUser(finalUser);
     setToken(authToken);
+
+    // Hydrate school branding from login response (school field on the user DTO)
+    if (userData?.school && schoolSetterRef.current) {
+      schoolSetterRef.current(userData.school);
+    }
   }, []);
 
   const logout = useCallback(() => {
@@ -144,6 +154,7 @@ export const AuthProvider = ({ children }) => {
     hasRole,
     getDashboardPath,
     hasPermission,
+    registerSchoolSetter,
   };
 
   return (

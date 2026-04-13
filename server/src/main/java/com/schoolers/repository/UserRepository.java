@@ -20,7 +20,12 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByMobileAndIdNot(String mobile, Long id);
     boolean existsByEmailIgnoreCaseAndIdNot(String email, Long id);
     List<User> findByRole(User.Role role);
+    List<User> findByRoleAndSchoolId(User.Role role, Long schoolId);
+    boolean existsBySchoolIdAndRole(Long schoolId, User.Role role);
 
     /** Find the login account directly linked to a student record */
-    java.util.Optional<User> findByStudentId(Long studentId);
+    Optional<User> findByStudentId(Long studentId);
+
+    /** Find all school-level super admins (schoolId is not null) */
+    List<User> findByRoleAndSchoolIdNotNull(User.Role role);
 }

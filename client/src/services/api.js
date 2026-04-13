@@ -52,7 +52,8 @@ api.interceptors.response.use(
 // ============================================
 
 export const authAPI = {
-  login: (data) => api.post('/api/auth/login', data),
+  login:            (data) => api.post('/api/auth/login', data),
+  register:         (data) => api.post('/api/auth/register', data),
   sendLoginOTP: (data) => api.post('/api/auth/forgot-password', data),
   verifyLoginOTP: (data) => api.post('/api/auth/verify-otp', data),
   forgotPassword: (data) => api.post('/api/auth/forgot-password', data),
@@ -67,12 +68,14 @@ export const authAPI = {
 // ============================================
 
 export const superAdminAPI = {
-  getAdmins:       ()         => api.get('/api/superadmin/admins'),
-  getAdminById:    (id)       => api.get(`/api/superadmin/admins/${id}`),
-  createAdmin:     (data)     => api.post('/api/superadmin/admins', data),
-  updateAdmin:     (id, data) => api.put(`/api/superadmin/admins/${id}`, data),
-  deleteAdmin:     (id)       => api.delete(`/api/superadmin/admins/${id}`),
-  getMyPermissions: ()        => api.get('/api/admin/permissions'),
+  getAdmins:        ()         => api.get('/api/superadmin/admins'),
+  getAdminById:     (id)       => api.get(`/api/superadmin/admins/${id}`),
+  createAdmin:      (data)     => api.post('/api/superadmin/admins', data),
+  updateAdmin:      (id, data) => api.put(`/api/superadmin/admins/${id}`, data),
+  deleteAdmin:      (id)       => api.delete(`/api/superadmin/admins/${id}`),
+  createSuperAdmin: (data)     => api.post('/api/superadmin/super-admins', data),
+  getSuperAdmins:   ()         => api.get('/api/superadmin/super-admins'),
+  getMyPermissions: ()         => api.get('/api/admin/permissions'),
 };
 
 // ============================================
@@ -402,6 +405,50 @@ export const generalAPI = {
     api.post('/api/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     }),
+};
+
+// ============================================
+// SCHOOL APIs (multi-tenancy)
+// ============================================
+
+export const schoolAPI = {
+  /** SUPER_ADMIN: create a new school with optional logo file */
+  createSchool: (data, logoFile) => {
+    const formData = new FormData();
+    formData.append('data', JSON.stringify(data));
+    if (logoFile) formData.append('logo', logoFile);
+    return api.post('/api/schools', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+
+  /** SUPER_ADMIN: list all schools */
+  getAllSchools: () => api.get('/api/schools'),
+
+  /** Any authenticated user: fetch the school linked to their account */
+  getMySchool: () => api.get('/api/schools/by-admin'),
+
+  /** Any authenticated user: fetch school by id */
+  getSchoolById: (id) => api.get(`/api/schools/${id}`),
+
+  /** SUPER_ADMIN / ADMIN: update school details (with optional new logo) */
+  updateSchool: (id, data, logoFile) => {
+    const formData = new FormData();
+    formData.append('data', JSON.stringify(data));
+    if (logoFile) formData.append('logo', logoFile);
+    return api.put(`/api/schools/${id}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+
+  /** SUPER_ADMIN / ADMIN: replace logo only */
+  updateLogo: (id, logoFile) => {
+    const formData = new FormData();
+    formData.append('logo', logoFile);
+    return api.patch(`/api/schools/${id}/logo`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
 };
 
 // ============================================

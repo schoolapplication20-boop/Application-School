@@ -53,8 +53,14 @@ const ProtectedRoute = ({ children, allowedRoles, permKey }) => {
   }
 
   // ── Role check ────────────────────────────────────────────────────────────
-  // SUPER_ADMIN has access to all protected routes
+  // SUPER_ADMIN has access to all protected routes, BUT must complete school
+  // setup first if no school has been created yet.
   if (user?.role === 'SUPER_ADMIN') {
+    const setupRequired = user?.needsSchoolSetup === true;
+    const onSetupPage   = location.pathname === '/superadmin/setup-school';
+    if (setupRequired && !onSetupPage) {
+      return <Navigate to="/superadmin/setup-school" replace />;
+    }
     return children;
   }
 

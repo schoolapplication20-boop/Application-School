@@ -84,6 +84,13 @@ public class User {
     @Column(name = "permissions", columnDefinition = "TEXT")
     private String permissions;
 
+    /**
+     * Multi-tenancy: which school this user belongs to.
+     * NULL for SUPER_ADMIN (platform-level accounts).
+     */
+    @Column(name = "school_id")
+    private Long schoolId;
+
     @Column(name = "reset_otp", length = 10)
     private String resetOtp;
 

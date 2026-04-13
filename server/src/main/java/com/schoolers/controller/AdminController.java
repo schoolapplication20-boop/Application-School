@@ -30,6 +30,14 @@ public class AdminController {
     @Autowired
     private UserRepository userRepository;
 
+    /** Returns the school_id of the currently authenticated user */
+    private Long getCurrentSchoolId(Authentication auth) {
+        if (auth == null) return null;
+        return userRepository.findByEmailIgnoreCase(auth.getName())
+                .map(com.schoolers.model.User::getSchoolId)
+                .orElse(null);
+    }
+
     // ===== Permissions =====
     @GetMapping("/permissions")
     public ResponseEntity<ApiResponse<String>> getPermissions() {
@@ -42,8 +50,8 @@ public class AdminController {
 
     // ===== Dashboard =====
     @GetMapping("/dashboard/stats")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> getDashboardStats() {
-        return ResponseEntity.ok(adminService.getDashboardStats());
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getDashboardStats(Authentication auth) {
+        return ResponseEntity.ok(adminService.getDashboardStats(getCurrentSchoolId(auth)));
     }
 
     // ===== Students =====
@@ -51,8 +59,9 @@ public class AdminController {
     public ResponseEntity<ApiResponse<Page<Student>>> getStudents(
             @RequestParam(defaultValue = "") String search,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(adminService.getStudents(search, page, size));
+            @RequestParam(defaultValue = "10") int size,
+            Authentication auth) {
+        return ResponseEntity.ok(adminService.getStudents(getCurrentSchoolId(auth), search, page, size));
     }
 
     @GetMapping("/students/{id}")
@@ -62,7 +71,9 @@ public class AdminController {
     }
 
     @PostMapping("/students")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> createStudent(@RequestBody Map<String, Object> body) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> createStudent(
+            @RequestBody Map<String, Object> body, Authentication auth) {
+        body.put("schoolId", getCurrentSchoolId(auth));
         ApiResponse<Map<String, Object>> response = adminService.createStudent(body);
         return response.isSuccess() ? ResponseEntity.status(201).body(response) : ResponseEntity.badRequest().body(response);
     }
@@ -87,8 +98,8 @@ public class AdminController {
 
     // ===== Teachers =====
     @GetMapping("/teachers")
-    public ResponseEntity<ApiResponse<List<Teacher>>> getTeachers() {
-        return ResponseEntity.ok(adminService.getTeachers());
+    public ResponseEntity<ApiResponse<List<Teacher>>> getTeachers(Authentication auth) {
+        return ResponseEntity.ok(adminService.getTeachers(getCurrentSchoolId(auth)));
     }
 
     @GetMapping("/teachers/{id}")
@@ -98,7 +109,8 @@ public class AdminController {
     }
 
     @PostMapping("/teachers")
-    public ResponseEntity<?> createTeacher(@RequestBody CreateTeacherRequest req) {
+    public ResponseEntity<?> createTeacher(@RequestBody CreateTeacherRequest req, Authentication auth) {
+        req.setSchoolId(getCurrentSchoolId(auth));
         var response = adminService.createTeacher(req);
         return response.isSuccess() ? ResponseEntity.status(201).body(response) : ResponseEntity.badRequest().body(response);
     }
@@ -171,8 +183,8 @@ public class AdminController {
     }
 
     @GetMapping("/students/search")
-    public ResponseEntity<?> searchStudentsForFee(@RequestParam(required = false) String q) {
-        return ResponseEntity.ok(adminService.searchStudentsForFee(q));
+    public ResponseEntity<?> searchStudentsForFee(@RequestParam(required = false) String q, Authentication auth) {
+        return ResponseEntity.ok(adminService.searchStudentsForFee(getCurrentSchoolId(auth), q));
     }
 
     @PostMapping("/fees")
@@ -284,7 +296,9 @@ public class AdminController {
     }
 
     @PostMapping("/parents")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> createParent(@RequestBody Map<String, Object> body) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> createParent(
+            @RequestBody Map<String, Object> body, Authentication auth) {
+        body.put("schoolId", getCurrentSchoolId(auth));
         ApiResponse<Map<String, Object>> response = adminService.createParent(body);
         return response.isSuccess() ? ResponseEntity.status(201).body(response) : ResponseEntity.badRequest().body(response);
     }

@@ -183,7 +183,7 @@ public class AdminService {
 
     // ── Dashboard ──────────────────────────────────────────────────────────
 
-    public ApiResponse<Map<String, Object>> getDashboardStats() {
+    public ApiResponse<Map<String, Object>> getDashboardStats(Long schoolId) {
         Map<String, Object> stats = new HashMap<>();
         stats.put("totalStudents", studentRepository.count());
         stats.put("totalTeachers", teacherRepository.count());
@@ -198,7 +198,7 @@ public class AdminService {
 
     // ── Students ───────────────────────────────────────────────────────────
 
-    public ApiResponse<Page<Student>> getStudents(String search, int page, int size) {
+    public ApiResponse<Page<Student>> getStudents(Long schoolId, String search, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         if (search != null && !search.isEmpty()) {
             return ApiResponse.success(studentRepository.searchStudents(search, pageable));
@@ -559,7 +559,7 @@ public class AdminService {
 
     // ── Teachers ───────────────────────────────────────────────────────────
 
-    public ApiResponse<List<Teacher>> getTeachers() {
+    public ApiResponse<List<Teacher>> getTeachers(Long schoolId) {
         return ApiResponse.success(teacherRepository.findAll());
     }
 
@@ -873,7 +873,7 @@ public class AdminService {
         return ApiResponse.success(feeRepository.findAll());
     }
 
-    public ApiResponse<List<Student>> searchStudentsForFee(String query) {
+    public ApiResponse<List<Student>> searchStudentsForFee(Long schoolId, String query) {
         if (query == null || query.trim().isEmpty()) return ApiResponse.success(java.util.Collections.emptyList());
         List<Student> results = studentRepository.searchByNameRollOrPhone(query.trim());
         return ApiResponse.success(results);

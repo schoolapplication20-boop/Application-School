@@ -20,4 +20,5 @@ public class CreateTeacherRequest {
     private String teacherType;
     /** ID of the classroom this teacher is primary class teacher for */
     private Long primaryClassId;
+    private Long schoolId;
 }

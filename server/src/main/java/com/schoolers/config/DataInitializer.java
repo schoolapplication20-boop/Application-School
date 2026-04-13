@@ -25,7 +25,9 @@ public class DataInitializer {
     ) {
         return args -> {
 
-            // ── Ensure Super Admin exists with correct values ──────────────────
+            // ── Ensure Application Owner (platform-level Super Admin) exists ──
+            // This account has NO schoolId — it is the builder/owner of the platform.
+            // School-level Super Admins are created by this owner via Admin Management.
             userRepo.findByEmail("superadmin@schoolers.com").ifPresentOrElse(
                 existing -> {
                     boolean changed = false;
@@ -41,22 +43,29 @@ public class DataInitializer {
                         existing.setRole(User.Role.SUPER_ADMIN);
                         changed = true;
                     }
+                    // Platform owner must never have a schoolId — it would restrict their access
+                    if (existing.getSchoolId() != null) {
+                        existing.setSchoolId(null);
+                        changed = true;
+                        System.out.println("  [DataInitializer] Cleared schoolId from Application Owner account.");
+                    }
                     if (changed) {
                         userRepo.save(existing);
-                        System.out.println("  [DataInitializer] Super Admin columns corrected.");
+                        System.out.println("  [DataInitializer] Application Owner account corrected.");
                     }
                 },
                 () -> {
                     userRepo.save(User.builder()
-                            .name("Super Admin")
+                            .name("Application Owner")
                             .email("superadmin@schoolers.com")
                             .mobile("9000000000")
                             .password(passwordEncoder.encode("SuperAdmin@123"))
                             .role(User.Role.SUPER_ADMIN)
+                            .schoolId(null)   // platform-level — no school
                             .isActive(true)
                             .firstLogin(false)
                             .build());
-                    System.out.println("  [DataInitializer] Super Admin created -> superadmin@schoolers.com / SuperAdmin@123");
+                    System.out.println("  [DataInitializer] Application Owner created -> superadmin@schoolers.com / SuperAdmin@123");
                 }
             );
 

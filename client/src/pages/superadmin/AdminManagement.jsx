@@ -27,6 +27,9 @@ const emptyForm = { name: '', email: '', mobile: '', permissions: { ...DEFAULT_P
 export default function AdminManagement() {
   const { user } = useAuth();
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+  // Platform-level SUPER_ADMINs (no school yet) can create other SUPER_ADMINs.
+  // School-level SUPER_ADMINs (schoolId != null) manage only their own school.
+  const isPlatformAdmin = isSuperAdmin && !user?.schoolId;
 
   const [admins,       setAdmins]       = useState([]);
   const [loading,      setLoading]      = useState(true);
@@ -47,6 +50,17 @@ export default function AdminManagement() {
   const [credModal,     setCredModal]     = useState(null); // { name, email, tempPassword }
   const [showCredPwd,   setShowCredPwd]   = useState(false);
 
+  // ── Super Admin management (visible only to platform Application Owner) ────
+  const [activeTab,      setActiveTab]      = useState('admins'); // 'admins' | 'superadmins'
+  const [superAdmins,    setSuperAdmins]    = useState([]);
+  const [saLoading,      setSaLoading]      = useState(false);
+  const [showSaModal,    setShowSaModal]    = useState(false);
+  const [saSaving,       setSaSaving]       = useState(false);
+  const [saForm,         setSaForm]         = useState({ name: '', email: '', mobile: '', schoolName: '', schoolCode: '' });
+  const [saErrors,       setSaErrors]       = useState({});
+  const [saSuccessModal, setSaSuccessModal] = useState(null); // { name, email, password, schoolName, schoolCode }
+  const [showSaPassword, setShowSaPassword] = useState(false);
+
   const showToast = (msg, type = 'success') => setToast({ message: msg, type });
 
   const loadAdmins = useCallback(async () => {
@@ -63,6 +77,22 @@ export default function AdminManagement() {
   }, []);
 
   useEffect(() => { loadAdmins(); }, [loadAdmins]);
+
+  const loadSuperAdmins = useCallback(async () => {
+    if (!isPlatformAdmin) return;
+    try {
+      setSaLoading(true);
+      const res = await superAdminAPI.getSuperAdmins();
+      const data = res.data?.data ?? [];
+      setSuperAdmins(Array.isArray(data) ? data : []);
+    } catch {
+      setSuperAdmins([]);
+    } finally {
+      setSaLoading(false);
+    }
+  }, [isPlatformAdmin]);
+
+  useEffect(() => { if (isPlatformAdmin) loadSuperAdmins(); }, [isPlatformAdmin, loadSuperAdmins]);
 
   const filtered = useMemo(() => admins.filter(a => {
     const matchSearch = !search ||
@@ -206,6 +236,56 @@ export default function AdminManagement() {
     } catch { return MODULES.length; }
   };
 
+  const validateSaForm = () => {
+    const errs = {};
+    if (!saForm.name.trim())        errs.name       = 'Required';
+    if (!saForm.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(saForm.email))
+      errs.email = 'Valid email required';
+    if (!saForm.mobile.trim())      errs.mobile     = 'Required';
+    else if (!/^\d{10}$/.test(saForm.mobile)) errs.mobile = 'Must be 10 digits';
+    if (!saForm.schoolName.trim())  errs.schoolName = 'School name is required';
+    if (!saForm.schoolCode.trim())  errs.schoolCode = 'School code is required';
+    else if (!/^[A-Z0-9]{2,10}$/i.test(saForm.schoolCode.trim()))
+      errs.schoolCode = 'Code: 2–10 alphanumeric characters';
+    setSaErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  const handleCreateSuperAdmin = async () => {
+    if (!validateSaForm()) return;
+    setSaSaving(true);
+    try {
+      const res = await superAdminAPI.createSuperAdmin({
+        name:       saForm.name.trim(),
+        email:      saForm.email.trim().toLowerCase(),
+        mobile:     saForm.mobile.trim(),
+        schoolName: saForm.schoolName.trim(),
+        schoolCode: saForm.schoolCode.trim().toUpperCase(),
+      });
+      if (!res.data?.success) {
+        showToast(res.data?.message || 'Failed to create Super Admin', 'error');
+        return;
+      }
+      const result = res.data?.data;
+      setShowSaModal(false);
+      setSaForm({ name: '', email: '', mobile: '', schoolName: '', schoolCode: '' });
+      setSaErrors({});
+      setShowSaPassword(false);
+      setSaSuccessModal({
+        name:       result.name,
+        email:      result.email,
+        password:   result.generatedPassword || null,
+        schoolName: saForm.schoolName.trim(),
+        schoolCode: saForm.schoolCode.trim().toUpperCase(),
+      });
+      loadSuperAdmins();
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to create Super Admin', 'error');
+    } finally {
+      setSaSaving(false);
+    }
+  };
+
   const iStyle = (err) => ({
     padding: '10px 12px',
     border: `1.5px solid ${err ? '#e53e3e' : '#e2e8f0'}`,
@@ -222,16 +302,146 @@ export default function AdminManagement() {
     <Layout pageTitle="Admin Management">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
         <div className="page-header" style={{ marginBottom: 0 }}>
           <h1>Admin Management</h1>
-          <p>Create and manage admin accounts with role-based permissions</p>
+          <p>{isPlatformAdmin
+            ? 'Manage school admins and create Super Admins for new schools'
+            : 'Create and manage admin accounts with role-based permissions'}
+          </p>
         </div>
-        <button className="btn-add" onClick={() => { setEditAdmin(null); setFormData(emptyForm); setFormErrors({}); setShowModal(true); }}>
-          <span className="material-icons">add</span> Add Admin
-        </button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          {activeTab === 'admins' ? (
+            <button className="btn-add" onClick={() => { setEditAdmin(null); setFormData(emptyForm); setFormErrors({}); setShowModal(true); }}>
+              <span className="material-icons">add</span> Add Admin
+            </button>
+          ) : (
+            <button className="btn-add" style={{ background: 'linear-gradient(135deg,#7c3aed,#553c9a)' }}
+              onClick={() => { setSaForm({ name: '', email: '', mobile: '', schoolName: '', schoolCode: '' }); setSaErrors({}); setShowSaModal(true); }}>
+              <span className="material-icons">add</span> Add Super Admin
+            </button>
+          )}
+        </div>
       </div>
 
+      {/* Tab bar — only shown to Application Owner (platform admin) */}
+      {isPlatformAdmin && (
+        <div style={{ display: 'flex', gap: '4px', marginBottom: '24px', borderBottom: '2px solid #e2e8f0', paddingBottom: '0' }}>
+          {[
+            { id: 'admins',      label: 'School Admins',   icon: 'manage_accounts' },
+            { id: 'superadmins', label: 'Super Admins',    icon: 'admin_panel_settings' },
+          ].map(tab => (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+              style={{
+                padding: '10px 20px', border: 'none', cursor: 'pointer', fontWeight: 700,
+                fontSize: '13px', borderRadius: '8px 8px 0 0', display: 'flex', alignItems: 'center', gap: '6px',
+                background: activeTab === tab.id ? '#fff' : 'transparent',
+                color:      activeTab === tab.id ? '#7c3aed' : '#718096',
+                borderBottom: activeTab === tab.id ? '2px solid #7c3aed' : '2px solid transparent',
+                marginBottom: '-2px',
+              }}>
+              <span className="material-icons" style={{ fontSize: '16px' }}>{tab.icon}</span>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* ── SUPER ADMINS TAB ─────────────────────────────────────────────────── */}
+      {activeTab === 'superadmins' && isPlatformAdmin && (
+        <>
+          {/* Super Admin Stats */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '16px', marginBottom: '24px' }}>
+            {[
+              { label: 'Total Super Admins', value: superAdmins.length, color: '#7c3aed', icon: 'admin_panel_settings' },
+              { label: 'Setup Complete', value: superAdmins.filter(s => !s.needsSchoolSetup).length, color: '#3182ce', icon: 'check_circle' },
+              { label: 'Setup Pending', value: superAdmins.filter(s => s.needsSchoolSetup).length, color: '#d97706', icon: 'pending' },
+            ].map(c => (
+              <div key={c.label} className="stat-card">
+                <div className="stat-icon" style={{ backgroundColor: c.color + '18' }}>
+                  <span className="material-icons" style={{ color: c.color }}>{c.icon}</span>
+                </div>
+                <div className="stat-value">{c.value}</div>
+                <div className="stat-label">{c.label}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Info banner */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '12px 16px', background: '#ede9fe', border: '1px solid #c4b5fd', borderRadius: '10px', marginBottom: '20px' }}>
+            <span className="material-icons" style={{ color: '#7c3aed', fontSize: '18px', marginTop: '1px', flexShrink: 0 }}>info</span>
+            <div style={{ fontSize: '13px', color: '#4c1d95', lineHeight: '1.5' }}>
+              <strong>Application Owner</strong> — only you can create Super Admin accounts.
+              Each Super Admin is linked to a school (identified by school code) and must complete
+              their school setup wizard on first login before accessing the dashboard.
+            </div>
+          </div>
+
+          {/* Super Admins Table */}
+          <div className="data-table-card">
+            <div style={{ overflowX: 'auto' }}>
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Super Admin</th>
+                    <th>School</th>
+                    <th>School Code</th>
+                    <th>Setup Status</th>
+                    <th>Created</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {saLoading ? (
+                    <tr><td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: '#a0aec0' }}>Loading...</td></tr>
+                  ) : superAdmins.length === 0 ? (
+                    <tr><td colSpan={5}>
+                      <div className="empty-state" style={{ padding: '40px' }}>
+                        <span className="material-icons" style={{ fontSize: 48, color: '#e2e8f0', display: 'block', marginBottom: 8 }}>admin_panel_settings</span>
+                        <h3 style={{ color: '#a0aec0' }}>No Super Admins yet</h3>
+                        <p style={{ color: '#cbd5e0' }}>Click "Add Super Admin" to create one.</p>
+                      </div>
+                    </td></tr>
+                  ) : superAdmins.map(sa => (
+                    <tr key={sa.id}>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#553c9a)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '13px', fontWeight: 700, flexShrink: 0 }}>
+                            {sa.name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}
+                          </div>
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: '13px', color: '#2d3748' }}>{sa.name}</div>
+                            <div style={{ fontSize: '11px', color: '#a0aec0' }}>{sa.email}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td style={{ fontSize: '12px', color: '#2d3748', fontWeight: 600 }}>
+                        {sa.schoolName || <span style={{ color: '#a0aec0' }}>—</span>}
+                      </td>
+                      <td>
+                        {sa.schoolCode ? (
+                          <span style={{ padding: '2px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 700, background: '#ede9fe', color: '#7c3aed', fontFamily: 'monospace', letterSpacing: '0.06em' }}>{sa.schoolCode}</span>
+                        ) : <span style={{ color: '#a0aec0', fontSize: '12px' }}>—</span>}
+                      </td>
+                      <td>
+                        <span style={{ padding: '3px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: 700, background: sa.needsSchoolSetup ? '#fffbeb' : '#f0fff4', color: sa.needsSchoolSetup ? '#d97706' : '#38a169' }}>
+                          {sa.needsSchoolSetup ? 'Pending Setup' : 'Setup Complete'}
+                        </span>
+                      </td>
+                      <td style={{ fontSize: '12px', color: '#718096' }}>
+                        {sa.createdAt ? new Date(sa.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── SCHOOL ADMINS TAB ────────────────────────────────────────────────── */}
+      {activeTab === 'admins' && (
+      <>
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '16px', marginBottom: '24px' }}>
         {[
@@ -345,6 +555,9 @@ export default function AdminManagement() {
           </table>
         </div>
       </div>
+
+      </>
+      )}
 
       {/* Add/Edit Modal */}
       {showModal && (
@@ -704,6 +917,171 @@ export default function AdminManagement() {
           </div>
         </div>
       )}
+      {/* ── Create Super Admin Modal ──────────────────────────────────────────── */}
+      {showSaModal && isPlatformAdmin && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowSaModal(false)}>
+          <div className="modal-container" style={{ maxWidth: 540 }}>
+            <div className="modal-header" style={{ background: 'linear-gradient(135deg,#7c3aed,#553c9a)', borderRadius: '12px 12px 0 0' }}>
+              <span className="modal-title" style={{ color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span className="material-icons">admin_panel_settings</span> Create Super Admin
+              </span>
+              <button className="modal-close" onClick={() => setShowSaModal(false)} style={{ color: '#fff' }}>
+                <span className="material-icons">close</span>
+              </button>
+            </div>
+            <div className="modal-body" style={{ padding: '24px', maxHeight: '72vh', overflowY: 'auto' }}>
+
+              {/* Role info */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 14px', background: '#ede9fe', border: '1px solid #c4b5fd', borderRadius: '10px', marginBottom: '20px' }}>
+                <span className="material-icons" style={{ color: '#7c3aed', fontSize: '17px', marginTop: '1px', flexShrink: 0 }}>info</span>
+                <div style={{ fontSize: '12px', color: '#4c1d95', lineHeight: '1.5' }}>
+                  A Super Admin account will be created and linked to a new school identified by the school code below.
+                  The Super Admin must complete the school setup wizard on first login.
+                </div>
+              </div>
+
+              {/* Account Details section */}
+              <div style={{ fontSize: '12px', fontWeight: 700, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span className="material-icons" style={{ color: '#7c3aed', fontSize: '16px' }}>person</span> Account Details
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '20px' }}>
+                <div>
+                  <label style={{ fontSize: '13px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '4px' }}>Full Name *</label>
+                  <input style={iStyle(saErrors.name)} placeholder="Super Admin name" value={saForm.name}
+                    onChange={e => { setSaForm(f => ({ ...f, name: e.target.value })); setSaErrors(p => ({ ...p, name: undefined })); }} />
+                  {saErrors.name && <p style={errStyle}>{saErrors.name}</p>}
+                </div>
+                <div>
+                  <label style={{ fontSize: '13px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '4px' }}>Email Address *</label>
+                  <input type="email" style={iStyle(saErrors.email)} placeholder="superadmin@school.com" value={saForm.email}
+                    onChange={e => { setSaForm(f => ({ ...f, email: e.target.value })); setSaErrors(p => ({ ...p, email: undefined })); }} />
+                  {saErrors.email && <p style={errStyle}>{saErrors.email}</p>}
+                </div>
+                <div>
+                  <label style={{ fontSize: '13px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '4px' }}>Phone Number *</label>
+                  <input type="tel" style={iStyle(saErrors.mobile)} placeholder="10-digit mobile" maxLength={10}
+                    value={saForm.mobile}
+                    onChange={e => { setSaForm(f => ({ ...f, mobile: e.target.value.replace(/\D/g, '').slice(0,10) })); setSaErrors(p => ({ ...p, mobile: undefined })); }} />
+                  {saErrors.mobile && <p style={errStyle}>{saErrors.mobile}</p>}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', padding: '10px 12px', background: '#ede9fe', border: '1px solid #c4b5fd', borderRadius: '8px', gap: '8px' }}>
+                  <span className="material-icons" style={{ fontSize: '18px', color: '#7c3aed' }}>lock</span>
+                  <div>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#4c1d95' }}>Auto-generated password</div>
+                    <div style={{ fontSize: '11px', color: '#7c3aed' }}>Shown after creation — share securely</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* School Details section */}
+              <div style={{ fontSize: '12px', fontWeight: 700, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span className="material-icons" style={{ color: '#7c3aed', fontSize: '16px' }}>school</span> School Assignment
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                <div>
+                  <label style={{ fontSize: '13px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '4px' }}>School Name *</label>
+                  <input style={iStyle(saErrors.schoolName)} placeholder="e.g. Springfield High School" value={saForm.schoolName}
+                    onChange={e => { setSaForm(f => ({ ...f, schoolName: e.target.value })); setSaErrors(p => ({ ...p, schoolName: undefined })); }} />
+                  {saErrors.schoolName && <p style={errStyle}>{saErrors.schoolName}</p>}
+                </div>
+                <div>
+                  <label style={{ fontSize: '13px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '4px' }}>School Code / ID *</label>
+                  <input style={iStyle(saErrors.schoolCode)} placeholder="e.g. SPRHS (2–10 chars)"
+                    value={saForm.schoolCode}
+                    onChange={e => { setSaForm(f => ({ ...f, schoolCode: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') })); setSaErrors(p => ({ ...p, schoolCode: undefined })); }} />
+                  {saErrors.schoolCode && <p style={errStyle}>{saErrors.schoolCode}</p>}
+                  <p style={{ fontSize: '11px', color: '#a0aec0', marginTop: '3px' }}>Alphanumeric, unique identifier for this school</p>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button onClick={() => setShowSaModal(false)}
+                style={{ padding: '10px 20px', border: '1.5px solid #e2e8f0', borderRadius: '8px', background: '#fff', cursor: 'pointer', fontWeight: 600 }}>Cancel</button>
+              <button onClick={handleCreateSuperAdmin} disabled={saSaving}
+                style={{ padding: '10px 24px', background: saSaving ? '#a0aec0' : 'linear-gradient(135deg,#7c3aed,#553c9a)', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: 700, cursor: saSaving ? 'not-allowed' : 'pointer' }}>
+                {saSaving ? 'Creating...' : 'Create Super Admin'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Super Admin Success Modal ──────────────────────────────────────────── */}
+      {saSuccessModal && (
+        <div className="modal-overlay">
+          <div className="modal-container" style={{ maxWidth: 480 }}>
+            <div className="modal-header" style={{ background: 'linear-gradient(135deg,#7c3aed,#553c9a)', borderRadius: '12px 12px 0 0' }}>
+              <span className="modal-title" style={{ color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span className="material-icons">check_circle</span> Super Admin Created
+              </span>
+              <button className="modal-close" onClick={() => { setSaSuccessModal(null); setShowSaPassword(false); }} style={{ color: '#fff' }}>
+                <span className="material-icons">close</span>
+              </button>
+            </div>
+            <div className="modal-body" style={{ padding: '24px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '20px', padding: '14px', background: '#ede9fe', border: '1px solid #c4b5fd', borderRadius: '12px' }}>
+                <div style={{ width: 46, height: 46, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#553c9a)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: '16px', flexShrink: 0 }}>
+                  {saSuccessModal.name.trim().split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '15px', color: '#4c1d95' }}>{saSuccessModal.name}</div>
+                  <div style={{ fontSize: '12px', color: '#7c3aed' }}>
+                    Super Admin · School: <strong>{saSuccessModal.schoolCode}</strong>
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ background: '#f7fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px 16px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>School</div>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: '#2d3748' }}>{saSuccessModal.schoolName}</div>
+                  <div style={{ fontSize: '12px', color: '#718096', marginTop: '2px' }}>Code: <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#7c3aed' }}>{saSuccessModal.schoolCode}</span></div>
+                </div>
+                <div style={{ background: '#f7fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px 16px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Email (Login ID)</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span className="material-icons" style={{ fontSize: '17px', color: '#7c3aed', flexShrink: 0 }}>email</span>
+                    <span style={{ fontSize: '14px', fontWeight: 600, color: '#2d3748', flex: 1, wordBreak: 'break-all' }}>{saSuccessModal.email}</span>
+                    <button onClick={() => { navigator.clipboard.writeText(saSuccessModal.email); showToast('Email copied!'); }} title="Copy"
+                      style={{ padding: '5px', border: '1px solid #e2e8f0', borderRadius: '6px', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                      <span className="material-icons" style={{ fontSize: '15px', color: '#718096' }}>content_copy</span>
+                    </button>
+                  </div>
+                </div>
+                {saSuccessModal.password && (
+                  <div style={{ background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: '10px', padding: '14px 16px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Generated Password</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span className="material-icons" style={{ fontSize: '17px', color: '#d97706', flexShrink: 0 }}>lock</span>
+                      <span style={{ flex: 1, fontSize: '15px', fontWeight: 700, color: '#92400e', fontFamily: 'monospace', letterSpacing: '0.12em', wordBreak: 'break-all' }}>
+                        {showSaPassword ? saSuccessModal.password : '•'.repeat(saSuccessModal.password.length)}
+                      </span>
+                      <button onClick={() => setShowSaPassword(v => !v)}
+                        style={{ padding: '5px', border: '1px solid #e2e8f0', borderRadius: '6px', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                        <span className="material-icons" style={{ fontSize: '15px', color: '#718096' }}>{showSaPassword ? 'visibility_off' : 'visibility'}</span>
+                      </button>
+                      <button onClick={() => { navigator.clipboard.writeText(saSuccessModal.password); showToast('Password copied!'); }}
+                        style={{ padding: '5px', border: '1px solid #e2e8f0', borderRadius: '6px', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                        <span className="material-icons" style={{ fontSize: '15px', color: '#718096' }}>content_copy</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div style={{ marginTop: '14px', padding: '10px 12px', background: '#fff5f5', border: '1px solid #fed7d7', borderRadius: '8px', fontSize: '12px', color: '#c53030', display: 'flex', gap: '6px', alignItems: 'flex-start' }}>
+                <span className="material-icons" style={{ fontSize: '15px', marginTop: '1px', flexShrink: 0 }}>warning</span>
+                <span>Share these credentials securely. The Super Admin must complete school setup on first login. Password will not be shown again.</span>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button onClick={() => { setSaSuccessModal(null); setShowSaPassword(false); }}
+                style={{ padding: '10px 32px', background: 'linear-gradient(135deg,#7c3aed,#553c9a)', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '14px' }}>
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </Layout>
   );
 }

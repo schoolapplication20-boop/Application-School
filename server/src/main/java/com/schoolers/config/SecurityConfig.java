@@ -62,11 +62,18 @@ public class SecurityConfig {
 
             // Authorization rules
             .authorizeHttpRequests(auth -> auth
-                // Public routes
+                // Public routes — login, forgot-password, OTP, reset, AND self-service registration
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/applications").permitAll()   // anyone can submit admission application
                 .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/error").permitAll()
+
+                // Uploaded files (logos, documents) — public read access
+                .requestMatchers("/uploads/**").permitAll()
+
+                // School setup — create is SUPER_ADMIN only (enforced by @PreAuthorize in controller)
+                // GET /api/schools/by-admin and GET /api/schools/{id} require only authentication
+                .requestMatchers("/api/schools/**").authenticated()
 
                 // Super Admin routes
                 .requestMatchers("/api/superadmin/**").hasRole("SUPER_ADMIN")

@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useSchool } from '../../context/SchoolContext';
 import { loginWithEmail as apiLoginWithEmail } from '../../services/authService';
 import '../../styles/auth.css';
 
 const Login = () => {
   const navigate = useNavigate();
   const { login, refreshPermissions, isAuthenticated, getDashboardPath } = useAuth();
+  const { school } = useSchool();
+
+  const primary   = school?.primaryColor   || '#76C442';
+  const secondary = school?.secondaryColor || '#5fa832';
 
   const [emailForm, setEmailForm]       = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
@@ -26,11 +31,19 @@ const Login = () => {
   };
 
   const navigateByRole = (registeredUser) => {
+    // Non-SUPER_ADMIN first-login → must set a new password first
     if (registeredUser?.firstLogin && registeredUser?.role !== 'SUPER_ADMIN') {
       navigate('/reset-password', { replace: true });
-    } else {
-      navigate(rolePathMap[registeredUser.role] || '/login', { replace: true });
+      return;
     }
+
+    // SUPER_ADMIN with no school set up yet → go to Setup School wizard
+    if (registeredUser?.role === 'SUPER_ADMIN' && registeredUser?.needsSchoolSetup) {
+      navigate('/superadmin/setup-school', { replace: true });
+      return;
+    }
+
+    navigate(rolePathMap[registeredUser.role] || '/login', { replace: true });
   };
 
   const handleEmailLogin = async (e) => {
@@ -65,10 +78,19 @@ const Login = () => {
   return (
     <div className="auth-wrapper">
       {/* Left Panel */}
-      <div className="auth-left">
+      <div className="auth-left" style={{ background: `linear-gradient(135deg, ${primary} 0%, ${secondary} 100%)` }}>
         <div className="auth-brand">
-          <span className="brand-icon">🏆</span>
-          <span className="brand-name">Schoolers</span>
+          {school?.logoUrl ? (
+            <img
+              src={`http://localhost:8080${school.logoUrl}`}
+              alt={school.name}
+              style={{ width: 40, height: 40, objectFit: 'contain', borderRadius: 8, background: 'rgba(255,255,255,0.2)', padding: 4 }}
+              onError={e => { e.target.style.display='none'; }}
+            />
+          ) : (
+            <span className="brand-icon">🏆</span>
+          )}
+          <span className="brand-name">{school?.name || 'Schoolers'}</span>
         </div>
         <div className="auth-tagline">
           <h2>Speed Up Your Work Flow With Our Web App</h2>
@@ -81,8 +103,17 @@ const Login = () => {
         </div>
         <div className="auth-illustration">
           <div className="auth-illustration-placeholder">
-            <span style={{ fontSize: '80px' }}>🎓</span>
-            <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '15px', textAlign: 'center', marginTop: '8px' }}>Smart School Management</p>
+            {school?.logoUrl ? (
+              <img src={`http://localhost:8080${school.logoUrl}`} alt={school.name}
+                style={{ width: 100, height: 100, objectFit: 'contain', marginBottom: 8, borderRadius: 12, background: 'rgba(255,255,255,0.15)', padding: 8 }}
+                onError={e => { e.target.replaceWith(Object.assign(document.createElement('span'), { style: 'font-size:80px', textContent: '🎓' })); }}
+              />
+            ) : (
+              <span style={{ fontSize: '80px' }}>🎓</span>
+            )}
+            <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '15px', textAlign: 'center', marginTop: '8px' }}>
+              {school?.name ? `${school.name} Portal` : 'Smart School Management'}
+            </p>
           </div>
         </div>
       </div>
@@ -92,8 +123,16 @@ const Login = () => {
         <div className="auth-right-inner">
           <div className="auth-form-header">
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-              <span style={{ fontSize: '28px' }}>🏆</span>
-              <span style={{ fontSize: '22px', fontWeight: 800, color: '#2d3748', fontFamily: 'Poppins, sans-serif' }}>Schoolers</span>
+              {school?.logoUrl ? (
+                <img src={`http://localhost:8080${school.logoUrl}`} alt={school.name}
+                  style={{ width: 36, height: 36, objectFit: 'contain', borderRadius: 8 }}
+                  onError={e => e.target.style.display = 'none'} />
+              ) : (
+                <span style={{ fontSize: '28px' }}>🏆</span>
+              )}
+              <span style={{ fontSize: '22px', fontWeight: 800, color: primary, fontFamily: 'Poppins, sans-serif' }}>
+                {school?.name || 'Schoolers'}
+              </span>
             </div>
             <h1>Welcome Back!</h1>
             <p>Sign in to your account to continue</p>
@@ -134,7 +173,8 @@ const Login = () => {
                 </span>
               </div>
             </div>
-            <button type="submit" className="btn-auth-submit" disabled={isLoading}>
+            <button type="submit" className="btn-auth-submit" disabled={isLoading}
+              style={{ background: `linear-gradient(135deg, ${primary}, ${secondary})` }}>
               {isLoading ? (
                 <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                   <span style={{ width: '16px', height: '16px', border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />

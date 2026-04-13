@@ -3,14 +3,17 @@ package com.schoolers.controller;
 import com.schoolers.dto.AdminCreatedResponse;
 import com.schoolers.dto.ApiResponse;
 import com.schoolers.model.User;
+import com.schoolers.repository.UserRepository;
 import com.schoolers.service.SuperAdminService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/superadmin")
@@ -24,14 +27,28 @@ public class SuperAdminController {
     @Autowired
     private SuperAdminService superAdminService;
 
-    @GetMapping("/admins")
-    public ResponseEntity<ApiResponse<List<User>>> getAdmins() {
-        return ResponseEntity.ok(superAdminService.getAdmins());
+    @Autowired
+    private UserRepository userRepository;
+
+    /** Resolve the school_id of the currently authenticated SUPER_ADMIN */
+    private Long getCurrentSchoolId(Authentication auth) {
+        if (auth == null) return null;
+        return userRepository.findByEmailIgnoreCase(auth.getName())
+                .map(User::getSchoolId)
+                .orElse(null);
     }
 
+    // ── GET /api/superadmin/admins ────────────────────────────────────────────
+    @GetMapping("/admins")
+    public ResponseEntity<ApiResponse<List<User>>> getAdmins(Authentication auth) {
+        return ResponseEntity.ok(superAdminService.getAdmins(getCurrentSchoolId(auth)));
+    }
+
+    // ── POST /api/superadmin/admins ───────────────────────────────────────────
     @PostMapping("/admins")
     public ResponseEntity<ApiResponse<AdminCreatedResponse>> createAdmin(
-            @RequestBody Map<String, String> body) {
+            @RequestBody Map<String, String> body,
+            Authentication auth) {
 
         String rawName  = body.get("name");
         String rawEmail = body.get("email");
@@ -47,8 +64,52 @@ public class SuperAdminController {
         if (!EMAIL_PATTERN.matcher(email).matches())
             return ResponseEntity.badRequest().body(ApiResponse.error("Valid email is required"));
 
+        Long schoolId = getCurrentSchoolId(auth);
         ApiResponse<AdminCreatedResponse> response =
-                superAdminService.createAdmin(name, email, mobile.isEmpty() ? null : mobile, permissions);
+                superAdminService.createAdmin(name, email, mobile.isEmpty() ? null : mobile, permissions, schoolId);
+
+        return response.isSuccess()
+                ? ResponseEntity.status(201).body(response)
+                : ResponseEntity.badRequest().body(response);
+    }
+
+    // ── GET /api/superadmin/super-admins ──────────────────────────────────────
+    // Only the platform Application Owner (schoolId=null) may list super admins.
+    @GetMapping("/super-admins")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getSuperAdmins(Authentication auth) {
+        Long callerSchoolId = getCurrentSchoolId(auth);
+        if (callerSchoolId != null)
+            return ResponseEntity.status(403)
+                    .body(ApiResponse.error("Only the Application Owner can view Super Admin accounts."));
+        return ResponseEntity.ok(superAdminService.getSuperAdmins());
+    }
+
+    // ── POST /api/superadmin/super-admins ─────────────────────────────────────
+    // Only the platform Application Owner (schoolId=null) may create super admins.
+    // Creates a stub school linked to the new super admin (isSetupCompleted=false).
+    @PostMapping("/super-admins")
+    public ResponseEntity<ApiResponse<AdminCreatedResponse>> createSuperAdmin(
+            @RequestBody Map<String, String> body, Authentication auth) {
+
+        String name       = body.getOrDefault("name",       "").trim();
+        String email      = body.getOrDefault("email",      "").trim();
+        String mobile     = body.getOrDefault("mobile",     "").trim();
+        String schoolName = body.getOrDefault("schoolName", "").trim();
+        String schoolCode = body.getOrDefault("schoolCode", "").trim();
+
+        if (name.isEmpty())
+            return ResponseEntity.badRequest().body(ApiResponse.error("Name is required"));
+        if (!EMAIL_PATTERN.matcher(email).matches())
+            return ResponseEntity.badRequest().body(ApiResponse.error("Valid email is required"));
+        if (schoolName.isEmpty())
+            return ResponseEntity.badRequest().body(ApiResponse.error("School name is required"));
+        if (schoolCode.isEmpty())
+            return ResponseEntity.badRequest().body(ApiResponse.error("School code is required"));
+
+        Long callerSchoolId = getCurrentSchoolId(auth);
+        ApiResponse<AdminCreatedResponse> response = superAdminService.createSuperAdmin(
+                name, email, mobile.isEmpty() ? null : mobile,
+                schoolName, schoolCode, callerSchoolId);
 
         return response.isSuccess()
                 ? ResponseEntity.status(201).body(response)

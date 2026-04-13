@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useSchool } from '../context/SchoolContext';
 import '../styles/sidebar.css';
 
 const adminNavItems = [
@@ -24,6 +25,7 @@ const adminNavItems = [
 // Super-Admin-only items (platform management)
 const superAdminOnlyItems = [
   { path: '/superadmin/admins',            icon: 'manage_accounts',  label: 'Admin Management',     permKey: null },
+  { path: '/superadmin/setup-school',      icon: 'add_business',     label: 'Setup School',         permKey: null },
   { path: '/superadmin/student-transport', icon: 'directions_bus',   label: 'Student Transport',    permKey: null },
   { path: '/superadmin/exam-schedule',     icon: 'event_note',       label: 'Exam Schedule',        permKey: null },
 ];
@@ -64,7 +66,12 @@ const parentNavItems = [
 ];
 
 const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
-  const { user } = useAuth();
+  const { user }   = useAuth();
+  const { school } = useSchool();
+
+  // Dynamic accent colour from school branding (fallback to green)
+  const primary   = school?.primaryColor   || '#76C442';
+  const secondary = school?.secondaryColor || '#5fa832';
 
   /**
    * Returns the nav sections to render.
@@ -76,8 +83,15 @@ const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
     switch (user?.role) {
       case 'SUPER_ADMIN': {
         const [first, ...rest] = adminNavItems.filter(item => item.path !== '/admin/parents');
+        // Show "Setup School" only while school setup is still needed.
+        // needsSchoolSetup=true means school doesn't exist yet or isSetupCompleted=false.
+        // After setup completes, updateUser({ needsSchoolSetup: false }) clears this flag.
+        const saItems = superAdminOnlyItems.filter(item => {
+          if (item.path === '/superadmin/setup-school') return user?.needsSchoolSetup === true;
+          return true;
+        });
         return [
-          { label: 'Navigation', items: [first, ...superAdminOnlyItems, ...rest] },
+          { label: 'Navigation', items: [first, ...saItems, ...rest] },
         ];
       }
 
@@ -132,11 +146,25 @@ const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
     <aside className={`sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
       {/* Brand */}
       <div className="sidebar-brand">
-        <div className="brand-logo">
-          <span style={{ fontSize: '20px' }}>🏆</span>
+        <div className="brand-logo" style={{
+          background: school?.logoUrl ? 'transparent' : `linear-gradient(135deg, ${primary}, ${secondary})`,
+          borderRadius: school?.logoUrl ? '0' : undefined,
+          overflow: 'hidden',
+        }}>
+          {school?.logoUrl ? (
+            <img
+              src={`http://localhost:8080${school.logoUrl}`}
+              alt={school.name || 'School logo'}
+              style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: 8 }}
+              onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+            />
+          ) : null}
+          <span style={{ fontSize: '20px', display: school?.logoUrl ? 'none' : 'flex' }}>🏆</span>
         </div>
         <div className="brand-text">
-          <div className="brand-name">Schoolers</div>
+          <div className="brand-name" style={{ color: primary }}>
+            {school?.name || 'Schoolers'}
+          </div>
           <div className="brand-tagline">Management System</div>
         </div>
       </div>
@@ -189,7 +217,7 @@ const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
             style={{
               background: user?.role === 'SUPER_ADMIN'
                 ? 'linear-gradient(135deg, #7c3aed, #553c9a)'
-                : 'linear-gradient(135deg, #76C442, #5fa832)',
+                : `linear-gradient(135deg, ${primary}, ${secondary})`,
             }}
           >
             {getInitials(user?.name)}
