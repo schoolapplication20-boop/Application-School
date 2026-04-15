@@ -229,7 +229,7 @@ export default function StudentDashboard() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '8px 0' }}>
             {[
               { label: 'View Attendance', icon: 'fact_check',    path: '/student/attendance',  color: '#76C442' },
-              { label: 'Assignments',     icon: 'assignment',     path: '/student/assignments', color: '#805ad5' },
+
               { label: 'Pay Fees',        icon: 'payments',       path: '/student/fees',        color: '#e53e3e' },
               { label: 'Leave Request',   icon: 'event_busy',     path: '/student/leave',       color: '#ed8936' },
               { label: 'Hall Ticket',     icon: 'verified',       path: '/student/examination', color: '#3182ce' },

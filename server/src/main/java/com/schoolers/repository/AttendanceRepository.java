@@ -43,4 +43,16 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
     @Modifying
     @Transactional
     void deleteByStudentId(Long studentId);
+
+    // ── School-scoped queries (multi-tenant) ──────────────────────────────────
+
+    List<Attendance> findBySchoolIdAndClassIdAndDate(Long schoolId, Long classId, LocalDate date);
+
+    List<Attendance> findBySchoolIdAndClassIdAndDateBetween(Long schoolId, Long classId, LocalDate start, LocalDate end);
+
+    @Query("SELECT DISTINCT a.date FROM Attendance a WHERE a.schoolId = :schoolId AND a.classId = :cid ORDER BY a.date DESC")
+    List<LocalDate> findDistinctDatesBySchoolIdAndClassId(@Param("schoolId") Long schoolId, @Param("cid") Long classId);
+
+    @Query("SELECT a.status, COUNT(a) FROM Attendance a WHERE a.schoolId = :schoolId AND a.classId = :cid AND a.date = :date GROUP BY a.status")
+    List<Object[]> countByStatusForSchoolAndClassAndDate(@Param("schoolId") Long schoolId, @Param("cid") Long classId, @Param("date") LocalDate date);
 }

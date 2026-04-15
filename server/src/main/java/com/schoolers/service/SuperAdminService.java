@@ -118,17 +118,30 @@ public class SuperAdminService {
         }
     }
 
+    /**
+     * Returns ADMIN users only, scoped to the caller's school.
+     * SUPER_ADMIN and APPLICATION_OWNER accounts are NEVER included, regardless of schoolId.
+     */
     public ApiResponse<List<User>> getAdmins(Long schoolId) {
+        List<User> admins;
         if (schoolId != null) {
-            return ApiResponse.success(userRepository.findByRoleAndSchoolId(User.Role.ADMIN, schoolId));
+            admins = userRepository.findByRoleAndSchoolId(User.Role.ADMIN, schoolId);
+        } else {
+            // Platform-level owner: see all school-level ADMINs across all schools
+            admins = userRepository.findByRole(User.Role.ADMIN);
         }
-        return ApiResponse.success(userRepository.findByRole(User.Role.ADMIN));
+        // Defensive: strip out any non-ADMIN entries (should never happen, but belt-and-suspenders)
+        admins = admins.stream()
+                .filter(u -> u.getRole() == User.Role.ADMIN)
+                .collect(java.util.stream.Collectors.toList());
+        return ApiResponse.success(admins);
     }
 
     /**
      * Creates a new school-level Super Admin.
      * Only the platform Application Owner (callerSchoolId == null) may call this.
      *
+     * Enforces: exactly ONE SUPER_ADMIN per school.
      * A stub School record is created with isSetupCompleted=false so the new
      * Super Admin is redirected to the Setup School wizard on first login.
      *
@@ -139,9 +152,10 @@ public class SuperAdminService {
     public ApiResponse<AdminCreatedResponse> createSuperAdmin(
             String name, String email, String mobile,
             String schoolName, String schoolCode,
+            String permissions,
             Long callerSchoolId) {
 
-        // ── Gate: only platform-level (no schoolId) owners may create super admins ──
+        // ── Gate: only APPLICATION_OWNER (schoolId == null) may create SUPER_ADMINs ──
         if (callerSchoolId != null)
             return ApiResponse.error("Only the Application Owner can create new Super Admin accounts.");
 
@@ -179,7 +193,16 @@ public class SuperAdminService {
             log.info("[createSuperAdmin] Created stub school id=" + school.getId()
                     + " code=" + normalizedCode);
 
-            // ── 2. Create Super Admin linked to the stub school ───────────────
+            // ── 2. Enforce one SUPER_ADMIN per school ─────────────────────────
+            // This guard is belt-and-suspenders: since the school was just created
+            // above it cannot already have a SUPER_ADMIN. This protects against
+            // future code paths that might call this method with an existing schoolId.
+            if (userRepository.existsBySchoolIdAndRole(school.getId(), User.Role.SUPER_ADMIN)) {
+                return ApiResponse.error("A Super Admin already exists for school '"
+                        + normalizedCode + "'. Each school can have only one Super Admin.");
+            }
+
+            // ── 3. Create Super Admin linked to the stub school ───────────────
             User user = userRepository.save(User.builder()
                     .name(name.trim())
                     .email(normalizedEmail)
@@ -187,9 +210,10 @@ public class SuperAdminService {
                     .password(passwordEncoder.encode(rawPassword))
                     .tempPassword(rawPassword)
                     .role(User.Role.SUPER_ADMIN)
-                    .schoolId(school.getId())
+                    .schoolId(school.getId())    // SUPER_ADMIN must always have a schoolId
                     .isActive(true)
-                    .firstLogin(false)   // password is known; no forced reset needed
+                    .firstLogin(true)            // forced password reset on first login
+                    .permissions(permissions)
                     .build());
             log.info("[createSuperAdmin] Created super admin id=" + user.getId()
                     + " email=" + normalizedEmail + " schoolId=" + school.getId());
@@ -200,6 +224,7 @@ public class SuperAdminService {
                     .email(user.getEmail())
                     .mobile(user.getMobile())
                     .generatedPassword(rawPassword)
+                    .schoolId(school.getId())
                     .build();
 
             return ApiResponse.success("Super Admin created successfully", response);
@@ -252,10 +277,39 @@ public class SuperAdminService {
         return ApiResponse.success("Super admins fetched", result);
     }
 
-    public ApiResponse<User> updateAdmin(Long id, String name, String mobile, Boolean isActive, String permissions) {
+    /**
+     * Deletes a SUPER_ADMIN account.
+     * Only APPLICATION_OWNER (callerSchoolId == null) may call this.
+     * The linked school record is preserved so historical data is not lost.
+     */
+    @Transactional
+    public ApiResponse<String> deleteSuperAdmin(Long id) {
+        return userRepository.findById(id)
+                .filter(u -> u.getRole() == User.Role.SUPER_ADMIN)
+                .map(user -> {
+                    userRepository.deleteById(id);
+                    log.info("[deleteSuperAdmin] Deleted SUPER_ADMIN id=" + id
+                            + " email=" + user.getEmail() + " schoolId=" + user.getSchoolId());
+                    return ApiResponse.<String>success("Super Admin deleted successfully", "Deleted");
+                })
+                .orElse(ApiResponse.<String>error("Super Admin not found or is not a SUPER_ADMIN account."));
+    }
+
+    /**
+     * Updates an ADMIN user. The caller's schoolId is enforced — a SUPER_ADMIN
+     * from School A cannot update an ADMIN from School B.
+     * Platform-level owners (callerSchoolId == null) may update any ADMIN.
+     */
+    public ApiResponse<User> updateAdmin(Long id, String name, String mobile,
+                                         Boolean isActive, String permissions,
+                                         Long callerSchoolId) {
         return userRepository.findById(id)
                 .filter(u -> u.getRole() == User.Role.ADMIN)
                 .map(user -> {
+                    // School isolation: reject if the admin belongs to a different school
+                    if (callerSchoolId != null && !callerSchoolId.equals(user.getSchoolId())) {
+                        return ApiResponse.<User>error("Access denied: admin belongs to a different school.");
+                    }
                     if (name != null && !name.isBlank()) user.setName(name);
                     if (mobile != null && !mobile.isBlank()) {
                         String newMobile = mobile.trim();
@@ -270,10 +324,19 @@ public class SuperAdminService {
                 .orElse(ApiResponse.error("Admin not found"));
     }
 
-    public ApiResponse<String> deleteAdmin(Long id) {
+    /**
+     * Deletes an ADMIN user. The caller's schoolId is enforced — a SUPER_ADMIN
+     * from School A cannot delete an ADMIN from School B.
+     * Platform-level owners (callerSchoolId == null) may delete any ADMIN.
+     */
+    public ApiResponse<String> deleteAdmin(Long id, Long callerSchoolId) {
         return userRepository.findById(id)
                 .filter(u -> u.getRole() == User.Role.ADMIN)
                 .map(user -> {
+                    // School isolation: reject if the admin belongs to a different school
+                    if (callerSchoolId != null && !callerSchoolId.equals(user.getSchoolId())) {
+                        return ApiResponse.<String>error("Access denied: admin belongs to a different school.");
+                    }
                     userRepository.deleteById(id);
                     return ApiResponse.success("Admin deleted", "Deleted");
                 })

@@ -75,6 +75,7 @@ export const superAdminAPI = {
   deleteAdmin:      (id)       => api.delete(`/api/superadmin/admins/${id}`),
   createSuperAdmin: (data)     => api.post('/api/superadmin/super-admins', data),
   getSuperAdmins:   ()         => api.get('/api/superadmin/super-admins'),
+  deleteSuperAdmin: (id)       => api.delete(`/api/superadmin/super-admins/${id}`),
   getMyPermissions: ()         => api.get('/api/admin/permissions'),
 };
 
@@ -223,8 +224,15 @@ export const parentAPI = {
 export const studentAPI = {
   getMyProfile:    ()       => api.get('/api/student/me'),
   getMyAttendance: (params) => api.get('/api/student/attendance', { params }),
+  // Convenience: fetch the full academic year (Jan 1 → today) in one call
+  getMyFullAttendance: () => {
+    const today = new Date().toISOString().split('T')[0];
+    const startDate = `${new Date().getFullYear()}-01-01`;
+    return api.get('/api/student/attendance', { params: { startDate, endDate: today } });
+  },
   getMyMarks:      ()       => api.get('/api/student/marks'),
   getMyFees:       ()       => api.get('/api/student/fees'),
+  getMyDiary:      ()       => api.get('/api/student/diary'),
 };
 
 // ============================================
@@ -371,15 +379,19 @@ export const salaryAPI = {
 
 export const diaryAPI = {
   // Super Admin / Admin: all entries with optional filters
-  getAll:       (params)     => api.get('/api/diary', { params }),
+  getAll:         (params)     => api.get('/api/diary', { params }),
   // Teacher / Parent: entries for a specific class
-  getByClass:   (className)  => api.get(`/api/diary/class/${encodeURIComponent(className)}`),
-  // Teacher: upload diary entry (body contains base64 imageUrl)
-  create:       (data)       => api.post('/api/diary', data),
+  getByClass:     (className)  => api.get(`/api/diary/class/${encodeURIComponent(className)}`),
+  // Teacher: get their own diary entries
+  getForTeacher:  ()           => api.get('/api/diary/teacher'),
+  // Teacher: create diary entry
+  create:         (data)       => api.post('/api/diary', data),
+  // Teacher: update their own diary entry
+  updateEntry:    (id, data)   => api.put(`/api/diary/${id}`, data),
   // Admin / Super Admin: update review status + comment
-  updateReview: (id, data)   => api.patch(`/api/diary/${id}/review`, data),
+  updateReview:   (id, data)   => api.patch(`/api/diary/${id}/review`, data),
   // Admin / Super Admin: delete entry
-  delete:       (id)         => api.delete(`/api/diary/${id}`),
+  delete:         (id)         => api.delete(`/api/diary/${id}`),
 };
 
 // ============================================

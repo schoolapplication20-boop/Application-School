@@ -107,6 +107,10 @@ public class Salary {
     @Column(name = "paid_date")
     private LocalDate paidDate;
 
+    /** Multi-tenancy: which school this salary record belongs to. */
+    @Column(name = "school_id")
+    private Long schoolId;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

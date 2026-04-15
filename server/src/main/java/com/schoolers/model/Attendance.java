@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "attendance",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"student_id", "class_id", "date"}))
+        uniqueConstraints = @UniqueConstraint(columnNames = {"student_id", "class_id", "date", "school_id"}))
 @Data
 @Builder
 @NoArgsConstructor
@@ -41,6 +41,10 @@ public class Attendance {
 
     @Column(name = "marked_by")
     private Long markedBy;
+
+    /** Multi-tenancy: which school this attendance record belongs to. */
+    @Column(name = "school_id")
+    private Long schoolId;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

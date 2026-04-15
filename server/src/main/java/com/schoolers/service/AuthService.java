@@ -18,7 +18,6 @@ import java.time.ZoneOffset;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.security.SecureRandom;
 import java.util.logging.Logger;
 
@@ -32,9 +31,8 @@ public class AuthService {
     @Autowired private JwtUtil          jwtUtil;
     @Autowired private PasswordEncoder  passwordEncoder;
 
-    // In-memory OTP store: mobile → otp / expiry
-    private final Map<String, String>        otpStore       = new ConcurrentHashMap<>();
-    private final Map<String, LocalDateTime> otpExpiryStore = new ConcurrentHashMap<>();
+    // All OTP data is persisted directly on the User record in the database.
+    // No in-memory caches — restarts and multi-instance deployments are safe.
 
     // ── Login ─────────────────────────────────────────────────────────────────
 
@@ -219,6 +217,7 @@ public class AuthService {
     }
 
     // ── Forgot Password ───────────────────────────────────────────────────────
+    // OTP is generated and saved directly to the database. No in-memory cache.
 
     public ApiResponse<String> forgotPassword(String mobile) {
         User user = userRepository.findByMobile(mobile).orElse(null);
@@ -227,37 +226,39 @@ public class AuthService {
         String otp    = String.format("%04d", new SecureRandom().nextInt(10000));
         LocalDateTime expiry = LocalDateTime.now(ZoneOffset.UTC).plusMinutes(5);
 
-        otpStore.put(mobile, otp);
-        otpExpiryStore.put(mobile, expiry);
-        try {
-            user.setResetOtp(otp);
-            user.setOtpExpiry(expiry);
-            userRepository.save(user);
-        } catch (Exception e) {
-            log.warning("[forgotPassword] DB save failed for " + mobile + ": " + e.getMessage());
-        }
+        user.setResetOtp(otp);
+        user.setOtpExpiry(expiry);
+        userRepository.save(user);
+
         log.info("[DEV] OTP for " + mobile + ": " + otp);
         return ApiResponse.success("OTP sent successfully to " + mobile, otp);
     }
 
     // ── Verify OTP ────────────────────────────────────────────────────────────
+    // Reads OTP and expiry directly from the database — no in-memory lookup.
 
     public ApiResponse<String> verifyOTP(String mobile, String otp) {
-        String cachedOtp = otpStore.get(mobile);
-        if (cachedOtp == null || !cachedOtp.equals(otp)) {
-            User user = userRepository.findByMobile(mobile).orElse(null);
-            if (user == null) return ApiResponse.error("Mobile number not registered.");
-            String dbOtp = user.getResetOtp();
-            if (dbOtp == null || !dbOtp.trim().equals(otp.trim()))
-                return ApiResponse.error("Invalid OTP.");
-            otpStore.put(mobile, dbOtp);
-        }
-        otpStore.remove(mobile);
-        otpExpiryStore.remove(mobile);
+        User user = userRepository.findByMobile(mobile).orElse(null);
+        if (user == null) return ApiResponse.error("Mobile number not registered.");
+
+        String dbOtp = user.getResetOtp();
+        if (dbOtp == null || !dbOtp.trim().equals(otp.trim()))
+            return ApiResponse.error("Invalid OTP.");
+
+        LocalDateTime expiry = user.getOtpExpiry();
+        if (expiry != null && LocalDateTime.now(ZoneOffset.UTC).isAfter(expiry))
+            return ApiResponse.error("OTP has expired. Please request a new one.");
+
+        // Clear OTP from DB after successful verification
+        user.setResetOtp(null);
+        user.setOtpExpiry(null);
+        userRepository.save(user);
+
         return ApiResponse.success("OTP verified successfully", "OTP verified");
     }
 
     // ── Reset Password ────────────────────────────────────────────────────────
+    // Reads and writes entirely from the database.
 
     public ApiResponse<String> resetPassword(String mobile, String newPassword) {
         User user = userRepository.findByMobile(mobile).orElse(null);
@@ -266,8 +267,6 @@ public class AuthService {
         user.setResetOtp(null);
         user.setOtpExpiry(null);
         userRepository.save(user);
-        otpStore.remove(mobile);
-        otpExpiryStore.remove(mobile);
         return ApiResponse.success("Password reset successfully", "Password updated");
     }
 

@@ -6,193 +6,237 @@ import { teacherAPI, diaryAPI } from '../../services/api';
 
 const TODAY = new Date().toISOString().split('T')[0];
 
-const SUBJECTS = ['Mathematics', 'Science', 'English', 'Social Science', 'Hindi', 'Computer Science', 'Physics', 'Chemistry', 'Biology', 'History', 'Geography'];
-
-const initialHW = [
-  { id: 1, title: 'Chapter 5 — Quadratic Equations', class: '10-A', subject: 'Mathematics', dueDate: '2025-03-25', description: 'Solve exercises 1–15. Show full working.', assignedAt: '18 Mar 2025', status: 'Active' },
-  { id: 2, title: 'Essay on Indian Constitution', class: '9-B', subject: 'Social Science', dueDate: '2025-03-22', description: 'Write a 500-word essay.', assignedAt: '17 Mar 2025', status: 'Active' },
+const SUBJECTS = [
+  'Mathematics', 'Science', 'English', 'Social Science', 'Hindi',
+  'Computer Science', 'Physics', 'Chemistry', 'Biology', 'History', 'Geography',
 ];
+
+const emptyForm = {
+  className: '', section: '', classId: '',
+  subject: '', diaryDate: TODAY,
+  topic: '', homework: '', description: '', remarks: '',
+  imageUrl: '', imageName: '',
+};
 
 export default function Homework() {
   const { user } = useAuth();
 
-  // ── Tab ─────────────────────────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState('homework');
-
-  // ── Toast ────────────────────────────────────────────────────────────────
-  const [toast, setToast] = useState(null);
+  const [activeTab, setActiveTab] = useState('new');
+  const [toast, setToast]       = useState(null);
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3500);
   };
 
-  // ── Homework state ───────────────────────────────────────────────────────
-  const [homework, setHomework] = useState(initialHW);
-  const [showHWModal, setShowHWModal] = useState(false);
-  const [filterClass, setFilterClass] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
-  const [hwForm, setHWForm] = useState({ title: '', class: '', subject: '', dueDate: '', description: '' });
+  // ── Teacher's classes ─────────────────────────────────────────────────────
+  // myClasses = full list of ClassRoom objects assigned to this teacher
+  // (combines class-teacher primary class + subject-teacher assignments)
+  const [myClasses, setMyClasses] = useState([]);
+  const [classesLoading, setClassesLoading] = useState(true);
 
-  const filteredHW = homework.filter(h => {
-    const matchClass  = !filterClass  || h.class === filterClass;
-    const matchStatus = !filterStatus || h.status === filterStatus;
-    return matchClass && matchStatus;
-  });
+  useEffect(() => {
+    setClassesLoading(true);
+    teacherAPI.getMyClasses()                     // JWT resolves the teacher; no id needed
+      .then(res => setMyClasses(res.data?.data ?? []))
+      .catch(() => setMyClasses([]))
+      .finally(() => setClassesLoading(false));
+  }, []);
 
-  const handleHWSave = (e) => {
-    e.preventDefault();
-    if (!hwForm.title.trim() || !hwForm.class) {
-      showToast('Title and Class are required', 'error'); return;
-    }
-    setHomework(prev => [...prev, {
-      id: Date.now(), ...hwForm,
-      assignedAt: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-      status: 'Active',
-    }]);
-    setShowHWModal(false);
-    setHWForm({ title: '', class: '', subject: '', dueDate: '', description: '' });
-    showToast('Homework assigned successfully!');
-  };
-
-  const handleDelete = (id) => {
-    setHomework(prev => prev.filter(h => h.id !== id));
-    showToast('Homework deleted', 'warning');
-  };
-
-  const handleMarkComplete = (id) => {
-    setHomework(prev => prev.map(h => h.id === id ? { ...h, status: 'Completed' } : h));
-    showToast('Marked as completed');
-  };
-
-  const statusColor = { Active: '#76C442', Completed: '#3182ce' };
-
-  // ── Diary state ──────────────────────────────────────────────────────────
-  const [myClasses, setMyClasses]   = useState([]);
-  const [diaryEntries, setDiaryEntries] = useState([]);
-  const [diaryLoading, setDiaryLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [previewEntry, setPreviewEntry] = useState(null);
-
-  const [diaryForm, setDiaryForm] = useState({
-    className: '', section: '', subject: '', diaryDate: TODAY,
-    description: '', imageUrl: '', imageName: '',
-  });
+  // ── New entry form ────────────────────────────────────────────────────────
+  const [form, setForm]         = useState(emptyForm);
   const [imagePreview, setImagePreview] = useState(null);
+  const [submitting, setSubmitting]     = useState(false);
   const fileInputRef = useRef(null);
 
-  // Load teacher's classes
-  useEffect(() => {
-    if (!user?.id) return;
-    teacherAPI.getMyClasses(user.id)
-      .then(res => {
-        const classes = res.data?.data ?? [];
-        setMyClasses(Array.isArray(classes) ? classes : []);
-      })
-      .catch(() => setMyClasses([]));
-  }, [user?.id]);
+  // Derived: unique class names for the first dropdown (depends on myClasses only)
+  const uniqueClassNames = [...new Set(myClasses.map(c => c.name))].sort();
 
-  // Load diary entries whenever tab opens
-  useEffect(() => {
-    if (activeTab !== 'diary' || !diaryForm.className) return;
-    fetchDiary(diaryForm.className);
-  }, [activeTab, diaryForm.className]);
+  // Sections available for the currently-selected class name (depends on form.className)
+  const availableSections = myClasses
+    .filter(c => c.name === form.className)
+    .map(c => c.section)
+    .filter(Boolean);
 
-  const fetchDiary = async (className) => {
-    if (!className) return;
-    setDiaryLoading(true);
-    try {
-      const res = await diaryAPI.getByClass(className);
-      const data = res.data?.data ?? [];
-      setDiaryEntries(Array.isArray(data) ? data : []);
-    } catch {
-      setDiaryEntries([]);
-    } finally {
-      setDiaryLoading(false);
+  // Step 1: teacher picks a class name → reset section, auto-select if only one section
+  const handleClassNameChange = (e) => {
+    const name = e.target.value;
+    const sections = myClasses
+      .filter(c => c.name === name)
+      .map(c => c.section)
+      .filter(Boolean);
+
+    // Auto-select the section if there's only one option
+    if (sections.length === 1) {
+      const cls = myClasses.find(c => c.name === name && c.section === sections[0]);
+      setForm(prev => ({
+        ...prev,
+        className: name,
+        section:   sections[0],
+        classId:   cls ? cls.id : '',
+      }));
+    } else if (sections.length === 0) {
+      // Class without sections — find by name only
+      const cls = myClasses.find(c => c.name === name);
+      setForm(prev => ({
+        ...prev,
+        className: name,
+        section:   '',
+        classId:   cls ? cls.id : '',
+      }));
+    } else {
+      // Multiple sections — let teacher pick
+      setForm(prev => ({
+        ...prev,
+        className: name,
+        section:   '',
+        classId:   '',
+      }));
     }
   };
 
-  const handleClassChange = (e) => {
-    const cls = myClasses.find(c => c.id === Number(e.target.value));
-    const className = cls ? cls.name : '';
-    const section   = cls ? (cls.section || '') : '';
-    setDiaryForm(prev => ({ ...prev, className, section }));
-    if (className) fetchDiary(className);
+  // Step 2: teacher picks a section → lock in the classroom ID
+  const handleSectionChange = (e) => {
+    const section = e.target.value;
+    const cls = myClasses.find(c => c.name === form.className && c.section === section);
+    setForm(prev => ({
+      ...prev,
+      section,
+      classId: cls ? cls.id : '',
+    }));
   };
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
-    // Image-only validation
     if (!file.type.startsWith('image/')) {
-      showToast('Only image files are allowed (JPG, PNG, GIF, etc.)', 'error');
+      showToast('Only image files are allowed', 'error');
       e.target.value = '';
       return;
     }
-    // 5 MB limit
     if (file.size > 5 * 1024 * 1024) {
       showToast('Image must be smaller than 5 MB', 'error');
       e.target.value = '';
       return;
     }
-
     const reader = new FileReader();
     reader.onload = (ev) => {
       const base64 = ev.target.result;
-      setDiaryForm(prev => ({ ...prev, imageUrl: base64, imageName: file.name }));
+      setForm(prev => ({ ...prev, imageUrl: base64, imageName: file.name }));
       setImagePreview(base64);
     };
     reader.readAsDataURL(file);
   };
 
-  const handleDiarySubmit = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!diaryForm.className) { showToast('Please select a class', 'error'); return; }
-    if (!diaryForm.imageUrl)  { showToast('Please upload a diary image', 'error'); return; }
+    if (!form.className)       { showToast('Please select a class', 'error'); return; }
+    if (!form.topic.trim())    { showToast('Topic is required', 'error'); return; }
+    if (!form.homework.trim()) { showToast('Homework is required', 'error'); return; }
 
     setSubmitting(true);
     try {
       await diaryAPI.create({
-        ...diaryForm,
+        ...form,
         teacherId:   user?.id,
         teacherName: user?.name,
       });
-      showToast('Today\'s Diary uploaded successfully!');
-      setDiaryForm(prev => ({ ...prev, description: '', imageUrl: '', imageName: '', diaryDate: TODAY }));
+      showToast('Diary entry created successfully!');
+      setForm(emptyForm);
       setImagePreview(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
-      fetchDiary(diaryForm.className);
+      // Switch to My Entries tab and refresh
+      setActiveTab('entries');
+      fetchEntries();
     } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to upload diary';
+      const msg = err.response?.data?.message || 'Failed to create diary entry';
       showToast(msg, 'error');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleDownload = (entry) => {
-    const link = document.createElement('a');
-    link.href = entry.imageUrl;
-    link.download = entry.imageName || `diary-${entry.diaryDate}.jpg`;
-    link.click();
+  // ── My Entries ────────────────────────────────────────────────────────────
+  const [entries, setEntries]       = useState([]);
+  const [loadingEntries, setLoadingEntries] = useState(false);
+  const [filterSubject, setFilterSubject]   = useState('');
+  const [filterDate, setFilterDate]         = useState('');
+  const [editEntry, setEditEntry]   = useState(null);   // entry being edited
+  const [editForm, setEditForm]     = useState({});
+  const [saving, setSaving]         = useState(false);
+  const [previewEntry, setPreviewEntry] = useState(null);
+
+  const fetchEntries = async () => {
+    setLoadingEntries(true);
+    try {
+      const res = await diaryAPI.getForTeacher();
+      const data = res.data?.data ?? [];
+      setEntries(Array.isArray(data) ? data : []);
+    } catch {
+      setEntries([]);
+    } finally {
+      setLoadingEntries(false);
+    }
   };
 
-  const reviewColor = { PENDING: '#ed8936', APPROVED: '#76C442', REJECTED: '#e53e3e' };
+  useEffect(() => {
+    if (activeTab === 'entries') fetchEntries();
+  }, [activeTab]);
+
+  const filteredEntries = entries.filter(e => {
+    const matchSubject = !filterSubject || e.subject === filterSubject;
+    const matchDate    = !filterDate    || e.diaryDate === filterDate;
+    return matchSubject && matchDate;
+  });
+
+  const openEdit = (entry) => {
+    setEditEntry(entry);
+    setEditForm({
+      topic:       entry.topic       || '',
+      homework:    entry.homework    || '',
+      description: entry.description || '',
+      remarks:     entry.remarks     || '',
+    });
+  };
+
+  const handleSaveEdit = async (e) => {
+    e.preventDefault();
+    if (!editForm.topic.trim())    { showToast('Topic is required', 'error'); return; }
+    if (!editForm.homework.trim()) { showToast('Homework is required', 'error'); return; }
+    setSaving(true);
+    try {
+      await diaryAPI.updateEntry(editEntry.id, editForm);
+      showToast('Entry updated successfully!');
+      setEditEntry(null);
+      fetchEntries();
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Failed to update entry';
+      showToast(msg, 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const fmtDate = (d) => {
+    if (!d) return '—';
+    try {
+      return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch { return d; }
+  };
 
   return (
-    <Layout pageTitle="Homework & Diary">
+    <Layout pageTitle="Diary">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
       <div className="page-header">
-        <h1>Homework & Diary</h1>
-        <p>Manage homework assignments and upload today's class diary</p>
+        <h1>Diary</h1>
+        <p>Create daily diary entries with topic, homework, and optional notes</p>
       </div>
 
       {/* Tab Switcher */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', borderBottom: '2px solid #f0f4f8', paddingBottom: '0' }}>
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', borderBottom: '2px solid #f0f4f8' }}>
         {[
-          { key: 'homework', label: 'Homework', icon: 'menu_book' },
-          { key: 'diary',    label: "Today's Diary", icon: 'photo_camera' },
+          { key: 'new',     label: 'New Entry',   icon: 'add_circle' },
+          { key: 'entries', label: 'My Entries',  icon: 'list_alt' },
         ].map(tab => (
           <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
             display: 'flex', alignItems: 'center', gap: '6px',
@@ -208,347 +252,355 @@ export default function Homework() {
         ))}
       </div>
 
-      {/* ── HOMEWORK TAB ── */}
-      {activeTab === 'homework' && (
-        <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '16px', marginBottom: '24px' }}>
-            {[
-              { label: 'Total',     value: homework.length,                                       color: '#76C442', icon: 'menu_book' },
-              { label: 'Active',    value: homework.filter(h => h.status === 'Active').length,    color: '#3182ce', icon: 'pending_actions' },
-              { label: 'Completed', value: homework.filter(h => h.status === 'Completed').length, color: '#805ad5', icon: 'check_circle' },
-              { label: 'Classes',   value: [...new Set(homework.map(h => h.class))].length,       color: '#ed8936', icon: 'class' },
-            ].map(c => (
-              <div key={c.label} className="stat-card">
-                <div className="stat-icon" style={{ backgroundColor: c.color + '15' }}>
-                  <span className="material-icons" style={{ color: c.color }}>{c.icon}</span>
-                </div>
-                <div className="stat-value">{c.value}</div>
-                <div className="stat-label">{c.label}</div>
-              </div>
-            ))}
-          </div>
+      {/* ── NEW ENTRY TAB ── */}
+      {activeTab === 'new' && (
+        <div style={{ maxWidth: '680px' }}>
+          <div className="data-table-card" style={{ padding: '28px' }}>
+            <form onSubmit={handleSubmit}>
 
-          <div className="data-table-card">
-            <div className="search-filter-bar">
-              <select className="filter-select" value={filterClass} onChange={e => setFilterClass(e.target.value)}>
-                <option value="">All Classes</option>
-                {[...new Set(homework.map(h => h.class))].map(c => <option key={c}>{c}</option>)}
-              </select>
-              <select className="filter-select" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
-                <option value="">All Status</option>
-                <option>Active</option>
-                <option>Completed</option>
-              </select>
-              <button className="btn-add" onClick={() => setShowHWModal(true)}>
-                <span className="material-icons">add</span> Assign Homework
-              </button>
-            </div>
-
-            <div style={{ display: 'grid', gap: '16px' }}>
-              {filteredHW.length === 0 ? (
-                <div className="empty-state" style={{ padding: '40px' }}>
-                  <span className="material-icons" style={{ fontSize: 48, color: '#e2e8f0' }}>menu_book</span>
-                  <h3 style={{ color: '#a0aec0', marginTop: 12 }}>No homework found</h3>
+              {/* Class + Section selectors */}
+              {classesLoading ? (
+                <div style={{ padding: '10px 0 16px', fontSize: 13, color: '#a0aec0' }}>
+                  <span className="material-icons" style={{ fontSize: 16, verticalAlign: 'middle', marginRight: 4 }}>hourglass_empty</span>
+                  Loading your assigned classes…
                 </div>
-              ) : filteredHW.map(h => {
-                const color = statusColor[h.status] || '#76C442';
-                const isOverdue = h.status === 'Active' && new Date(h.dueDate) < new Date();
-                return (
-                  <div key={h.id} style={{ border: `1.5px solid ${isOverdue ? '#fed7d7' : '#f0f4f8'}`, borderRadius: '12px', padding: '20px', background: isOverdue ? '#fff5f5' : '#fff' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                          <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: color + '15', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <span className="material-icons" style={{ color, fontSize: '18px' }}>menu_book</span>
-                          </div>
-                          <div>
-                            <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#2d3748', margin: 0 }}>{h.title}</h3>
-                            <div style={{ fontSize: '12px', color: '#a0aec0' }}>Assigned: {h.assignedAt}</div>
-                          </div>
-                        </div>
-                        <p style={{ fontSize: '13px', color: '#718096', margin: '0 0 12px', lineHeight: '1.5' }}>{h.description}</p>
-                        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                          {[
-                            { icon: 'class',         text: `Class ${h.class}` },
-                            { icon: 'science',       text: h.subject },
-                            { icon: 'calendar_today', text: `Due: ${h.dueDate}` },
-                          ].map((info, i) => (
-                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <span className="material-icons" style={{ fontSize: '14px', color: '#a0aec0' }}>{info.icon}</span>
-                              <span style={{ fontSize: '12px', color: isOverdue && info.icon === 'calendar_today' ? '#e53e3e' : '#718096' }}>{info.text}</span>
-                            </div>
-                          ))}
-                          {isOverdue && <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 700, background: '#fff5f5', color: '#e53e3e' }}>OVERDUE</span>}
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px', marginLeft: 16 }}>
-                        <span style={{ padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, background: color + '15', color }}>{h.status}</span>
-                        <div className="action-btns">
-                          {h.status === 'Active' && (
-                            <button className="action-btn" style={{ color: '#76C442', background: '#f0fff4' }} title="Mark Complete" onClick={() => handleMarkComplete(h.id)}>
-                              <span className="material-icons">check_circle</span>
-                            </button>
-                          )}
-                          <button className="action-btn action-btn-delete" onClick={() => handleDelete(h.id)} title="Delete">
-                            <span className="material-icons">delete</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+              ) : myClasses.length === 0 ? (
+                <div style={{ padding: '10px 0 16px', fontSize: 13, color: '#e53e3e' }}>
+                  <span className="material-icons" style={{ fontSize: 16, verticalAlign: 'middle', marginRight: 4 }}>warning</span>
+                  No classes assigned yet. Please contact your admin.
+                </div>
+              ) : (
+                <div className="row g-3 mb-3">
+                  {/* Step 1 — Class name */}
+                  <div className="col-6">
+                    <label className="form-label small fw-medium">Class *</label>
+                    <select className="form-select form-select-sm"
+                      value={form.className}
+                      onChange={handleClassNameChange}
+                      required>
+                      <option value="" disabled>Select class</option>
+                      {uniqueClassNames.map(name => (
+                        <option key={name} value={name}>{name}</option>
+                      ))}
+                    </select>
                   </div>
-                );
-              })}
-            </div>
-          </div>
 
-          {/* Assign Homework Modal */}
-          {showHWModal && (
-            <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-              <div className="modal-dialog">
-                <div className="modal-content">
-                  <div className="modal-header">
-                    <h5 className="modal-title">Assign Homework</h5>
-                    <button className="btn-close" onClick={() => setShowHWModal(false)} />
+                  {/* Step 2 — Section (shown only when class is chosen and has sections) */}
+                  <div className="col-6">
+                    <label className="form-label small fw-medium">Section *</label>
+                    {availableSections.length > 1 ? (
+                      <select className="form-select form-select-sm"
+                        value={form.section}
+                        onChange={handleSectionChange}
+                        required
+                        disabled={!form.className}>
+                        <option value="" disabled>Select section</option>
+                        {availableSections.map(sec => (
+                          <option key={sec} value={sec}>{sec}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input className="form-control form-control-sm"
+                        value={form.section || (form.className ? '—' : '')}
+                        readOnly
+                        style={{ background: '#f7fafc', color: '#718096' }}
+                        placeholder="Auto-filled" />
+                    )}
+                    {form.className && availableSections.length === 1 && (
+                      <p style={{ margin: '3px 0 0', fontSize: 11, color: '#76C442' }}>
+                        Auto-selected: {availableSections[0]}
+                      </p>
+                    )}
                   </div>
-                  <form onSubmit={handleHWSave}>
-                    <div className="modal-body">
-                      <div className="mb-3">
-                        <label className="form-label small fw-medium">Title *</label>
-                        <input type="text" className="form-control form-control-sm" placeholder="Homework title"
-                          value={hwForm.title} onChange={e => setHWForm({ ...hwForm, title: e.target.value })} required />
-                      </div>
-                      <div className="row g-3 mb-3">
-                        <div className="col-6">
-                          <label className="form-label small fw-medium">Class *</label>
-                          <select className="form-select form-select-sm" value={hwForm.class}
-                            onChange={e => setHWForm({ ...hwForm, class: e.target.value })} required>
-                            <option value="">Select Class</option>
-                            {myClasses.length > 0
-                              ? myClasses.map(c => <option key={c.id} value={c.name}>{c.name}{c.section ? ` - ${c.section}` : ''}</option>)
-                              : ['10-A', '9-B', '10-B', '8-A'].map(c => <option key={c}>{c}</option>)}
-                          </select>
-                        </div>
-                        <div className="col-6">
-                          <label className="form-label small fw-medium">Subject</label>
-                          <select className="form-select form-select-sm" value={hwForm.subject}
-                            onChange={e => setHWForm({ ...hwForm, subject: e.target.value })}>
-                            <option value="">Select Subject</option>
-                            {SUBJECTS.map(s => <option key={s}>{s}</option>)}
-                          </select>
-                        </div>
-                        <div className="col-6">
-                          <label className="form-label small fw-medium">Due Date</label>
-                          <input type="date" className="form-control form-control-sm" value={hwForm.dueDate}
-                            min={TODAY}
-                            onChange={e => setHWForm({ ...hwForm, dueDate: e.target.value })} />
-                        </div>
-                      </div>
-                      <div className="mb-2">
-                        <label className="form-label small fw-medium">Description</label>
-                        <textarea className="form-control form-control-sm" rows={3} placeholder="Instructions for students..."
-                          value={hwForm.description} onChange={e => setHWForm({ ...hwForm, description: e.target.value })} />
-                      </div>
-                    </div>
-                    <div className="modal-footer">
-                      <button type="button" className="btn btn-secondary" onClick={() => setShowHWModal(false)}>Cancel</button>
-                      <button type="submit" className="btn btn-primary">Assign</button>
-                    </div>
-                  </form>
                 </div>
-              </div>
-            </div>
-          )}
-        </>
-      )}
-
-      {/* ── DIARY TAB ── */}
-      {activeTab === 'diary' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'start' }}>
-
-          {/* Upload Form */}
-          <div className="data-table-card" style={{ padding: '24px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#76C44215', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span className="material-icons" style={{ color: '#76C442', fontSize: '20px' }}>photo_camera</span>
-              </div>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#2d3748' }}>Upload Today's Diary</h3>
-                <p style={{ margin: 0, fontSize: '12px', color: '#a0aec0' }}>Visible only to parents of this class</p>
-              </div>
-            </div>
-
-            <form onSubmit={handleDiarySubmit}>
-              {/* Class */}
-              <div className="mb-3">
-                <label className="form-label small fw-medium">Class *</label>
-                <select className="form-select form-select-sm" onChange={handleClassChange} required
-                  defaultValue="">
-                  <option value="" disabled>Select your class</option>
-                  {myClasses.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}{c.section ? ` - ${c.section}` : ''}</option>
-                  ))}
-                </select>
-              </div>
+              )}
 
               <div className="row g-3 mb-3">
-                {/* Subject */}
                 <div className="col-6">
-                  <label className="form-label small fw-medium">Subject <span style={{ color: '#a0aec0' }}>(optional)</span></label>
-                  <select className="form-select form-select-sm" value={diaryForm.subject}
-                    onChange={e => setDiaryForm(prev => ({ ...prev, subject: e.target.value }))}>
-                    <option value="">All Subjects</option>
+                  <label className="form-label small fw-medium">Subject</label>
+                  <select className="form-select form-select-sm" value={form.subject}
+                    onChange={e => setForm(prev => ({ ...prev, subject: e.target.value }))}>
+                    <option value="">Select Subject</option>
                     {SUBJECTS.map(s => <option key={s}>{s}</option>)}
                   </select>
                 </div>
-                {/* Date */}
                 <div className="col-6">
                   <label className="form-label small fw-medium">Date</label>
                   <input type="date" className="form-control form-control-sm"
-                    value={diaryForm.diaryDate} max={TODAY}
-                    onChange={e => setDiaryForm(prev => ({ ...prev, diaryDate: e.target.value }))} />
+                    value={form.diaryDate} max={TODAY}
+                    onChange={e => setForm(prev => ({ ...prev, diaryDate: e.target.value }))} />
                 </div>
               </div>
 
-              {/* Image Upload */}
+              {/* Topic (required) */}
               <div className="mb-3">
-                <label className="form-label small fw-medium">Diary Photo * <span style={{ color: '#a0aec0' }}>(max 5 MB, images only)</span></label>
+                <label className="form-label small fw-medium">Topic Covered *</label>
+                <input type="text" className="form-control form-control-sm"
+                  placeholder="e.g. Chapter 4 — Quadratic Equations"
+                  value={form.topic}
+                  onChange={e => setForm(prev => ({ ...prev, topic: e.target.value }))}
+                  required />
+              </div>
+
+              {/* Homework (required) */}
+              <div className="mb-3">
+                <label className="form-label small fw-medium">Homework Assigned *</label>
+                <textarea className="form-control form-control-sm" rows={3}
+                  placeholder="e.g. Solve exercises 1–10 from page 78"
+                  value={form.homework}
+                  onChange={e => setForm(prev => ({ ...prev, homework: e.target.value }))}
+                  required />
+              </div>
+
+              {/* Description (optional) */}
+              <div className="mb-3">
+                <label className="form-label small fw-medium">
+                  Description <span style={{ color: '#a0aec0', fontWeight: 400 }}>(optional)</span>
+                </label>
+                <textarea className="form-control form-control-sm" rows={2}
+                  placeholder="Additional notes, classwork summary..."
+                  value={form.description}
+                  onChange={e => setForm(prev => ({ ...prev, description: e.target.value }))} />
+              </div>
+
+              {/* Remarks (optional) */}
+              <div className="mb-3">
+                <label className="form-label small fw-medium">
+                  Remarks <span style={{ color: '#a0aec0', fontWeight: 400 }}>(optional)</span>
+                </label>
+                <input type="text" className="form-control form-control-sm"
+                  placeholder="e.g. Students should revise Chapter 3 before next class"
+                  value={form.remarks}
+                  onChange={e => setForm(prev => ({ ...prev, remarks: e.target.value }))} />
+              </div>
+
+              {/* Image upload (optional) */}
+              <div className="mb-4">
+                <label className="form-label small fw-medium">
+                  Diary Photo <span style={{ color: '#a0aec0', fontWeight: 400 }}>(optional, max 5 MB)</span>
+                </label>
                 <div
                   onClick={() => fileInputRef.current?.click()}
                   style={{
-                    border: '2px dashed #e2e8f0', borderRadius: '12px', padding: '20px', textAlign: 'center',
-                    cursor: 'pointer', background: imagePreview ? '#f0fff4' : '#fafafa',
-                    transition: 'all 0.2s',
+                    border: '2px dashed #e2e8f0', borderRadius: '12px', padding: '16px',
+                    textAlign: 'center', cursor: 'pointer',
+                    background: imagePreview ? '#f0fff4' : '#fafafa',
                   }}
                 >
                   {imagePreview ? (
                     <div>
                       <img src={imagePreview} alt="Preview"
-                        style={{ maxHeight: '160px', maxWidth: '100%', borderRadius: '8px', objectFit: 'contain' }} />
+                        style={{ maxHeight: '140px', maxWidth: '100%', borderRadius: '8px', objectFit: 'contain' }} />
                       <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#76C442' }}>
-                        {diaryForm.imageName} — click to change
+                        {form.imageName} — click to change
                       </p>
                     </div>
                   ) : (
                     <>
-                      <span className="material-icons" style={{ fontSize: '40px', color: '#cbd5e0' }}>add_photo_alternate</span>
-                      <p style={{ margin: '8px 0 0', fontSize: '13px', color: '#a0aec0' }}>Click to upload diary photo</p>
-                      <p style={{ margin: '4px 0 0', fontSize: '11px', color: '#cbd5e0' }}>JPG, PNG, GIF — up to 5 MB</p>
+                      <span className="material-icons" style={{ fontSize: '36px', color: '#cbd5e0' }}>add_photo_alternate</span>
+                      <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#a0aec0' }}>Click to upload (optional)</p>
                     </>
                   )}
                 </div>
-                <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageChange} />
+                <input ref={fileInputRef} type="file" accept="image/*"
+                  style={{ display: 'none' }} onChange={handleImageChange} />
               </div>
 
-              {/* Description */}
-              <div className="mb-4">
-                <label className="form-label small fw-medium">Description <span style={{ color: '#a0aec0' }}>(optional)</span></label>
-                <textarea className="form-control form-control-sm" rows={3}
-                  placeholder="E.g. Today's classwork, homework details, announcements..."
-                  value={diaryForm.description}
-                  onChange={e => setDiaryForm(prev => ({ ...prev, description: e.target.value }))} />
-              </div>
-
-              <button type="submit" className="btn btn-primary w-100" disabled={submitting}
-                style={{ background: '#76C442', border: 'none', borderRadius: '10px', padding: '10px', fontWeight: 600 }}>
-                {submitting ? 'Uploading...' : 'Upload Diary'}
+              <button type="submit" disabled={submitting}
+                style={{
+                  display: 'block', width: '100%', padding: '11px',
+                  background: '#76C442', border: 'none', borderRadius: '10px',
+                  color: '#fff', fontWeight: 700, fontSize: '14px', cursor: 'pointer',
+                }}>
+                {submitting ? 'Saving…' : 'Save Diary Entry'}
               </button>
             </form>
-          </div>
-
-          {/* Recent Diary Entries */}
-          <div>
-            <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#2d3748', marginBottom: '16px' }}>
-              {diaryForm.className ? `Recent Diary — Class ${diaryForm.className}` : 'Select a class to view entries'}
-            </h3>
-
-            {diaryLoading ? (
-              <div style={{ textAlign: 'center', padding: '40px', color: '#a0aec0' }}>
-                <span className="material-icons" style={{ fontSize: 36, display: 'block', marginBottom: 8 }}>hourglass_empty</span>
-                Loading...
-              </div>
-            ) : !diaryForm.className ? (
-              <div style={{ textAlign: 'center', padding: '40px', color: '#a0aec0' }}>
-                <span className="material-icons" style={{ fontSize: 48, color: '#e2e8f0', display: 'block', marginBottom: 8 }}>photo_library</span>
-                <p>Select a class to see diary entries</p>
-              </div>
-            ) : diaryEntries.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px', color: '#a0aec0' }}>
-                <span className="material-icons" style={{ fontSize: 48, color: '#e2e8f0', display: 'block', marginBottom: 8 }}>photo_library</span>
-                <p>No diary entries yet</p>
-              </div>
-            ) : (
-              <div style={{ display: 'grid', gap: '16px' }}>
-                {diaryEntries.map(entry => (
-                  <div key={entry.id} style={{ border: '1.5px solid #f0f4f8', borderRadius: '12px', overflow: 'hidden', background: '#fff' }}>
-                    {/* Thumbnail */}
-                    <div style={{ position: 'relative', cursor: 'pointer' }} onClick={() => setPreviewEntry(entry)}>
-                      <img src={entry.imageUrl} alt="Diary"
-                        style={{ width: '100%', height: '160px', objectFit: 'cover' }} />
-                      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s' }}
-                        onMouseEnter={e => e.currentTarget.style.opacity = 1}
-                        onMouseLeave={e => e.currentTarget.style.opacity = 0}>
-                        <span className="material-icons" style={{ color: '#fff', fontSize: 36 }}>zoom_in</span>
-                      </div>
-                      <span style={{ position: 'absolute', top: 8, right: 8, background: reviewColor[entry.reviewStatus] || '#ed8936', color: '#fff', borderRadius: '20px', padding: '2px 10px', fontSize: '11px', fontWeight: 700 }}>
-                        {entry.reviewStatus || 'PENDING'}
-                      </span>
-                    </div>
-                    <div style={{ padding: '14px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div>
-                          <div style={{ fontSize: '13px', fontWeight: 600, color: '#2d3748' }}>
-                            {entry.subject || 'General'} — {entry.diaryDate}
-                          </div>
-                          {entry.description && (
-                            <p style={{ fontSize: '12px', color: '#718096', margin: '4px 0 0', lineHeight: 1.5 }}>
-                              {entry.description.length > 80 ? entry.description.slice(0, 80) + '…' : entry.description}
-                            </p>
-                          )}
-                          {entry.adminComment && (
-                            <p style={{ fontSize: '11px', color: '#805ad5', margin: '6px 0 0', fontStyle: 'italic' }}>
-                              Admin: {entry.adminComment}
-                            </p>
-                          )}
-                        </div>
-                        <button onClick={() => handleDownload(entry)} title="Download"
-                          style={{ border: 'none', background: '#f0f4f8', borderRadius: '8px', padding: '6px', cursor: 'pointer', color: '#718096', flexShrink: 0, marginLeft: 8 }}>
-                          <span className="material-icons" style={{ fontSize: '16px' }}>download</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         </div>
       )}
 
-      {/* Image Preview Lightbox */}
-      {previewEntry && (
-        <div onClick={() => setPreviewEntry(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: '16px', overflow: 'hidden', maxWidth: '700px', width: '100%' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid #f0f4f8' }}>
+      {/* ── MY ENTRIES TAB ── */}
+      {activeTab === 'entries' && (
+        <div>
+          {/* Filters */}
+          <div className="data-table-card" style={{ marginBottom: '20px' }}>
+            <div className="search-filter-bar">
+              <select className="filter-select" value={filterSubject}
+                onChange={e => setFilterSubject(e.target.value)}>
+                <option value="">All Subjects</option>
+                {SUBJECTS.map(s => <option key={s}>{s}</option>)}
+              </select>
+              <input type="date" className="filter-select" value={filterDate}
+                max={TODAY}
+                onChange={e => setFilterDate(e.target.value)}
+                style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '13px' }} />
+              {filterDate && (
+                <button onClick={() => setFilterDate('')}
+                  style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#fff5f5', color: '#e53e3e', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>
+                  Clear Date
+                </button>
+              )}
+              <button onClick={fetchEntries}
+                style={{ marginLeft: 'auto', padding: '8px 16px', borderRadius: '8px', border: 'none', background: '#76C44215', color: '#276749', fontSize: '13px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span className="material-icons" style={{ fontSize: 16 }}>refresh</span> Refresh
+              </button>
+            </div>
+          </div>
+
+          {loadingEntries ? (
+            <div style={{ textAlign: 'center', padding: '60px', color: '#a0aec0' }}>
+              <span className="material-icons" style={{ fontSize: 48, display: 'block', marginBottom: 12 }}>hourglass_empty</span>
+              Loading…
+            </div>
+          ) : filteredEntries.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '60px', color: '#a0aec0' }}>
+              <span className="material-icons" style={{ fontSize: 56, color: '#e2e8f0', display: 'block', marginBottom: 12 }}>menu_book</span>
+              <h3 style={{ color: '#a0aec0', margin: '0 0 8px' }}>No diary entries found</h3>
+              <p style={{ margin: 0, fontSize: 13 }}>
+                {entries.length === 0 ? 'Create your first entry using the New Entry tab' : 'Try clearing the filters'}
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gap: '16px' }}>
+              {filteredEntries.map(entry => (
+                <div key={entry.id} className="data-table-card" style={{ padding: '20px' }}>
+                  <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+
+                    {/* Left: image or icon */}
+                    <div style={{
+                      width: 56, height: 56, borderRadius: 12, flexShrink: 0,
+                      background: '#76C44215', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      overflow: 'hidden', cursor: entry.imageUrl ? 'pointer' : 'default',
+                    }} onClick={() => entry.imageUrl && setPreviewEntry(entry)}>
+                      {entry.imageUrl
+                        ? <img src={entry.imageUrl} alt="diary"
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : <span className="material-icons" style={{ color: '#76C442', fontSize: 26 }}>menu_book</span>
+                      }
+                    </div>
+
+                    {/* Middle: content */}
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 700, color: '#2d3748', fontSize: 15 }}>
+                          {entry.subject || 'General'}
+                        </span>
+                        <span style={{ fontSize: 12, color: '#a0aec0' }}>
+                          Class {entry.className}{entry.section ? ` - ${entry.section}` : ''}
+                        </span>
+                        <span style={{ fontSize: 12, color: '#a0aec0', marginLeft: 'auto' }}>
+                          {fmtDate(entry.diaryDate)}
+                        </span>
+                      </div>
+
+                      <div style={{ marginBottom: 6 }}>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: '#4a5568' }}>Topic: </span>
+                        <span style={{ fontSize: 13, color: '#2d3748' }}>{entry.topic}</span>
+                      </div>
+                      <div style={{ marginBottom: entry.description || entry.remarks ? 6 : 0 }}>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: '#4a5568' }}>Homework: </span>
+                        <span style={{ fontSize: 13, color: '#2d3748' }}>{entry.homework}</span>
+                      </div>
+                      {entry.description && (
+                        <div style={{ fontSize: 12, color: '#718096', marginBottom: 4 }}>
+                          {entry.description.length > 100 ? entry.description.slice(0, 100) + '…' : entry.description}
+                        </div>
+                      )}
+                      {entry.remarks && (
+                        <div style={{ fontSize: 12, color: '#805ad5', fontStyle: 'italic' }}>
+                          Remark: {entry.remarks}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Right: edit button */}
+                    <button onClick={() => openEdit(entry)}
+                      style={{ border: 'none', background: '#ebf8ff', borderRadius: '8px', padding: '8px 14px', cursor: 'pointer', color: '#2b6cb0', fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                      <span className="material-icons" style={{ fontSize: 16 }}>edit</span> Edit
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Edit Modal ── */}
+      {editEntry && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 520, boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}>
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid #f0f4f8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <div style={{ fontWeight: 700, color: '#2d3748' }}>{previewEntry.subject || 'General Diary'} — {previewEntry.diaryDate}</div>
-                <div style={{ fontSize: '12px', color: '#a0aec0' }}>Class {previewEntry.className}{previewEntry.section ? ` - ${previewEntry.section}` : ''}</div>
+                <div style={{ fontWeight: 700, fontSize: 16, color: '#2d3748' }}>Edit Diary Entry</div>
+                <div style={{ fontSize: 12, color: '#a0aec0' }}>
+                  {editEntry.subject || 'General'} — {fmtDate(editEntry.diaryDate)} — Class {editEntry.className}{editEntry.section ? ` - ${editEntry.section}` : ''}
+                </div>
               </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button onClick={() => handleDownload(previewEntry)} style={{ border: 'none', background: '#f0f4f8', borderRadius: '8px', padding: '8px 14px', cursor: 'pointer', fontWeight: 600, fontSize: '13px', color: '#4a5568', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span className="material-icons" style={{ fontSize: '16px' }}>download</span> Download
+              <button onClick={() => setEditEntry(null)}
+                style={{ border: 'none', background: '#fff5f5', borderRadius: 8, padding: 8, cursor: 'pointer', color: '#e53e3e' }}>
+                <span className="material-icons" style={{ fontSize: 18 }}>close</span>
+              </button>
+            </div>
+            <form onSubmit={handleSaveEdit} style={{ padding: '24px' }}>
+              <div className="mb-3">
+                <label className="form-label small fw-medium">Topic Covered *</label>
+                <input type="text" className="form-control form-control-sm"
+                  value={editForm.topic}
+                  onChange={e => setEditForm(prev => ({ ...prev, topic: e.target.value }))}
+                  required />
+              </div>
+              <div className="mb-3">
+                <label className="form-label small fw-medium">Homework Assigned *</label>
+                <textarea className="form-control form-control-sm" rows={3}
+                  value={editForm.homework}
+                  onChange={e => setEditForm(prev => ({ ...prev, homework: e.target.value }))}
+                  required />
+              </div>
+              <div className="mb-3">
+                <label className="form-label small fw-medium">Description <span style={{ color: '#a0aec0', fontWeight: 400 }}>(optional)</span></label>
+                <textarea className="form-control form-control-sm" rows={2}
+                  value={editForm.description}
+                  onChange={e => setEditForm(prev => ({ ...prev, description: e.target.value }))} />
+              </div>
+              <div className="mb-4">
+                <label className="form-label small fw-medium">Remarks <span style={{ color: '#a0aec0', fontWeight: 400 }}>(optional)</span></label>
+                <input type="text" className="form-control form-control-sm"
+                  value={editForm.remarks}
+                  onChange={e => setEditForm(prev => ({ ...prev, remarks: e.target.value }))} />
+              </div>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                <button type="button" onClick={() => setEditEntry(null)}
+                  style={{ padding: '9px 20px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
+                  Cancel
                 </button>
-                <button onClick={() => setPreviewEntry(null)} style={{ border: 'none', background: '#fff5f5', borderRadius: '8px', padding: '8px', cursor: 'pointer', color: '#e53e3e' }}>
-                  <span className="material-icons" style={{ fontSize: '18px' }}>close</span>
+                <button type="submit" disabled={saving}
+                  style={{ padding: '9px 24px', borderRadius: 8, border: 'none', background: '#76C442', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>
+                  {saving ? 'Saving…' : 'Save Changes'}
                 </button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Image Lightbox */}
+      {previewEntry && (
+        <div onClick={() => setPreviewEntry(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ background: '#fff', borderRadius: 16, overflow: 'hidden', maxWidth: 700, width: '100%' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid #f0f4f8' }}>
+              <div style={{ fontWeight: 700, color: '#2d3748' }}>
+                {previewEntry.subject || 'General'} — {fmtDate(previewEntry.diaryDate)}
+              </div>
+              <button onClick={() => setPreviewEntry(null)}
+                style={{ border: 'none', background: '#fff5f5', borderRadius: 8, padding: 8, cursor: 'pointer', color: '#e53e3e' }}>
+                <span className="material-icons" style={{ fontSize: 18 }}>close</span>
+              </button>
             </div>
             <img src={previewEntry.imageUrl} alt="Diary full"
-              style={{ width: '100%', maxHeight: '500px', objectFit: 'contain', background: '#f7fafc' }} />
-            {previewEntry.description && (
-              <div style={{ padding: '16px 20px', fontSize: '13px', color: '#4a5568', borderTop: '1px solid #f0f4f8' }}>
-                {previewEntry.description}
-              </div>
-            )}
+              style={{ width: '100%', maxHeight: 500, objectFit: 'contain', background: '#f7fafc' }} />
           </div>
         </div>
       )}

@@ -139,13 +139,13 @@ public class AdminController {
 
     // ===== Classes =====
     @GetMapping("/classes")
-    public ResponseEntity<ApiResponse<List<ClassRoom>>> getClasses() {
-        return ResponseEntity.ok(adminService.getClasses());
+    public ResponseEntity<ApiResponse<List<ClassRoom>>> getClasses(Authentication auth) {
+        return ResponseEntity.ok(adminService.getClasses(getCurrentSchoolId(auth)));
     }
 
     @PostMapping("/classes")
-    public ResponseEntity<ApiResponse<ClassRoom>> createClass(@RequestBody ClassRoom classRoom) {
-        return ResponseEntity.status(201).body(adminService.createClass(classRoom));
+    public ResponseEntity<ApiResponse<ClassRoom>> createClass(@RequestBody ClassRoom classRoom, Authentication auth) {
+        return ResponseEntity.status(201).body(adminService.createClass(classRoom, getCurrentSchoolId(auth)));
     }
 
     @PutMapping("/classes/{id}")
@@ -162,8 +162,8 @@ public class AdminController {
 
     // ===== Fees =====
     @GetMapping("/fees")
-    public ResponseEntity<ApiResponse<List<Fee>>> getFees() {
-        return ResponseEntity.ok(adminService.getFees());
+    public ResponseEntity<ApiResponse<List<Fee>>> getFees(Authentication auth) {
+        return ResponseEntity.ok(adminService.getFees(getCurrentSchoolId(auth)));
     }
 
     @GetMapping("/fees/student/{studentId}")

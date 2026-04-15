@@ -107,13 +107,14 @@ public class SchoolService {
         log.info("[createSchool] Saved school id=" + school.getId() + " code=" + school.getCode());
 
         // ── 3. Link school to the SUPER_ADMIN who created it ───────────────
-        // Guard: only link if the creator doesn't already have a school.
+        // Guard: only skip re-link if the creator already has a valid, existing school.
+        // If schoolId is stale (school was deleted), re-link to the new school.
         if (creatorEmail != null && !creatorEmail.isBlank()) {
             final Long schoolId = school.getId();
             userRepository.findByEmailIgnoreCase(creatorEmail).ifPresent(creator -> {
-                if (creator.getSchoolId() != null) {
+                if (creator.getSchoolId() != null && schoolRepository.existsById(creator.getSchoolId())) {
                     log.warning("[createSchool] Creator " + creatorEmail
-                            + " already has schoolId=" + creator.getSchoolId() + ". Skipping re-link.");
+                            + " already has valid schoolId=" + creator.getSchoolId() + ". Skipping re-link.");
                     return;
                 }
                 if (userRepository.existsBySchoolIdAndRole(schoolId, User.Role.SUPER_ADMIN)) {
@@ -123,7 +124,8 @@ public class SchoolService {
                 }
                 creator.setSchoolId(schoolId);
                 userRepository.save(creator);
-                log.info("[createSchool] Linked schoolId=" + schoolId + " to creator=" + creatorEmail);
+                log.info("[createSchool] Linked schoolId=" + schoolId + " to creator=" + creatorEmail
+                        + (creator.getSchoolId() != null ? " (replaced stale schoolId)" : ""));
             });
         }
 
@@ -209,9 +211,28 @@ public class SchoolService {
     @Transactional
     public ApiResponse<Map<String, Object>> updateSchool(Long id, Map<String, Object> data,
                                                           String newLogoUrl,
-                                                          String oldLogoUrl) {
+                                                          String oldLogoUrl,
+                                                          String creatorEmail) {
         Optional<School> opt = schoolRepository.findById(id);
-        if (opt.isEmpty()) return ApiResponse.error("School not found.");
+        if (opt.isEmpty()) {
+            // Stub school was deleted or lost. If we know who is calling (setup wizard),
+            // fall back to creating a fresh school and re-linking the user.
+            if (creatorEmail != null && !creatorEmail.isBlank()) {
+                log.warning("[updateSchool] School id=" + id + " not found. Falling back to create for " + creatorEmail);
+                ApiResponse<Map<String, Object>> createResp = createSchool(data, newLogoUrl, creatorEmail);
+                if (createResp.isSuccess()) {
+                    // Return just the school object so the response shape matches the update path.
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> nested = (Map<String, Object>) createResp.getData();
+                    Object schoolObj = nested != null ? nested.get("school") : null;
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> schoolMap = schoolObj instanceof Map ? (Map<String, Object>) schoolObj : nested;
+                    return ApiResponse.success("School setup completed", schoolMap);
+                }
+                return createResp;
+            }
+            return ApiResponse.error("School not found.");
+        }
 
         School school = opt.get();
 

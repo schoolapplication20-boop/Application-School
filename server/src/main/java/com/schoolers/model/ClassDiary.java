@@ -41,7 +41,16 @@ public class ClassDiary {
     @Column(name = "diary_date", nullable = false)
     private LocalDate diaryDate;
 
-    @Column(name = "image_url", columnDefinition = "TEXT", nullable = false)
+    @Column(columnDefinition = "TEXT")
+    private String topic;
+
+    @Column(columnDefinition = "TEXT")
+    private String homework;
+
+    @Column(columnDefinition = "TEXT")
+    private String remarks;
+
+    @Column(name = "image_url", columnDefinition = "TEXT")
     private String imageUrl;
 
     @Column(name = "image_name", length = 255)
@@ -57,6 +66,10 @@ public class ClassDiary {
 
     @Column(name = "admin_comment", columnDefinition = "TEXT")
     private String adminComment;
+
+    /** Multi-tenancy: which school this diary entry belongs to. */
+    @Column(name = "school_id")
+    private Long schoolId;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

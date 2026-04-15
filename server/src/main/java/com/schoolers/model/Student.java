@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "students", uniqueConstraints = {
-    @UniqueConstraint(name = "uq_roll_class_section", columnNames = {"roll_number", "class_name", "section"})
+    @UniqueConstraint(name = "uq_roll_class_section_school", columnNames = {"roll_number", "class_name", "section", "school_id"})
 })
 @Data
 @Builder
@@ -100,6 +100,13 @@ public class Student {
     @Column(name = "is_active")
     @Builder.Default
     private Boolean isActive = true;
+
+    /**
+     * Multi-tenancy: which school this student belongs to.
+     * Set on creation from the authenticated user's schoolId.
+     */
+    @Column(name = "school_id")
+    private Long schoolId;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

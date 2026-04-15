@@ -11,6 +11,23 @@ import java.util.Optional;
 
 @Repository
 public interface TeacherRepository extends JpaRepository<Teacher, Long> {
+
+    // ── School-scoped queries (multi-tenant) ──────────────────────────────────
+
+    List<Teacher> findBySchoolId(Long schoolId);
+
+    long countBySchoolId(Long schoolId);
+
+    long countBySchoolIdAndIsActive(Long schoolId, Boolean isActive);
+
+    Optional<Teacher> findBySchoolIdAndEmployeeId(Long schoolId, String employeeId);
+
+    boolean existsByEmployeeIdAndSchoolId(String employeeId, Long schoolId);
+
+    boolean existsByEmployeeIdAndSchoolIdAndIdNot(String employeeId, Long schoolId, Long id);
+
+    // ── Lookup helpers ────────────────────────────────────────────────────────
+
     Optional<Teacher> findByEmployeeId(String employeeId);
 
     @Query("SELECT t FROM Teacher t WHERE t.user.id = :userId")

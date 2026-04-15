@@ -50,6 +50,10 @@ public class Marks {
     @Column(name = "exam_date")
     private LocalDate examDate;
 
+    /** Multi-tenancy: which school this marks record belongs to. */
+    @Column(name = "school_id")
+    private Long schoolId;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

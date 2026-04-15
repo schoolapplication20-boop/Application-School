@@ -16,6 +16,40 @@ import java.util.Optional;
 @Repository
 public interface StudentRepository extends JpaRepository<Student, Long> {
 
+    // ── School-scoped queries (multi-tenant) ──────────────────────────────────
+
+    Page<Student> findBySchoolId(Long schoolId, Pageable pageable);
+
+    List<Student> findBySchoolId(Long schoolId);
+
+    long countBySchoolId(Long schoolId);
+
+    long countBySchoolIdAndIsActive(Long schoolId, Boolean isActive);
+
+    List<Student> findBySchoolIdAndClassName(Long schoolId, String className);
+
+    List<Student> findBySchoolIdAndClassNameAndSection(Long schoolId, String className, String section);
+
+    List<Student> findBySchoolIdAndClassNameIgnoreCaseAndSectionIgnoreCase(Long schoolId, String className, String section);
+
+    long countBySchoolIdAndClassNameAndSection(Long schoolId, String className, String section);
+
+    @Query("SELECT s FROM Student s WHERE s.schoolId = :schoolId AND s.isActive = true AND (LOWER(s.name) LIKE LOWER(CONCAT('%',:search,'%')) OR LOWER(s.rollNumber) LIKE LOWER(CONCAT('%',:search,'%')))")
+    Page<Student> searchStudentsBySchool(@Param("schoolId") Long schoolId, @Param("search") String search, Pageable pageable);
+
+    @Query("SELECT s FROM Student s WHERE s.schoolId = :schoolId AND (LOWER(s.name) LIKE LOWER(CONCAT('%',:s,'%')) OR LOWER(s.rollNumber) LIKE LOWER(CONCAT('%',:s,'%')) OR s.parentMobile LIKE CONCAT('%',:s,'%') OR s.motherMobile LIKE CONCAT('%',:s,'%') OR s.guardianMobile LIKE CONCAT('%',:s,'%'))")
+    List<Student> searchBySchoolAndNameRollOrPhone(@Param("schoolId") Long schoolId, @Param("s") String search);
+
+    @Query("SELECT s FROM Student s WHERE s.schoolId = :schoolId AND LOWER(s.rollNumber) = LOWER(:roll) AND LOWER(s.className) = LOWER(:cls) AND LOWER(COALESCE(s.section,'')) = LOWER(COALESCE(:sec,''))")
+    Optional<Student> findDuplicateInClassAndSchool(@Param("schoolId") Long schoolId, @Param("roll") String rollNumber, @Param("cls") String className, @Param("sec") String section);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Transactional
+    @Query("DELETE FROM Student s WHERE s.schoolId = :schoolId AND LOWER(s.className) = LOWER(:cls) AND LOWER(s.section) = LOWER(:sec)")
+    int deleteBySchoolIdAndClassNameIgnoreCaseAndSectionIgnoreCase(@Param("schoolId") Long schoolId, @Param("cls") String className, @Param("sec") String section);
+
+    // ── Lookup helpers (school-agnostic — used for FK resolution) ─────────────
+
     Optional<Student> findByRollNumber(String rollNumber);
 
     List<Student> findByClassName(String className);

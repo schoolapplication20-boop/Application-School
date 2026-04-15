@@ -49,6 +49,10 @@ public class Homework {
     @Builder.Default
     private Status status = Status.ACTIVE;
 
+    /** Multi-tenancy: which school this homework belongs to. */
+    @Column(name = "school_id")
+    private Long schoolId;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

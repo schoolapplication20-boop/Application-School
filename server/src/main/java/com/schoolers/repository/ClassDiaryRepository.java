@@ -17,7 +17,13 @@ public interface ClassDiaryRepository extends JpaRepository<ClassDiary, Long> {
 
     List<ClassDiary> findByClassNameOrderByDiaryDateDesc(String className);
 
+    List<ClassDiary> findByClassNameAndSectionOrderByDiaryDateDesc(String className, String section);
+
+    List<ClassDiary> findByTeacherIdOrderByDiaryDateDesc(Long teacherId);
+
     Optional<ClassDiary> findByClassNameAndDiaryDateAndTeacherId(String className, LocalDate diaryDate, Long teacherId);
+
+    boolean existsByClassNameAndSubjectAndDiaryDateAndTeacherId(String className, String subject, LocalDate diaryDate, Long teacherId);
 
     @Query("SELECT d FROM ClassDiary d WHERE " +
            "(:className IS NULL OR d.className = :className) AND " +

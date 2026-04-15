@@ -25,10 +25,17 @@ public class DataInitializer {
     ) {
         return args -> {
 
-            // ── Ensure Application Owner (platform-level Super Admin) exists ──
-            // This account has NO schoolId — it is the builder/owner of the platform.
-            // School-level Super Admins are created by this owner via Admin Management.
-            userRepo.findByEmail("superadmin@schoolers.com").ifPresentOrElse(
+            // ── Role Hierarchy ─────────────────────────────────────────────────────
+            // APPLICATION_OWNER : platform-level account, schoolId = NULL.
+            //                     Manages all schools. Creates SUPER_ADMINs.
+            // SUPER_ADMIN        : school-level owner, schoolId = NOT NULL.
+            //                     Exactly ONE per school. Created by APPLICATION_OWNER.
+            // ADMIN              : created by SUPER_ADMIN, scoped to their school.
+            //
+            // DataInitializer ONLY seeds APPLICATION_OWNER.
+            // SUPER_ADMINs are created at runtime by APPLICATION_OWNER via the platform dashboard.
+            // ──────────────────────────────────────────────────────────────────────
+            userRepo.findByEmailIgnoreCase("superadmin@schoolers.com").ifPresentOrElse(
                 existing -> {
                     boolean changed = false;
                     if (!Boolean.TRUE.equals(existing.getIsActive())) {
@@ -39,19 +46,23 @@ public class DataInitializer {
                         existing.setFirstLogin(false);
                         changed = true;
                     }
-                    if (existing.getRole() != User.Role.SUPER_ADMIN) {
-                        existing.setRole(User.Role.SUPER_ADMIN);
+                    // This seed account must always be APPLICATION_OWNER (platform-level).
+                    // If somehow it was changed to SUPER_ADMIN or another role, correct it.
+                    if (existing.getRole() != User.Role.APPLICATION_OWNER) {
+                        existing.setRole(User.Role.APPLICATION_OWNER);
                         changed = true;
+                        System.out.println("  [DataInitializer] Corrected role to APPLICATION_OWNER for: " + existing.getEmail());
                     }
-                    // Platform owner must never have a schoolId — it would restrict their access
+                    // APPLICATION_OWNER must never have a schoolId — it is platform-level.
+                    // A schoolId would incorrectly scope this account to a single school.
                     if (existing.getSchoolId() != null) {
                         existing.setSchoolId(null);
                         changed = true;
-                        System.out.println("  [DataInitializer] Cleared schoolId from Application Owner account.");
+                        System.out.println("  [DataInitializer] Cleared schoolId from APPLICATION_OWNER account.");
                     }
                     if (changed) {
                         userRepo.save(existing);
-                        System.out.println("  [DataInitializer] Application Owner account corrected.");
+                        System.out.println("  [DataInitializer] APPLICATION_OWNER account corrected.");
                     }
                 },
                 () -> {
@@ -60,12 +71,12 @@ public class DataInitializer {
                             .email("superadmin@schoolers.com")
                             .mobile("9000000000")
                             .password(passwordEncoder.encode("SuperAdmin@123"))
-                            .role(User.Role.SUPER_ADMIN)
-                            .schoolId(null)   // platform-level — no school
+                            .role(User.Role.APPLICATION_OWNER)
+                            .schoolId(null)   // platform-level — no school affiliation
                             .isActive(true)
                             .firstLogin(false)
                             .build());
-                    System.out.println("  [DataInitializer] Application Owner created -> superadmin@schoolers.com / SuperAdmin@123");
+                    System.out.println("  [DataInitializer] APPLICATION_OWNER created -> superadmin@schoolers.com / SuperAdmin@123");
                 }
             );
 

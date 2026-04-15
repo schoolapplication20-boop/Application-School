@@ -14,8 +14,8 @@ import java.time.LocalDateTime;
 @Table(
     name = "classrooms",
     uniqueConstraints = @UniqueConstraint(
-        name = "uq_classrooms_name_section",
-        columnNames = {"class_name", "section"}
+        name = "uq_classrooms_name_section_school",
+        columnNames = {"class_name", "section", "school_id"}
     )
 )
 @Data
@@ -46,6 +46,10 @@ public class ClassRoom {
     @Column(name = "is_active")
     @Builder.Default
     private Boolean isActive = true;
+
+    /** Multi-tenancy: which school this classroom belongs to. */
+    @Column(name = "school_id")
+    private Long schoolId;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

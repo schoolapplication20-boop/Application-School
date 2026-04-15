@@ -12,7 +12,13 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "teachers")
+@Table(
+    name = "teachers",
+    uniqueConstraints = @jakarta.persistence.UniqueConstraint(
+        name = "unique_school_emp",
+        columnNames = {"school_id", "employee_id"}
+    )
+)
 @Data
 @Builder
 @NoArgsConstructor
@@ -30,7 +36,7 @@ public class Teacher {
     @Column(name = "name", length = 100)
     private String name;
 
-    @Column(name = "employee_id", unique = true, length = 20)
+    @Column(name = "employee_id", length = 20)
     private String employeeId;
 
     @Column(length = 50)
@@ -62,6 +68,10 @@ public class Teacher {
     @Column(name = "is_active")
     @Builder.Default
     private Boolean isActive = true;
+
+    /** Multi-tenancy: which school this teacher belongs to. */
+    @Column(name = "school_id")
+    private Long schoolId;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

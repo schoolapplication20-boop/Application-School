@@ -52,4 +52,30 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
 
     @Query(value = "SELECT COALESCE(SUM(amount), 0) FROM expenses", nativeQuery = true)
     BigDecimal sumAllExpenses();
+
+    // ── School-scoped queries (multi-tenant) ──────────────────────────────────
+
+    @Query(value =
+        "SELECT * FROM expenses e WHERE e.school_id = :schoolId AND " +
+        "  (:status   IS NULL OR UPPER(CAST(e.status AS text)) = UPPER(:status))  AND " +
+        "  (:dateFrom IS NULL OR e.date >= CAST(:dateFrom AS date))                AND " +
+        "  (:dateTo   IS NULL OR e.date <= CAST(:dateTo   AS date))                AND " +
+        "  (:search   IS NULL OR LOWER(COALESCE(e.title,'')) LIKE LOWER(CONCAT('%',:search,'%'))) " +
+        "ORDER BY e.date DESC, e.created_at DESC",
+        nativeQuery = true)
+    List<Expense> findFilteredBySchool(
+            @Param("schoolId") Long schoolId,
+            @Param("status")   String status,
+            @Param("dateFrom") String dateFrom,
+            @Param("dateTo")   String dateTo,
+            @Param("search")   String search);
+
+    @Query(value = "SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE school_id = :schoolId", nativeQuery = true)
+    BigDecimal sumAllExpensesBySchool(@Param("schoolId") Long schoolId);
+
+    @Query(value =
+        "SELECT COALESCE(SUM(amount), 0) FROM expenses " +
+        "WHERE school_id = :schoolId AND EXTRACT(MONTH FROM date) = :month AND EXTRACT(YEAR FROM date) = :year",
+        nativeQuery = true)
+    BigDecimal sumBySchoolAndMonth(@Param("schoolId") Long schoolId, @Param("month") int month, @Param("year") int year);
 }

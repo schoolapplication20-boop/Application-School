@@ -60,37 +60,45 @@ public class SecurityConfig {
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-            // Authorization rules
+            // ── Authorization rules ───────────────────────────────────────────
+            // Role hierarchy (top → bottom):
+            //   APPLICATION_OWNER  – platform-level, schoolId = NULL, manages all schools
+            //   SUPER_ADMIN        – school-level owner, schoolId = NOT NULL, one per school
+            //   ADMIN              – school module admin, created by SUPER_ADMIN
+            //   TEACHER / PARENT / STUDENT – end users
+            //
+            // Fine-grained endpoint access is enforced via @PreAuthorize in controllers.
+            // These rules are the coarse-grained security gate.
             .authorizeHttpRequests(auth -> auth
-                // Public routes — login, forgot-password, OTP, reset, AND self-service registration
+                // ── Public ────────────────────────────────────────────────────
                 .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/applications").permitAll()   // anyone can submit admission application
+                .requestMatchers("/api/applications").permitAll()   // public admission form
                 .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/error").permitAll()
+                .requestMatchers("/uploads/**").permitAll()          // logo / document assets
 
-                // Uploaded files (logos, documents) — public read access
-                .requestMatchers("/uploads/**").permitAll()
-
-                // School setup — create is SUPER_ADMIN only (enforced by @PreAuthorize in controller)
-                // GET /api/schools/by-admin and GET /api/schools/{id} require only authentication
+                // ── School management ─────────────────────────────────────────
+                // Fine-grained access (create=SUPER_ADMIN, update=SUPER_ADMIN|APPLICATION_OWNER)
+                // is enforced by @PreAuthorize in SchoolController.
                 .requestMatchers("/api/schools/**").authenticated()
 
-                // Super Admin routes
-                .requestMatchers("/api/superadmin/**").hasRole("SUPER_ADMIN")
+                // ── Platform-level routes ─────────────────────────────────────
+                // createSuperAdmin and getSuperAdmins are further gated inside the controller.
+                .requestMatchers("/api/superadmin/**").hasAnyRole("SUPER_ADMIN", "APPLICATION_OWNER")
 
-                // Admin-only routes
-                .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
+                // ── School-level admin routes ─────────────────────────────────
+                // SUPER_ADMIN and APPLICATION_OWNER can also call these for oversight.
+                .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN", "APPLICATION_OWNER")
 
-                // Teacher routes
-                .requestMatchers("/api/teacher/**").hasAnyRole("TEACHER", "ADMIN", "SUPER_ADMIN")
+                // ── Teacher-facing routes ─────────────────────────────────────
+                .requestMatchers("/api/teacher/**").hasAnyRole("TEACHER", "ADMIN", "SUPER_ADMIN", "APPLICATION_OWNER")
 
-                // Parent routes
-                .requestMatchers("/api/parent/**").hasAnyRole("PARENT", "ADMIN", "SUPER_ADMIN")
+                // ── Parent-facing routes ──────────────────────────────────────
+                .requestMatchers("/api/parent/**").hasAnyRole("PARENT", "ADMIN", "SUPER_ADMIN", "APPLICATION_OWNER")
 
-                // User profile (any authenticated user)
+                // ── User profile ──────────────────────────────────────────────
                 .requestMatchers("/api/user/**").authenticated()
 
-                // Everything else requires authentication
                 .anyRequest().authenticated()
             )
 

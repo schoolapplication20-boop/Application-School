@@ -50,6 +50,10 @@ public class Timetable {
     @Builder.Default
     private Boolean isActive = true;
 
+    /** Multi-tenancy: which school this timetable entry belongs to. */
+    @Column(name = "school_id")
+    private Long schoolId;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

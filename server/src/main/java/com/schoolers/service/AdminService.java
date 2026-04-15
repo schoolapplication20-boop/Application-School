@@ -126,9 +126,16 @@ public class AdminService {
      * If studentEmail is a valid real email, it is used as the login email directly (same as teacher flow).
      * Otherwise falls back to generating an internal username@student.schoolers.local email.
      * Throws on DB error so the caller's @Transactional rolls back cleanly.
+     * schoolId is stamped on the User row for multi-tenant isolation.
      */
     private StudentUserResult createStudentUser(String fullName, String admissionNumber,
                                                 String rollNumber, Long studentId, String studentEmail) {
+        return createStudentUser(fullName, admissionNumber, rollNumber, studentId, studentEmail, null);
+    }
+
+    private StudentUserResult createStudentUser(String fullName, String admissionNumber,
+                                                String rollNumber, Long studentId, String studentEmail,
+                                                Long schoolId) {
         String email;
         String username = buildStudentUsername(fullName, admissionNumber, rollNumber);
 
@@ -165,6 +172,7 @@ public class AdminService {
                 .role(User.Role.STUDENT)
                 .isActive(true)
                 .firstLogin(true)
+                .schoolId(schoolId)
                 .build());
 
         log.info("[createStudentUser] Saved STUDENT user id=" + saved.getId()
@@ -185,14 +193,25 @@ public class AdminService {
 
     public ApiResponse<Map<String, Object>> getDashboardStats(Long schoolId) {
         Map<String, Object> stats = new HashMap<>();
-        stats.put("totalStudents", studentRepository.count());
-        stats.put("totalTeachers", teacherRepository.count());
-        stats.put("totalUsers", userRepository.count());
-        BigDecimal rev = feeRepository.sumPaidFees();
-        BigDecimal exp = expenseRepository.sumAllExpenses();
-        stats.put("totalRevenue",  rev != null ? rev : BigDecimal.ZERO);
-        stats.put("totalExpenses", exp != null ? exp : BigDecimal.ZERO);
-        stats.put("totalClasses",  classRoomRepository.count());
+        if (schoolId != null) {
+            // Multi-tenant: scope all counts to the caller's school
+            stats.put("totalStudents", studentRepository.countBySchoolId(schoolId));
+            stats.put("totalTeachers", teacherRepository.countBySchoolId(schoolId));
+            stats.put("totalClasses",  classRoomRepository.countBySchoolId(schoolId));
+            BigDecimal rev = feeRepository.sumPaidFeesBySchool(schoolId);
+            BigDecimal exp = expenseRepository.sumAllExpensesBySchool(schoolId);
+            stats.put("totalRevenue",  rev != null ? rev : BigDecimal.ZERO);
+            stats.put("totalExpenses", exp != null ? exp : BigDecimal.ZERO);
+        } else {
+            // Platform-level SUPER_ADMIN: aggregate across all schools
+            stats.put("totalStudents", studentRepository.count());
+            stats.put("totalTeachers", teacherRepository.count());
+            stats.put("totalClasses",  classRoomRepository.count());
+            BigDecimal rev = feeRepository.sumPaidFees();
+            BigDecimal exp = expenseRepository.sumAllExpenses();
+            stats.put("totalRevenue",  rev != null ? rev : BigDecimal.ZERO);
+            stats.put("totalExpenses", exp != null ? exp : BigDecimal.ZERO);
+        }
         return ApiResponse.success(stats);
     }
 
@@ -200,6 +219,13 @@ public class AdminService {
 
     public ApiResponse<Page<Student>> getStudents(Long schoolId, String search, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        if (schoolId != null) {
+            if (search != null && !search.isEmpty()) {
+                return ApiResponse.success(studentRepository.searchStudentsBySchool(schoolId, search, pageable));
+            }
+            return ApiResponse.success(studentRepository.findBySchoolId(schoolId, pageable));
+        }
+        // Platform-level fallback
         if (search != null && !search.isEmpty()) {
             return ApiResponse.success(studentRepository.searchStudents(search, pageable));
         }
@@ -248,9 +274,18 @@ public class AdminService {
         if (userRepository.existsByEmailIgnoreCase(studentEmail))
             return ApiResponse.<Map<String, Object>>error("Email '" + studentEmail + "' is already registered. Use a different email.");
 
+        // Extract schoolId injected by AdminController from authenticated user
+        Long schoolId = body.get("schoolId") != null
+                ? Long.parseLong(body.get("schoolId").toString()) : null;
+
         String className = resolveClassName(str(body, "className", str(body, "class", "")));
         String section   = normalizeSection(str(body, "section", ""));
-        if (studentRepository.findDuplicateInClass(rollNumber, className, section).isPresent())
+
+        // School-scoped duplicate roll-number check
+        boolean duplicate = (schoolId != null)
+                ? studentRepository.findDuplicateInClassAndSchool(schoolId, rollNumber, className, section).isPresent()
+                : studentRepository.findDuplicateInClass(rollNumber, className, section).isPresent();
+        if (duplicate)
             return ApiResponse.<Map<String, Object>>error("Roll number " + rollNumber + " already exists in " + (className.isBlank() ? "this class" : className) + (section.isBlank() ? "" : " – " + section));
 
         Student student = Student.builder()
@@ -276,6 +311,7 @@ public class AdminService {
                 .bonafideDocument(str(body, "bonafideDocument", null))
                 .bonafideDocumentName(str(body, "bonafideDocumentName", null))
                 .isActive(!"Inactive".equalsIgnoreCase(str(body, "status", "Active")))
+                .schoolId(schoolId)
                 .build();
 
         try {
@@ -288,11 +324,11 @@ public class AdminService {
             }
             // Step 2: Save the student record to obtain its generated ID
             Student saved = studentRepository.save(student);
-            ensureClassExists(saved.getClassName(), saved.getSection());
+            ensureClassExists(saved.getClassName(), saved.getSection(), schoolId);
 
-            // Step 3: Create the student User account
+            // Step 3: Create the student User account (pass schoolId for multi-tenant isolation)
             StudentUserResult studentUserResult = createStudentUser(
-                    name, saved.getAdmissionNumber(), rollNumber, saved.getId(), studentEmail);
+                    name, saved.getAdmissionNumber(), rollNumber, saved.getId(), studentEmail, schoolId);
 
             // Step 4: Back-patch the student row with the user ID
             if (studentUserResult != null) {
@@ -560,10 +596,12 @@ public class AdminService {
     // ── Teachers ───────────────────────────────────────────────────────────
 
     public ApiResponse<List<Teacher>> getTeachers(Long schoolId) {
+        if (schoolId != null) {
+            return ApiResponse.success(teacherRepository.findBySchoolId(schoolId));
+        }
         return ApiResponse.success(teacherRepository.findAll());
     }
 
-    @Transactional   // rolls back BOTH saves atomically if teacherRepository.save() fails
     public ApiResponse<Map<String, Object>> createTeacher(CreateTeacherRequest req) {
 
         // ── Input validation (fast-fail before touching the DB) ────────────────
@@ -597,6 +635,10 @@ public class AdminService {
                 ? req.getEmpId().trim()
                 : "EMP" + System.currentTimeMillis() % 100000;
 
+        // School-scoped employee ID uniqueness check (not global)
+        if (req.getSchoolId() != null && teacherRepository.existsByEmployeeIdAndSchoolId(empId, req.getSchoolId()))
+            return ApiResponse.error("Employee ID '" + empId + "' is already assigned to another teacher in this school. Please provide a unique employee ID.");
+
         User user = null;
         try {
             user = userRepository.save(User.builder()
@@ -608,6 +650,7 @@ public class AdminService {
                     .role(User.Role.TEACHER)
                     .isActive(!"Inactive".equalsIgnoreCase(req.getStatus()))
                     .firstLogin(true)
+                    .schoolId(req.getSchoolId())
                     .build());
 
             Teacher teacher = teacherRepository.save(Teacher.builder()
@@ -623,6 +666,7 @@ public class AdminService {
                     .isActive(!"Inactive".equalsIgnoreCase(req.getStatus()))
                     .teacherType(teacherType)
                     .primaryClassId(primaryClassId)
+                    .schoolId(req.getSchoolId())
                     .build());
 
             syncPrimaryClassAssignment(teacher, null);
@@ -658,8 +702,8 @@ public class AdminService {
                 userMessage = "Email '" + normalizedEmail + "' was just registered by another request. Please use a different email.";
             } else if (hint.contains("mobile") || hint.contains("uk_users_mobile")) {
                 userMessage = "Mobile number '" + normalizedMobile + "' was just registered by another request. Please use a different number.";
-            } else if (hint.contains("employee_id") || hint.contains("teachers_employee_id_key")) {
-                userMessage = "Employee ID '" + empId + "' is already assigned to another teacher. Please provide a unique employee ID.";
+            } else if (hint.contains("employee_id") || hint.contains("unique_school_emp") || hint.contains("teachers_employee_id_key")) {
+                userMessage = "Employee ID '" + empId + "' is already assigned to another teacher in this school. Please provide a unique employee ID.";
             } else {
                 userMessage = "A data conflict occurred (duplicate entry). Please verify the email, mobile, and employee ID are unique.";
             }
@@ -787,21 +831,30 @@ public class AdminService {
 
     // ── Classes ────────────────────────────────────────────────────────────
 
-    public ApiResponse<List<ClassRoom>> getClasses() {
+    public ApiResponse<List<ClassRoom>> getClasses(Long schoolId) {
+        if (schoolId != null) {
+            return ApiResponse.success(classRoomRepository.findBySchoolId(schoolId));
+        }
         return ApiResponse.success(classRoomRepository.findAll());
     }
 
     @Transactional
-    public ApiResponse<ClassRoom> createClass(ClassRoom classRoom) {
+    public ApiResponse<ClassRoom> createClass(ClassRoom classRoom, Long schoolId) {
         String name = resolveClassName(classRoom.getName());
         String section = normalizeSection(classRoom.getSection());
 
         if (name.isBlank()) return ApiResponse.error("Class name is required");
-        if (classRoomRepository.existsByNameIgnoreCaseAndSectionIgnoreCase(name, section))
+
+        // School-scoped duplicate check
+        boolean exists = (schoolId != null)
+                ? classRoomRepository.existsBySchoolIdAndNameIgnoreCaseAndSectionIgnoreCase(schoolId, name, section)
+                : classRoomRepository.existsByNameIgnoreCaseAndSectionIgnoreCase(name, section);
+        if (exists)
             return ApiResponse.error("Class " + name + " - " + section + " already exists");
 
         classRoom.setName(name);
         classRoom.setSection(section);
+        classRoom.setSchoolId(schoolId);
         return ApiResponse.success("Class created", classRoomRepository.save(classRoom));
     }
 
@@ -825,20 +878,33 @@ public class AdminService {
                     c.setName(newName);
                     c.setSection(newSection);
 
-                    classRoomRepository.findByNameIgnoreCaseAndSectionIgnoreCase(newName, newSection)
-                            .ifPresent(existing -> {
-                                if (!existing.getId().equals(id)) {
-                                    throw new IllegalArgumentException("Class " + newName + " - " + newSection + " already exists");
-                                }
-                            });
+                    // School-scoped duplicate check on rename
+                    Long roomSchoolId = c.getSchoolId();
+                    if (roomSchoolId != null) {
+                        classRoomRepository.findBySchoolIdAndNameIgnoreCaseAndSectionIgnoreCase(roomSchoolId, newName, newSection)
+                                .ifPresent(existing -> {
+                                    if (!existing.getId().equals(id))
+                                        throw new IllegalArgumentException("Class " + newName + " - " + newSection + " already exists");
+                                });
+                    } else {
+                        classRoomRepository.findByNameIgnoreCaseAndSectionIgnoreCase(newName, newSection)
+                                .ifPresent(existing -> {
+                                    if (!existing.getId().equals(id))
+                                        throw new IllegalArgumentException("Class " + newName + " - " + newSection + " already exists");
+                                });
+                    }
 
                     if (!oldName.equalsIgnoreCase(newName) || !oldSection.equalsIgnoreCase(newSection)) {
-                        studentRepository.findByClassNameIgnoreCaseAndSectionIgnoreCase(oldName, oldSection)
-                                .forEach(student -> {
-                                    student.setClassName(newName);
-                                    student.setSection(newSection);
-                                    studentRepository.save(student);
-                                });
+                        // Only cascade rename to students in the same school
+                        List<?> studentsToRename = (roomSchoolId != null)
+                                ? studentRepository.findBySchoolIdAndClassNameIgnoreCaseAndSectionIgnoreCase(roomSchoolId, oldName, oldSection)
+                                : studentRepository.findByClassNameIgnoreCaseAndSectionIgnoreCase(oldName, oldSection);
+                        studentsToRename.forEach(s -> {
+                            Student student = (Student) s;
+                            student.setClassName(newName);
+                            student.setSection(newSection);
+                            studentRepository.save(student);
+                        });
                     }
 
                     return ApiResponse.success("Class updated", classRoomRepository.save(c));
@@ -859,9 +925,12 @@ public class AdminService {
                 .map(classRoom -> {
                     String className = resolveClassName(classRoom.getName());
                     String section = normalizeSection(classRoom.getSection());
-                    int deletedStudents = studentRepository.deleteByClassNameIgnoreCaseAndSectionIgnoreCase(className, section);
+                    Long schoolId = classRoom.getSchoolId();
+                    int deletedStudents = (schoolId != null)
+                            ? studentRepository.deleteBySchoolIdAndClassNameIgnoreCaseAndSectionIgnoreCase(schoolId, className, section)
+                            : studentRepository.deleteByClassNameIgnoreCaseAndSectionIgnoreCase(className, section);
                     classRoomRepository.deleteById(classRoom.getId());
-                    log.info("[deleteClass] Deleted class " + className + "-" + section + " and removed " + deletedStudents + " linked students");
+                    log.info("[deleteClass] Deleted class " + className + "-" + section + " schoolId=" + schoolId + " students removed=" + deletedStudents);
                     return ApiResponse.success("Class deleted", "Deleted");
                 })
                 .orElse(ApiResponse.error("Class not found"));
@@ -869,13 +938,18 @@ public class AdminService {
 
     // ── Fees ───────────────────────────────────────────────────────────────
 
-    public ApiResponse<List<Fee>> getFees() {
+    public ApiResponse<List<Fee>> getFees(Long schoolId) {
+        if (schoolId != null) {
+            return ApiResponse.success(feeRepository.findBySchoolId(schoolId));
+        }
         return ApiResponse.success(feeRepository.findAll());
     }
 
     public ApiResponse<List<Student>> searchStudentsForFee(Long schoolId, String query) {
         if (query == null || query.trim().isEmpty()) return ApiResponse.success(java.util.Collections.emptyList());
-        List<Student> results = studentRepository.searchByNameRollOrPhone(query.trim());
+        List<Student> results = (schoolId != null)
+                ? studentRepository.searchBySchoolAndNameRollOrPhone(schoolId, query.trim())
+                : studentRepository.searchByNameRollOrPhone(query.trim());
         return ApiResponse.success(results);
     }
 
@@ -905,6 +979,8 @@ public class AdminService {
         fee.setStudentName(student.getName());
         fee.setRollNumber(student.getRollNumber());
         fee.setClassName(student.getClassName());
+        // Inherit school from student for multi-tenant isolation
+        if (fee.getSchoolId() == null) fee.setSchoolId(student.getSchoolId());
 
         BigDecimal paidAmount = fee.getPaidAmount() != null ? fee.getPaidAmount() : BigDecimal.ZERO;
         if (paidAmount.compareTo(BigDecimal.ZERO) < 0) {
@@ -1007,6 +1083,7 @@ public class AdminService {
                             .receiptNumber(normalizedReceiptNumber)
                             .receivedBy(savedFee.getReceivedBy())
                             .remarks(savedFee.getRemarks())
+                            .schoolId(savedFee.getSchoolId())
                             .build());
 
                     return ApiResponse.success("Cash payment recorded", savedFee);
@@ -1535,28 +1612,34 @@ public class AdminService {
     }
 
     private void ensureClassExists(String rawClassName, String section) {
+        ensureClassExists(rawClassName, section, null);
+    }
+
+    private void ensureClassExists(String rawClassName, String section, Long schoolId) {
         if (rawClassName == null || rawClassName.isBlank()) return;
 
         String normalized = resolveClassName(rawClassName);
-
-        // ── Normalize section ─────────────────────────────────────────────────
         String sec = normalizeSection(section);
 
-        // ── Fast existence check (case-insensitive) ───────────────────────────
-        if (classRoomRepository.existsByNameIgnoreCaseAndSectionIgnoreCase(normalized, sec)) {
+        // ── Fast existence check (school-scoped) ──────────────────────────────
+        boolean exists = (schoolId != null)
+                ? classRoomRepository.existsBySchoolIdAndNameIgnoreCaseAndSectionIgnoreCase(schoolId, normalized, sec)
+                : classRoomRepository.existsByNameIgnoreCaseAndSectionIgnoreCase(normalized, sec);
+
+        if (exists) {
             log.info("[ensureClassExists] Already exists: " + normalized + "-" + sec);
             return;
         }
 
-        // No try-catch here — let exceptions propagate so the caller's @Transactional
-        // can call setRollbackOnly() cleanly instead of leaving the session corrupt.
         classRoomRepository.save(ClassRoom.builder()
                 .name(normalized)
                 .section(sec)
                 .capacity(40)
                 .isActive(true)
+                .schoolId(schoolId)
                 .build());
-        log.info("[ensureClassExists] Auto-created class: " + normalized + "-" + sec);
+        log.info("[ensureClassExists] Auto-created class: " + normalized + "-" + sec
+                + (schoolId != null ? " schoolId=" + schoolId : ""));
     }
 
     // ── Helper ─────────────────────────────────────────────────────────────

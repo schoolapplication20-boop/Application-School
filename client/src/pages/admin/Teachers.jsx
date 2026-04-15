@@ -298,9 +298,15 @@ export default function Teachers() {
   };
 
   // ── Assign Classes ────────────────────────────────────────────────────────
-  const handleSaveAssign = () => {
+  const handleSaveAssign = async () => {
+    const classesStr = assignClasses.join(', ');
+    const result = await apiUpdateTeacher(assignTarget.id, { classes: classesStr });
+    if (!result.success) {
+      showToast(result.message || 'Failed to assign classes', 'error');
+      return;
+    }
     const updated = teachers.map(t =>
-      t.id === assignTarget.id ? { ...t, classes: assignClasses.join(', ') } : t
+      t.id === assignTarget.id ? { ...t, classes: classesStr } : t
     );
     persist(updated);
     setShowAssign(false);
@@ -616,6 +622,7 @@ export default function Teachers() {
                     >
                       <option value="SUBJECT_TEACHER">Subject Teacher</option>
                       <option value="CLASS_TEACHER">Class Teacher</option>
+                      <option value="BOTH">Class + Subject Teacher</option>
                     </select>
                   </Field>
 
@@ -639,28 +646,22 @@ export default function Teachers() {
                     </Field>
                   ) : (
                     <Field label="Classes Taught" optional>
-                      <input
-                        style={inputStyle(false)}
-                        placeholder="e.g., 9-A, 10-B, 11-C"
+                      <ClassPicker
+                        classList={classList}
                         value={form.classes}
-                        onChange={e => setForm({ ...form, classes: e.target.value })}
+                        onChange={v => setForm({ ...form, classes: v })}
+                        label="Select classes this teacher teaches"
                       />
-                      <p style={{ margin: '4px 0 0', fontSize: 11, color: '#a0aec0' }}>
-                        Comma-separated list of classes this teacher teaches.
-                      </p>
                     </Field>
                   )}
                   {form.teacherType === 'BOTH' && (
-                    <Field label="Other Classes Taught" optional>
-                      <input
-                        style={inputStyle(false)}
-                        placeholder="e.g., 9-A, 10-B, 11-C"
+                    <Field label="Additional Classes (Subject Teacher)" optional>
+                      <ClassPicker
+                        classList={classList}
                         value={form.classes}
-                        onChange={e => setForm({ ...form, classes: e.target.value })}
+                        onChange={v => setForm({ ...form, classes: v })}
+                        label="Select additional subject-teacher classes"
                       />
-                      <p style={{ margin: '4px 0 0', fontSize: 11, color: '#a0aec0' }}>
-                        Additional classes this teacher teaches as a subject teacher.
-                      </p>
                     </Field>
                   )}
                 </Col2>

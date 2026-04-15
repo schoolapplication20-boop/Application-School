@@ -86,7 +86,17 @@ public class User {
 
     /**
      * Multi-tenancy: which school this user belongs to.
-     * NULL for SUPER_ADMIN (platform-level accounts).
+     *
+     * Role         | schoolId
+     * -------------|------------------------------------------
+     * APPLICATION_OWNER | NULL  — platform-level, no school affiliation
+     * SUPER_ADMIN  | NOT NULL — each SUPER_ADMIN owns exactly one school
+     * ADMIN        | NOT NULL — belongs to the SUPER_ADMIN's school
+     * TEACHER      | NOT NULL — belongs to their school
+     * PARENT       | NOT NULL — belongs to their child's school
+     * STUDENT      | NOT NULL — belongs to their school
+     *
+     * Constraint: at most ONE SUPER_ADMIN per school_id (enforced in service layer).
      */
     @Column(name = "school_id")
     private Long schoolId;
@@ -106,6 +116,8 @@ public class User {
     private LocalDateTime updatedAt;
 
     public enum Role {
+        /** Platform-level owner — full access, no schoolId. Legacy alias for SUPER_ADMIN. */
+        APPLICATION_OWNER,
         SUPER_ADMIN, ADMIN, TEACHER, PARENT, STUDENT
     }
 }

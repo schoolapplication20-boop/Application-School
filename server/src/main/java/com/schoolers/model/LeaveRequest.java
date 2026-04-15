@@ -62,6 +62,10 @@ public class LeaveRequest {
     @Column(name = "reviewed_by", length = 100)
     private String reviewedBy;
 
+    /** Multi-tenancy: which school this leave request belongs to. */
+    @Column(name = "school_id")
+    private Long schoolId;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

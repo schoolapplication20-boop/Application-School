@@ -64,8 +64,10 @@ public class SchoolController {
     }
 
     // ── GET /api/schools ──────────────────────────────────────────────────────
+    // APPLICATION_OWNER: sees all schools (global view)
+    // SUPER_ADMIN: can also call this (e.g. for setup wizard flows)
     @GetMapping
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'APPLICATION_OWNER')")
     public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getAllSchools() {
         return ResponseEntity.ok(schoolService.getAllSchools());
     }
@@ -88,12 +90,15 @@ public class SchoolController {
     // ── PUT /api/schools/{id} ─────────────────────────────────────────────────
     // Logo upload done here (outside @Transactional) to prevent IOException from
     // poisoning the JPA transaction with rollback-only status.
+    // ADMIN must NOT update school settings — only SUPER_ADMIN (their own school)
+    // and APPLICATION_OWNER (any school) are allowed.
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPLICATION_OWNER')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> updateSchool(
             @PathVariable Long id,
             @RequestPart("data") String dataJson,
-            @RequestPart(value = "logo", required = false) MultipartFile logo) {
+            @RequestPart(value = "logo", required = false) MultipartFile logo,
+            Authentication auth) {
         try {
             Map<String, Object> data = objectMapper.readValue(dataJson,
                     new TypeReference<Map<String, Object>>() {});
@@ -110,8 +115,9 @@ public class SchoolController {
                 newLogoUrl = schoolService.uploadLogo(logo);
             }
 
+            String creatorEmail = auth != null ? auth.getName() : null;
             ApiResponse<Map<String, Object>> response =
-                    schoolService.updateSchool(id, data, newLogoUrl, oldLogoUrl);
+                    schoolService.updateSchool(id, data, newLogoUrl, oldLogoUrl, creatorEmail);
 
             if (!response.isSuccess() && newLogoUrl != null) {
                 schoolService.cleanupLogo(newLogoUrl);
@@ -139,7 +145,7 @@ public class SchoolController {
                     : null;
             String newLogoUrl = schoolService.uploadLogo(logo);
             ApiResponse<Map<String, Object>> response =
-                    schoolService.updateSchool(id, Map.of(), newLogoUrl, oldLogoUrl);
+                    schoolService.updateSchool(id, Map.of(), newLogoUrl, oldLogoUrl, null);
             if (!response.isSuccess()) schoolService.cleanupLogo(newLogoUrl);
             return response.isSuccess()
                     ? ResponseEntity.ok(response)

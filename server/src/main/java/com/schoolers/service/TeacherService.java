@@ -37,30 +37,80 @@ public class TeacherService {
     // ── Classes ────────────────────────────────────────────────────────────────
 
     public ApiResponse<List<ClassRoom>> getTeacherClasses(Long teacherId) {
-        // 1. Classrooms directly linked (class teachers via primaryClassId)
-        List<ClassRoom> linked = new ArrayList<>(classRoomRepository.findByTeacherId(teacherId));
+        if (teacherId == null) return ApiResponse.success(new ArrayList<>());
 
-        // 2. Classrooms from the teacher's free-text `classes` field (subject teachers)
+        List<ClassRoom> linked = new ArrayList<>();
+
         Teacher teacher = teacherRepository.findById(teacherId).orElse(null);
-        if (teacher != null && teacher.getClasses() != null && !teacher.getClasses().isBlank()) {
+        if (teacher == null) return ApiResponse.success(linked);
+
+        Long schoolId = teacher.getSchoolId();
+
+        // 1. Primary class (class teacher role) — direct ID lookup; most reliable
+        if (teacher.getPrimaryClassId() != null) {
+            classRoomRepository.findById(teacher.getPrimaryClassId())
+                .ifPresent(cls -> addIfAbsent(linked, cls));
+        }
+
+        // 2. Classrooms where classroom.teacher_id = this teacher (set by AdminService on assignment)
+        classRoomRepository.findByTeacherId(teacherId)
+            .forEach(cls -> addIfAbsent(linked, cls));
+
+        // 3. Classrooms from the teacher's `classes` text field (subject-teacher assignments).
+        //    Possible formats written by the admin:
+        //      • "9-A, 10-B"          — plain number dash section (text input placeholder)
+        //      • "Class 9 - A"        — full name with space-dash-space (Assign Classes modal)
+        //      • "9 - A"              — number space-dash-space section
+        //    Classrooms are always stored in DB as "Class N" (normalized by resolveClassName).
+        //    So we must normalize the raw name before lookup.
+        if (teacher.getClasses() != null && !teacher.getClasses().isBlank()) {
+            // Get all classrooms for this school once (avoids N+1 queries)
+            List<ClassRoom> schoolRooms = (schoolId != null)
+                ? classRoomRepository.findBySchoolId(schoolId)
+                : classRoomRepository.findAll();
+
             for (String entry : teacher.getClasses().split(",")) {
                 String trimmed = entry.trim();
                 if (trimmed.isEmpty()) continue;
-                // Support both "6 - A" and "6-A" formats
+
+                // Split on first " - " or "-" to separate name from section
                 String[] parts = trimmed.split("\\s*-\\s*", 2);
-                if (parts.length == 2) {
-                    String name = parts[0].trim();
-                    String section = parts[1].trim();
-                    classRoomRepository.findByNameIgnoreCaseAndSectionIgnoreCase(name, section)
-                        .ifPresent(cls -> {
-                            if (linked.stream().noneMatch(c -> c.getId().equals(cls.getId()))) {
-                                linked.add(cls);
-                            }
-                        });
-                }
+                String rawName = parts[0].trim();
+                String section = parts.length == 2 ? parts[1].trim().toUpperCase() : null;
+
+                // Normalize: "9" → "Class 9", "class 9" → "Class 9", "Class 9" → "Class 9"
+                String normalizedName = normalizeForLookup(rawName);
+
+                schoolRooms.stream()
+                    .filter(cls -> {
+                        boolean nameMatch = cls.getName().equalsIgnoreCase(normalizedName)
+                                        || cls.getName().equalsIgnoreCase(rawName);
+                        if (!nameMatch) return false;
+                        if (section == null) return true;
+                        return section.equalsIgnoreCase(cls.getSection());
+                    })
+                    .forEach(cls -> addIfAbsent(linked, cls));
             }
         }
+
         return ApiResponse.success(linked);
+    }
+
+    /** Mirror of AdminService.resolveClassName — normalizes "9" → "Class 9". */
+    private String normalizeForLookup(String raw) {
+        if (raw == null || raw.isBlank()) return raw;
+        String t = raw.trim();
+        if (t.matches("\\d+")) return "Class " + t;                        // "9"      → "Class 9"
+        if (t.toLowerCase().startsWith("class ") && t.length() > 6)
+            return "Class " + t.substring(6).trim();                        // "class 9" → "Class 9"
+        // Title-case words (e.g. "class nine" → not handled, left as-is)
+        return t;
+    }
+
+    private void addIfAbsent(List<ClassRoom> list, ClassRoom cls) {
+        if (list.stream().noneMatch(c -> c.getId().equals(cls.getId()))) {
+            list.add(cls);
+        }
     }
 
     public ApiResponse<Map<String, Object>> getTeacherProfile(Long teacherId) {

@@ -26,10 +26,10 @@ const emptyForm = { name: '', email: '', mobile: '', permissions: { ...DEFAULT_P
 
 export default function AdminManagement() {
   const { user } = useAuth();
-  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
-  // Platform-level SUPER_ADMINs (no school yet) can create other SUPER_ADMINs.
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN' || user?.role === 'APPLICATION_OWNER';
+  // APPLICATION_OWNER is the platform-level account (no schoolId).
   // School-level SUPER_ADMINs (schoolId != null) manage only their own school.
-  const isPlatformAdmin = isSuperAdmin && !user?.schoolId;
+  const isPlatformAdmin = user?.role === 'APPLICATION_OWNER';
 
   const [admins,       setAdmins]       = useState([]);
   const [loading,      setLoading]      = useState(true);
@@ -68,7 +68,11 @@ export default function AdminManagement() {
       setLoading(true);
       const res = await superAdminAPI.getAdmins();
       const data = res.data?.data ?? [];
-      setAdmins(Array.isArray(data) ? data : []);
+      // Ensure only ADMIN-role accounts are stored — never SUPER_ADMIN or APPLICATION_OWNER
+      const adminOnly = Array.isArray(data)
+        ? data.filter(u => !u.role || u.role === 'ADMIN')
+        : [];
+      setAdmins(adminOnly);
     } catch {
       setAdmins([]);
     } finally {
@@ -95,6 +99,8 @@ export default function AdminManagement() {
   useEffect(() => { if (isPlatformAdmin) loadSuperAdmins(); }, [isPlatformAdmin, loadSuperAdmins]);
 
   const filtered = useMemo(() => admins.filter(a => {
+    // Defensive: never show SUPER_ADMIN or APPLICATION_OWNER accounts in this list
+    if (a.role && a.role !== 'ADMIN') return false;
     const matchSearch = !search ||
       a.name.toLowerCase().includes(search.toLowerCase()) ||
       a.email.toLowerCase().includes(search.toLowerCase());
@@ -104,11 +110,13 @@ export default function AdminManagement() {
     return matchSearch && matchStatus;
   }), [admins, search, filterStatus]);
 
+  // Only count genuine ADMIN-role accounts in stats
+  const adminOnly = useMemo(() => admins.filter(a => !a.role || a.role === 'ADMIN'), [admins]);
   const stats = useMemo(() => ({
-    total:    admins.length,
-    active:   admins.filter(a => a.isActive ?? true).length,
-    inactive: admins.filter(a => !(a.isActive ?? true)).length,
-  }), [admins]);
+    total:    adminOnly.length,
+    active:   adminOnly.filter(a => a.isActive ?? true).length,
+    inactive: adminOnly.filter(a => !(a.isActive ?? true)).length,
+  }), [adminOnly]);
 
   const togglePerm = (key) => {
     setFormData(fd => ({ ...fd, permissions: { ...fd.permissions, [key]: !fd.permissions[key] } }));

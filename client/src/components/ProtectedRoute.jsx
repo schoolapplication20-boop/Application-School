@@ -53,25 +53,36 @@ const ProtectedRoute = ({ children, allowedRoles, permKey }) => {
   }
 
   // ── Role check ────────────────────────────────────────────────────────────
-  // SUPER_ADMIN has access to all protected routes, BUT must complete school
-  // setup first if no school has been created yet.
+
+  // APPLICATION_OWNER: platform-level — only platform routes are accessible.
+  // Any attempt to visit a school-level route redirects back to the platform dashboard.
+  if (user?.role === 'APPLICATION_OWNER') {
+    if (!allowedRoles?.includes('APPLICATION_OWNER')) {
+      return <Navigate to="/superadmin/dashboard" replace />;
+    }
+    return children;
+  }
+
+  // SUPER_ADMIN: school-level owner — must complete school setup before accessing
+  // any other route. Once setup is done, all routes are open (with optional permKey check).
   if (user?.role === 'SUPER_ADMIN') {
     const setupRequired = user?.needsSchoolSetup === true;
     const onSetupPage   = location.pathname === '/superadmin/setup-school';
     if (setupRequired && !onSetupPage) {
       return <Navigate to="/superadmin/setup-school" replace />;
     }
+    if (permKey && !hasPermission(permKey)) {
+      return <AccessDenied module={MODULE_NAMES[permKey] || permKey} />;
+    }
     return children;
   }
 
+  // All other roles: check that the route allows this role.
   if (allowedRoles && !allowedRoles.includes(user?.role)) {
-    // Wrong role → redirect to own dashboard
     return <Navigate to={getDashboardPath()} replace />;
   }
 
-  // ── Module permission check (only for restricted ADMIN accounts) ───────────
-  // SUPER_ADMIN always passes. ADMIN without a permissions object = full access.
-  // ADMIN with permissions object must have the specific permKey enabled.
+  // ADMIN: enforce module-level permissions (permKey must be explicitly granted).
   if (permKey && user?.role === 'ADMIN') {
     if (!hasPermission(permKey)) {
       return <AccessDenied module={MODULE_NAMES[permKey] || permKey} />;

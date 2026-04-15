@@ -72,6 +72,10 @@ public class Fee {
     @Column(columnDefinition = "TEXT")
     private String remarks;
 
+    /** Multi-tenancy: which school this fee record belongs to. */
+    @Column(name = "school_id")
+    private Long schoolId;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

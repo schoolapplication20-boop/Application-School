@@ -52,6 +52,27 @@ public class JwtUtil {
         return extractClaim(token, Claims::getExpiration);
     }
 
+    /** Extracts the schoolId claim embedded in the JWT at login time. Returns null for platform-level accounts. */
+    public Long extractSchoolId(String token) {
+        try {
+            Object schoolId = extractAllClaims(token).get("schoolId");
+            if (schoolId == null) return null;
+            return Long.parseLong(schoolId.toString());
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /** Extracts the role claim embedded in the JWT at login time. */
+    public String extractRole(String token) {
+        try {
+            Object role = extractAllClaims(token).get("role");
+            return role != null ? role.toString() : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
         final Claims claims = extractAllClaims(token);
         return claimsResolver.apply(claims);

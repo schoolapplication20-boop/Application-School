@@ -22,19 +22,27 @@ const adminNavItems = [
   { path: '/admin/examination',        icon: 'verified',                label: 'Exam & Certificates', permKey: 'examination' },
 ];
 
-// Super-Admin-only items (platform management)
+// SUPER_ADMIN-only items (school management tools)
 const superAdminOnlyItems = [
   { path: '/superadmin/admins',            icon: 'manage_accounts',  label: 'Admin Management',     permKey: null },
+  // Setup School is only shown while needsSchoolSetup === true (filtered below)
   { path: '/superadmin/setup-school',      icon: 'add_business',     label: 'Setup School',         permKey: null },
   { path: '/superadmin/student-transport', icon: 'directions_bus',   label: 'Student Transport',    permKey: null },
   { path: '/superadmin/exam-schedule',     icon: 'event_note',       label: 'Exam Schedule',        permKey: null },
+];
+
+// APPLICATION_OWNER portal items — platform dashboard only.
+// APPLICATION_OWNER manages schools & SUPER_ADMINs from their platform dashboard;
+// they do NOT navigate into school-level admin routes.
+const appOwnerNavItems = [
+  { path: '/superadmin/dashboard', icon: 'domain', label: 'Platform Dashboard', permKey: null },
 ];
 
 const teacherNavItems = [
   { path: '/teacher/dashboard',       icon: 'dashboard',      label: 'Dashboard' },
   { path: '/teacher/schedule',        icon: 'calendar_today', label: 'My Schedule' },
   { path: '/teacher/attendance',      icon: 'fact_check',     label: 'Attendance' },
-  { path: '/teacher/homework',        icon: 'menu_book',      label: 'Homework' },
+  { path: '/teacher/diary',           icon: 'menu_book',      label: 'Diary' },
   { path: '/teacher/marks',           icon: 'grade',          label: 'Marks' },
   { path: '/teacher/messages',        icon: 'chat',           label: 'Messages' },
   { path: '/teacher/leave-approval',  icon: 'how_to_reg',     label: 'Leave Approval' },
@@ -45,7 +53,6 @@ const teacherNavItems = [
 const studentNavItems = [
   { path: '/student/dashboard',   icon: 'dashboard',      label: 'Dashboard' },
   { path: '/student/attendance',  icon: 'fact_check',     label: 'Attendance' },
-  { path: '/student/assignments', icon: 'assignment',     label: 'Assignments' },
   { path: '/student/diary',       icon: 'photo_library',  label: 'Class Diary' },
   { path: '/student/fees',        icon: 'payments',       label: 'Pay Fees' },
   { path: '/student/leave',       icon: 'event_busy',     label: 'Leave Request' },
@@ -81,15 +88,36 @@ const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
    */
   const getNavSections = () => {
     switch (user?.role) {
+      // ── APPLICATION_OWNER ────────────────────────────────────────────────
+      // Platform-level account: only the platform dashboard is accessible.
+      // School-level routes (/admin/*, /teacher/*, etc.) are blocked by ProtectedRoute.
+      case 'APPLICATION_OWNER':
+        return [{ label: 'Platform Management', items: appOwnerNavItems }];
+
+      // ── SUPER_ADMIN ──────────────────────────────────────────────────────
+      // School-level owner: full admin panel + SA-specific tools.
+      // "Setup School" is shown only while needsSchoolSetup is true.
       case 'SUPER_ADMIN': {
-        const [first, ...rest] = adminNavItems.filter(item => item.path !== '/admin/parents');
-        // Show "Setup School" only while school setup is still needed.
-        // needsSchoolSetup=true means school doesn't exist yet or isSetupCompleted=false.
-        // After setup completes, updateUser({ needsSchoolSetup: false }) clears this flag.
+        let perms = null;
+        if (user.permissions) {
+          try {
+            perms = typeof user.permissions === 'string'
+              ? JSON.parse(user.permissions)
+              : user.permissions;
+          } catch { perms = null; }
+        }
+
+        const visibleAdminItems = adminNavItems
+          .filter(item => item.path !== '/admin/parents')
+          .filter(item => item.permKey === null || !perms || perms[item.permKey] === true);
+
+        // "Setup School" only while school setup is still pending
         const saItems = superAdminOnlyItems.filter(item => {
           if (item.path === '/superadmin/setup-school') return user?.needsSchoolSetup === true;
           return true;
         });
+
+        const [first, ...rest] = visibleAdminItems;
         return [
           { label: 'Navigation', items: [first, ...saItems, ...rest] },
         ];
@@ -133,10 +161,11 @@ const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
   };
 
   const roleBadgeColor = {
-    SUPER_ADMIN: { bg: '#7c3aed20', text: '#7c3aed' },
-    ADMIN:       { bg: '#76C44220', text: '#276749' },
-    TEACHER:     { bg: '#3182ce20', text: '#2c5282' },
-    PARENT:      { bg: '#ed893620', text: '#9c4221' },
+    APPLICATION_OWNER: { bg: '#dc262620', text: '#dc2626' },
+    SUPER_ADMIN:       { bg: '#7c3aed20', text: '#7c3aed' },
+    ADMIN:             { bg: '#76C44220', text: '#276749' },
+    TEACHER:           { bg: '#3182ce20', text: '#2c5282' },
+    PARENT:            { bg: '#ed893620', text: '#9c4221' },
   };
   const roleColors = roleBadgeColor[user?.role] || { bg: '#f0f4f8', text: '#4a5568' };
 
@@ -215,7 +244,9 @@ const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
           <div
             className="user-avatar"
             style={{
-              background: user?.role === 'SUPER_ADMIN'
+              background: user?.role === 'APPLICATION_OWNER'
+                ? 'linear-gradient(135deg, #dc2626, #991b1b)'
+                : user?.role === 'SUPER_ADMIN'
                 ? 'linear-gradient(135deg, #7c3aed, #553c9a)'
                 : `linear-gradient(135deg, ${primary}, ${secondary})`,
             }}
@@ -237,7 +268,9 @@ const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
                 marginTop: '2px',
               }}
             >
-              {user?.role === 'SUPER_ADMIN' ? 'Super Admin' : (user?.role || 'Role')}
+              {user?.role === 'APPLICATION_OWNER' ? 'App Owner'
+                : user?.role === 'SUPER_ADMIN' ? 'Super Admin'
+                : (user?.role || 'Role')}
             </div>
           </div>
         </div>

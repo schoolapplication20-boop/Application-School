@@ -117,23 +117,38 @@ export const AuthProvider = ({ children }) => {
   const getDashboardPath = useCallback(() => {
     if (!user) return '/login';
     switch (user.role) {
-      case 'SUPER_ADMIN': return '/superadmin/dashboard';
-      case 'ADMIN':       return '/admin/dashboard';
-      case 'TEACHER':     return '/teacher/dashboard';
-      case 'PARENT':      return '/parent/dashboard';
-      case 'STUDENT':     return '/student/dashboard';
-      default:            return '/login';
+      // APPLICATION_OWNER → platform dashboard (all schools overview)
+      case 'APPLICATION_OWNER': return '/superadmin/dashboard';
+      // SUPER_ADMIN → school-level dashboard (filtered to their school)
+      case 'SUPER_ADMIN':       return '/superadmin/dashboard';
+      case 'ADMIN':             return '/admin/dashboard';
+      case 'TEACHER':           return '/teacher/dashboard';
+      case 'PARENT':            return '/parent/dashboard';
+      case 'STUDENT':           return '/student/dashboard';
+      default:                  return '/login';
     }
   }, [user]);
 
   /**
-   * SUPER_ADMIN always has full access.
-   * ADMIN must have the specific permKey set to true in permissions.
-   * ADMIN with no permissions object gets NO access.
+   * Permission check per role:
+   *
+   * APPLICATION_OWNER — platform-level, always has full access to every module.
+   * SUPER_ADMIN       — school-level owner; full access unless specific module
+   *                     permissions were assigned by APPLICATION_OWNER.
+   * ADMIN             — must have the specific permKey set to true.
+   *                     ADMIN with no permissions object gets NO access.
    */
   const hasPermission = useCallback((permKey) => {
     if (!user) return false;
-    if (user.role === 'SUPER_ADMIN') return true;
+    // Platform owner has unrestricted access to everything
+    if (user.role === 'APPLICATION_OWNER') return true;
+    // School owner has full access unless module permissions were explicitly assigned
+    if (user.role === 'SUPER_ADMIN') {
+      const perms = parsePermissions(user.permissions);
+      if (!perms || Object.keys(perms).length === 0) return true;
+      return perms[permKey] === true;
+    }
+    // School admin: must have explicit permission for each module
     if (user.role === 'ADMIN') {
       const perms = parsePermissions(user.permissions);
       if (!perms) return false;

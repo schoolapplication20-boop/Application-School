@@ -52,6 +52,10 @@ public class Expense {
     @Column(name = "added_by_id")
     private Long addedById;
 
+    /** Multi-tenancy: which school this expense belongs to. */
+    @Column(name = "school_id")
+    private Long schoolId;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

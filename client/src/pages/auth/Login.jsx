@@ -23,6 +23,7 @@ const Login = () => {
   }, [isAuthenticated, navigate, getDashboardPath]);
 
   const rolePathMap = {
+    APPLICATION_OWNER: '/superadmin/dashboard',
     SUPER_ADMIN: '/superadmin/dashboard',
     ADMIN:       '/admin/dashboard',
     TEACHER:     '/teacher/dashboard',
@@ -31,6 +32,12 @@ const Login = () => {
   };
 
   const navigateByRole = (registeredUser) => {
+    // APPLICATION_OWNER never needs a password reset on first login
+    if (registeredUser?.role === 'APPLICATION_OWNER') {
+      navigate('/superadmin/dashboard', { replace: true });
+      return;
+    }
+
     // Non-SUPER_ADMIN first-login → must set a new password first
     if (registeredUser?.firstLogin && registeredUser?.role !== 'SUPER_ADMIN') {
       navigate('/reset-password', { replace: true });
