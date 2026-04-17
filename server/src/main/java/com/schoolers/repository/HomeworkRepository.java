@@ -14,6 +14,11 @@ public interface HomeworkRepository extends JpaRepository<Homework, Long> {
     List<Homework> findByClassSection(String classSection);
     List<Homework> findByClassSectionAndSubject(String classSection, String subject);
 
+    // School-scoped queries
+    List<Homework> findBySchoolId(Long schoolId);
+    List<Homework> findBySchoolIdAndTeacherId(Long schoolId, Long teacherId);
+    List<Homework> findBySchoolIdAndClassSection(Long schoolId, String classSection);
+
     @Modifying @Transactional
     void deleteByTeacherId(Long teacherId);
 }

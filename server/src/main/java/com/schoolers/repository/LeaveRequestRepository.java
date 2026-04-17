@@ -15,6 +15,18 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Long
     List<LeaveRequest> findByRequesterTypeAndStatus(LeaveRequest.RequesterType requesterType, LeaveRequest.Status status);
     List<LeaveRequest> findByRequesterIdAndRequesterType(Long requesterId, LeaveRequest.RequesterType requesterType);
 
+    /** Ordered query for student's own leave history */
+    List<LeaveRequest> findByRequesterIdAndRequesterTypeOrderByCreatedAtDesc(
+            Long requesterId, LeaveRequest.RequesterType requesterType);
+
+    /** All student leaves for a specific class section, newest first */
+    List<LeaveRequest> findByClassSectionAndRequesterTypeOrderByCreatedAtDesc(
+            String classSection, LeaveRequest.RequesterType requesterType);
+
+    /** School-scoped: all leaves of a given requester type for one school */
+    List<LeaveRequest> findByRequesterTypeAndSchoolIdOrderByCreatedAtDesc(
+            LeaveRequest.RequesterType requesterType, Long schoolId);
+
     @Modifying @Transactional
     void deleteByRequesterId(Long requesterId);
 }

@@ -10,4 +10,5 @@ import java.util.List;
 public interface SalaryPaymentRepository extends JpaRepository<SalaryPayment, Long> {
     List<SalaryPayment> findBySalaryIdOrderByPaidDateDesc(Long salaryId);
     List<SalaryPayment> findAllByOrderByPaidDateDescCreatedAtDesc();
+    List<SalaryPayment> findBySchoolIdOrderByPaidDateDescCreatedAtDesc(Long schoolId);
 }

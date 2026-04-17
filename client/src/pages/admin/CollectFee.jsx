@@ -8,6 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 const todayStr = () => new Date().toISOString().split('T')[0];
 const fmt = (n) => Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const genReceipt = () => `RCP-${Date.now().toString().slice(-7)}-${Math.random().toString(36).slice(2,5).toUpperCase()}`;
+const isOverdue = (dueDateStr) => dueDateStr && new Date(dueDateStr) < new Date(todayStr());
 
 const StatusBadge = ({ status }) => {
   const map = {
@@ -32,15 +33,18 @@ export default function CollectFee() {
   const [student, setStudent]           = useState(null);
 
   /* assignment data */
-  const [assignment, setAssignment]     = useState(null);  // StudentFeeAssignment
-  const [payments, setPayments]         = useState([]);    // FeePayment[]
+  const [assignment, setAssignment]     = useState(null);
+  const [installments, setInstallments] = useState([]);
+  const [payments, setPayments]         = useState([]);
   const [loadingFee, setLoadingFee]     = useState(false);
+
+  /* selected installment (null = general payment mode) */
+  const [selectedInstallment, setSelectedInstallment] = useState(null);
 
   /* payment form */
   const [amount, setAmount]             = useState('');
   const [payDate, setPayDate]           = useState(todayStr());
   const [receiptNo, setReceiptNo]       = useState(genReceipt());
-  const [term, setTerm]                 = useState('');
   const [remarks, setRemarks]           = useState('');
   const [paying, setPaying]             = useState(false);
 
@@ -49,7 +53,6 @@ export default function CollectFee() {
 
   const [toast, setToast]               = useState(null);
   const searchRef                       = useRef(null);
-  const printRef                        = useRef(null);
 
   const showToast = (msg, type = 'success') => setToast({ message: msg, type });
 
@@ -67,57 +70,83 @@ export default function CollectFee() {
     return () => clearTimeout(t);
   }, [query]);
 
+  /* ── reload installments & payments ── */
+  const reloadFeeData = useCallback(async (assignId) => {
+    const [iRes, pRes] = await Promise.all([
+      adminAPI.getInstallments(assignId),
+      adminAPI.getAssignmentPayments(assignId),
+    ]);
+    setInstallments(iRes.data?.data ?? []);
+    setPayments(pRes.data?.data ?? []);
+  }, []);
+
   /* ── load assignment when student selected ── */
   const selectStudent = useCallback(async (s) => {
     setStudent(s);
     setQuery(s.name);
     setShowDrop(false);
     setAssignment(null);
+    setInstallments([]);
     setPayments([]);
+    setSelectedInstallment(null);
     setAmount('');
     setReceiptNo(genReceipt());
-    setTerm('');
     setRemarks('');
+    setReceiptData(null);
     setLoadingFee(true);
     try {
-      const [aRes, pRes] = await Promise.all([
-        adminAPI.getStudentFeeAssignment(s.id),
-        adminAPI.getStudentFeeAssignment(s.id).then(r => {
-          const assignId = r.data?.data?.id;
-          return assignId ? adminAPI.getAssignmentPayments(assignId) : { data: { data: [] } };
-        }),
-      ]);
+      const aRes = await adminAPI.getStudentFeeAssignment(s.id);
       const a = aRes.data?.data;
       setAssignment(a || null);
-      setPayments(pRes.data?.data ?? []);
-      if (a) {
-        const due = Number(a.totalFee || 0) - Number(a.paidAmount || 0);
-        setAmount(due > 0 ? String(due) : '');
-      }
+      if (a?.id) await reloadFeeData(a.id);
     } catch { setAssignment(null); } finally { setLoadingFee(false); }
-  }, []);
+  }, [reloadFeeData]);
 
-  /* ── collect payment ── */
+  /* ── select an installment for payment ── */
+  const pickInstallment = (inst) => {
+    setSelectedInstallment(inst);
+    setAmount(String(inst.amount));
+    setReceiptNo(genReceipt());
+    setRemarks('');
+    setPayDate(todayStr());
+  };
+
+  const clearInstallmentSelection = () => {
+    setSelectedInstallment(null);
+    setAmount('');
+    setReceiptNo(genReceipt());
+    setRemarks('');
+  };
+
+  /* ── collect payment (installment-level) ── */
   const handleCollect = async () => {
     if (!assignment) { showToast('No fee assignment found for this student', 'error'); return; }
+    if (!selectedInstallment) { showToast('Please select an installment to pay', 'error'); return; }
+
     const amt = Number(amount);
-    const due = Number(assignment.totalFee || 0) - Number(assignment.paidAmount || 0);
     if (!amt || amt <= 0) { showToast('Enter a valid amount', 'error'); return; }
-    if (amt > due) { showToast(`Amount exceeds due balance ₹${fmt(due)}`, 'error'); return; }
+    if (amt > Number(selectedInstallment.amount)) {
+      showToast(`Amount exceeds installment amount ₹${fmt(selectedInstallment.amount)}`, 'error'); return;
+    }
 
     setPaying(true);
     try {
-      const res = await adminAPI.collectAssignmentFee(assignment.id, {
+      const res = await adminAPI.collectInstallmentFee(selectedInstallment.id, {
         amountPaid:    amt,
         paidDate:      payDate,
         receiptNumber: receiptNo,
         receivedBy:    user?.name || user?.email || 'Admin',
-        term:          term || null,
+        term:          selectedInstallment.termName || null,
         remarks,
       });
-      const updated = res.data?.data;
-      const newPaid = Number(updated?.paidAmount || 0);
-      const newDue  = Number(updated?.totalFee || 0) - newPaid;
+
+      // refresh assignment summary
+      const aRes = await adminAPI.getStudentFeeAssignment(student.id);
+      const updatedAssignment = aRes.data?.data;
+      setAssignment(updatedAssignment);
+
+      const newPaid = Number(updatedAssignment?.paidAmount || 0);
+      const newDue  = Number(updatedAssignment?.totalFee || 0) - newPaid;
 
       setReceiptData({
         receiptNo,
@@ -125,23 +154,20 @@ export default function CollectFee() {
         studentName: student.name,
         rollNo:      student.rollNumber,
         className:   student.className,
-        totalFee:    updated?.totalFee,
+        totalFee:    updatedAssignment?.totalFee,
         amountPaid:  amt,
         paidSoFar:   newPaid,
         dueAmount:   newDue,
-        status:      updated?.status,
+        status:      updatedAssignment?.status,
         receivedBy:  user?.name || user?.email || 'Admin',
-        term:        term || null,
+        term:        selectedInstallment.termName || null,
         remarks,
       });
 
-      setAssignment(updated);
-      // reload payments
-      const pRes = await adminAPI.getAssignmentPayments(assignment.id);
-      setPayments(pRes.data?.data ?? []);
+      await reloadFeeData(assignment.id);
+      setSelectedInstallment(null);
       setAmount('');
       setReceiptNo(genReceipt());
-      setTerm('');
       setRemarks('');
       showToast('Payment recorded successfully');
     } catch (err) {
@@ -159,7 +185,6 @@ export default function CollectFee() {
       <style>
         * { margin:0;padding:0;box-sizing:border-box; }
         body { font-family: 'Arial', sans-serif; padding: 30px; color: #1a202c; }
-        .logo { text-align:center; margin-bottom:8px; }
         .school-name { font-size:22px; font-weight:800; color:#276749; text-align:center; }
         .receipt-title { font-size:15px; font-weight:600; text-align:center; color:#718096; margin:4px 0 20px; }
         .divider { border:none; border-top:2px solid #e2e8f0; margin:14px 0; }
@@ -196,7 +221,7 @@ export default function CollectFee() {
       <div class="row"><span class="label">Total Paid to Date</span><span class="value">₹${fmt(d.paidSoFar)}</span></div>
       <div class="row"><span class="label">Balance Due</span><span class="value" style="color:${d.dueAmount > 0 ? '#e53e3e':'#276749'}">${d.dueAmount > 0 ? '₹'+fmt(d.dueAmount) : 'NIL'}</span></div>
       <div class="row"><span class="label">Payment Mode</span><span class="value">Cash</span></div>
-      ${d.term ? `<div class="row"><span class="label">Term</span><span class="value" style="color:#2b6cb0;font-weight:700">${d.term}</span></div>` : ''}
+      ${d.term ? `<div class="row"><span class="label">Term / Installment</span><span class="value" style="color:#2b6cb0;font-weight:700">${d.term}</span></div>` : ''}
       ${d.remarks ? `<div class="row"><span class="label">Remarks</span><span class="value">${d.remarks}</span></div>` : ''}
       <div class="footer">
         <span>Generated: ${new Date().toLocaleString('en-IN')}</span>
@@ -216,6 +241,9 @@ export default function CollectFee() {
     ? Math.min(100, (Number(assignment.paidAmount || 0) / Number(assignment.totalFee)) * 100)
     : 0;
 
+  const pendingInstallments = installments.filter(i => i.status !== 'PAID');
+  const hasInstallments     = installments.length > 0;
+
   return (
     <Layout pageTitle="Collect Fee">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
@@ -224,7 +252,7 @@ export default function CollectFee() {
         {/* Header */}
         <div style={{ marginBottom: 24 }}>
           <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#1a202c' }}>Collect Fee</h2>
-          <p style={{ margin: 0, fontSize: 13, color: '#a0aec0' }}>Search a student, review their fee, and collect cash payment</p>
+          <p style={{ margin: 0, fontSize: 13, color: '#a0aec0' }}>Search a student, select an installment, and record cash payment</p>
         </div>
 
         {/* Search Bar */}
@@ -267,9 +295,9 @@ export default function CollectFee() {
         ) : loadingFee ? (
           <div style={{ textAlign: 'center', padding: 40, color: '#a0aec0' }}>Loading fee details...</div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: 20, alignItems: 'start' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '380px 1fr', gap: 20, alignItems: 'start' }}>
 
-            {/* Left: Student & Fee Info */}
+            {/* Left column */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
               {/* Student card */}
@@ -306,8 +334,6 @@ export default function CollectFee() {
                         <span style={{ fontSize: 13, color: '#718096' }}>Due</span>
                         <span style={{ fontSize: 14, fontWeight: 800, color: due > 0 ? '#e53e3e' : '#276749' }}>₹{fmt(due)}</span>
                       </div>
-
-                      {/* Progress bar */}
                       <div style={{ background: '#f0f4f8', borderRadius: 6, height: 8, overflow: 'hidden', marginBottom: 8 }}>
                         <div style={{ width: `${paidPct}%`, height: '100%', background: paidPct >= 100 ? '#76C442' : '#f6ad55', borderRadius: 6, transition: 'width 0.4s' }} />
                       </div>
@@ -317,56 +343,6 @@ export default function CollectFee() {
                       </div>
                     </div>
 
-                    {/* Payment form */}
-                    {due > 0 && (
-                      <div style={{ borderTop: '1px solid #f0f4f8', paddingTop: 16, marginTop: 8 }}>
-                        <h4 style={{ margin: '0 0 14px', fontSize: 13, fontWeight: 700, color: '#2d3748' }}>Collect Cash Payment</h4>
-
-                        <div style={{ marginBottom: 12 }}>
-                          <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Amount (₹) *</label>
-                          <input
-                            type="number" min="1" max={due} value={amount}
-                            onChange={e => setAmount(e.target.value)}
-                            placeholder={`Max ₹${fmt(due)}`}
-                            style={{ width: '100%', padding: '9px 12px', border: '2px solid #76C442', borderRadius: 8, fontSize: 15, fontWeight: 700, outline: 'none', boxSizing: 'border-box' }}
-                          />
-                        </div>
-                        <div style={{ marginBottom: 12 }}>
-                          <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Payment Date *</label>
-                          <input type="date" value={payDate} max={todayStr()} onChange={e => setPayDate(e.target.value)}
-                            style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
-                        </div>
-                        <div style={{ marginBottom: 12 }}>
-                          <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Term</label>
-                          <select value={term} onChange={e => setTerm(e.target.value)}
-                            style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box', background: '#fff' }}>
-                            <option value="">— Select Term (optional) —</option>
-                            <option value="Term 1">Term 1</option>
-                            <option value="Term 2">Term 2</option>
-                            <option value="Term 3">Term 3</option>
-                            <option value="Full Payment">Full Payment</option>
-                            <option value="Advance">Advance</option>
-                          </select>
-                        </div>
-                        <div style={{ marginBottom: 12 }}>
-                          <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Receipt No.</label>
-                          <input value={receiptNo} readOnly
-                            style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 12, fontFamily: 'monospace', background: '#f7fafc', boxSizing: 'border-box' }} />
-                        </div>
-                        <div style={{ marginBottom: 16 }}>
-                          <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Remarks</label>
-                          <input value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="Optional"
-                            style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
-                        </div>
-
-                        <button onClick={handleCollect} disabled={paying}
-                          style={{ width: '100%', padding: '12px', background: '#76C442', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 800, fontSize: 14, cursor: 'pointer', opacity: paying ? 0.7 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                          <span className="material-icons" style={{ fontSize: 18 }}>payments</span>
-                          {paying ? 'Processing...' : `Collect ₹${amount ? fmt(amount) : '—'}`}
-                        </button>
-                      </div>
-                    )}
-
                     {assignment.status === 'PAID' && (
                       <div style={{ marginTop: 14, padding: '12px', background: '#f0fff4', border: '1.5px solid #76C44240', borderRadius: 8, textAlign: 'center', color: '#276749', fontWeight: 700, fontSize: 13 }}>
                         ✓ Fee fully paid
@@ -375,9 +351,113 @@ export default function CollectFee() {
                   </>
                 )}
               </div>
+
+              {/* Installments panel */}
+              {assignment && hasInstallments && (
+                <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden' }}>
+                  <div style={{ padding: '12px 16px', borderBottom: '1px solid #f0f4f8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontWeight: 700, fontSize: 14, color: '#2d3748' }}>Installments</span>
+                    <span style={{ fontSize: 11, color: '#a0aec0' }}>{installments.filter(i => i.status === 'PAID').length}/{installments.length} paid</span>
+                  </div>
+                  <div style={{ padding: '8px 0' }}>
+                    {installments.map(inst => {
+                      const isPaid    = inst.status === 'PAID';
+                      const overdue   = !isPaid && isOverdue(inst.dueDate);
+                      const selected  = selectedInstallment?.id === inst.id;
+                      return (
+                        <div key={inst.id}
+                          onClick={() => !isPaid && pickInstallment(inst)}
+                          style={{
+                            padding: '10px 16px',
+                            borderLeft: selected ? '3px solid #76C442' : '3px solid transparent',
+                            background: selected ? '#f0fff4' : isPaid ? '#fafafa' : '#fff',
+                            cursor: isPaid ? 'default' : 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            borderBottom: '1px solid #f7f7f7',
+                            opacity: isPaid ? 0.7 : 1,
+                            transition: 'background 0.15s',
+                          }}
+                          onMouseEnter={e => { if (!isPaid) e.currentTarget.style.background = selected ? '#f0fff4' : '#f7fdf2'; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = selected ? '#f0fff4' : isPaid ? '#fafafa' : '#fff'; }}
+                        >
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: 13, color: '#2d3748' }}>{inst.termName}</div>
+                            <div style={{ fontSize: 11, color: overdue ? '#e53e3e' : '#a0aec0' }}>
+                              Due: {inst.dueDate}
+                              {overdue && <span style={{ marginLeft: 4, fontWeight: 700 }}>· OVERDUE</span>}
+                            </div>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontWeight: 800, fontSize: 13, color: isPaid ? '#276749' : '#2d3748' }}>₹{fmt(inst.amount)}</div>
+                            {isPaid
+                              ? <span style={{ fontSize: 10, color: '#276749', fontWeight: 700 }}>✓ PAID</span>
+                              : <span style={{ fontSize: 10, color: selected ? '#276749' : '#f6ad55', fontWeight: 700 }}>
+                                  {selected ? '▶ Selected' : 'Tap to pay'}
+                                </span>
+                            }
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Payment form */}
+              {assignment && selectedInstallment && (
+                <div style={{ background: '#fff', border: '2px solid #76C442', borderRadius: 12, padding: 20 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                    <h4 style={{ margin: 0, fontSize: 14, fontWeight: 800, color: '#276749' }}>
+                      Collect: {selectedInstallment.termName}
+                    </h4>
+                    <button onClick={clearInstallmentSelection}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#a0aec0', fontSize: 13 }}>
+                      ✕ Cancel
+                    </button>
+                  </div>
+
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Amount (₹) *</label>
+                    <input
+                      type="number" min="1" max={selectedInstallment.amount} value={amount}
+                      onChange={e => setAmount(e.target.value)}
+                      placeholder={`Max ₹${fmt(selectedInstallment.amount)}`}
+                      style={{ width: '100%', padding: '9px 12px', border: '2px solid #76C442', borderRadius: 8, fontSize: 15, fontWeight: 700, outline: 'none', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Payment Date *</label>
+                    <input type="date" value={payDate} max={todayStr()} onChange={e => setPayDate(e.target.value)}
+                      style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
+                  </div>
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Receipt No.</label>
+                    <input value={receiptNo} readOnly
+                      style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 12, fontFamily: 'monospace', background: '#f7fafc', boxSizing: 'border-box' }} />
+                  </div>
+                  <div style={{ marginBottom: 16 }}>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Remarks</label>
+                    <input value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="Optional"
+                      style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
+                  </div>
+
+                  <button onClick={handleCollect} disabled={paying}
+                    style={{ width: '100%', padding: '12px', background: '#76C442', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 800, fontSize: 14, cursor: 'pointer', opacity: paying ? 0.7 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                    <span className="material-icons" style={{ fontSize: 18 }}>payments</span>
+                    {paying ? 'Processing...' : `Collect ₹${amount ? fmt(amount) : '—'}`}
+                  </button>
+                </div>
+              )}
+
+              {/* No installments — show prompt */}
+              {assignment && !hasInstallments && due > 0 && (
+                <div style={{ background: '#fffbeb', border: '1.5px solid #f6ad5560', borderRadius: 10, padding: 14, fontSize: 13, color: '#b45309' }}>
+                  <strong>No installments defined.</strong> Go to <strong>Fees &amp; Payments → Student Fees</strong> to set up installments for this student before collecting payment.
+                </div>
+              )}
             </div>
 
-            {/* Right: Receipt + Payment History */}
+            {/* Right column: Receipt + Payment History */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
               {/* Receipt card */}
@@ -396,7 +476,7 @@ export default function CollectFee() {
                       ['Date', receiptData.date],
                       ['Student', receiptData.studentName],
                       ['Class', receiptData.className],
-                      ...(receiptData.term ? [['Term', receiptData.term]] : []),
+                      ...(receiptData.term ? [['Term / Installment', receiptData.term]] : []),
                       ['Amount Paid', `₹${fmt(receiptData.amountPaid)}`],
                       ['Total Paid', `₹${fmt(receiptData.paidSoFar)}`],
                       ['Balance Due', receiptData.dueAmount > 0 ? `₹${fmt(receiptData.dueAmount)}` : 'NIL'],
@@ -422,7 +502,7 @@ export default function CollectFee() {
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                     <thead>
                       <tr style={{ background: '#f7fafc' }}>
-                        {['Date','Term','Amount','Receipt No','Received By','Remarks'].map(h => (
+                        {['Date','Term / Installment','Amount','Receipt No','Received By','Remarks'].map(h => (
                           <th key={h} style={{ padding: '9px 14px', textAlign: h === 'Amount' ? 'right' : 'left', fontWeight: 700, color: '#718096', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '1px solid #e2e8f0' }}>{h}</th>
                         ))}
                       </tr>

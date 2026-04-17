@@ -32,6 +32,95 @@ const EMPTY_FORM = {
   primaryClassId: '',
 };
 
+// ─── ClassPicker ─────────────────────────────────────────────────────────────
+// Multi-select component for picking classes from a list.
+// `value`    — comma-separated string of selected class labels, e.g. "Class 9 - A, Class 10 - B"
+// `onChange` — called with the updated comma-separated string
+function ClassPicker({ classList = [], value = '', onChange, label = 'Select classes' }) {
+  // Parse the current value into a Set of labels for O(1) lookup
+  const selected = new Set(
+    value.split(',').map(s => s.trim()).filter(Boolean)
+  );
+
+  const toggle = (label) => {
+    const next = new Set(selected);
+    if (next.has(label)) {
+      next.delete(label);
+    } else {
+      next.add(label);
+    }
+    onChange([...next].join(', '));
+  };
+
+  if (classList.length === 0) {
+    return (
+      <p style={{ fontSize: 12, color: '#a0aec0', margin: 0 }}>
+        No classes available. Add classes first.
+      </p>
+    );
+  }
+
+  return (
+    <div>
+      {/* Selected chips */}
+      {selected.size > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+          {[...selected].map(lbl => (
+            <span key={lbl} style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              background: '#76C44220', color: '#276749', border: '1px solid #76C44260',
+              borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 600,
+            }}>
+              {lbl}
+              <span
+                onClick={() => toggle(lbl)}
+                style={{ cursor: 'pointer', fontSize: 14, lineHeight: 1, color: '#e53e3e' }}
+              >×</span>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Scrollable checklist */}
+      <div style={{
+        maxHeight: 160, overflowY: 'auto', border: '1.5px solid #e2e8f0',
+        borderRadius: 8, padding: '4px 0', background: '#fafafa',
+      }}>
+        {classList.length === 0 ? (
+          <p style={{ fontSize: 12, color: '#a0aec0', padding: '8px 12px', margin: 0 }}>
+            No classes available
+          </p>
+        ) : (
+          classList.map(c => {
+            const lbl = `${c.name}${c.section ? ` - ${c.section}` : ''}`;
+            const checked = selected.has(lbl);
+            return (
+              <label key={c.id} style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '6px 12px', cursor: 'pointer',
+                background: checked ? '#f0fff4' : 'transparent',
+                transition: 'background 0.15s',
+              }}>
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => toggle(lbl)}
+                  style={{ accentColor: '#76C442', width: 14, height: 14, cursor: 'pointer' }}
+                />
+                <span style={{ fontSize: 13, color: '#2d3748' }}>{lbl}</span>
+              </label>
+            );
+          })
+        )}
+      </div>
+
+      {selected.size === 0 && (
+        <p style={{ margin: '4px 0 0', fontSize: 11, color: '#a0aec0' }}>{label}</p>
+      )}
+    </div>
+  );
+}
+
 // ─── Shared style helpers ─────────────────────────────────────────────────────
 
 const inputStyle = (hasError) => ({
@@ -199,6 +288,7 @@ export default function Teachers() {
         name:           form.name,
         email:          form.email,
         mobile:         form.mobile,
+        empId:          form.empId,
         subject:        form.subject,
         department:     form.department,
         classes:        form.classes,
@@ -457,14 +547,23 @@ export default function Teachers() {
                     </td>
                     <td>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                        {t.primaryClassId && classList.length > 0 && (() => {
-                          const cls = classList.find(c => Number(c.id) === Number(t.primaryClassId));
-                          return cls ? <span style={{ fontSize: 11, color: '#4a5568', fontWeight: 600 }}>{cls.name}{cls.section ? ` - ${cls.section}` : ''}</span> : null;
+                        {/* Primary class (class teacher assignment) */}
+                        {(t.primaryClassName || (t.primaryClassId && classList.length > 0)) && (() => {
+                          const label = t.primaryClassName
+                            || (() => { const cls = classList.find(c => Number(c.id) === Number(t.primaryClassId)); return cls ? `${cls.name}${cls.section ? ` - ${cls.section}` : ''}` : null; })();
+                          return label ? (
+                            <span style={{ fontSize: 11, background: '#f0fff4', color: '#276749', fontWeight: 700, padding: '2px 8px', borderRadius: 10, display: 'inline-block' }}>
+                              {label}
+                            </span>
+                          ) : null;
                         })()}
+                        {/* Subject classes */}
                         {t.classes && t.classes.split(',').map(s => s.trim()).filter(Boolean).map((cls, i) => (
                           <span key={i} style={{ fontSize: 11, color: '#4a5568', fontWeight: 600 }}>{cls}</span>
                         ))}
-                        {!t.primaryClassId && !t.classes && <span style={{ fontSize: 11, color: '#a0aec0' }}>—</span>}
+                        {!t.primaryClassId && !t.primaryClassName && !t.classes && (
+                          <span style={{ fontSize: 11, color: '#a0aec0' }}>—</span>
+                        )}
                       </div>
                     </td>
                     <td style={{ fontSize: 12, color: '#718096' }}>{t.experience || '—'}</td>
@@ -562,8 +661,17 @@ export default function Teachers() {
                       onChange={e => setForm({ ...form, name: e.target.value })} />
                   </Field>
                   <Field label="Employee ID" required error={errors.empId}>
-                    <input style={inputStyle(errors.empId)} placeholder="e.g., T009" value={form.empId}
-                      onChange={e => setForm({ ...form, empId: e.target.value })} />
+                    <input
+                      style={inputStyle(errors.empId)}
+                      placeholder="e.g., T009"
+                      value={form.empId}
+                      onChange={e => setForm({ ...form, empId: e.target.value.trim() })}
+                    />
+                    {editTeacher && (
+                      <p style={{ fontSize: '11px', color: '#718096', marginTop: '3px' }}>
+                        Must be unique within this school. Same ID can exist in other schools.
+                      </p>
+                    )}
                   </Field>
                   <Field label="Email (Login ID)" required error={errors.email}>
                     <input type="email" style={inputStyle(errors.email)} placeholder="teacher@school.com" value={form.email}
@@ -627,7 +735,7 @@ export default function Teachers() {
                   </Field>
 
                   {(form.teacherType === 'CLASS_TEACHER' || form.teacherType === 'BOTH') ? (
-                    <Field label="Primary Class" required error={errors.primaryClassId}>
+                    <Field label={form.teacherType === 'BOTH' ? 'Primary Class (Class Teacher)' : 'Primary Class'} required error={errors.primaryClassId}>
                       <select
                         style={{ ...inputStyle(!!errors.primaryClassId), cursor: 'pointer' }}
                         value={form.primaryClassId}
@@ -654,17 +762,17 @@ export default function Teachers() {
                       />
                     </Field>
                   )}
-                  {form.teacherType === 'BOTH' && (
-                    <Field label="Additional Classes (Subject Teacher)" optional>
-                      <ClassPicker
-                        classList={classList}
-                        value={form.classes}
-                        onChange={v => setForm({ ...form, classes: v })}
-                        label="Select additional subject-teacher classes"
-                      />
-                    </Field>
-                  )}
                 </Col2>
+                {form.teacherType === 'BOTH' && (
+                  <Field label="Additional Classes (Subject Teacher)" optional>
+                    <ClassPicker
+                      classList={classList.filter(c => c.id !== Number(form.primaryClassId))}
+                      value={form.classes}
+                      onChange={v => setForm({ ...form, classes: v })}
+                      label="Select additional classes where this teacher teaches a subject"
+                    />
+                  </Field>
+                )}
 
                 {/* ── Documents ────────────────────────────────────────── */}
                 <Section icon="upload_file" label="Documents" />

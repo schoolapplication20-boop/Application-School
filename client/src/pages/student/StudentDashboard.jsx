@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import LineChartComponent from '../../components/Charts/LineChartComponent';
@@ -10,11 +10,6 @@ const gradeColor = { 'A+': '#276749', 'A': '#276749', 'B+': '#2b6cb0', 'B': '#2b
 
 const getInitials = (name = '') => name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?';
 
-const fmtDate = (d) => {
-  if (!d) return '—';
-  try { return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }); }
-  catch { return d; }
-};
 
 export default function StudentDashboard() {
   const navigate = useNavigate();
@@ -23,7 +18,7 @@ export default function StudentDashboard() {
   const [profile,    setProfile]    = useState(null);
   const [attendance, setAttendance] = useState([]);
   const [marks,      setMarks]      = useState([]);
-  const [fees,       setFees]       = useState([]);
+  const [feeData,    setFeeData]    = useState(null);
   const [loading,    setLoading]    = useState(true);
 
   useEffect(() => {
@@ -35,12 +30,12 @@ export default function StudentDashboard() {
       studentAPI.getMyProfile().catch(() => ({ data: { data: null } })),
       studentAPI.getMyAttendance({ startDate, endDate }).catch(() => ({ data: { data: [] } })),
       studentAPI.getMyMarks().catch(() => ({ data: { data: [] } })),
-      studentAPI.getMyFees().catch(() => ({ data: { data: [] } })),
+      studentAPI.getMyFees().catch(() => ({ data: { data: null } })),
     ]).then(([profileRes, attRes, marksRes, feesRes]) => {
       setProfile(profileRes.data?.data ?? null);
       setAttendance(attRes.data?.data  ?? []);
       setMarks(marksRes.data?.data     ?? []);
-      setFees(feesRes.data?.data       ?? []);
+      setFeeData(feesRes.data?.data    ?? null);
     }).finally(() => setLoading(false));
   }, []);
 
@@ -49,10 +44,14 @@ export default function StudentDashboard() {
   const workingDays   = attendance.filter(a => a.status !== 'HOLIDAY').length;
   const attendancePct = workingDays > 0 ? Math.round((presentDays / workingDays) * 100) : 0;
 
-  const totalFee   = fees.reduce((s, f) => s + (f.amount || 0), 0);
-  const paidFee    = fees.filter(f => f.status === 'PAID').reduce((s, f) => s + (f.amount || 0), 0);
-  const pendingFee = fees.filter(f => f.status !== 'PAID').reduce((s, f) => s + (f.amount || 0), 0);
-  const nextDue    = fees.filter(f => f.status !== 'PAID').sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))[0];
+  const feeSummary = feeData?.summary ?? {};
+  const totalFee   = Number(feeSummary.totalFee  || 0);
+  const paidFee    = Number(feeSummary.paidAmount || 0);
+  const pendingFee = Number(feeSummary.dueAmount  || 0);
+  // Next due: first PENDING installment by due date
+  const pendingInstallments = (feeData?.installments ?? []).filter(i => i.status !== 'PAID' && i.dueDate);
+  pendingInstallments.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+  const nextDue = pendingInstallments[0] ?? null;
 
   const recentMarks = [...marks].sort((a, b) => new Date(b.examDate || 0) - new Date(a.examDate || 0)).slice(0, 5);
 

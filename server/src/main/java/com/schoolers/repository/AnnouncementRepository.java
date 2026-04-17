@@ -10,4 +10,8 @@ import java.util.List;
 public interface AnnouncementRepository extends JpaRepository<Announcement, Long> {
     List<Announcement> findByIsActiveTrueOrderByCreatedAtDesc();
     List<Announcement> findByTargetRoleInOrderByCreatedAtDesc(List<String> roles);
+
+    // School-scoped queries
+    List<Announcement> findBySchoolIdAndIsActiveTrueOrderByCreatedAtDesc(Long schoolId);
+    List<Announcement> findBySchoolIdAndTargetRoleInOrderByCreatedAtDesc(Long schoolId, List<String> roles);
 }

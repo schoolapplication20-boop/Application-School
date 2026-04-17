@@ -53,6 +53,10 @@ public class LeaveRequest {
     @Builder.Default
     private Status status = Status.PENDING;
 
+    /** Remark added by the reviewing teacher or admin */
+    @Column(name = "teacher_remark", columnDefinition = "TEXT")
+    private String teacherRemark;
+
     @Column(name = "admin_comment", columnDefinition = "TEXT")
     private String adminComment;
 

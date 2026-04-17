@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "class_fee_structure",
-       uniqueConstraints = @UniqueConstraint(columnNames = {"class_name", "academic_year"}))
+       uniqueConstraints = @UniqueConstraint(name = "uq_class_fee_name_year_school", columnNames = {"class_name", "academic_year", "school_id"}))
 @Data
 @Builder
 @NoArgsConstructor
@@ -29,6 +29,9 @@ public class ClassFeeStructure {
 
     @Column(name = "academic_year", length = 10)
     private String academicYear;
+
+    @Column(name = "school_id")
+    private Long schoolId;
 
     @Column(name = "tuition_fee", precision = 10, scale = 2)
     @Builder.Default

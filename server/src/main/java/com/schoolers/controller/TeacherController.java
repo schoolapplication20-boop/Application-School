@@ -132,7 +132,9 @@ public class TeacherController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         if (startDate != null && endDate != null) {
-            return ResponseEntity.ok(teacherService.getAttendanceSummaryRange(classId, startDate, endDate));
+            Long resolved = resolveTeacherId(null);
+            ApiResponse<Map<String, Object>> rangeResponse = teacherService.getAttendanceSummaryRange(resolved, classId, startDate, endDate);
+            return rangeResponse.isSuccess() ? ResponseEntity.ok(rangeResponse) : ResponseEntity.badRequest().body(rangeResponse);
         }
         if (date == null) date = LocalDate.now();
         Long resolved = resolveTeacherId(null);

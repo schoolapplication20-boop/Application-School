@@ -54,6 +54,10 @@ public class SalaryPayment {
     @Column(length = 10)
     private String year;
 
+    /** Multi-tenancy: which school this payment belongs to. */
+    @Column(name = "school_id")
+    private Long schoolId;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

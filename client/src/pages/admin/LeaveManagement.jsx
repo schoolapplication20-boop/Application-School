@@ -18,6 +18,7 @@ const fmt = (d) => {
 
 export default function LeaveManagement() {
   const { user } = useAuth();
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
 
   const [tab, setTab]                         = useState('teacher');
   const [teacherLeaves, setTeacherLeaves]     = useState([]);
@@ -27,7 +28,6 @@ export default function LeaveManagement() {
   const [toast, setToast]                     = useState(null);
   const [filterStatus, setFilterStatus]       = useState('');
   const [selectedTeacherLeave, setSelectedTeacherLeave] = useState(null);
-  const [selectedStudentLeave, setSelectedStudentLeave] = useState(null);
   const [comment, setComment]                 = useState('');
   const [actioning, setActioning]             = useState(false);
 
@@ -58,8 +58,8 @@ export default function LeaveManagement() {
 
   useEffect(() => {
     loadTeacherLeaves();
-    loadStudentLeaves();
-  }, []);
+    if (!isSuperAdmin) loadStudentLeaves();
+  }, [isSuperAdmin]);
 
   // ── Derived lists ─────────────────────────────────────────────────────────
   const filteredTeacher = filterStatus
@@ -94,38 +94,10 @@ export default function LeaveManagement() {
     }
   };
 
-  const handleStudentAction = async (leaveId, action) => {
-    if (actioning) return;
-    setActioning(true);
-    try {
-      await leaveAPI.updateStatus(leaveId, {
-        status:      action.toUpperCase(),
-        adminComment: comment.trim() || null,
-        reviewedBy:  user?.name || 'Admin',
-      });
-      await loadStudentLeaves();
-      setSelectedStudentLeave(null);
-      setComment('');
-      showToast(`Student leave ${action.toLowerCase()}`);
-    } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to update leave status', 'error');
-    } finally {
-      setActioning(false);
-    }
-  };
-
   const handleDeleteTeacher = async (id) => {
     try {
       await leaveAPI.deleteLeave(id);
       setTeacherLeaves(prev => prev.filter(l => l.id !== id));
-      showToast('Leave request deleted', 'warning');
-    } catch { showToast('Failed to delete', 'error'); }
-  };
-
-  const handleDeleteStudent = async (id) => {
-    try {
-      await leaveAPI.deleteLeave(id);
-      setStudentLeaves(prev => prev.filter(l => l.id !== id));
       showToast('Leave request deleted', 'warning');
     } catch { showToast('Failed to delete', 'error'); }
   };
@@ -152,12 +124,14 @@ export default function LeaveManagement() {
       </div>
 
       {/* Summary stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '16px', marginBottom: '24px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${isSuperAdmin ? 2 : 4},1fr)`, gap: '16px', marginBottom: '24px' }}>
         {[
           { label: 'Teacher Leaves',  value: teacherLeaves.length,  color: '#805ad5', icon: 'person' },
           { label: 'Teacher Pending', value: teacherPending,         color: '#ed8936', icon: 'pending_actions' },
-          { label: 'Student Leaves',  value: studentLeaves.length,  color: '#76C442', icon: 'school' },
-          { label: 'Student Pending', value: studentPending,         color: '#3182ce', icon: 'pending_actions' },
+          ...(!isSuperAdmin ? [
+            { label: 'Student Leaves',  value: studentLeaves.length,  color: '#76C442', icon: 'school' },
+            { label: 'Student Pending', value: studentPending,         color: '#3182ce', icon: 'pending_actions' },
+          ] : []),
         ].map(c => (
           <div key={c.label} className="stat-card">
             <div className="stat-icon" style={{ backgroundColor: c.color + '15' }}>
@@ -173,7 +147,7 @@ export default function LeaveManagement() {
       <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
         {[
           { key: 'teacher', label: 'Teacher Leave Requests', icon: 'person',  badge: teacherPending },
-          { key: 'student', label: 'Student Leave Requests', icon: 'school',  badge: studentPending },
+          ...(!isSuperAdmin ? [{ key: 'student', label: 'Student Leave Requests', icon: 'school', badge: studentPending }] : []),
         ].map(t => (
           <button key={t.key} onClick={() => { setTab(t.key); setFilterStatus(''); }}
             style={{
@@ -276,7 +250,7 @@ export default function LeaveManagement() {
               <thead>
                 <tr>
                   <th>Student</th><th>Leave Type</th><th>Duration</th>
-                  <th>Reason</th><th>Submitted</th><th>Admin Remark</th><th>Status</th><th>Actions</th>
+                  <th>Reason</th><th>Submitted</th><th>Teacher Remark</th><th>Status</th><th>Handled By</th>
                 </tr>
               </thead>
               <tbody>
@@ -304,16 +278,9 @@ export default function LeaveManagement() {
                     <td>{getStatusBadge(l.status)}</td>
                     <td>
                       <div className="action-btns">
-                        {(l.status || '').toUpperCase() === 'PENDING' && (
-                          <button className="action-btn" style={{ background: '#f0fff4', color: '#76C442' }}
-                            title="Review" onClick={() => { setSelectedStudentLeave(l); setComment(''); }}>
-                            <span className="material-icons">how_to_reg</span>
-                          </button>
-                        )}
-                        <button className="action-btn action-btn-delete" title="Delete"
-                          onClick={() => handleDeleteStudent(l.id)}>
-                          <span className="material-icons">delete</span>
-                        </button>
+                        <span style={{ fontSize: '11px', color: '#a0aec0', fontStyle: 'italic' }}>
+                          Handled by teacher
+                        </span>
                       </div>
                     </td>
                   </tr>
@@ -376,57 +343,6 @@ export default function LeaveManagement() {
         </div>
       )}
 
-      {/* ── Review Student Leave Modal ──────────────────────────────────────── */}
-      {selectedStudentLeave && (
-        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">Review Student Leave</h5>
-                <button className="btn-close" onClick={() => setSelectedStudentLeave(null)} />
-              </div>
-              <div className="modal-body">
-                <div style={{ background: '#f7fafc', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '13px' }}>
-                    {[
-                      ['Student',    selectedStudentLeave.requesterName],
-                      ['Class',      selectedStudentLeave.classSection || '—'],
-                      ['Leave Type', selectedStudentLeave.leaveType || '—'],
-                      ['From',       selectedStudentLeave.fromDate],
-                      ['To',         selectedStudentLeave.toDate],
-                      ['Submitted',  fmt(selectedStudentLeave.createdAt)],
-                    ].map(([k, v]) => (
-                      <div key={k}><span style={{ color: '#a0aec0' }}>{k}: </span><strong>{v}</strong></div>
-                    ))}
-                  </div>
-                  <div style={{ marginTop: '8px', fontSize: '13px' }}>
-                    <span style={{ color: '#a0aec0' }}>Reason: </span>{selectedStudentLeave.reason}
-                  </div>
-                </div>
-                <label className="form-label small fw-medium">Comment (optional)</label>
-                <textarea className="form-control form-control-sm" rows={2} value={comment}
-                  onChange={e => setComment(e.target.value)} placeholder="Add a comment…" />
-              </div>
-              <div className="modal-footer">
-                <button className="btn btn-secondary"
-                  onClick={() => setSelectedStudentLeave(null)} disabled={actioning}>
-                  Cancel
-                </button>
-                <button className="btn btn-danger" disabled={actioning}
-                  onClick={() => handleStudentAction(selectedStudentLeave.id, 'Rejected')}>
-                  <span className="material-icons" style={{ fontSize: 16, verticalAlign: 'middle', marginRight: 4 }}>cancel</span>
-                  {actioning ? 'Saving…' : 'Reject'}
-                </button>
-                <button className="btn btn-success" disabled={actioning}
-                  onClick={() => handleStudentAction(selectedStudentLeave.id, 'Approved')}>
-                  <span className="material-icons" style={{ fontSize: 16, verticalAlign: 'middle', marginRight: 4 }}>check_circle</span>
-                  {actioning ? 'Saving…' : 'Approve'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </Layout>
   );
 }

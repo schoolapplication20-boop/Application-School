@@ -17,16 +17,31 @@ public class ClassDiaryService {
     @Autowired
     private ClassDiaryRepository diaryRepository;
 
-    public ApiResponse<List<ClassDiary>> getAll(String className, Long teacherId, String date) {
+    public ApiResponse<List<ClassDiary>> getAll(String className, Long teacherId, String date, Long schoolId) {
         LocalDate parsedDate = parseDate(date);
+        List<ClassDiary> entries;
         if (className == null && teacherId == null && parsedDate == null) {
-            return ApiResponse.success(diaryRepository.findAllByOrderByCreatedAtDesc());
+            entries = diaryRepository.findAllByOrderByCreatedAtDesc();
+        } else {
+            entries = diaryRepository.findWithFilters(className, teacherId, parsedDate);
         }
-        return ApiResponse.success(diaryRepository.findWithFilters(className, teacherId, parsedDate));
+        // Apply school-level filter in-memory (ClassDiary has schoolId but no school-scoped repo query)
+        if (schoolId != null) {
+            entries = entries.stream()
+                    .filter(e -> e.getSchoolId() == null || schoolId.equals(e.getSchoolId()))
+                    .toList();
+        }
+        return ApiResponse.success(entries);
     }
 
-    public ApiResponse<List<ClassDiary>> getByClass(String className) {
-        return ApiResponse.success(diaryRepository.findByClassNameOrderByDiaryDateDesc(className));
+    public ApiResponse<List<ClassDiary>> getByClass(String className, Long schoolId) {
+        List<ClassDiary> entries = diaryRepository.findByClassNameOrderByDiaryDateDesc(className);
+        if (schoolId != null) {
+            entries = entries.stream()
+                    .filter(e -> e.getSchoolId() == null || schoolId.equals(e.getSchoolId()))
+                    .toList();
+        }
+        return ApiResponse.success(entries);
     }
 
     /** Teacher: fetch only their own diary entries */
@@ -35,12 +50,17 @@ public class ClassDiaryService {
     }
 
     /** Student: fetch all diary entries for their class + section */
-    public ApiResponse<List<ClassDiary>> getForStudent(String className, String section) {
+    public ApiResponse<List<ClassDiary>> getForStudent(String className, String section, Long schoolId) {
         List<ClassDiary> entries;
         if (section != null && !section.isBlank()) {
             entries = diaryRepository.findByClassNameAndSectionOrderByDiaryDateDesc(className, section);
         } else {
             entries = diaryRepository.findByClassNameOrderByDiaryDateDesc(className);
+        }
+        if (schoolId != null) {
+            entries = entries.stream()
+                    .filter(e -> e.getSchoolId() == null || schoolId.equals(e.getSchoolId()))
+                    .toList();
         }
         return ApiResponse.success(entries);
     }
@@ -113,9 +133,12 @@ public class ClassDiaryService {
                 .orElse(ApiResponse.error("Diary entry not found"));
     }
 
-    public ApiResponse<ClassDiary> updateReview(Long id, Map<String, Object> body) {
+    public ApiResponse<ClassDiary> updateReview(Long id, Map<String, Object> body, Long schoolId) {
         return diaryRepository.findById(id)
                 .map(diary -> {
+                    if (schoolId != null && diary.getSchoolId() != null
+                            && !schoolId.equals(diary.getSchoolId()))
+                        return ApiResponse.<ClassDiary>error("Access denied: diary entry belongs to another school");
                     String status = str(body, "reviewStatus", null);
                     if (status != null) {
                         try {
@@ -130,8 +153,11 @@ public class ClassDiaryService {
                 .orElse(ApiResponse.error("Diary entry not found"));
     }
 
-    public ApiResponse<String> delete(Long id) {
-        if (!diaryRepository.existsById(id)) return ApiResponse.error("Diary entry not found");
+    public ApiResponse<String> delete(Long id, Long schoolId) {
+        ClassDiary diary = diaryRepository.findById(id).orElse(null);
+        if (diary == null) return ApiResponse.error("Diary entry not found");
+        if (schoolId != null && diary.getSchoolId() != null && !schoolId.equals(diary.getSchoolId()))
+            return ApiResponse.error("Access denied: diary entry belongs to another school");
         diaryRepository.deleteById(id);
         return ApiResponse.success("Diary entry deleted", "Deleted");
     }

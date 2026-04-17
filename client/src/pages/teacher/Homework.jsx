@@ -32,15 +32,31 @@ export default function Homework() {
   // myClasses = full list of ClassRoom objects assigned to this teacher
   // (combines class-teacher primary class + subject-teacher assignments)
   const [myClasses, setMyClasses] = useState([]);
+  const [teacherProfile, setTeacherProfile] = useState(null);
   const [classesLoading, setClassesLoading] = useState(true);
 
   useEffect(() => {
     setClassesLoading(true);
-    teacherAPI.getMyClasses()                     // JWT resolves the teacher; no id needed
-      .then(res => setMyClasses(res.data?.data ?? []))
+    Promise.all([
+      teacherAPI.getMyClasses(),
+      teacherAPI.getMyProfile().catch(() => ({ data: { data: null } })),
+    ])
+      .then(([classesRes, profileRes]) => {
+        setMyClasses(classesRes.data?.data ?? []);
+        setTeacherProfile(profileRes.data?.data ?? null);
+      })
       .catch(() => setMyClasses([]))
       .finally(() => setClassesLoading(false));
   }, []);
+
+  // Determine if a classroom is where this teacher is the Class Teacher
+  // (their primary class) or a Subject Teacher assignment (all others).
+  const getClassRole = (cls) => {
+    if (!teacherProfile) return null;
+    const isPrimary = teacherProfile.primaryClassId != null
+      && cls.id === teacherProfile.primaryClassId;
+    return isPrimary ? 'CLASS_TEACHER' : 'SUBJECT_TEACHER';
+  };
 
   // ── New entry form ────────────────────────────────────────────────────────
   const [form, setForm]         = useState(emptyForm);
@@ -48,60 +64,43 @@ export default function Homework() {
   const [submitting, setSubmitting]     = useState(false);
   const fileInputRef = useRef(null);
 
-  // Derived: unique class names for the first dropdown (depends on myClasses only)
-  const uniqueClassNames = [...new Set(myClasses.map(c => c.name))].sort();
+  // Build a flat list of options for the single combined class dropdown.
+  // Each entry = one classroom with its role label.
+  const classOptions = myClasses.map(cls => {
+    const role = getClassRole(cls);
+    const classLabel = `${cls.name}${cls.section ? ` – ${cls.section}` : ''}`;
+    const roleLabel  = role === 'CLASS_TEACHER'
+      ? 'Class Teacher'
+      : `${teacherProfile?.subject ? teacherProfile.subject + ' ' : ''}Subject Teacher`;
+    return { cls, classLabel, roleLabel };
+  });
 
-  // Sections available for the currently-selected class name (depends on form.className)
-  const availableSections = myClasses
-    .filter(c => c.name === form.className)
-    .map(c => c.section)
-    .filter(Boolean);
+  // Derived: the currently selected classroom object and its role
+  const selectedClass = form.classId
+    ? myClasses.find(c => c.id === Number(form.classId))
+    : null;
+  const selectedRole = selectedClass ? getClassRole(selectedClass) : null;
+  const isSubjectTeacher = selectedRole === 'SUBJECT_TEACHER';
 
-  // Step 1: teacher picks a class name → reset section, auto-select if only one section
-  const handleClassNameChange = (e) => {
-    const name = e.target.value;
-    const sections = myClasses
-      .filter(c => c.name === name)
-      .map(c => c.section)
-      .filter(Boolean);
-
-    // Auto-select the section if there's only one option
-    if (sections.length === 1) {
-      const cls = myClasses.find(c => c.name === name && c.section === sections[0]);
-      setForm(prev => ({
-        ...prev,
-        className: name,
-        section:   sections[0],
-        classId:   cls ? cls.id : '',
-      }));
-    } else if (sections.length === 0) {
-      // Class without sections — find by name only
-      const cls = myClasses.find(c => c.name === name);
-      setForm(prev => ({
-        ...prev,
-        className: name,
-        section:   '',
-        classId:   cls ? cls.id : '',
-      }));
-    } else {
-      // Multiple sections — let teacher pick
-      setForm(prev => ({
-        ...prev,
-        className: name,
-        section:   '',
-        classId:   '',
-      }));
+  // Single handler: teacher picks one combined "Class – Section (Role)" option
+  const handleClassSelect = (e) => {
+    const classId = e.target.value;
+    if (!classId) {
+      setForm(prev => ({ ...prev, className: '', section: '', classId: '', subject: '' }));
+      return;
     }
-  };
-
-  // Step 2: teacher picks a section → lock in the classroom ID
-  const handleSectionChange = (e) => {
-    const section = e.target.value;
-    const cls = myClasses.find(c => c.name === form.className && c.section === section);
+    const cls = myClasses.find(c => c.id === Number(classId));
+    if (!cls) return;
+    const role = getClassRole(cls);
+    const autoSubject = role === 'SUBJECT_TEACHER' && teacherProfile?.subject
+      ? teacherProfile.subject
+      : '';
     setForm(prev => ({
       ...prev,
-      section,
-      classId: cls ? cls.id : '',
+      className: cls.name,
+      section:   cls.section || '',
+      classId:   cls.id,
+      subject:   autoSubject || (role === 'CLASS_TEACHER' ? prev.subject : ''),
     }));
   };
 
@@ -129,7 +128,7 @@ export default function Homework() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.className)       { showToast('Please select a class', 'error'); return; }
+    if (!form.classId)         { showToast('Please select a class', 'error'); return; }
     if (!form.topic.trim())    { showToast('Topic is required', 'error'); return; }
     if (!form.homework.trim()) { showToast('Homework is required', 'error'); return; }
 
@@ -258,71 +257,90 @@ export default function Homework() {
           <div className="data-table-card" style={{ padding: '28px' }}>
             <form onSubmit={handleSubmit}>
 
-              {/* Class + Section selectors */}
+              {/* Class selector — single combined dropdown */}
               {classesLoading ? (
                 <div style={{ padding: '10px 0 16px', fontSize: 13, color: '#a0aec0' }}>
                   <span className="material-icons" style={{ fontSize: 16, verticalAlign: 'middle', marginRight: 4 }}>hourglass_empty</span>
                   Loading your assigned classes…
                 </div>
               ) : myClasses.length === 0 ? (
-                <div style={{ padding: '10px 0 16px', fontSize: 13, color: '#e53e3e' }}>
-                  <span className="material-icons" style={{ fontSize: 16, verticalAlign: 'middle', marginRight: 4 }}>warning</span>
-                  No classes assigned yet. Please contact your admin.
+                <div style={{
+                  padding: '16px', marginBottom: 16, borderRadius: 10,
+                  background: '#fff5f5', border: '1px solid #fed7d7',
+                  display: 'flex', alignItems: 'center', gap: 8,
+                }}>
+                  <span className="material-icons" style={{ fontSize: 20, color: '#e53e3e' }}>assignment_late</span>
+                  <span style={{ fontSize: 13, color: '#c53030', fontWeight: 600 }}>
+                    No classes assigned to you. Please contact your admin.
+                  </span>
                 </div>
               ) : (
-                <div className="row g-3 mb-3">
-                  {/* Step 1 — Class name */}
-                  <div className="col-6">
-                    <label className="form-label small fw-medium">Class *</label>
-                    <select className="form-select form-select-sm"
-                      value={form.className}
-                      onChange={handleClassNameChange}
-                      required>
-                      <option value="" disabled>Select class</option>
-                      {uniqueClassNames.map(name => (
-                        <option key={name} value={name}>{name}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Step 2 — Section (shown only when class is chosen and has sections) */}
-                  <div className="col-6">
-                    <label className="form-label small fw-medium">Section *</label>
-                    {availableSections.length > 1 ? (
-                      <select className="form-select form-select-sm"
-                        value={form.section}
-                        onChange={handleSectionChange}
-                        required
-                        disabled={!form.className}>
-                        <option value="" disabled>Select section</option>
-                        {availableSections.map(sec => (
-                          <option key={sec} value={sec}>{sec}</option>
-                        ))}
-                      </select>
-                    ) : (
-                      <input className="form-control form-control-sm"
-                        value={form.section || (form.className ? '—' : '')}
-                        readOnly
-                        style={{ background: '#f7fafc', color: '#718096' }}
-                        placeholder="Auto-filled" />
-                    )}
-                    {form.className && availableSections.length === 1 && (
-                      <p style={{ margin: '3px 0 0', fontSize: 11, color: '#76C442' }}>
-                        Auto-selected: {availableSections[0]}
-                      </p>
-                    )}
-                  </div>
+                <div className="mb-3">
+                  <label className="form-label small fw-medium">Class &amp; Section *</label>
+                  <select
+                    className="form-select form-select-sm"
+                    value={form.classId}
+                    onChange={handleClassSelect}
+                    required
+                  >
+                    <option value="">— Select class —</option>
+                    {classOptions.map(({ cls, classLabel, roleLabel }) => (
+                      <option key={cls.id} value={cls.id}>
+                        {classLabel} ({roleLabel})
+                      </option>
+                    ))}
+                  </select>
+                  {/* Role badge below the dropdown */}
+                  {selectedRole && (
+                    <div style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 5,
+                      marginTop: 5, padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
+                      background: selectedRole === 'CLASS_TEACHER' ? '#ebf8ff' : '#faf5ff',
+                      color:      selectedRole === 'CLASS_TEACHER' ? '#2b6cb0' : '#6b46c1',
+                      border: `1px solid ${selectedRole === 'CLASS_TEACHER' ? '#bee3f8' : '#e9d8fd'}`,
+                    }}>
+                      <span className="material-icons" style={{ fontSize: 12 }}>
+                        {selectedRole === 'CLASS_TEACHER' ? 'school' : 'menu_book'}
+                      </span>
+                      {selectedRole === 'CLASS_TEACHER'
+                        ? 'Class Teacher — can assign any subject'
+                        : `Subject Teacher — restricted to ${teacherProfile?.subject || 'assigned subject'}`}
+                    </div>
+                  )}
                 </div>
               )}
 
               <div className="row g-3 mb-3">
                 <div className="col-6">
                   <label className="form-label small fw-medium">Subject</label>
-                  <select className="form-select form-select-sm" value={form.subject}
-                    onChange={e => setForm(prev => ({ ...prev, subject: e.target.value }))}>
-                    <option value="">Select Subject</option>
-                    {SUBJECTS.map(s => <option key={s}>{s}</option>)}
-                  </select>
+                  {isSubjectTeacher ? (
+                    /* Subject Teachers: subject is locked to their assigned subject */
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        className="form-control form-control-sm"
+                        value={form.subject || teacherProfile?.subject || ''}
+                        readOnly
+                        style={{ background: '#faf5ff', color: '#6b46c1', fontWeight: 600, paddingRight: 28 }}
+                      />
+                      <span className="material-icons" style={{
+                        position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+                        fontSize: 14, color: '#6b46c1', pointerEvents: 'none',
+                      }}>lock</span>
+                    </div>
+                  ) : (
+                    /* Class Teachers: free subject selection */
+                    <select className="form-select form-select-sm" value={form.subject}
+                      onChange={e => setForm(prev => ({ ...prev, subject: e.target.value }))}>
+                      <option value="">Select Subject</option>
+                      {SUBJECTS.map(s => <option key={s}>{s}</option>)}
+                    </select>
+                  )}
+                  {isSubjectTeacher && (
+                    <p style={{ margin: '3px 0 0', fontSize: 11, color: '#805ad5' }}>
+                      <span className="material-icons" style={{ fontSize: 11, verticalAlign: 'middle', marginRight: 2 }}>auto_fix_high</span>
+                      Locked to your assigned subject
+                    </p>
+                  )}
                 </div>
                 <div className="col-6">
                   <label className="form-label small fw-medium">Date</label>

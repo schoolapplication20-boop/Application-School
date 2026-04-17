@@ -4,6 +4,7 @@ import com.schoolers.dto.ApiResponse;
 import com.schoolers.model.*;
 import com.schoolers.repository.StudentRepository;
 import com.schoolers.repository.UserRepository;
+import com.schoolers.service.AdminService;
 import com.schoolers.service.ClassDiaryService;
 import com.schoolers.service.ParentService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +27,9 @@ public class StudentController {
 
     @Autowired
     private ParentService parentService;
+
+    @Autowired
+    private AdminService adminService;
 
     @Autowired
     private ClassDiaryService classDiaryService;
@@ -76,12 +80,17 @@ public class StudentController {
         return ResponseEntity.ok(parentService.getChildMarks(studentId));
     }
 
+    /**
+     * Returns comprehensive fee data for the logged-in student:
+     *   { assignment, installments, payments, summary }
+     * Falls back to legacy Fee list when no StudentFeeAssignment exists.
+     */
     @GetMapping("/fees")
-    public ResponseEntity<ApiResponse<List<Fee>>> getMyFees() {
+    public ResponseEntity<?> getMyFees() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         Long studentId = resolveStudentId(auth);
         if (studentId == null) return ResponseEntity.status(403).body(ApiResponse.error("Student profile not found."));
-        return ResponseEntity.ok(parentService.getChildFees(studentId));
+        return ResponseEntity.ok(adminService.getStudentFeeData(studentId));
     }
 
     @GetMapping("/diary")
@@ -94,6 +103,6 @@ public class StudentController {
         Optional<Student> studentOpt = studentRepository.findByStudentUserId(userId);
         if (studentOpt.isEmpty()) return ResponseEntity.status(404).body(ApiResponse.error("Student profile not found."));
         Student student = studentOpt.get();
-        return ResponseEntity.ok(classDiaryService.getForStudent(student.getClassName(), student.getSection()));
+        return ResponseEntity.ok(classDiaryService.getForStudent(student.getClassName(), student.getSection(), student.getSchoolId()));
     }
 }

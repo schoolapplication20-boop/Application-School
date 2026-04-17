@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import Layout from '../../components/Layout';
 import Toast from '../../components/Toast';
 import { teacherAPI } from '../../services/api';
@@ -7,15 +7,16 @@ import { exportCSV } from '../../services/attendanceStore';
 const TODAY = new Date().toISOString().split('T')[0];
 
 const STATUS_CONFIG = {
-  PRESENT: { label: 'Present', short: 'P', bg: '#76C442', light: '#f0fff4', text: '#276749', icon: 'check_circle'      },
-  ABSENT:  { label: 'Absent',  short: 'A', bg: '#e53e3e', light: '#fff5f5', text: '#c53030', icon: 'cancel'            },
-  LEAVE:   { label: 'Leave',   short: 'L', bg: '#ed8936', light: '#fffaf0', text: '#c05621', icon: 'event_busy'        },
-  OTHERS:  { label: 'Others',  short: 'O', bg: '#805ad5', light: '#faf5ff', text: '#553c9a', icon: 'more_horiz'        },
+  PRESENT: { label: 'Present', short: 'P', bg: '#76C442', light: '#f0fff4', text: '#276749', icon: 'check_circle' },
+  ABSENT:  { label: 'Absent',  short: 'A', bg: '#e53e3e', light: '#fff5f5', text: '#c53030', icon: 'cancel'       },
+  LEAVE:   { label: 'Leave',   short: 'L', bg: '#ed8936', light: '#fffaf0', text: '#c05621', icon: 'event_busy'   },
+  OTHERS:  { label: 'Others',  short: 'O', bg: '#805ad5', light: '#faf5ff', text: '#553c9a', icon: 'more_horiz'   },
 };
 
 const getInitials = (name) => (name || 'U').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 const fmtDate    = (d) => { if (!d) return '—'; return new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }); };
 const pctColor   = (p) => p >= 90 ? '#276749' : p >= 75 ? '#c05621' : '#c53030';
+const classLabel = (cls) => cls ? `${cls.name}${cls.section ? '-' + cls.section : ''}` : '';
 
 export default function Attendance() {
   const [activeTab, setActiveTab]           = useState('mark');
@@ -27,11 +28,13 @@ export default function Attendance() {
   const [alreadyMarked, setAlreadyMarked]   = useState(false);
   const [saving, setSaving]                 = useState(false);
   const [loadingStudents, setLoadingStudents] = useState(false);
+  const [loadingClasses, setLoadingClasses] = useState(true);
+  const [primaryClass, setPrimaryClass]     = useState(null);   // teacher's designated class
+  const [noClassAssigned, setNoClassAssigned] = useState(false);
   const [toast, setToast]                   = useState(null);
 
   // History state
   const [historyDates, setHistoryDates]     = useState([]);
-  const [historyRecords, setHistoryRecords] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [expandedDate, setExpandedDate]     = useState(null);
   const [expandedStudents, setExpandedStudents] = useState([]);
@@ -41,15 +44,30 @@ export default function Attendance() {
     setTimeout(() => setToast(null), 3500);
   };
 
-  // ── Load teacher's classes on mount ───────────────────────────────────────
+  // ── Load teacher profile + assigned classes on mount ──────────────────────
   useEffect(() => {
-    teacherAPI.getMyClasses()
-      .then(res => {
-        const list = res.data?.data ?? [];
-        setClasses(list);
-        if (list.length) setSelectedClass(list[0]);
-      })
-      .catch(() => {});
+    setLoadingClasses(true);
+    Promise.all([
+      teacherAPI.getMyProfile().catch(() => null),
+      teacherAPI.getMyClasses().catch(() => null),
+    ]).then(([profileRes, classesRes]) => {
+      const profile = profileRes?.data?.data ?? null;
+      const list    = classesRes?.data?.data  ?? [];
+
+      setClasses(list);
+
+      if (!list.length) {
+        setNoClassAssigned(true);
+        return;
+      }
+
+      // Resolve primary class: prefer teacher.primaryClassId, else first in list
+      const primaryId = profile?.primaryClassId ?? profile?.primaryClass?.id ?? null;
+      const primary   = primaryId ? (list.find(c => c.id === primaryId) ?? list[0]) : list[0];
+
+      setPrimaryClass(primary);
+      setSelectedClass(primary);
+    }).finally(() => setLoadingClasses(false));
   }, []);
 
   // ── When class or date changes → load students + existing attendance ──────
@@ -65,18 +83,15 @@ export default function Attendance() {
       teacherAPI.getAttendance(selectedClass.id, selectedDate),
     ])
       .then(([studRes, attRes]) => {
-        const roster = studRes.data?.data ?? [];
-        const attList = attRes.data?.data ?? [];
+        const roster  = studRes.data?.data ?? [];
+        const attList = attRes.data?.data  ?? [];
 
         setStudents(roster);
 
-        // Build attendanceMap from existing records
         const map = {};
         roster.forEach(s => { map[s.id] = { status: 'PRESENT', note: '' }; });
         if (attList.length) {
-          attList.forEach(a => {
-            map[a.studentId] = { status: a.status, note: '' };
-          });
+          attList.forEach(a => { map[a.studentId] = { status: a.status, note: '' }; });
           setAlreadyMarked(true);
         }
         setAttendanceMap(map);
@@ -107,22 +122,21 @@ export default function Attendance() {
   const countByStatus = (st) =>
     students.filter(s => (attendanceMap[s.id]?.status || 'PRESENT') === st).length;
 
-  // ── Save attendance to backend ─────────────────────────────────────────────
+  // ── Save attendance ───────────────────────────────────────────────────────
   const handleSave = async () => {
     if (!selectedClass || !students.length) return;
     setSaving(true);
     const payload = students.map(s => ({
       studentId: s.id,
       classId:   selectedClass.id,
-      className: `${selectedClass.name}-${selectedClass.section}`,
+      className: classLabel(selectedClass),
       date:      selectedDate,
       status:    attendanceMap[s.id]?.status || 'PRESENT',
     }));
-
     try {
       await teacherAPI.markAttendance(payload);
       setAlreadyMarked(true);
-      showToast(`Attendance ${alreadyMarked ? 'updated' : 'saved'} for ${selectedClass.name}-${selectedClass.section} — ${fmtDate(selectedDate)}`);
+      showToast(`Attendance ${alreadyMarked ? 'updated' : 'saved'} for ${classLabel(selectedClass)} — ${fmtDate(selectedDate)}`);
     } catch {
       showToast('Failed to save attendance. Please try again.', 'error');
     } finally {
@@ -147,33 +161,72 @@ export default function Attendance() {
     const rows = [];
     for (const date of historyDates) {
       try {
-        const res = await teacherAPI.getAttendance(selectedClass.id, date);
+        const res  = await teacherAPI.getAttendance(selectedClass.id, date);
         const list = res.data?.data ?? [];
         const p = list.filter(a => a.status === 'PRESENT').length;
         const a = list.filter(a => a.status === 'ABSENT').length;
         const l = list.filter(a => a.status === 'LEAVE').length;
         const o = list.filter(a => a.status === 'OTHERS').length;
         const t = list.length;
-        rows.push({ Date: fmtDate(date), Class: `${selectedClass.name}-${selectedClass.section}`, Present: p, Absent: a, Leave: l, Others: o, Total: t, 'Attendance%': t ? `${Math.round((p/t)*100)}%` : '0%' });
+        rows.push({ Date: fmtDate(date), Class: classLabel(selectedClass), Present: p, Absent: a, Leave: l, Others: o, Total: t, 'Attendance%': t ? `${Math.round((p / t) * 100)}%` : '0%' });
       } catch { /* skip */ }
     }
     exportCSV(rows, `attendance_${selectedClass.name}_${TODAY}.csv`);
   };
-
-  const classLabel = (cls) => cls ? `${cls.name}${cls.section ? '-' + cls.section : ''}` : '';
 
   const TABS = [
     { key: 'mark',    label: 'Mark Attendance', icon: 'edit_note' },
     { key: 'history', label: 'History',          icon: 'history'   },
   ];
 
+  // ── No class assigned — show informative state ────────────────────────────
+  if (!loadingClasses && noClassAssigned) {
+    return (
+      <Layout pageTitle="Attendance">
+        <div className="page-header">
+          <h1>Attendance Management</h1>
+          <p>Mark and track student attendance for your assigned classes</p>
+        </div>
+        <div className="data-table-card" style={{ padding: '60px 24px', textAlign: 'center' }}>
+          <span className="material-icons" style={{ fontSize: 52, color: '#e2e8f0', display: 'block', marginBottom: 12 }}>class</span>
+          <h3 style={{ color: '#4a5568', marginBottom: 8 }}>No Class Assigned</h3>
+          <p style={{ color: '#718096', fontSize: 14, maxWidth: 400, margin: '0 auto' }}>
+            You have not been assigned as a class teacher yet. Please contact the administrator to assign you to a class and section.
+          </p>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout pageTitle="Attendance">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-      <div className="page-header">
-        <h1>Attendance Management</h1>
-        <p>Mark and track student attendance for your assigned classes</p>
+      {/* Page Header */}
+      <div className="page-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <h1>Attendance Management</h1>
+          <p>Mark and track student attendance for your assigned classes</p>
+        </div>
+        {/* Class Teacher Badge */}
+        {primaryClass && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            background: 'linear-gradient(135deg, #76C44215, #76C44230)',
+            border: '1.5px solid #76C44250', borderRadius: 12,
+            padding: '10px 18px',
+          }}>
+            <div style={{ width: 36, height: 36, borderRadius: 9, background: '#76C442', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <span className="material-icons" style={{ color: '#fff', fontSize: 18 }}>school</span>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Class Teacher</div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: '#276749' }}>
+                {classLabel(primaryClass)}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Tab Bar */}
@@ -208,7 +261,7 @@ export default function Attendance() {
                   }}>
                   {classes.length === 0 && <option value="">No classes assigned</option>}
                   {classes.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}{c.section ? ` – ${c.section}` : ''}</option>
+                    <option key={c.id} value={c.id}>{classLabel(c)}</option>
                   ))}
                 </select>
               </div>
@@ -261,7 +314,11 @@ export default function Attendance() {
               <div className="empty-state">
                 <span className="material-icons">people</span>
                 <h3>No students found{selectedClass ? ` for ${classLabel(selectedClass)}` : ''}</h3>
-                <p>Students assigned to this class will appear here</p>
+                <p>
+                  {selectedClass
+                    ? `No students are assigned to ${classLabel(selectedClass)} yet. Add students via Admin → Students.`
+                    : 'Students assigned to this class will appear here.'}
+                </p>
               </div>
             ) : (
               <>
@@ -362,7 +419,7 @@ export default function Attendance() {
                 value={selectedClass?.id || ''}
                 onChange={e => { const cls = classes.find(c => String(c.id) === e.target.value); setSelectedClass(cls || null); }}>
                 {classes.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}{c.section ? ` – ${c.section}` : ''}</option>
+                  <option key={c.id} value={c.id}>{classLabel(c)}</option>
                 ))}
               </select>
               <span style={{ fontSize: 13, color: '#a0aec0' }}>{historyDates.length} recorded days</span>
@@ -390,7 +447,7 @@ export default function Attendance() {
                   expanded={expandedDate === date}
                   expandedStudents={expandedStudents}
                   onToggle={() => handleExpandDate(date)}
-                  classLabel={classLabel(selectedClass)}
+                  clsLabel={classLabel(selectedClass)}
                   students={students}
                 />
               ))}
@@ -398,12 +455,14 @@ export default function Attendance() {
           )}
         </div>
       )}
+
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </Layout>
   );
 }
 
-// ── History Row (lazy-loads summary + details on expand) ──────────────────────
-function HistoryRow({ date, classId, expanded, expandedStudents, onToggle, classLabel, students = [] }) {
+// ── History Row ───────────────────────────────────────────────────────────────
+function HistoryRow({ date, classId, expanded, expandedStudents, onToggle, clsLabel, students = [] }) {
   const [summary, setSummary] = useState(null);
 
   useEffect(() => {
@@ -419,15 +478,12 @@ function HistoryRow({ date, classId, expanded, expandedStudents, onToggle, class
 
   return (
     <div style={{ borderBottom: '1px solid #f0f4f8' }}>
-      <div
-        onClick={onToggle}
-        style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 4px', cursor: 'pointer', userSelect: 'none' }}
-      >
+      <div onClick={onToggle} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 4px', cursor: 'pointer', userSelect: 'none' }}>
         <span className="material-icons" style={{ fontSize: 16, color: '#a0aec0', transition: 'transform 0.2s', transform: expanded ? 'rotate(90deg)' : 'none' }}>chevron_right</span>
 
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: '#2d3748', minWidth: 110 }}>{new Date(date + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
-          <span style={{ background: '#76C44215', color: '#276749', padding: '2px 10px', borderRadius: 12, fontWeight: 700, fontSize: 12 }}>{classLabel}</span>
+          <span style={{ background: '#76C44215', color: '#276749', padding: '2px 10px', borderRadius: 12, fontWeight: 700, fontSize: 12 }}>{clsLabel}</span>
 
           {summary ? (
             <>
@@ -459,26 +515,17 @@ function HistoryRow({ date, classId, expanded, expandedStudents, onToggle, class
           ) : (
             <table className="data-table" style={{ fontSize: 12 }}>
               <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Student Name</th>
-                  <th>Roll No</th>
-                  <th>Status</th>
-                </tr>
+                <tr><th>#</th><th>Student Name</th><th>Roll No</th><th>Status</th></tr>
               </thead>
               <tbody>
                 {expandedStudents.map((a, idx) => {
-                  const cfg = STATUS_CONFIG[a.status] || STATUS_CONFIG.PRESENT;
+                  const cfg     = STATUS_CONFIG[a.status] || STATUS_CONFIG.PRESENT;
                   const student = students.find(s => s.id === a.studentId);
                   return (
                     <tr key={a.id}>
                       <td style={{ color: '#a0aec0' }}>{idx + 1}</td>
-                      <td style={{ fontWeight: 600, color: '#2d3748' }}>
-                        {student?.name || `Student #${a.studentId}`}
-                      </td>
-                      <td style={{ fontFamily: 'monospace', color: '#718096' }}>
-                        {student?.rollNumber || '—'}
-                      </td>
+                      <td style={{ fontWeight: 600, color: '#2d3748' }}>{student?.name || `Student #${a.studentId}`}</td>
+                      <td style={{ fontFamily: 'monospace', color: '#718096' }}>{student?.rollNumber || '—'}</td>
                       <td>
                         <span style={{ background: cfg.light, color: cfg.bg, border: `1.5px solid ${cfg.bg}40`, borderRadius: 12, padding: '2px 10px', fontSize: 11, fontWeight: 700 }}>
                           {cfg.label}

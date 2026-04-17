@@ -65,8 +65,8 @@ public class AdminController {
     }
 
     @GetMapping("/students/{id}")
-    public ResponseEntity<ApiResponse<Student>> getStudentById(@PathVariable Long id) {
-        ApiResponse<Student> response = adminService.getStudentById(id);
+    public ResponseEntity<ApiResponse<Student>> getStudentById(@PathVariable Long id, Authentication auth) {
+        ApiResponse<Student> response = adminService.getStudentById(id, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
     }
 
@@ -79,32 +79,32 @@ public class AdminController {
     }
 
     @PutMapping("/students/{id}")
-    public ResponseEntity<ApiResponse<Student>> updateStudent(@PathVariable Long id, @RequestBody Map<String, Object> body) {
-        ApiResponse<Student> response = adminService.updateStudent(id, body);
+    public ResponseEntity<ApiResponse<Student>> updateStudent(@PathVariable Long id, @RequestBody Map<String, Object> body, Authentication auth) {
+        ApiResponse<Student> response = adminService.updateStudent(id, body, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
     @DeleteMapping("/students/{id}")
-    public ResponseEntity<ApiResponse<String>> deleteStudent(@PathVariable Long id) {
-        ApiResponse<String> response = adminService.deleteStudent(id);
+    public ResponseEntity<ApiResponse<String>> deleteStudent(@PathVariable Long id, Authentication auth) {
+        ApiResponse<String> response = adminService.deleteStudent(id, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
     }
 
     @GetMapping("/students/{id}/credentials")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> getStudentCredentials(@PathVariable Long id) {
-        ApiResponse<Map<String, Object>> response = adminService.getStudentCredentials(id);
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getStudentCredentials(@PathVariable Long id, Authentication auth) {
+        ApiResponse<Map<String, Object>> response = adminService.getStudentCredentials(id, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
     // ===== Teachers =====
     @GetMapping("/teachers")
-    public ResponseEntity<ApiResponse<List<Teacher>>> getTeachers(Authentication auth) {
+    public ResponseEntity<?> getTeachers(Authentication auth) {
         return ResponseEntity.ok(adminService.getTeachers(getCurrentSchoolId(auth)));
     }
 
     @GetMapping("/teachers/{id}")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> getTeacherById(@PathVariable Long id) {
-        ApiResponse<Map<String, Object>> response = adminService.getTeacherById(id);
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getTeacherById(@PathVariable Long id, Authentication auth) {
+        ApiResponse<Map<String, Object>> response = adminService.getTeacherById(id, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
     }
 
@@ -116,24 +116,25 @@ public class AdminController {
     }
 
     @PutMapping("/teachers/{id}")
-    public ResponseEntity<ApiResponse<Teacher>> updateTeacher(@PathVariable Long id, @RequestBody CreateTeacherRequest req) {
+    public ResponseEntity<ApiResponse<Teacher>> updateTeacher(@PathVariable Long id, @RequestBody CreateTeacherRequest req, Authentication auth) {
+        req.setSchoolId(getCurrentSchoolId(auth));
         ApiResponse<Teacher> response = adminService.updateTeacher(id, req);
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
     @PutMapping("/teachers/{id}/reset-password")
     public ResponseEntity<ApiResponse<String>> resetTeacherPassword(
-            @PathVariable Long id, @RequestBody Map<String, String> body) {
+            @PathVariable Long id, @RequestBody Map<String, String> body, Authentication auth) {
         String newPassword = body.get("password");
         if (newPassword == null || newPassword.isBlank())
             return ResponseEntity.badRequest().body(ApiResponse.error("New password is required"));
-        ApiResponse<String> response = adminService.resetTeacherPassword(id, newPassword);
+        ApiResponse<String> response = adminService.resetTeacherPassword(id, newPassword, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
     @DeleteMapping("/teachers/{id}")
-    public ResponseEntity<ApiResponse<String>> deleteTeacher(@PathVariable Long id) {
-        ApiResponse<String> response = adminService.deleteTeacher(id);
+    public ResponseEntity<ApiResponse<String>> deleteTeacher(@PathVariable Long id, Authentication auth) {
+        ApiResponse<String> response = adminService.deleteTeacher(id, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
     }
 
@@ -149,14 +150,14 @@ public class AdminController {
     }
 
     @PutMapping("/classes/{id}")
-    public ResponseEntity<?> updateClass(@PathVariable Long id, @RequestBody ClassRoom classRoom) {
-        ApiResponse<ClassRoom> response = adminService.updateClass(id, classRoom);
+    public ResponseEntity<?> updateClass(@PathVariable Long id, @RequestBody ClassRoom classRoom, Authentication auth) {
+        ApiResponse<ClassRoom> response = adminService.updateClass(id, classRoom, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
     @DeleteMapping("/classes/{id}")
-    public ResponseEntity<?> deleteClass(@PathVariable Long id) {
-        ApiResponse<String> response = adminService.deleteClass(id);
+    public ResponseEntity<?> deleteClass(@PathVariable Long id, Authentication auth) {
+        ApiResponse<String> response = adminService.deleteClass(id, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
     }
 
@@ -167,18 +168,18 @@ public class AdminController {
     }
 
     @GetMapping("/fees/student/{studentId}")
-    public ResponseEntity<ApiResponse<List<Fee>>> getFeesByStudent(@PathVariable Long studentId) {
-        return ResponseEntity.ok(adminService.getStudentFees(studentId));
+    public ResponseEntity<ApiResponse<List<Fee>>> getFeesByStudent(@PathVariable Long studentId, Authentication auth) {
+        return ResponseEntity.ok(adminService.getStudentFees(studentId, getCurrentSchoolId(auth)));
     }
 
     @GetMapping("/fees/student/{studentId}/payments")
-    public ResponseEntity<ApiResponse<List<FeePayment>>> getFeePaymentsByStudent(@PathVariable Long studentId) {
-        return ResponseEntity.ok(adminService.getStudentFeePayments(studentId));
+    public ResponseEntity<ApiResponse<List<FeePayment>>> getFeePaymentsByStudent(@PathVariable Long studentId, Authentication auth) {
+        return ResponseEntity.ok(adminService.getStudentFeePayments(studentId, getCurrentSchoolId(auth)));
     }
 
     @PostMapping("/fees/{id}/collect")
-    public ResponseEntity<?> collectCashFee(@PathVariable Long id, @RequestBody Map<String, Object> body) {
-        ApiResponse<Fee> response = adminService.collectCashFee(id, body);
+    public ResponseEntity<?> collectCashFee(@PathVariable Long id, @RequestBody Map<String, Object> body, Authentication auth) {
+        ApiResponse<Fee> response = adminService.collectCashFee(id, body, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
@@ -193,44 +194,45 @@ public class AdminController {
     }
 
     @PutMapping("/fees/{id}")
-    public ResponseEntity<?> updateFee(@PathVariable Long id, @RequestBody Map<String, Object> body) {
-        ApiResponse<Fee> response = adminService.updateFee(id, body);
+    public ResponseEntity<?> updateFee(@PathVariable Long id, @RequestBody Map<String, Object> body, Authentication auth) {
+        ApiResponse<Fee> response = adminService.updateFee(id, body, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
     @DeleteMapping("/fees/{id}")
-    public ResponseEntity<ApiResponse<String>> deleteFee(@PathVariable Long id) {
-        ApiResponse<String> response = adminService.deleteFee(id);
+    public ResponseEntity<ApiResponse<String>> deleteFee(@PathVariable Long id, Authentication auth) {
+        ApiResponse<String> response = adminService.deleteFee(id, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
     }
 
     // ===== Class Fee Structure =====
     @GetMapping("/class-fees")
-    public ResponseEntity<?> getClassFeeStructures() {
-        return ResponseEntity.ok(adminService.getClassFeeStructures());
+    public ResponseEntity<?> getClassFeeStructures(Authentication auth) {
+        return ResponseEntity.ok(adminService.getClassFeeStructures(getCurrentSchoolId(auth)));
     }
 
     @PostMapping("/class-fees")
-    public ResponseEntity<?> saveClassFeeStructure(@RequestBody Map<String, Object> body) {
+    public ResponseEntity<?> saveClassFeeStructure(@RequestBody Map<String, Object> body, Authentication auth) {
+        body.put("schoolId", getCurrentSchoolId(auth));
         var response = adminService.saveClassFeeStructure(body);
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
     @DeleteMapping("/class-fees/{id}")
-    public ResponseEntity<?> deleteClassFeeStructure(@PathVariable Long id) {
-        var response = adminService.deleteClassFeeStructure(id);
+    public ResponseEntity<?> deleteClassFeeStructure(@PathVariable Long id, Authentication auth) {
+        var response = adminService.deleteClassFeeStructure(id, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
     }
 
     // ===== Student Fee Assignments =====
     @GetMapping("/student-fee-assignments")
-    public ResponseEntity<?> getAllStudentFeeAssignments() {
-        return ResponseEntity.ok(adminService.getAllStudentFeeAssignments());
+    public ResponseEntity<?> getAllStudentFeeAssignments(Authentication auth) {
+        return ResponseEntity.ok(adminService.getAllStudentFeeAssignments(getCurrentSchoolId(auth)));
     }
 
     @GetMapping("/student-fee-assignments/student/{studentId}")
-    public ResponseEntity<?> getStudentFeeAssignment(@PathVariable Long studentId) {
-        var response = adminService.getStudentFeeAssignment(studentId);
+    public ResponseEntity<?> getStudentFeeAssignment(@PathVariable Long studentId, Authentication auth) {
+        var response = adminService.getStudentFeeAssignment(studentId, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.ok(response);
     }
 
@@ -240,8 +242,8 @@ public class AdminController {
     }
 
     @GetMapping("/fee-payments")
-    public ResponseEntity<?> getAllFeePayments() {
-        return ResponseEntity.ok(adminService.getAllFeePayments());
+    public ResponseEntity<?> getAllFeePayments(Authentication auth) {
+        return ResponseEntity.ok(adminService.getAllFeePayments(getCurrentSchoolId(auth)));
     }
 
     @PostMapping("/student-fee-assignments")
@@ -256,19 +258,40 @@ public class AdminController {
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
+    // ===== Fee Installments =====
+
+    @GetMapping("/student-fee-assignments/{assignmentId}/installments")
+    public ResponseEntity<?> getInstallments(@PathVariable Long assignmentId) {
+        return ResponseEntity.ok(adminService.getInstallments(assignmentId));
+    }
+
+    @PostMapping("/fee-installments/{installmentId}/pay")
+    public ResponseEntity<?> collectInstallmentFee(
+            @PathVariable Long installmentId,
+            @RequestBody Map<String, Object> body,
+            Authentication auth) {
+        // Inject receivedBy from JWT if caller didn't supply it
+        if (body.get("receivedBy") == null || body.get("receivedBy").toString().isBlank()) {
+            body.put("receivedBy", auth != null ? auth.getName() : "Admin");
+        }
+        var response = adminService.collectInstallmentFee(installmentId, body);
+        return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
+    }
+
     // ===== Expenses =====
     @GetMapping("/expenses")
     public ResponseEntity<ApiResponse<List<Expense>>> getExpenses(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String dateFrom,
             @RequestParam(required = false) String dateTo,
-            @RequestParam(required = false) String search) {
-        return ResponseEntity.ok(adminService.getExpenses(status, dateFrom, dateTo, search));
+            @RequestParam(required = false) String search,
+            Authentication auth) {
+        return ResponseEntity.ok(adminService.getExpenses(getCurrentSchoolId(auth), status, dateFrom, dateTo, search));
     }
 
     @GetMapping("/expenses/summary")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> getExpenseSummary() {
-        return ResponseEntity.ok(adminService.getExpenseSummary());
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getExpenseSummary(Authentication auth) {
+        return ResponseEntity.ok(adminService.getExpenseSummary(getCurrentSchoolId(auth)));
     }
 
     @PostMapping("/expenses")
@@ -291,8 +314,8 @@ public class AdminController {
 
     // ===== Parents =====
     @GetMapping("/parents")
-    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getParents() {
-        return ResponseEntity.ok(adminService.getParents());
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getParents(Authentication auth) {
+        return ResponseEntity.ok(adminService.getParents(getCurrentSchoolId(auth)));
     }
 
     @PostMapping("/parents")
@@ -329,9 +352,10 @@ public class AdminController {
     /** Class-wise attendance summary for all active classes on a given date */
     @GetMapping("/attendance/summary")
     public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getClassAttendanceSummaries(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            Authentication auth) {
         if (date == null) date = LocalDate.now();
-        return ResponseEntity.ok(adminService.getClassAttendanceSummaries(date));
+        return ResponseEntity.ok(adminService.getClassAttendanceSummaries(date, getCurrentSchoolId(auth)));
     }
 
     /** Attendance summary for a specific teacher's primary class */

@@ -32,18 +32,20 @@ public class SalaryService {
 
     // ── READ ────────────────────────────────────────────────────────────────
 
-    public ApiResponse<List<Salary>> getAll() {
+    public ApiResponse<List<Salary>> getAll(Long schoolId) {
+        if (schoolId != null) return ApiResponse.success(salaryRepository.findBySchoolId(schoolId));
         return ApiResponse.success(salaryRepository.findAll());
     }
 
-    public ApiResponse<List<Salary>> getByMonthYear(String month, String year) {
+    public ApiResponse<List<Salary>> getByMonthYear(String month, String year, Long schoolId) {
+        if (schoolId != null) return ApiResponse.success(salaryRepository.findBySchoolIdAndMonthAndYear(schoolId, month, year));
         return ApiResponse.success(salaryRepository.findByMonthAndYear(month, year));
     }
 
     // ── CREATE / UPDATE ─────────────────────────────────────────────────────
 
     @Transactional
-    public ApiResponse<Salary> create(Map<String, Object> body) {
+    public ApiResponse<Salary> create(Map<String, Object> body, Long schoolId) {
         String staffName = str(body, "staffName", str(body, "name", null));
         if (staffName == null || staffName.isBlank()) return ApiResponse.error("Staff name is required");
 
@@ -51,9 +53,11 @@ public class SalaryService {
         String year  = str(body, "year", null);
         Long staffId = longVal(body, "staffId", null);
 
-        // Upsert: if a record already exists for this staff+month+year, update it
+        // Upsert: if a record already exists for this staff+month+year (within this school), update it
         Salary salary = (staffId != null && month != null && year != null)
-            ? salaryRepository.findByStaffIdAndMonthAndYear(staffId, month, year)
+            ? (schoolId != null
+                ? salaryRepository.findBySchoolIdAndStaffIdAndMonthAndYear(schoolId, staffId, month, year)
+                : salaryRepository.findByStaffIdAndMonthAndYear(staffId, month, year))
                 .orElse(Salary.builder().build())
             : Salary.builder().build();
 
@@ -69,6 +73,7 @@ public class SalaryService {
         salary.setTax(decimal(body, "tax", salary.getTax() != null ? salary.getTax() : BigDecimal.ZERO));
         salary.setMonth(month);
         salary.setYear(year);
+        if (schoolId != null) salary.setSchoolId(schoolId);
 
         if (salary.getLeavesTaken() == null) salary.setLeavesTaken(0);
         if (salary.getPaidAmount() == null) salary.setPaidAmount(BigDecimal.ZERO);
@@ -79,9 +84,11 @@ public class SalaryService {
     }
 
     @Transactional
-    public ApiResponse<Salary> update(Long id, Map<String, Object> body) {
+    public ApiResponse<Salary> update(Long id, Map<String, Object> body, Long schoolId) {
         return salaryRepository.findById(id)
             .map(s -> {
+                if (schoolId != null && s.getSchoolId() != null && !schoolId.equals(s.getSchoolId()))
+                    return ApiResponse.<Salary>error("Access denied: salary record belongs to another school");
                 if (body.containsKey("basic"))      s.setBasic(decimal(body, "basic", s.getBasic()));
                 if (body.containsKey("hra"))        s.setHra(decimal(body, "hra", s.getHra()));
                 if (body.containsKey("da"))         s.setDa(decimal(body, "da", s.getDa()));
@@ -98,9 +105,11 @@ public class SalaryService {
     // ── LEAVES ──────────────────────────────────────────────────────────────
 
     @Transactional
-    public ApiResponse<Salary> updateLeaves(Long id, Map<String, Object> body) {
+    public ApiResponse<Salary> updateLeaves(Long id, Map<String, Object> body, Long schoolId) {
         return salaryRepository.findById(id)
             .map(s -> {
+                if (schoolId != null && s.getSchoolId() != null && !schoolId.equals(s.getSchoolId()))
+                    return ApiResponse.<Salary>error("Access denied: salary record belongs to another school");
                 int leaves = intVal(body, "leavesTaken", s.getLeavesTaken() != null ? s.getLeavesTaken() : 0);
                 s.setLeavesTaken(leaves);
                 applyCalculations(s);
@@ -112,9 +121,12 @@ public class SalaryService {
     // ── COLLECT PAYMENT ─────────────────────────────────────────────────────
 
     @Transactional
-    public ApiResponse<SalaryPayment> collectPayment(Long id, Map<String, Object> body) {
+    public ApiResponse<SalaryPayment> collectPayment(Long id, Map<String, Object> body, Long schoolId) {
         return salaryRepository.findById(id)
             .map(s -> {
+                if (schoolId != null && s.getSchoolId() != null && !schoolId.equals(s.getSchoolId()))
+                    return ApiResponse.<SalaryPayment>error("Access denied: salary record belongs to another school");
+
                 BigDecimal amount = decimal(body, "amount", BigDecimal.ZERO);
                 if (amount.compareTo(BigDecimal.ZERO) <= 0)
                     return ApiResponse.<SalaryPayment>error("Amount must be greater than zero");
@@ -136,6 +148,7 @@ public class SalaryService {
                     .remarks(str(body, "remarks", null))
                     .month(s.getMonth())
                     .year(s.getYear())
+                    .schoolId(s.getSchoolId())
                     .build();
 
                 salaryPaymentRepository.save(payment);
@@ -162,7 +175,9 @@ public class SalaryService {
         return ApiResponse.success(salaryPaymentRepository.findBySalaryIdOrderByPaidDateDesc(salaryId));
     }
 
-    public ApiResponse<List<SalaryPayment>> getAllPayments() {
+    public ApiResponse<List<SalaryPayment>> getAllPayments(Long schoolId) {
+        if (schoolId != null)
+            return ApiResponse.success(salaryPaymentRepository.findBySchoolIdOrderByPaidDateDescCreatedAtDesc(schoolId));
         return ApiResponse.success(salaryPaymentRepository.findAllByOrderByPaidDateDescCreatedAtDesc());
     }
 
@@ -198,8 +213,11 @@ public class SalaryService {
     // ── DELETE SALARY ────────────────────────────────────────────────────────
 
     @Transactional
-    public ApiResponse<String> delete(Long id) {
-        if (!salaryRepository.existsById(id)) return ApiResponse.error("Salary record not found");
+    public ApiResponse<String> delete(Long id, Long schoolId) {
+        Salary s = salaryRepository.findById(id).orElse(null);
+        if (s == null) return ApiResponse.error("Salary record not found");
+        if (schoolId != null && s.getSchoolId() != null && !schoolId.equals(s.getSchoolId()))
+            return ApiResponse.error("Access denied: salary record belongs to another school");
         salaryRepository.deleteById(id);
         return ApiResponse.success("Salary record deleted", "Deleted");
     }

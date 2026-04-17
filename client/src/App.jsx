@@ -52,9 +52,11 @@ import ExaminationView from './pages/teacher/ExaminationView';
 import ExaminationPortal from './pages/parent/ExaminationPortal';
 
 // Student Pages
-import StudentDashboard   from './pages/student/StudentDashboard';
-import StudentAttendance  from './pages/student/StudentAttendance';
-import StudentDiary       from './pages/student/StudentDiary';
+import StudentDashboard      from './pages/student/StudentDashboard';
+import StudentAttendance     from './pages/student/StudentAttendance';
+import StudentDiary          from './pages/student/StudentDiary';
+import StudentFees           from './pages/student/StudentFees';
+import StudentLeaveRequest   from './pages/student/StudentLeaveRequest';
 
 // Parent Pages
 import DiaryView from './pages/parent/DiaryView';
@@ -150,6 +152,8 @@ function App() {
             <Route path="/student/dashboard"  element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentDashboard /></ProtectedRoute>} />
             <Route path="/student/attendance" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentAttendance /></ProtectedRoute>} />
             <Route path="/student/diary"      element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentDiary /></ProtectedRoute>} />
+            <Route path="/student/fees"       element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentFees /></ProtectedRoute>} />
+            <Route path="/student/leave"      element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentLeaveRequest /></ProtectedRoute>} />
 
             {/* 404 */}
             <Route path="*" element={

@@ -71,6 +71,19 @@ export default function Fees() {
   const [assignForm, setAssignForm]           = useState({ totalFee: '', dueDate: '', remarks: '', academicYear: CURRENT_YEAR });
   const [assignSearching, setAssignSearching] = useState(false);
 
+  // Installment schedule state
+  const [installments, setInstallments] = useState([
+    { termName: 'Term 1', amount: '', dueDate: '' },
+    { termName: 'Term 2', amount: '', dueDate: '' },
+    { termName: 'Term 3', amount: '', dueDate: '' },
+  ]);
+  const addInstallment = () =>
+    setInstallments(prev => [...prev, { termName: `Term ${prev.length + 1}`, amount: '', dueDate: '' }]);
+  const removeInstallment = (idx) =>
+    setInstallments(prev => prev.filter((_, i) => i !== idx));
+  const updateInstallment = (idx, field, value) =>
+    setInstallments(prev => prev.map((item, i) => i === idx ? { ...item, [field]: value } : item));
+
   const [saving, setSaving]   = useState(false);
   const [toast, setToast]     = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null); // { type, id }
@@ -162,7 +175,7 @@ export default function Fees() {
   };
 
   /* ── assign fee modal ── */
-  const openAssignModal = (assignment = null) => {
+  const openAssignModal = async (assignment = null) => {
     setAssignTarget(assignment);
     setAssignStudent(assignment ? { id: assignment.studentId, name: assignment.studentName, rollNumber: assignment.rollNumber, className: assignment.className } : null);
     setAssignForm({
@@ -170,12 +183,35 @@ export default function Fees() {
       dueDate:      assignment?.dueDate     ?? '',
       remarks:      assignment?.remarks     ?? '',
       academicYear: assignment?.academicYear ?? CURRENT_YEAR,
-      term1Fee:     assignment?.term1Fee    ?? '',
-      term2Fee:     assignment?.term2Fee    ?? '',
-      term3Fee:     assignment?.term3Fee    ?? '',
     });
     setAssignStudentSearch('');
     setAssignStudentResults([]);
+
+    // Load existing installments when editing; otherwise reset to 3 blank rows
+    if (assignment?.id) {
+      try {
+        const res = await adminAPI.getInstallments(assignment.id);
+        const existing = res.data?.data ?? [];
+        if (existing.length > 0) {
+          setInstallments(existing.map(i => ({
+            termName: i.termName,
+            amount:   String(i.amount),
+            dueDate:  i.dueDate || '',
+            status:   i.status,
+          })));
+        } else {
+          setInstallments([{ termName: 'Term 1', amount: '', dueDate: '' }]);
+        }
+      } catch {
+        setInstallments([{ termName: 'Term 1', amount: '', dueDate: '' }]);
+      }
+    } else {
+      setInstallments([
+        { termName: 'Term 1', amount: '', dueDate: '' },
+        { termName: 'Term 2', amount: '', dueDate: '' },
+        { termName: 'Term 3', amount: '', dueDate: '' },
+      ]);
+    }
     setShowAssignModal(true);
   };
 
@@ -206,7 +242,16 @@ export default function Fees() {
     if (!assignForm.totalFee) { showToast('Enter total fee', 'error'); return; }
     setSaving(true);
     try {
-      await adminAPI.assignStudentFee({ studentId: assignStudent.id, ...assignForm });
+      // Only send installments that have both a name and an amount
+      const filledInstallments = installments
+        .filter(i => i.termName?.trim() && i.amount && Number(i.amount) > 0)
+        .map(i => ({ termName: i.termName.trim(), amount: i.amount, dueDate: i.dueDate || null }));
+
+      await adminAPI.assignStudentFee({
+        studentId: assignStudent.id,
+        ...assignForm,
+        installments: filledInstallments.length > 0 ? filledInstallments : undefined,
+      });
       showToast(assignTarget ? 'Fee updated' : 'Fee assigned');
       setShowAssignModal(false);
       loadAssignments();
@@ -559,30 +604,69 @@ export default function Fees() {
                   style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none', resize: 'none', boxSizing: 'border-box' }} />
               </div>
 
-              {/* Term-wise fees */}
+              {/* Dynamic installment schedule */}
               <div style={{ gridColumn: '1/-1', borderTop: '1px dashed #e2e8f0', paddingTop: 14, marginTop: 2 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
-                  Term-wise Installments <span style={{ fontSize: 11, fontWeight: 400, color: '#a0aec0', textTransform: 'none', letterSpacing: 0 }}>(optional — guidance amounts)</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Installment Schedule
+                    <span style={{ fontSize: 11, fontWeight: 400, color: '#a0aec0', textTransform: 'none', letterSpacing: 0, marginLeft: 6 }}>(optional)</span>
+                  </div>
+                  <button type="button" onClick={addInstallment}
+                    style={{ fontSize: 12, color: '#76C442', background: 'none', border: '1px solid #76C442', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontWeight: 600 }}>
+                    + Add Term
+                  </button>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
-                  {[['term1Fee','Term 1'],['term2Fee','Term 2'],['term3Fee','Term 3']].map(([k, label]) => (
-                    <div key={k}>
-                      <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>{label} (₹)</label>
+
+                {installments.map((inst, idx) => (
+                  <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 100px 120px 30px', gap: 6, alignItems: 'end', marginBottom: 8 }}>
+                    <div>
+                      {idx === 0 && <label style={{ fontSize: 11, fontWeight: 600, color: '#718096', display: 'block', marginBottom: 3 }}>Term Name</label>}
                       <input
-                        type="number" min="0"
-                        value={assignForm[k]}
-                        onChange={e => setAssignForm(f => ({ ...f, [k]: e.target.value }))}
-                        placeholder="0"
-                        style={{ width: '100%', padding: '8px 10px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+                        value={inst.termName}
+                        onChange={e => updateInstallment(idx, 'termName', e.target.value)}
+                        placeholder="e.g. Term 1"
+                        style={{ width: '100%', padding: '7px 10px', border: `1.5px solid ${inst.status === 'PAID' ? '#68d391' : '#e2e8f0'}`, borderRadius: 7, fontSize: 13, outline: 'none', boxSizing: 'border-box', background: inst.status === 'PAID' ? '#f0fff4' : '#fff' }}
                       />
                     </div>
-                  ))}
-                </div>
-                {(assignForm.term1Fee || assignForm.term2Fee || assignForm.term3Fee) && (
-                  <div style={{ marginTop: 8, fontSize: 12, color: '#a0aec0' }}>
-                    Term total: ₹{fmt(Number(assignForm.term1Fee||0) + Number(assignForm.term2Fee||0) + Number(assignForm.term3Fee||0))}
-                    {Number(assignForm.totalFee) > 0 && Number(assignForm.term1Fee||0) + Number(assignForm.term2Fee||0) + Number(assignForm.term3Fee||0) !== Number(assignForm.totalFee) && (
-                      <span style={{ color: '#e53e3e', marginLeft: 8 }}>⚠ Does not match total fee</span>
+                    <div>
+                      {idx === 0 && <label style={{ fontSize: 11, fontWeight: 600, color: '#718096', display: 'block', marginBottom: 3 }}>Amount (₹)</label>}
+                      <input
+                        type="number" min="0"
+                        value={inst.amount}
+                        onChange={e => updateInstallment(idx, 'amount', e.target.value)}
+                        placeholder="0"
+                        disabled={inst.status === 'PAID'}
+                        style={{ width: '100%', padding: '7px 10px', border: '1.5px solid #e2e8f0', borderRadius: 7, fontSize: 13, outline: 'none', boxSizing: 'border-box', background: inst.status === 'PAID' ? '#f7fafc' : '#fff' }}
+                      />
+                    </div>
+                    <div>
+                      {idx === 0 && <label style={{ fontSize: 11, fontWeight: 600, color: '#718096', display: 'block', marginBottom: 3 }}>Due Date</label>}
+                      <input
+                        type="date"
+                        value={inst.dueDate}
+                        onChange={e => updateInstallment(idx, 'dueDate', e.target.value)}
+                        disabled={inst.status === 'PAID'}
+                        style={{ width: '100%', padding: '7px 8px', border: '1.5px solid #e2e8f0', borderRadius: 7, fontSize: 12, outline: 'none', boxSizing: 'border-box', background: inst.status === 'PAID' ? '#f7fafc' : '#fff' }}
+                      />
+                    </div>
+                    <div>
+                      {idx === 0 && <div style={{ height: 20 }} />}
+                      {inst.status === 'PAID' ? (
+                        <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 32, fontSize: 16 }} title="Paid">✅</span>
+                      ) : (
+                        <button type="button" onClick={() => removeInstallment(idx)}
+                          style={{ width: 30, height: 32, border: 'none', background: '#fff5f5', borderRadius: 6, color: '#e53e3e', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+
+                {installments.some(i => i.amount && Number(i.amount) > 0) && (
+                  <div style={{ fontSize: 12, color: '#718096', marginTop: 6, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                    <span>Installment total: ₹{fmt(installments.reduce((s, i) => s + Number(i.amount || 0), 0))}</span>
+                    {Number(assignForm.totalFee) > 0 &&
+                     Math.abs(installments.reduce((s, i) => s + Number(i.amount || 0), 0) - Number(assignForm.totalFee)) > 0.01 && (
+                      <span style={{ color: '#e53e3e' }}>⚠ Does not match total fee (₹{fmt(assignForm.totalFee)})</span>
                     )}
                   </div>
                 )}

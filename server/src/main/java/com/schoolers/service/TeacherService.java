@@ -144,8 +144,15 @@ public class TeacherService {
     public ApiResponse<List<Student>> getClassStudents(Long classId) {
         return classRoomRepository.findById(classId)
                 .map(cls -> {
-                    List<Student> students = studentRepository
-                            .findByClassNameIgnoreCaseAndSectionIgnoreCase(cls.getName(), cls.getSection());
+                    String name    = cls.getName();
+                    String section = normalizeSection(cls.getSection());
+                    // Combined format covers students stored as "LKG-B" (className) with section=null
+                    String combined = name + "-" + section;
+
+                    List<Student> students = cls.getSchoolId() != null
+                            ? studentRepository.findBySchoolIdAndClassFlexible(cls.getSchoolId(), combined, name, section)
+                            : studentRepository.findByClassFlexible(combined, name, section);
+
                     students.sort(Comparator.comparing(Student::getName));
                     return ApiResponse.success(students);
                 })
@@ -360,6 +367,12 @@ public class TeacherService {
         return ApiResponse.success(buildSummary(rows));
     }
 
+    public ApiResponse<Map<String, Object>> getAttendanceSummaryRange(Long teacherId, Long classId, LocalDate start, LocalDate end) {
+        ApiResponse<ClassRoom> access = validateClassTeacherAccess(teacherId, classId, false);
+        if (!access.isSuccess()) return ApiResponse.error(access.getMessage());
+        return getAttendanceSummaryRange(classId, start, end);
+    }
+
     /** Returns list of dates when attendance was marked for a class */
     public ApiResponse<List<LocalDate>> getAttendanceDates(Long classId) {
         return ApiResponse.success(attendanceRepository.findDistinctDatesByClassId(classId));
@@ -440,22 +453,43 @@ public class TeacherService {
         ClassRoom classRoom = classRoomRepository.findById(classId).orElse(null);
         if (classRoom == null) return ApiResponse.error("Class not found");
 
-        boolean isClassTeacher = "CLASS_TEACHER".equalsIgnoreCase(teacher.getTeacherType())
-                || "BOTH".equalsIgnoreCase(teacher.getTeacherType());
-        if (requireClassTeacher && !isClassTeacher) {
-            return ApiResponse.error("Only class teachers can manage this module");
+        // A teacher has class access if EITHER:
+        //   (a) teacher.primaryClassId == classId  (set during teacher creation)
+        //   (b) classroom.teacherId == teacher.id  (set during class management or via syncPrimaryClassAssignment)
+        boolean isPrimaryClass       = teacher.getPrimaryClassId() != null && teacher.getPrimaryClassId().equals(classId);
+        boolean isAssignedViaClass   = teacherId.equals(classRoom.getTeacherId());
+        boolean hasClassAccess       = isPrimaryClass || isAssignedViaClass;
+
+        if (!hasClassAccess) {
+            return ApiResponse.error("You are not the class teacher for this class");
         }
-        if (teacher.getPrimaryClassId() == null || !teacher.getPrimaryClassId().equals(classId)) {
-            return ApiResponse.error("Access denied for this class");
+
+        if (requireClassTeacher) {
+            boolean isClassTeacherType = "CLASS_TEACHER".equalsIgnoreCase(teacher.getTeacherType())
+                    || "BOTH".equalsIgnoreCase(teacher.getTeacherType());
+            // If the classroom explicitly names this teacher, treat them as class teacher
+            // regardless of the teacherType field (handles cases where type was not set correctly)
+            if (!isClassTeacherType && !isAssignedViaClass) {
+                return ApiResponse.error("Only class teachers can manage attendance");
+            }
         }
+
         return ApiResponse.success(classRoom);
     }
 
     private boolean belongsToClass(Student student, ClassRoom classRoom) {
-        return student.getClassName() != null
-                && student.getSection() != null
-                && student.getClassName().equalsIgnoreCase(classRoom.getName())
-                && student.getSection().equalsIgnoreCase(normalizeSection(classRoom.getSection()));
+        if (student.getClassName() == null) return false;
+
+        String clsName    = classRoom.getName();
+        String clsSection = normalizeSection(classRoom.getSection()); // "B" or "A" (never null)
+
+        // Match combined format: student.className = "LKG-B", classroom.name = "LKG", section = "B"
+        String combined = clsName + "-" + clsSection;
+        if (student.getClassName().equalsIgnoreCase(combined)) return true;
+
+        // Match separate format: student.className = "LKG", student.section = "B"
+        if (!student.getClassName().equalsIgnoreCase(clsName)) return false;
+        return normalizeSection(student.getSection()).equalsIgnoreCase(clsSection);
     }
 
     private String str(Map<String, Object> map, String key, String fallback) {

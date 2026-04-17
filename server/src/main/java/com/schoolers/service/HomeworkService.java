@@ -17,19 +17,22 @@ public class HomeworkService {
     @Autowired
     private HomeworkRepository homeworkRepository;
 
-    public ApiResponse<List<Homework>> getAll() {
+    public ApiResponse<List<Homework>> getAll(Long schoolId) {
+        if (schoolId != null) return ApiResponse.success(homeworkRepository.findBySchoolId(schoolId));
         return ApiResponse.success(homeworkRepository.findAll());
     }
 
-    public ApiResponse<List<Homework>> getByTeacher(Long teacherId) {
+    public ApiResponse<List<Homework>> getByTeacher(Long teacherId, Long schoolId) {
+        if (schoolId != null) return ApiResponse.success(homeworkRepository.findBySchoolIdAndTeacherId(schoolId, teacherId));
         return ApiResponse.success(homeworkRepository.findByTeacherId(teacherId));
     }
 
-    public ApiResponse<List<Homework>> getByClass(String classSection) {
+    public ApiResponse<List<Homework>> getByClass(String classSection, Long schoolId) {
+        if (schoolId != null) return ApiResponse.success(homeworkRepository.findBySchoolIdAndClassSection(schoolId, classSection));
         return ApiResponse.success(homeworkRepository.findByClassSection(classSection));
     }
 
-    public ApiResponse<Homework> create(Map<String, Object> body) {
+    public ApiResponse<Homework> create(Map<String, Object> body, Long schoolId) {
         String title = str(body, "title", null);
         if (title == null || title.isBlank()) return ApiResponse.error("Title is required");
 
@@ -41,13 +44,16 @@ public class HomeworkService {
                 .teacherId(longVal(body, "teacherId", null))
                 .teacherName(str(body, "teacherName", null))
                 .dueDate(parseDate(str(body, "dueDate", null)))
+                .schoolId(schoolId)
                 .build();
         return ApiResponse.success("Homework created", homeworkRepository.save(hw));
     }
 
-    public ApiResponse<Homework> update(Long id, Map<String, Object> body) {
+    public ApiResponse<Homework> update(Long id, Map<String, Object> body, Long schoolId) {
         return homeworkRepository.findById(id)
                 .map(hw -> {
+                    if (schoolId != null && hw.getSchoolId() != null && !schoolId.equals(hw.getSchoolId()))
+                        return ApiResponse.<Homework>error("Access denied: homework belongs to another school");
                     if (body.containsKey("title"))        hw.setTitle(str(body, "title", hw.getTitle()));
                     if (body.containsKey("description"))  hw.setDescription(str(body, "description", hw.getDescription()));
                     if (body.containsKey("classSection")) hw.setClassSection(str(body, "classSection", hw.getClassSection()));
@@ -62,8 +68,11 @@ public class HomeworkService {
                 .orElse(ApiResponse.error("Homework not found"));
     }
 
-    public ApiResponse<String> delete(Long id) {
-        if (!homeworkRepository.existsById(id)) return ApiResponse.error("Homework not found");
+    public ApiResponse<String> delete(Long id, Long schoolId) {
+        Homework hw = homeworkRepository.findById(id).orElse(null);
+        if (hw == null) return ApiResponse.error("Homework not found");
+        if (schoolId != null && hw.getSchoolId() != null && !schoolId.equals(hw.getSchoolId()))
+            return ApiResponse.error("Access denied: homework belongs to another school");
         homeworkRepository.deleteById(id);
         return ApiResponse.success("Homework deleted", "Deleted");
     }

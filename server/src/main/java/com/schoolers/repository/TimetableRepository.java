@@ -15,6 +15,12 @@ public interface TimetableRepository extends JpaRepository<Timetable, Long> {
     List<Timetable> findByTeacherIdAndDay(Long teacherId, String day);
     List<Timetable> findByIsActiveTrue();
 
+    // School-scoped queries
+    List<Timetable> findBySchoolId(Long schoolId);
+    List<Timetable> findBySchoolIdAndTeacherId(Long schoolId, Long teacherId);
+    List<Timetable> findBySchoolIdAndClassSection(Long schoolId, String classSection);
+    List<Timetable> findBySchoolIdAndTeacherIdAndDay(Long schoolId, Long teacherId, String day);
+
     @Modifying @Transactional
     void deleteByTeacherId(Long teacherId);
 }

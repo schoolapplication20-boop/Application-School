@@ -1,310 +1,343 @@
-import React, { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Layout from '../../components/Layout';
-import Toast from '../../components/Toast';
-import { useNotifications } from '../../context/NotificationContext';
+import { leaveAPI } from '../../services/api';
+
+const STATUS_COLORS = {
+  PENDING:  { bg: '#fffbeb', color: '#b7791f', label: 'Pending'  },
+  APPROVED: { bg: '#f0fff4', color: '#276749', label: 'Approved' },
+  REJECTED: { bg: '#fff5f5', color: '#c53030', label: 'Rejected' },
+};
 
 export default function LeaveApproval() {
-  const { addNotification } = useNotifications();
-  const [leaves, setLeaves] = useState([]);
-  const [toast, setToast] = useState(null);
-  const [selectedLeave, setSelectedLeave] = useState(null);
-  const [forwardComment, setForwardComment] = useState('');
+  const [leaves,     setLeaves]     = useState([]);
+  const [loading,    setLoading]    = useState(true);
+  const [error,      setError]      = useState('');
+  const [toast,      setToast]      = useState(null);
 
-  const showToast = (message, type = 'success') => {
-    setToast({ message, type });
+  // Modal state
+  const [selected,   setSelected]   = useState(null); // leave object
+  const [remark,     setRemark]     = useState('');
+  const [actionType, setActionType] = useState('');   // 'APPROVED' | 'REJECTED'
+  const [acting,     setActing]     = useState(false);
+
+  const showToast = (msg, type = 'success') => {
+    setToast({ msg, type });
     setTimeout(() => setToast(null), 3500);
   };
 
-  // Section 1: New from parents — teacher hasn't acted yet
-  const newRequests = leaves.filter(l => l.teacherStatus === 'Pending');
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await leaveAPI.getClassStudentLeaves();
+      setLeaves(res.data?.data ?? []);
+    } catch (err) {
+      const msg = err.response?.data?.message || '';
+      // No primary class assigned → show empty state, not an error
+      if (err.response?.status === 200 || msg.toLowerCase().includes('no primary')) {
+        setLeaves([]);
+      } else {
+        setError(msg || 'Failed to load leave requests.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  // Section 2: Admin has decided — teacher needs to confirm and notify parent
-  const adminDecided = leaves.filter(
-    l => l.teacherStatus === 'Forwarded' && l.adminStatus !== 'Pending'
-  );
+  useEffect(() => { load(); }, [load]);
 
-  // Section 3: Fully completed
-  const completed = leaves.filter(
-    l => l.teacherStatus !== 'Pending' && l.teacherStatus !== 'Forwarded'
-  );
-
-  // Teacher forwards leave to admin
-  const handleForward = (leaveId) => {
-    const updated = leaves.map(l => {
-      if (l.id !== leaveId) return l;
-      return { ...l, teacherStatus: 'Forwarded', teacherComment: forwardComment };
-    });
-    setLeaves(updated);
-
-    const leave = leaves.find(l => l.id === leaveId);
-    addNotification({
-      text: `Teacher forwarded leave request for ${leave?.studentName} from ${leave?.parentName}. Please review.`,
-      icon: 'forward_to_inbox',
-      color: '#3182ce',
-      role: 'ADMIN',
-      leaveId,
-      details: {
-        type: 'forwarded_leave',
-        sender: 'Teacher',
-        senderRole: 'Teacher',
-        studentName: leave?.studentName,
-        parentName: leave?.parentName,
-        class: leave?.class,
-        leaveType: leave?.leaveType,
-        fromDate: leave?.fromDate,
-        toDate: leave?.toDate,
-        reason: leave?.reason,
-        teacherComment: forwardComment || '',
-        submittedAt: leave?.submittedAt,
-      },
-    });
-
-    setSelectedLeave(null);
-    setForwardComment('');
-    showToast('Leave forwarded to Admin');
+  const openModal = (leave, action) => {
+    setSelected(leave);
+    setActionType(action);
+    setRemark('');
   };
 
-  // Teacher confirms admin's decision and notifies parent
-  const handleConfirm = (leaveId) => {
-    const leave = leaves.find(l => l.id === leaveId);
-    if (!leave) return;
-    const finalStatus = leave.adminStatus; // mirror admin decision
-    const updated = leaves.map(l => {
-      if (l.id !== leaveId) return l;
-      return { ...l, teacherStatus: finalStatus, finalStatus };
-    });
-    setLeaves(updated);
-
-    addNotification({
-      text: `Your leave request for ${leave.studentName} has been ${finalStatus.toLowerCase()} by the teacher (${finalStatus === 'Approved' ? 'Admin approved' : 'Admin rejected'}).`,
-      icon: finalStatus === 'Approved' ? 'check_circle' : 'cancel',
-      color: finalStatus === 'Approved' ? '#76C442' : '#e53e3e',
-      role: 'PARENT',
-      leaveId,
-    });
-
-    showToast(`Leave ${finalStatus.toLowerCase()} — parent notified`);
+  const closeModal = () => {
+    setSelected(null);
+    setRemark('');
+    setActionType('');
   };
 
-  const getStatusBadge = (status) => {
-    const map = { Pending: '#ed8936', Approved: '#76C442', Rejected: '#e53e3e', Forwarded: '#3182ce' };
-    const bg  = { Pending: '#fffaf0', Approved: '#f0fff4', Rejected: '#fff5f5', Forwarded: '#ebf8ff' };
+  const handleAction = async () => {
+    if (!selected) return;
+    setActing(true);
+    try {
+      await leaveAPI.approveRejectLeave(selected.id, {
+        status:        actionType,
+        teacherRemark: remark.trim() || undefined,
+      });
+      showToast(`Leave request ${actionType.toLowerCase()} successfully.`);
+      closeModal();
+      await load();
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Action failed.', 'error');
+    } finally {
+      setActing(false);
+    }
+  };
+
+  const pending   = leaves.filter(l => l.status === 'PENDING');
+  const decided   = leaves.filter(l => l.status !== 'PENDING');
+
+  const StatusBadge = ({ status }) => {
+    const s = STATUS_COLORS[status] || STATUS_COLORS.PENDING;
     return (
-      <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: 700,
-        background: bg[status] || '#f7fafc', color: map[status] || '#718096' }}>
-        {status}
+      <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: s.bg, color: s.color }}>
+        {s.label}
       </span>
     );
   };
 
   return (
     <Layout pageTitle="Leave Approval">
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+      {/* Toast */}
+      {toast && (
+        <div style={{
+          position: 'fixed', top: 20, right: 20, zIndex: 9999,
+          padding: '12px 20px', borderRadius: 10, fontSize: 13, fontWeight: 600,
+          background: toast.type === 'error' ? '#fff5f5' : '#f0fff4',
+          color:      toast.type === 'error' ? '#c53030' : '#276749',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+          display: 'flex', alignItems: 'center', gap: 8,
+        }}>
+          <span className="material-icons" style={{ fontSize: 18 }}>
+            {toast.type === 'error' ? 'error' : 'check_circle'}
+          </span>
+          {toast.msg}
+        </div>
+      )}
 
-      <div className="page-header">
-        <h1>Leave Approval</h1>
-        <p>Review parent leave requests and coordinate with Admin</p>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '16px', marginBottom: '24px' }}>
+      {/* Stats */}
+      <div className="stats-grid" style={{ marginBottom: 24 }}>
         {[
-          { label: 'New Requests', value: newRequests.length, color: '#ed8936', icon: 'inbox' },
-          { label: 'Awaiting Admin', value: leaves.filter(l => l.teacherStatus === 'Forwarded' && l.adminStatus === 'Pending').length, color: '#3182ce', icon: 'pending_actions' },
-          { label: 'To Confirm', value: adminDecided.length, color: '#805ad5', icon: 'rule' },
-          { label: 'Completed', value: completed.length, color: '#76C442', icon: 'task_alt' },
-        ].map(c => (
-          <div key={c.label} className="stat-card">
-            <div className="stat-icon" style={{ backgroundColor: c.color + '15' }}>
-              <span className="material-icons" style={{ color: c.color }}>{c.icon}</span>
+          { label: 'Pending',  value: pending.length,  icon: 'pending_actions', color: '#ed8936' },
+          { label: 'Approved', value: leaves.filter(l => l.status === 'APPROVED').length, icon: 'check_circle', color: '#76C442' },
+          { label: 'Rejected', value: leaves.filter(l => l.status === 'REJECTED').length, icon: 'cancel',       color: '#e53e3e' },
+          { label: 'Total',    value: leaves.length,   icon: 'list_alt',        color: '#3182ce' },
+        ].map(s => (
+          <div key={s.label} className="stat-card">
+            <div className="stat-icon" style={{ backgroundColor: s.color + '15' }}>
+              <span className="material-icons" style={{ color: s.color }}>{s.icon}</span>
             </div>
-            <div className="stat-value">{c.value}</div>
-            <div className="stat-label">{c.label}</div>
+            <div className="stat-value">{s.value}</div>
+            <div className="stat-label">{s.label}</div>
           </div>
         ))}
       </div>
 
-      {/* Section 1: New requests from parents */}
-      <div className="data-table-card" style={{ marginBottom: '24px' }}>
-        <div style={{ fontWeight: 700, fontSize: '15px', color: '#2d3748', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span className="material-icons" style={{ color: '#ed8936', fontSize: '18px' }}>inbox</span>
-          New Requests from Parents ({newRequests.length})
+      {error && (
+        <div style={{ background: '#fff5f5', color: '#c53030', borderRadius: 8, padding: '12px 16px', marginBottom: 20, fontSize: 13 }}>
+          {error}
         </div>
-        <div style={{ overflowX: 'auto' }}>
+      )}
+
+      {/* Pending Requests */}
+      <div className="data-table-card" style={{ marginBottom: 24 }}>
+        <div className="data-table-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span className="material-icons" style={{ color: '#ed8936', fontSize: 18 }}>pending_actions</span>
+            <span className="data-table-title">Pending Requests ({pending.length})</span>
+          </div>
+          <button
+            onClick={load}
+            disabled={loading}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#718096', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}
+          >
+            <span className="material-icons" style={{ fontSize: 16, animation: loading ? 'spin 1s linear infinite' : 'none' }}>refresh</span>
+            Refresh
+          </button>
+        </div>
+
+        {loading ? (
+          <div style={{ padding: '40px 0', textAlign: 'center', color: '#a0aec0', fontSize: 13 }}>
+            <span className="material-icons" style={{ fontSize: 32, display: 'block', marginBottom: 8 }}>hourglass_empty</span>
+            Loading…
+          </div>
+        ) : pending.length === 0 ? (
+          <div style={{ padding: '40px 0', textAlign: 'center', color: '#a0aec0', fontSize: 13 }}>
+            <span className="material-icons" style={{ fontSize: 40, display: 'block', marginBottom: 8, opacity: 0.4 }}>event_available</span>
+            No pending leave requests
+          </div>
+        ) : (
           <table className="data-table">
             <thead>
               <tr>
-                <th>Student</th><th>Parent</th><th>Leave Type</th>
-                <th>Duration</th><th>Reason</th><th>Submitted</th><th>Action</th>
+                <th>Student</th><th>Class</th><th>Type</th><th>From</th><th>To</th><th>Reason</th><th>Applied On</th><th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {newRequests.length === 0 ? (
-                <tr><td colSpan={7}>
-                  <div className="empty-state" style={{ padding: '24px' }}>
-                    <span className="material-icons" style={{ fontSize: 36, color: '#e2e8f0' }}>event_available</span>
-                    <p style={{ color: '#a0aec0', margin: '8px 0 0' }}>No new leave requests</p>
-                  </div>
-                </td></tr>
-              ) : newRequests.map(l => (
+              {pending.map(l => (
                 <tr key={l.id}>
+                  <td style={{ fontWeight: 700, fontSize: 13 }}>{l.requesterName}</td>
+                  <td style={{ fontSize: 12, color: '#718096' }}>{l.classSection || '—'}</td>
                   <td>
-                    <div style={{ fontWeight: 700, fontSize: '13px' }}>{l.studentName}</div>
-                    <div style={{ fontSize: '11px', color: '#a0aec0' }}>Class {l.class}</div>
+                    <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: '#ed893615', color: '#c05621' }}>
+                      {l.leaveType || 'Other'}
+                    </span>
                   </td>
-                  <td style={{ fontSize: '13px' }}>{l.parentName}</td>
-                  <td>
-                    <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 600,
-                      background: '#76C44215', color: '#5fa832' }}>{l.leaveType}</span>
+                  <td style={{ fontSize: 12 }}>{l.fromDate}</td>
+                  <td style={{ fontSize: 12 }}>{l.toDate}</td>
+                  <td style={{ fontSize: 12, color: '#718096', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={l.reason}>{l.reason || '—'}</td>
+                  <td style={{ fontSize: 11, color: '#a0aec0' }}>
+                    {l.createdAt ? new Date(l.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : '—'}
                   </td>
-                  <td style={{ fontSize: '12px', color: '#718096' }}>{l.fromDate} → {l.toDate}</td>
-                  <td style={{ fontSize: '12px', color: '#718096', maxWidth: '140px' }}>{l.reason}</td>
-                  <td style={{ fontSize: '12px', color: '#a0aec0' }}>{l.submittedAt}</td>
                   <td>
-                    <button className="action-btn" style={{ background: '#ebf8ff', color: '#3182ce' }}
-                      title="Forward to Admin"
-                      onClick={() => { setSelectedLeave({ ...l, mode: 'forward' }); setForwardComment(''); }}>
-                      <span className="material-icons">forward_to_inbox</span>
-                    </button>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button
+                        onClick={() => openModal(l, 'APPROVED')}
+                        style={{ padding: '5px 12px', background: '#f0fff4', color: '#276749', border: '1px solid #c6f6d5', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+                      >
+                        <span className="material-icons" style={{ fontSize: 13 }}>check_circle</span>
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => openModal(l, 'REJECTED')}
+                        style={{ padding: '5px 12px', background: '#fff5f5', color: '#c53030', border: '1px solid #fed7d7', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+                      >
+                        <span className="material-icons" style={{ fontSize: 13 }}>cancel</span>
+                        Reject
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
+        )}
       </div>
 
-      {/* Section 2: Admin has decided — teacher must confirm */}
-      {adminDecided.length > 0 && (
-        <div className="data-table-card" style={{ marginBottom: '24px' }}>
-          <div style={{ fontWeight: 700, fontSize: '15px', color: '#2d3748', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span className="material-icons" style={{ color: '#805ad5', fontSize: '18px' }}>rule</span>
-            Admin Decision Received — Confirm & Notify Parent ({adminDecided.length})
-          </div>
-          <div style={{ overflowX: 'auto' }}>
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Student</th><th>Parent</th><th>Leave Type</th>
-                  <th>Duration</th><th>Admin Decision</th><th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {adminDecided.map(l => (
-                  <tr key={l.id}>
-                    <td>
-                      <div style={{ fontWeight: 700, fontSize: '13px' }}>{l.studentName}</div>
-                      <div style={{ fontSize: '11px', color: '#a0aec0' }}>Class {l.class}</div>
-                    </td>
-                    <td style={{ fontSize: '13px' }}>{l.parentName}</td>
-                    <td>
-                      <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 600,
-                        background: '#76C44215', color: '#5fa832' }}>{l.leaveType}</span>
-                    </td>
-                    <td style={{ fontSize: '12px', color: '#718096' }}>{l.fromDate} → {l.toDate}</td>
-                    <td>{getStatusBadge(l.adminStatus)}</td>
-                    <td>
-                      <button
-                        className="btn btn-sm"
-                        style={{
-                          background: l.adminStatus === 'Approved' ? '#76C442' : '#e53e3e',
-                          color: '#fff', border: 'none', borderRadius: '8px',
-                          padding: '6px 14px', fontSize: '12px', fontWeight: 600, cursor: 'pointer'
-                        }}
-                        onClick={() => handleConfirm(l.id)}
-                      >
-                        <span className="material-icons" style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 4 }}>
-                          {l.adminStatus === 'Approved' ? 'check_circle' : 'cancel'}
-                        </span>
-                        {l.adminStatus === 'Approved' ? 'Approve & Notify Parent' : 'Reject & Notify Parent'}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Section 3: Completed */}
-      {completed.length > 0 && (
+      {/* Decided Requests */}
+      {decided.length > 0 && (
         <div className="data-table-card">
-          <div style={{ fontWeight: 700, fontSize: '15px', color: '#2d3748', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span className="material-icons" style={{ color: '#76C442', fontSize: '18px' }}>task_alt</span>
-            Completed ({completed.length})
+          <div className="data-table-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span className="material-icons" style={{ color: '#76C442', fontSize: 18 }}>task_alt</span>
+              <span className="data-table-title">Decided ({decided.length})</span>
+            </div>
           </div>
-          <div style={{ overflowX: 'auto' }}>
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Student</th><th>Parent</th><th>Leave Type</th>
-                  <th>Duration</th><th>Final Status</th>
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Student</th><th>Class</th><th>Type</th><th>From</th><th>To</th><th>Status</th><th>Remark</th><th>Reviewed By</th>
+              </tr>
+            </thead>
+            <tbody>
+              {decided.map(l => (
+                <tr key={l.id}>
+                  <td style={{ fontWeight: 700, fontSize: 13 }}>{l.requesterName}</td>
+                  <td style={{ fontSize: 12, color: '#718096' }}>{l.classSection || '—'}</td>
+                  <td style={{ fontSize: 12 }}>{l.leaveType || 'Other'}</td>
+                  <td style={{ fontSize: 12 }}>{l.fromDate}</td>
+                  <td style={{ fontSize: 12 }}>{l.toDate}</td>
+                  <td><StatusBadge status={l.status} /></td>
+                  <td style={{ fontSize: 12, color: '#718096', fontStyle: l.teacherRemark ? 'normal' : 'italic' }}>
+                    {l.teacherRemark || '—'}
+                  </td>
+                  <td style={{ fontSize: 12, color: '#718096' }}>{l.reviewedBy || '—'}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {completed.map(l => (
-                  <tr key={l.id}>
-                    <td>
-                      <div style={{ fontWeight: 700, fontSize: '13px' }}>{l.studentName}</div>
-                      <div style={{ fontSize: '11px', color: '#a0aec0' }}>Class {l.class}</div>
-                    </td>
-                    <td style={{ fontSize: '13px' }}>{l.parentName}</td>
-                    <td>
-                      <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 600,
-                        background: '#76C44215', color: '#5fa832' }}>{l.leaveType}</span>
-                    </td>
-                    <td style={{ fontSize: '12px', color: '#718096' }}>{l.fromDate} → {l.toDate}</td>
-                    <td>{getStatusBadge(l.finalStatus)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
-      {/* Forward to Admin Modal */}
-      {selectedLeave?.mode === 'forward' && (
-        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">Forward to Admin</h5>
-                <button className="btn-close" onClick={() => setSelectedLeave(null)} />
+      {/* Action Modal */}
+      {selected && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+        }}>
+          <div style={{
+            background: '#fff', borderRadius: 16, padding: 28, width: '100%', maxWidth: 460,
+            boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+          }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+              <div style={{
+                width: 40, height: 40, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: actionType === 'APPROVED' ? '#f0fff4' : '#fff5f5',
+              }}>
+                <span className="material-icons" style={{ color: actionType === 'APPROVED' ? '#276749' : '#c53030', fontSize: 22 }}>
+                  {actionType === 'APPROVED' ? 'check_circle' : 'cancel'}
+                </span>
               </div>
-              <div className="modal-body">
-                <div style={{ background: '#f7fafc', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '13px' }}>
-                    {[
-                      ['Student', selectedLeave.studentName],
-                      ['Class', selectedLeave.class],
-                      ['Parent', selectedLeave.parentName],
-                      ['Type', selectedLeave.leaveType],
-                      ['From', selectedLeave.fromDate],
-                      ['To', selectedLeave.toDate],
-                    ].map(([k, v]) => (
-                      <div key={k}><span style={{ color: '#a0aec0' }}>{k}: </span><strong>{v}</strong></div>
-                    ))}
-                  </div>
-                  <div style={{ marginTop: '8px', fontSize: '13px' }}>
-                    <span style={{ color: '#a0aec0' }}>Reason: </span>{selectedLeave.reason}
-                  </div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 15, color: '#2d3748' }}>
+                  {actionType === 'APPROVED' ? 'Approve' : 'Reject'} Leave Request
                 </div>
-                <label className="form-label small fw-medium">Note to Admin (optional)</label>
-                <textarea className="form-control form-control-sm" rows={2} value={forwardComment}
-                  onChange={e => setForwardComment(e.target.value)} placeholder="Add a note for Admin..." />
+                <div style={{ fontSize: 12, color: '#718096' }}>for {selected.requesterName}</div>
               </div>
-              <div className="modal-footer">
-                <button className="btn btn-secondary" onClick={() => setSelectedLeave(null)}>Cancel</button>
-                <button className="btn btn-primary" onClick={() => handleForward(selectedLeave.id)}>
-                  <span className="material-icons" style={{ fontSize: 16, verticalAlign: 'middle', marginRight: 4 }}>forward_to_inbox</span>
-                  Forward to Admin
-                </button>
+            </div>
+
+            {/* Leave summary */}
+            <div style={{ background: '#f7fafc', borderRadius: 10, padding: '14px 16px', marginBottom: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px', fontSize: 13 }}>
+                {[
+                  ['Type',   selected.leaveType || 'Other'],
+                  ['Class',  selected.classSection || '—'],
+                  ['From',   selected.fromDate],
+                  ['To',     selected.toDate],
+                ].map(([k, v]) => (
+                  <div key={k}>
+                    <span style={{ color: '#a0aec0', fontSize: 11 }}>{k}</span>
+                    <div style={{ fontWeight: 600, color: '#2d3748' }}>{v}</div>
+                  </div>
+                ))}
               </div>
+              {selected.reason && (
+                <div style={{ marginTop: 10, fontSize: 12, color: '#4a5568' }}>
+                  <span style={{ color: '#a0aec0', fontSize: 11 }}>Reason</span>
+                  <div>{selected.reason}</div>
+                </div>
+              )}
+            </div>
+
+            {/* Remark */}
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#4a5568', marginBottom: 6 }}>
+                Remark <span style={{ fontWeight: 400, color: '#a0aec0' }}>(optional)</span>
+              </label>
+              <textarea
+                rows={2}
+                value={remark}
+                onChange={e => setRemark(e.target.value)}
+                placeholder="Add a note for the student…"
+                style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 13, resize: 'vertical', boxSizing: 'border-box', outline: 'none' }}
+              />
+            </div>
+
+            {/* Buttons */}
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button
+                onClick={closeModal}
+                disabled={acting}
+                style={{ padding: '9px 20px', background: '#edf2f7', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, color: '#4a5568', cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAction}
+                disabled={acting}
+                style={{
+                  padding: '9px 24px', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                  color: '#fff', cursor: acting ? 'not-allowed' : 'pointer',
+                  background: acting ? '#a0aec0' : (actionType === 'APPROVED' ? '#38a169' : '#e53e3e'),
+                  display: 'flex', alignItems: 'center', gap: 6,
+                }}
+              >
+                <span className="material-icons" style={{ fontSize: 15 }}>
+                  {actionType === 'APPROVED' ? 'check_circle' : 'cancel'}
+                </span>
+                {acting ? 'Processing…' : (actionType === 'APPROVED' ? 'Approve' : 'Reject')}
+              </button>
             </div>
           </div>
         </div>
       )}
+
+      <style>{`
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      `}</style>
     </Layout>
   );
 }

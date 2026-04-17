@@ -58,6 +58,29 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
 
     List<Student> findByClassNameIgnoreCaseAndSectionIgnoreCase(String className, String section);
 
+    /**
+     * Flexible class lookup: matches students stored in either format —
+     *   • Separate: className="LKG", section="B"
+     *   • Combined: className="LKG-B", section=null/empty
+     */
+    @Query("SELECT s FROM Student s WHERE " +
+           "LOWER(s.className) = LOWER(:combinedName) OR " +
+           "(LOWER(s.className) = LOWER(:className) AND LOWER(COALESCE(s.section,'')) = LOWER(:section))")
+    List<Student> findByClassFlexible(
+            @Param("combinedName") String combinedName,
+            @Param("className")    String className,
+            @Param("section")      String section);
+
+    /** Same as above but school-scoped (multi-tenant). */
+    @Query("SELECT s FROM Student s WHERE s.schoolId = :schoolId AND (" +
+           "LOWER(s.className) = LOWER(:combinedName) OR " +
+           "(LOWER(s.className) = LOWER(:className) AND LOWER(COALESCE(s.section,'')) = LOWER(:section)))")
+    List<Student> findBySchoolIdAndClassFlexible(
+            @Param("schoolId")     Long schoolId,
+            @Param("combinedName") String combinedName,
+            @Param("className")    String className,
+            @Param("section")      String section);
+
     long countByClassNameAndSection(String className, String section);
 
     long countByClassNameIgnoreCaseAndSectionIgnoreCase(String className, String section);

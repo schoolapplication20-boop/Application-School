@@ -56,11 +56,22 @@ public class AdminService {
     @Autowired private TransportFeeRepository transportFeeRepository;
     @Autowired private ClassFeeStructureRepository classFeeStructureRepository;
     @Autowired private StudentFeeAssignmentRepository studentFeeAssignmentRepository;
+    @Autowired private FeeInstallmentRepository feeInstallmentRepository;
 
     private static final String CHARS = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#$!";
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final java.util.regex.Pattern EMAIL_PATTERN =
         java.util.regex.Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
+
+    /**
+     * Returns true when a school-scoped admin is trying to access an entity
+     * from a different school. Both IDs must be non-null to trigger a mismatch.
+     * Platform-level SUPER_ADMINs (schoolId == null) always pass through.
+     */
+    private boolean schoolMismatch(Long authSchoolId, Long entitySchoolId) {
+        return authSchoolId != null && entitySchoolId != null
+                && !authSchoolId.equals(entitySchoolId);
+    }
 
     private void cleanupOrphanUser(com.schoolers.model.User user) {
         if (user != null && user.getId() != null) {
@@ -232,9 +243,11 @@ public class AdminService {
         return ApiResponse.success(studentRepository.findAll(pageable));
     }
 
-    public ApiResponse<Student> getStudentById(Long id) {
+    public ApiResponse<Student> getStudentById(Long id, Long schoolId) {
         return studentRepository.findById(id)
-                .map(ApiResponse::success)
+                .map(s -> schoolMismatch(schoolId, s.getSchoolId())
+                        ? ApiResponse.<Student>error("Student not found with id: " + id)
+                        : ApiResponse.success(s))
                 .orElse(ApiResponse.error("Student not found with id: " + id));
     }
 
@@ -383,9 +396,11 @@ public class AdminService {
     }
 
     @Transactional
-    public ApiResponse<Student> updateStudent(Long id, Map<String, Object> body) {
+    public ApiResponse<Student> updateStudent(Long id, Map<String, Object> body, Long schoolId) {
         try { return studentRepository.findById(id)
                 .map(student -> {
+                    if (schoolMismatch(schoolId, student.getSchoolId()))
+                        return ApiResponse.<Student>error("Student not found");
                     String targetClass = body.containsKey("className") || body.containsKey("class")
                             ? resolveClassName(str(body, "className", str(body, "class", student.getClassName())))
                             : student.getClassName();
@@ -493,10 +508,14 @@ public class AdminService {
      * rolls back the whole transaction — no partial deletes, no orphan records.
      */
     @Transactional(rollbackFor = Exception.class)
-    public ApiResponse<String> deleteStudent(Long id) {
+    public ApiResponse<String> deleteStudent(Long id, Long schoolId) {
         Student student = studentRepository.findById(id).orElse(null);
         if (student == null) {
             log.warning("[deleteStudent] Student not found id=" + id);
+            return ApiResponse.error("Student not found with id: " + id);
+        }
+        if (schoolMismatch(schoolId, student.getSchoolId())) {
+            log.warning("[deleteStudent] Cross-school access denied id=" + id + " authSchool=" + schoolId);
             return ApiResponse.error("Student not found with id: " + id);
         }
 
@@ -564,8 +583,10 @@ public class AdminService {
     /** Returns the student's login username and temp password (only while firstLogin is still true).
      *  If the student has no linked user account, one is auto-created on demand. */
     @Transactional
-    public ApiResponse<Map<String, Object>> getStudentCredentials(Long studentId) {
+    public ApiResponse<Map<String, Object>> getStudentCredentials(Long studentId, Long schoolId) {
         return studentRepository.findById(studentId).map(student -> {
+            if (schoolMismatch(schoolId, student.getSchoolId()))
+                return ApiResponse.<Map<String, Object>>error("Student not found.");
             // Auto-create credentials if the student has no linked user account
             if (student.getStudentUserId() == null) {
                 StudentUserResult result = createStudentUser(
@@ -595,11 +616,43 @@ public class AdminService {
 
     // ── Teachers ───────────────────────────────────────────────────────────
 
-    public ApiResponse<List<Teacher>> getTeachers(Long schoolId) {
-        if (schoolId != null) {
-            return ApiResponse.success(teacherRepository.findBySchoolId(schoolId));
-        }
-        return ApiResponse.success(teacherRepository.findAll());
+    public ApiResponse<List<Map<String, Object>>> getTeachers(Long schoolId) {
+        List<Teacher> teachers = schoolId != null
+                ? teacherRepository.findBySchoolId(schoolId)
+                : teacherRepository.findAll();
+
+        List<Map<String, Object>> result = teachers.stream().map(t -> {
+            Map<String, Object> map = new LinkedHashMap<>();
+            map.put("id",             t.getId());
+            map.put("name",           t.getName());
+            map.put("employeeId",     t.getEmployeeId());
+            map.put("subject",        t.getSubject());
+            map.put("department",     t.getDepartment());
+            map.put("classes",        t.getClasses());
+            map.put("qualification",  t.getQualification());
+            map.put("experience",     t.getExperience());
+            map.put("joiningDate",    t.getJoiningDate());
+            map.put("teacherType",    t.getTeacherType() != null ? t.getTeacherType() : "SUBJECT_TEACHER");
+            map.put("primaryClassId", t.getPrimaryClassId());
+            map.put("isActive",       t.getIsActive());
+            map.put("schoolId",       t.getSchoolId());
+            if (t.getUser() != null) {
+                map.put("userId", t.getUser().getId());
+                map.put("email",  t.getUser().getEmail());
+                map.put("mobile", t.getUser().getMobile());
+            }
+            // Resolve primary class name so the frontend doesn't need a separate lookup
+            if (t.getPrimaryClassId() != null) {
+                classRoomRepository.findById(t.getPrimaryClassId()).ifPresent(cr -> {
+                    map.put("primaryClassName",
+                            cr.getName() + (cr.getSection() != null && !cr.getSection().isBlank()
+                                    ? " - " + cr.getSection() : ""));
+                });
+            }
+            return map;
+        }).toList();
+
+        return ApiResponse.success(result);
     }
 
     public ApiResponse<Map<String, Object>> createTeacher(CreateTeacherRequest req) {
@@ -728,7 +781,24 @@ public class AdminService {
     public ApiResponse<Teacher> updateTeacher(Long id, CreateTeacherRequest req) {
         return teacherRepository.findById(id)
                 .map(teacher -> {
+                    if (schoolMismatch(req.getSchoolId(), teacher.getSchoolId()))
+                        return ApiResponse.<Teacher>error("Teacher not found");
                     Long previousPrimaryClassId = teacher.getPrimaryClassId();
+
+                    // Employee ID: validate uniqueness within the school before updating
+                    if (req.getEmpId() != null && !req.getEmpId().isBlank()) {
+                        String newEmpId = req.getEmpId().trim();
+                        if (!newEmpId.equals(teacher.getEmployeeId())) {
+                            Long schoolId = teacher.getSchoolId();
+                            if (schoolId != null && teacherRepository
+                                    .existsByEmployeeIdAndSchoolIdAndIdNot(newEmpId, schoolId, teacher.getId())) {
+                                return ApiResponse.<Teacher>error("Employee ID '" + newEmpId
+                                        + "' is already assigned to another teacher in this school. Please provide a unique employee ID.");
+                            }
+                            teacher.setEmployeeId(newEmpId);
+                        }
+                    }
+
                     if (req.getName() != null && !req.getName().isBlank()) teacher.setName(req.getName().trim());
                     if (req.getSubject() != null)       teacher.setSubject(req.getSubject());
                     if (req.getDepartment() != null)    teacher.setDepartment(req.getDepartment());
@@ -762,9 +832,11 @@ public class AdminService {
                 .orElse(ApiResponse.error("Teacher not found"));
     }
 
-    public ApiResponse<Map<String, Object>> getTeacherById(Long id) {
+    public ApiResponse<Map<String, Object>> getTeacherById(Long id, Long schoolId) {
         return teacherRepository.findById(id)
                 .map(teacher -> {
+                    if (schoolMismatch(schoolId, teacher.getSchoolId()))
+                        return ApiResponse.<Map<String, Object>>error("Teacher not found");
                     Map<String, Object> result = new LinkedHashMap<>();
                     result.put("id", teacher.getId());
                     result.put("name", teacher.getName());
@@ -792,9 +864,11 @@ public class AdminService {
                 .orElse(ApiResponse.error("Teacher not found"));
     }
 
-    public ApiResponse<String> deleteTeacher(Long id) {
+    public ApiResponse<String> deleteTeacher(Long id, Long schoolId) {
         return teacherRepository.findById(id)
                 .map(teacher -> {
+                    if (schoolMismatch(schoolId, teacher.getSchoolId()))
+                        return ApiResponse.<String>error("Teacher not found");
                     User linkedUser = teacher.getUser();
                     // Cascade: delete all related records first
                     timetableRepository.deleteByTeacherId(id);
@@ -815,9 +889,11 @@ public class AdminService {
                 .orElse(ApiResponse.error("Teacher not found"));
     }
 
-    public ApiResponse<String> resetTeacherPassword(Long teacherId, String newPassword) {
+    public ApiResponse<String> resetTeacherPassword(Long teacherId, String newPassword, Long schoolId) {
         return teacherRepository.findById(teacherId)
                 .map(teacher -> {
+                    if (schoolMismatch(schoolId, teacher.getSchoolId()))
+                        return ApiResponse.<String>error("Teacher not found");
                     User user = teacher.getUser();
                     if (user == null) return ApiResponse.<String>error("Teacher has no login account.");
                     user.setPassword(passwordEncoder.encode(newPassword));
@@ -859,10 +935,12 @@ public class AdminService {
     }
 
     @Transactional
-    public ApiResponse<ClassRoom> updateClass(Long id, ClassRoom updated) {
+    public ApiResponse<ClassRoom> updateClass(Long id, ClassRoom updated, Long schoolId) {
         try {
             return classRoomRepository.findById(id)
                 .map(c -> {
+                    if (schoolMismatch(schoolId, c.getSchoolId()))
+                        return ApiResponse.<ClassRoom>error("Class not found");
                     String oldName = c.getName();
                     String oldSection = normalizeSection(c.getSection());
 
@@ -920,17 +998,19 @@ public class AdminService {
     }
 
     @Transactional
-    public ApiResponse<String> deleteClass(Long id) {
+    public ApiResponse<String> deleteClass(Long id, Long schoolId) {
         return classRoomRepository.findById(id)
                 .map(classRoom -> {
+                    if (schoolMismatch(schoolId, classRoom.getSchoolId()))
+                        return ApiResponse.<String>error("Class not found");
                     String className = resolveClassName(classRoom.getName());
                     String section = normalizeSection(classRoom.getSection());
-                    Long schoolId = classRoom.getSchoolId();
-                    int deletedStudents = (schoolId != null)
-                            ? studentRepository.deleteBySchoolIdAndClassNameIgnoreCaseAndSectionIgnoreCase(schoolId, className, section)
+                    Long classSchoolId = classRoom.getSchoolId();
+                    int deletedStudents = (classSchoolId != null)
+                            ? studentRepository.deleteBySchoolIdAndClassNameIgnoreCaseAndSectionIgnoreCase(classSchoolId, className, section)
                             : studentRepository.deleteByClassNameIgnoreCaseAndSectionIgnoreCase(className, section);
                     classRoomRepository.deleteById(classRoom.getId());
-                    log.info("[deleteClass] Deleted class " + className + "-" + section + " schoolId=" + schoolId + " students removed=" + deletedStudents);
+                    log.info("[deleteClass] Deleted class " + className + "-" + section + " schoolId=" + classSchoolId + " students removed=" + deletedStudents);
                     return ApiResponse.success("Class deleted", "Deleted");
                 })
                 .orElse(ApiResponse.error("Class not found"));
@@ -953,13 +1033,22 @@ public class AdminService {
         return ApiResponse.success(results);
     }
 
-    public ApiResponse<List<Fee>> getStudentFees(Long studentId) {
-        List<Fee> fees = feeRepository.findByStudentIdOrderByCreatedAtDesc(studentId);
-        return ApiResponse.success(fees);
+    public ApiResponse<List<Fee>> getStudentFees(Long studentId, Long schoolId) {
+        if (schoolId != null) {
+            return ApiResponse.success(feeRepository.findBySchoolIdAndStudentId(schoolId, studentId));
+        }
+        return ApiResponse.success(feeRepository.findByStudentIdOrderByCreatedAtDesc(studentId));
     }
 
-    public ApiResponse<List<FeePayment>> getStudentFeePayments(Long studentId) {
-        return ApiResponse.success(feePaymentRepository.findByStudentIdOrderByPaymentDateDescCreatedAtDesc(studentId));
+    public ApiResponse<List<FeePayment>> getStudentFeePayments(Long studentId, Long schoolId) {
+        List<FeePayment> payments = feePaymentRepository
+                .findByStudentIdOrderByPaymentDateDescCreatedAtDesc(studentId);
+        if (schoolId != null) {
+            payments = payments.stream()
+                    .filter(p -> p.getSchoolId() == null || schoolId.equals(p.getSchoolId()))
+                    .toList();
+        }
+        return ApiResponse.success(payments);
     }
 
     @Transactional
@@ -1014,9 +1103,11 @@ public class AdminService {
     }
 
     @Transactional
-    public ApiResponse<Fee> collectCashFee(Long feeId, Map<String, Object> body) {
+    public ApiResponse<Fee> collectCashFee(Long feeId, Map<String, Object> body, Long schoolId) {
         return feeRepository.findById(feeId)
                 .map(fee -> {
+                    if (schoolMismatch(schoolId, fee.getSchoolId()))
+                        return ApiResponse.<Fee>error("Fee record not found");
                     // Parse amount
                     BigDecimal amountPaid;
                     try {
@@ -1091,9 +1182,11 @@ public class AdminService {
                 .orElse(ApiResponse.error("Fee record not found"));
     }
 
-    public ApiResponse<Fee> updateFee(Long id, Map<String, Object> body) {
+    public ApiResponse<Fee> updateFee(Long id, Map<String, Object> body, Long schoolId) {
         return feeRepository.findById(id)
                 .map(fee -> {
+                    if (schoolMismatch(schoolId, fee.getSchoolId()))
+                        return ApiResponse.<Fee>error("Fee not found");
                     if (body.containsKey("paidAmount") && body.get("paidAmount") != null) {
                         try {
                             BigDecimal paid = new BigDecimal(body.get("paidAmount").toString());
@@ -1123,27 +1216,57 @@ public class AdminService {
     }
 
     @Transactional
-    public ApiResponse<String> deleteFee(Long id) {
-        if (!feeRepository.existsById(id)) return ApiResponse.error("Fee record not found");
+    public ApiResponse<String> deleteFee(Long id, Long schoolId) {
+        Fee fee = feeRepository.findById(id).orElse(null);
+        if (fee == null) return ApiResponse.error("Fee record not found");
+        if (schoolMismatch(schoolId, fee.getSchoolId()))
+            return ApiResponse.error("Fee record not found");
         feeRepository.deleteById(id);
         return ApiResponse.success("Fee record deleted", "Deleted");
     }
 
     // ── Class Fee Structure ─────────────────────────────────────────────────
 
-    public ApiResponse<List<ClassFeeStructure>> getClassFeeStructures() {
+    public ApiResponse<List<ClassFeeStructure>> getClassFeeStructures(Long schoolId) {
+        if (schoolId != null) {
+            return ApiResponse.success(classFeeStructureRepository.findBySchoolId(schoolId));
+        }
         return ApiResponse.success(classFeeStructureRepository.findAll());
     }
 
     @Transactional
     public ApiResponse<ClassFeeStructure> saveClassFeeStructure(Map<String, Object> body) {
-        String className   = str(body, "className", null);
+        String className    = str(body, "className", null);
         String academicYear = str(body, "academicYear", "2024-25");
+        Long   schoolId     = body.get("schoolId") != null
+                ? Long.parseLong(body.get("schoolId").toString()) : null;
+
         if (className == null || className.isBlank()) return ApiResponse.error("Class name is required");
 
-        ClassFeeStructure cfs = classFeeStructureRepository
-                .findByClassNameAndAcademicYear(className, academicYear)
-                .orElse(ClassFeeStructure.builder().className(className).academicYear(academicYear).build());
+        ClassFeeStructure cfs;
+        if (schoolId != null) {
+            // 1. Try school-scoped lookup first
+            var schoolScoped = classFeeStructureRepository
+                    .findByClassNameAndAcademicYearAndSchoolId(className, academicYear, schoolId);
+            if (schoolScoped.isPresent()) {
+                cfs = schoolScoped.get();
+            } else {
+                // 2. Fall back to old null-school record and migrate it to this school
+                var nullScoped = classFeeStructureRepository
+                        .findByClassNameAndAcademicYearAndSchoolIdIsNull(className, academicYear);
+                if (nullScoped.isPresent()) {
+                    cfs = nullScoped.get();
+                    cfs.setSchoolId(schoolId); // migrate old record to this school
+                } else {
+                    cfs = ClassFeeStructure.builder()
+                            .className(className).academicYear(academicYear).schoolId(schoolId).build();
+                }
+            }
+        } else {
+            cfs = classFeeStructureRepository
+                    .findByClassNameAndAcademicYear(className, academicYear)
+                    .orElse(ClassFeeStructure.builder().className(className).academicYear(academicYear).build());
+        }
 
         try {
             if (body.containsKey("tuitionFee"))   cfs.setTuitionFee(new BigDecimal(body.get("tuitionFee").toString()));
@@ -1159,19 +1282,34 @@ public class AdminService {
     }
 
     @Transactional
-    public ApiResponse<String> deleteClassFeeStructure(Long id) {
-        if (!classFeeStructureRepository.existsById(id)) return ApiResponse.error("Fee structure not found");
+    public ApiResponse<String> deleteClassFeeStructure(Long id, Long schoolId) {
+        ClassFeeStructure cfs = classFeeStructureRepository.findById(id).orElse(null);
+        if (cfs == null) return ApiResponse.error("Fee structure not found");
+        if (schoolMismatch(schoolId, cfs.getSchoolId()))
+            return ApiResponse.error("Fee structure not found");
         classFeeStructureRepository.deleteById(id);
         return ApiResponse.success("Fee structure deleted", "Deleted");
     }
 
     // ── Student Fee Assignment ───────────────────────────────────────────────
 
-    public ApiResponse<List<StudentFeeAssignment>> getAllStudentFeeAssignments() {
-        return ApiResponse.success(studentFeeAssignmentRepository.findAllByOrderByCreatedAtDesc());
+    public ApiResponse<List<StudentFeeAssignment>> getAllStudentFeeAssignments(Long schoolId) {
+        List<StudentFeeAssignment> all = studentFeeAssignmentRepository.findAllByOrderByCreatedAtDesc();
+        if (schoolId != null) {
+            // Filter via student ownership since StudentFeeAssignment has no schoolId column
+            java.util.Set<Long> schoolStudentIds = studentRepository.findBySchoolId(schoolId)
+                    .stream().map(Student::getId).collect(java.util.stream.Collectors.toSet());
+            all = all.stream().filter(a -> schoolStudentIds.contains(a.getStudentId())).toList();
+        }
+        return ApiResponse.success(all);
     }
 
-    public ApiResponse<StudentFeeAssignment> getStudentFeeAssignment(Long studentId) {
+    public ApiResponse<StudentFeeAssignment> getStudentFeeAssignment(Long studentId, Long schoolId) {
+        if (schoolId != null) {
+            Student student = studentRepository.findById(studentId).orElse(null);
+            if (student == null || schoolMismatch(schoolId, student.getSchoolId()))
+                return ApiResponse.error("No fee assignment found for this student");
+        }
         return studentFeeAssignmentRepository.findFirstByStudentIdOrderByCreatedAtDesc(studentId)
                 .map(a -> ApiResponse.success(a))
                 .orElse(ApiResponse.error("No fee assignment found for this student"));
@@ -1230,7 +1368,7 @@ public class AdminService {
                 try { assignment.setDueDate(LocalDate.parse(dueDateStr)); } catch (Exception ignored) {}
             }
 
-            // Optional term fees
+            // Optional term fees (kept for backwards compatibility)
             try {
                 if (body.get("term1Fee") != null && !body.get("term1Fee").toString().isBlank())
                     assignment.setTerm1Fee(new BigDecimal(body.get("term1Fee").toString()));
@@ -1249,7 +1387,45 @@ public class AdminService {
             else if (paid.compareTo(BigDecimal.ZERO) > 0) assignment.setStatus(StudentFeeAssignment.Status.PARTIAL);
             else assignment.setStatus(StudentFeeAssignment.Status.PENDING);
 
-            return ApiResponse.success("Fee assigned", studentFeeAssignmentRepository.save(assignment));
+            StudentFeeAssignment saved = studentFeeAssignmentRepository.save(assignment);
+
+            // ── Installments ──────────────────────────────────────────────────────
+            // Accept a JSON array: [{termName, amount, dueDate}, ...]
+            // On every save we replace all installments so admin can fully re-configure.
+            // Only replace if a non-empty installments list is actually sent.
+            Object instObj = body.get("installments");
+            if (instObj instanceof java.util.List<?> rawList && !rawList.isEmpty()) {
+                // Delete existing pending installments; keep paid ones intact
+                List<FeeInstallment> existing = feeInstallmentRepository.findByAssignmentIdOrderByCreatedAtAsc(saved.getId());
+                existing.stream()
+                        .filter(i -> i.getStatus() == FeeInstallment.Status.PENDING)
+                        .forEach(i -> feeInstallmentRepository.deleteById(i.getId()));
+
+                for (Object rawInst : rawList) {
+                    if (!(rawInst instanceof Map<?, ?> instMap)) continue;
+                    String termName = instMap.get("termName") != null ? instMap.get("termName").toString().trim() : "Term";
+                    if (termName.isBlank()) continue;
+                    if (instMap.get("amount") == null || instMap.get("amount").toString().isBlank()) continue;
+                    BigDecimal instAmt;
+                    try { instAmt = new BigDecimal(instMap.get("amount").toString()); }
+                    catch (Exception e) { continue; }
+                    if (instAmt.compareTo(BigDecimal.ZERO) <= 0) continue;
+
+                    LocalDate instDue = null;
+                    if (instMap.get("dueDate") != null && !instMap.get("dueDate").toString().isBlank()) {
+                        try { instDue = LocalDate.parse(instMap.get("dueDate").toString()); } catch (Exception ignored2) {}
+                    }
+                    feeInstallmentRepository.save(FeeInstallment.builder()
+                            .assignmentId(saved.getId())
+                            .termName(termName)
+                            .amount(instAmt)
+                            .dueDate(instDue)
+                            .status(FeeInstallment.Status.PENDING)
+                            .build());
+                }
+            }
+
+            return ApiResponse.success("Fee assigned", saved);
         } catch (Exception e) {
             log.severe("[assignStudentFee] Unexpected error: " + e.getMessage());
             return ApiResponse.error("Failed to save assignment: " + e.getMessage());
@@ -1313,24 +1489,173 @@ public class AdminService {
         return ApiResponse.success("Payment recorded", saved);
     }
 
-    public ApiResponse<List<FeePayment>> getAllFeePayments() {
+    public ApiResponse<List<FeePayment>> getAllFeePayments(Long schoolId) {
+        if (schoolId != null) {
+            return ApiResponse.success(
+                    feePaymentRepository.findBySchoolIdOrderByPaymentDateDescCreatedAtDesc(schoolId));
+        }
         return ApiResponse.success(
                 feePaymentRepository.findAll(
                         org.springframework.data.domain.Sort.by(
                                 org.springframework.data.domain.Sort.Direction.DESC, "createdAt")));
     }
 
+    // ── Installment management ─────────────────────────────────────────────
+
+    public ApiResponse<List<FeeInstallment>> getInstallments(Long assignmentId) {
+        return ApiResponse.success(
+                feeInstallmentRepository.findByAssignmentIdOrderByDueDateAsc(assignmentId));
+    }
+
+    /**
+     * Record a cash payment for a specific installment.
+     * Marks the installment PAID and updates the parent assignment's paidAmount.
+     */
+    @Transactional
+    public ApiResponse<FeeInstallment> collectInstallmentFee(Long installmentId, Map<String, Object> body) {
+        FeeInstallment installment = feeInstallmentRepository.findById(installmentId).orElse(null);
+        if (installment == null) return ApiResponse.error("Installment not found");
+        if (installment.getStatus() == FeeInstallment.Status.PAID)
+            return ApiResponse.error("This installment is already paid");
+
+        StudentFeeAssignment assignment = studentFeeAssignmentRepository
+                .findById(installment.getAssignmentId()).orElse(null);
+        if (assignment == null) return ApiResponse.error("Fee assignment not found");
+
+        String receiptNumber = str(body, "receiptNumber", null);
+        if (receiptNumber == null || receiptNumber.isBlank()) return ApiResponse.error("Receipt number is required");
+        receiptNumber = receiptNumber.trim();
+        if (feePaymentRepository.existsByReceiptNumber(receiptNumber))
+            return ApiResponse.error("Duplicate receipt number: " + receiptNumber);
+
+        String paidDateStr = str(body, "paidDate", null);
+        LocalDate paymentDate = LocalDate.now();
+        if (paidDateStr != null && !paidDateStr.isBlank()) {
+            try { paymentDate = LocalDate.parse(paidDateStr); } catch (Exception ignored) {}
+        }
+
+        // Mark installment paid
+        installment.setStatus(FeeInstallment.Status.PAID);
+        installment.setPaidDate(paymentDate);
+        FeeInstallment savedInst = feeInstallmentRepository.save(installment);
+
+        // Update assignment totals
+        BigDecimal currentPaid = assignment.getPaidAmount() != null ? assignment.getPaidAmount() : BigDecimal.ZERO;
+        BigDecimal newPaid = currentPaid.add(installment.getAmount());
+        assignment.setPaidAmount(newPaid);
+        if (newPaid.compareTo(assignment.getTotalFee()) >= 0) assignment.setStatus(StudentFeeAssignment.Status.PAID);
+        else assignment.setStatus(StudentFeeAssignment.Status.PARTIAL);
+        studentFeeAssignmentRepository.save(assignment);
+
+        // Record in fee_payments table
+        feePaymentRepository.save(FeePayment.builder()
+                .feeId(0L)
+                .assignmentId(assignment.getId())
+                .studentId(assignment.getStudentId())
+                .studentName(assignment.getStudentName())
+                .rollNumber(assignment.getRollNumber())
+                .className(assignment.getClassName())
+                .feeType("Fee Payment")
+                .term(installment.getTermName())
+                .amountPaid(installment.getAmount())
+                .paymentDate(paymentDate)
+                .paymentMode("CASH")
+                .receiptNumber(receiptNumber)
+                .receivedBy(str(body, "receivedBy", null))
+                .remarks(str(body, "remarks", null))
+                .build());
+
+        return ApiResponse.success("Payment recorded for " + installment.getTermName(), savedInst);
+    }
+
+    /**
+     * Returns comprehensive fee data for a student (used by the student portal).
+     * Includes the assignment, installments, payments, and a summary map.
+     */
+    public ApiResponse<Map<String, Object>> getStudentFeeData(Long studentId) {
+        Map<String, Object> result = new LinkedHashMap<>();
+
+        StudentFeeAssignment assignment = studentFeeAssignmentRepository
+                .findFirstByStudentIdOrderByCreatedAtDesc(studentId).orElse(null);
+
+        if (assignment == null) {
+            Map<String, Object> emptySummary = new LinkedHashMap<>();
+            emptySummary.put("totalFee",   0);
+            emptySummary.put("paidAmount", 0);
+            emptySummary.put("dueAmount",  0);
+            emptySummary.put("nextDueDate", null);
+            emptySummary.put("status", null);
+            emptySummary.put("academicYear", null);
+            result.put("assignment", null);
+            result.put("installments", List.of());
+            result.put("payments", List.of());
+            result.put("classFeeStructure", null);
+            result.put("summary", emptySummary);
+            return ApiResponse.success(result);
+        }
+
+        List<FeeInstallment> installments =
+                feeInstallmentRepository.findByAssignmentIdOrderByDueDateAsc(assignment.getId());
+        List<FeePayment> payments =
+                feePaymentRepository.findByAssignmentIdOrderByPaymentDateDescCreatedAtDesc(assignment.getId());
+
+        BigDecimal totalFee   = assignment.getTotalFee() != null ? assignment.getTotalFee() : BigDecimal.ZERO;
+        BigDecimal paidAmount = assignment.getPaidAmount() != null ? assignment.getPaidAmount() : BigDecimal.ZERO;
+        BigDecimal dueAmount  = totalFee.subtract(paidAmount).max(BigDecimal.ZERO);
+
+        LocalDate nextDue = installments.stream()
+                .filter(i -> i.getStatus() == FeeInstallment.Status.PENDING && i.getDueDate() != null)
+                .map(FeeInstallment::getDueDate)
+                .min(LocalDate::compareTo)
+                .orElse(assignment.getDueDate());
+
+        Map<String, Object> summary = new LinkedHashMap<>();
+        summary.put("totalFee",   totalFee);
+        summary.put("paidAmount", paidAmount);
+        summary.put("dueAmount",  dueAmount);
+        summary.put("nextDueDate", nextDue);
+        summary.put("status", assignment.getStatus());
+        summary.put("academicYear", assignment.getAcademicYear());
+
+        // Include class fee structure (fee type breakdown) if available
+        ClassFeeStructure cfs = null;
+        if (assignment.getClassName() != null && assignment.getAcademicYear() != null) {
+            Student student = studentRepository.findById(studentId).orElse(null);
+            if (student != null && student.getSchoolId() != null) {
+                cfs = classFeeStructureRepository
+                        .findByClassNameAndAcademicYearAndSchoolId(
+                                assignment.getClassName(), assignment.getAcademicYear(), student.getSchoolId())
+                        .orElse(null);
+            }
+            if (cfs == null) {
+                cfs = classFeeStructureRepository
+                        .findByClassNameAndAcademicYear(assignment.getClassName(), assignment.getAcademicYear())
+                        .orElse(null);
+            }
+        }
+
+        result.put("assignment",        assignment);
+        result.put("installments",      installments);
+        result.put("payments",          payments);
+        result.put("classFeeStructure", cfs);
+        result.put("summary",           summary);
+        return ApiResponse.success(result);
+    }
+
     // ── Expenses ───────────────────────────────────────────────────────────
 
     public ApiResponse<List<Expense>> getExpenses(
-            String status, String dateFrom, String dateTo, String search) {
+            Long schoolId, String status, String dateFrom, String dateTo, String search) {
 
-        // Pass raw strings to the native-query repository — null means "no filter"
         String statusParam   = (status   != null && !status.isBlank())   ? status.toUpperCase()  : null;
         String dateFromParam = (dateFrom != null && !dateFrom.isBlank()) ? dateFrom              : null;
         String dateToParam   = (dateTo   != null && !dateTo.isBlank())   ? dateTo                : null;
         String searchParam   = (search   != null && !search.isBlank())   ? search.trim()         : null;
 
+        if (schoolId != null) {
+            return ApiResponse.success(
+                    expenseRepository.findFilteredBySchool(schoolId, statusParam, dateFromParam, dateToParam, searchParam));
+        }
         return ApiResponse.success(
                 expenseRepository.findFiltered(statusParam, dateFromParam, dateToParam, searchParam));
     }
@@ -1405,13 +1730,31 @@ public class AdminService {
         return ApiResponse.success("Expense deleted", "Deleted");
     }
 
-    public ApiResponse<Map<String, Object>> getExpenseSummary() {
+    public ApiResponse<Map<String, Object>> getExpenseSummary(Long schoolId) {
         LocalDate now = LocalDate.now();
         int month = now.getMonthValue(), year = now.getYear();
 
-        BigDecimal total  = expenseRepository.sumByMonth(month, year);
-        BigDecimal paid   = expenseRepository.sumPaidByMonth(month, year);
-        BigDecimal unpaid = expenseRepository.sumUnpaidByMonth(month, year);
+        BigDecimal total, paid, unpaid;
+        if (schoolId != null) {
+            total  = expenseRepository.sumBySchoolAndMonth(schoolId, month, year);
+            // School-scoped paid/unpaid: fall back to in-memory filter from findFilteredBySchool
+            paid   = expenseRepository.sumBySchoolAndMonth(schoolId, month, year); // reuse total; separate breakdowns below
+            List<Expense> schoolExpenses = expenseRepository.findFilteredBySchool(
+                    schoolId, null, now.withDayOfMonth(1).toString(), now.toString(), null);
+            paid   = schoolExpenses.stream()
+                    .filter(e -> e.getStatus() == Expense.PaymentStatus.PAID)
+                    .map(Expense::getAmount).filter(a -> a != null)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            unpaid = schoolExpenses.stream()
+                    .filter(e -> e.getStatus() == Expense.PaymentStatus.UNPAID)
+                    .map(Expense::getAmount).filter(a -> a != null)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            total  = paid.add(unpaid);
+        } else {
+            total  = expenseRepository.sumByMonth(month, year);
+            paid   = expenseRepository.sumPaidByMonth(month, year);
+            unpaid = expenseRepository.sumUnpaidByMonth(month, year);
+        }
 
         Map<String, Object> summary = new HashMap<>();
         summary.put("totalMonthly", total  != null ? total  : BigDecimal.ZERO);
@@ -1445,8 +1788,11 @@ public class AdminService {
         return m;
     }
 
-    public ApiResponse<List<Map<String, Object>>> getParents() {
-        List<Map<String, Object>> result = userRepository.findByRole(User.Role.PARENT).stream()
+    public ApiResponse<List<Map<String, Object>>> getParents(Long schoolId) {
+        List<User> parentUsers = (schoolId != null)
+                ? userRepository.findByRoleAndSchoolId(User.Role.PARENT, schoolId)
+                : userRepository.findByRole(User.Role.PARENT);
+        List<Map<String, Object>> result = parentUsers.stream()
                 .map(u -> {
                     ParentProfile profile = parentProfileRepository.findByUser(u).orElse(null);
                     return parentToMap(u, profile);
@@ -1653,8 +1999,10 @@ public class AdminService {
     // ── Attendance Summary ────────────────────────────────────────────────────
 
     /** Class-wise attendance summary for a specific date (Admin/SuperAdmin view) */
-    public ApiResponse<List<Map<String, Object>>> getClassAttendanceSummaries(LocalDate date) {
-        List<ClassRoom> classes = classRoomRepository.findByIsActive(true);
+    public ApiResponse<List<Map<String, Object>>> getClassAttendanceSummaries(LocalDate date, Long schoolId) {
+        List<ClassRoom> classes = (schoolId != null)
+                ? classRoomRepository.findBySchoolIdAndIsActive(schoolId, true)
+                : classRoomRepository.findByIsActive(true);
         List<Map<String, Object>> result = new java.util.ArrayList<>();
 
         for (ClassRoom cls : classes) {

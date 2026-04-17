@@ -3,10 +3,7 @@ import axios from 'axios';
 // Base URL for the Spring Boot backend
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
-// Clear any legacy localStorage data left from older builds
-['schoolers_teacher_creds', 'student_export_history', 'schoolers_notifications'].forEach(k => localStorage.removeItem(k));
-
-// Module-level auth token (no localStorage)
+// Module-level auth token (no localStorage, no sessionStorage)
 let _authToken = null;
 export const setAuthToken   = (token) => { _authToken = token; };
 export const clearAuthToken = ()       => { _authToken = null; };
@@ -137,6 +134,10 @@ export const adminAPI = {
   collectAssignmentFee: (assignmentId, data) => api.post(`/api/admin/student-fee-assignments/${assignmentId}/collect`, data),
   getAllFeePayments: () => api.get('/api/admin/fee-payments'),
 
+  // Fee Installments
+  getInstallments: (assignmentId) => api.get(`/api/admin/student-fee-assignments/${assignmentId}/installments`),
+  collectInstallmentFee: (installmentId, data) => api.post(`/api/admin/fee-installments/${installmentId}/pay`, data),
+
   // Student search for fee collection
   searchStudentsForFee: (q) => api.get('/api/admin/students/search', { params: { q } }),
 
@@ -163,6 +164,7 @@ export const adminAPI = {
 export const teacherAPI = {
   // Classes
   getMyClasses: (teacherId) => api.get('/api/teacher/classes', { params: teacherId ? { teacherId } : {} }),
+  getMyProfile: () => api.get('/api/teacher/profile'),
 
   // Students in a class
   getClassStudents: (classId) => api.get(`/api/teacher/class/${classId}/students`),
@@ -302,12 +304,19 @@ export const timetableAPI = {
 // ============================================
 
 export const leaveAPI = {
-  getStudentLeaves:  ()          => api.get('/api/leave/student'),
-  getTeacherLeaves:  ()          => api.get('/api/leave/teacher'),
-  getMyLeaves:       (id, type)  => api.get(`/api/leave/my/${id}`, { params: { type } }),
-  createLeave:       (data)      => api.post('/api/leave', data),
-  updateStatus:      (id, data)  => api.put(`/api/leave/${id}/status`, data),
-  deleteLeave:       (id)        => api.delete(`/api/leave/${id}`),
+  // Admin
+  getStudentLeaves:     ()          => api.get('/api/leave/student'),
+  getTeacherLeaves:     ()          => api.get('/api/leave/teacher'),
+  getMyLeaves:          (id, type)  => api.get(`/api/leave/my/${id}`, { params: { type } }),
+  createLeave:          (data)      => api.post('/api/leave', data),
+  updateStatus:         (id, data)  => api.put(`/api/leave/${id}/status`, data),
+  deleteLeave:          (id)        => api.delete(`/api/leave/${id}`),
+  // Student
+  submitStudentLeave:   (data)      => api.post('/api/leave/student/submit', data),
+  getMyStudentLeaves:   ()          => api.get('/api/leave/student/my'),
+  // Teacher
+  getClassStudentLeaves: ()         => api.get('/api/leave/teacher/class'),
+  approveRejectLeave:   (id, data)  => api.put(`/api/leave/${id}/teacher-action`, data),
 };
 
 // ============================================
