@@ -376,4 +376,32 @@ public class AdminController {
         ApiResponse<Map<String, Object>> response = adminService.getClassAttendanceDetails(classId, date);
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
+
+    // ===== Teacher Class Assignments =====
+
+    /** Get all teacher-class-subject assignments for this school */
+    @GetMapping("/teacher-assignments")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getTeacherAssignments(
+            @RequestParam(required = false) Long teacherId, Authentication auth) {
+        return ResponseEntity.ok(adminService.getTeacherAssignments(teacherId, getCurrentSchoolId(auth)));
+    }
+
+    /**
+     * Batch-assign a single teacher to one or more classes with a subject per class.
+     * Body: { teacherId: Long, assignments: [{ classSection: String, subject: String }] }
+     * Existing assignments for this teacher+school are replaced.
+     */
+    @PostMapping("/teacher-assignments/batch")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> saveTeacherAssignments(
+            @RequestBody Map<String, Object> body, Authentication auth) {
+        var response = adminService.saveTeacherAssignments(body, getCurrentSchoolId(auth));
+        return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
+    }
+
+    /** Delete a single assignment row */
+    @DeleteMapping("/teacher-assignments/{id}")
+    public ResponseEntity<ApiResponse<String>> deleteTeacherAssignment(@PathVariable Long id, Authentication auth) {
+        var response = adminService.deleteTeacherAssignment(id, getCurrentSchoolId(auth));
+        return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
+    }
 }

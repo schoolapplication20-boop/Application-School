@@ -149,6 +149,11 @@ export const adminAPI = {
   updateExpense: (id, data) => api.put(`/api/admin/expenses/${id}`, data),
   deleteExpense: (id) => api.delete(`/api/admin/expenses/${id}`),
 
+  // Teacher Class Assignments
+  getTeacherAssignments: (teacherId) => api.get('/api/admin/teacher-assignments', { params: teacherId ? { teacherId } : {} }),
+  saveTeacherAssignments: (data) => api.post('/api/admin/teacher-assignments/batch', data),
+  deleteTeacherAssignment: (id) => api.delete(`/api/admin/teacher-assignments/${id}`),
+
   // Parents
   getParents: () => api.get('/api/admin/parents'),
   createParent: (data) => api.post('/api/admin/parents', data),
@@ -165,6 +170,8 @@ export const teacherAPI = {
   // Classes
   getMyClasses: (teacherId) => api.get('/api/teacher/classes', { params: teacherId ? { teacherId } : {} }),
   getMyProfile: () => api.get('/api/teacher/profile'),
+  getClassTeacherAssignment: () => api.get('/api/teacher/class-teacher-assignment'),
+  getMySubjectAssignments: () => api.get('/api/teacher/my-subject-assignments'),
 
   // Students in a class
   getClassStudents: (classId) => api.get(`/api/teacher/class/${classId}/students`),
@@ -346,11 +353,17 @@ export const homeworkAPI = {
 // ============================================
 
 export const messageAPI = {
-  getMessages:      (userId)       => api.get(`/api/messages/${userId}`),
-  getConversation:  (u1, u2)       => api.get('/api/messages/conversation', { params: { u1, u2 } }),
-  sendMessage:      (data)         => api.post('/api/messages', data),
-  markAsRead:       (id)           => api.patch(`/api/messages/${id}/read`),
-  getUnreadCount:   (userId)       => api.get(`/api/messages/unread/${userId}`),
+  getMessages:          (userId)   => api.get(`/api/messages/${userId}`),
+  getConversation:      (u1, u2)   => api.get('/api/messages/conversation', { params: { u1, u2 } }),
+  sendMessage:          (data)     => api.post('/api/messages', data),
+  markAsRead:           (id)       => api.patch(`/api/messages/${id}/read`),
+  getUnreadCount:       (userId)   => api.get(`/api/messages/unread/${userId}`),
+  // Broadcast / student-inbox
+  getStudentInbox:      ()         => api.get('/api/messages/student/inbox'),
+  getStudentUnreadCount:()         => api.get('/api/messages/student/unread-count'),
+  markReadByStudent:    (id)       => api.patch(`/api/messages/student/${id}/read`),
+  sendBroadcast:        (data)     => api.post('/api/messages/broadcast', data),
+  getBroadcasts:        ()         => api.get('/api/messages/broadcasts'),
 };
 
 // ============================================

@@ -22,6 +22,7 @@ import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -57,6 +58,11 @@ public class AdminService {
     @Autowired private ClassFeeStructureRepository classFeeStructureRepository;
     @Autowired private StudentFeeAssignmentRepository studentFeeAssignmentRepository;
     @Autowired private FeeInstallmentRepository feeInstallmentRepository;
+    @Autowired private AppNotificationRepository appNotificationRepository;
+    @Autowired private ClassDiaryRepository classDiaryRepository;
+    @Autowired private MessageRepository messageRepository;
+    @Autowired private SalaryPaymentRepository salaryPaymentRepository;
+    @Autowired private TeacherClassAssignmentRepository teacherClassAssignmentRepository;
 
     private static final String CHARS = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#$!";
     private static final SecureRandom RANDOM = new SecureRandom();
@@ -543,11 +549,28 @@ public class AdminService {
         transportStudentAssignmentRepository.deleteByStudentId(id);
         log.info("[deleteStudent] attendance, fees, transport records deleted");
 
-        // ── Step 3: Leave requests ────────────────────────────────────────────
+        // ── Step 3: Fee payments & fee assignments (with installments) ───────────
+        feePaymentRepository.deleteByStudentId(id);
+        List<com.schoolers.model.StudentFeeAssignment> feeAssignments =
+                studentFeeAssignmentRepository.findByStudentId(id);
+        for (com.schoolers.model.StudentFeeAssignment fa : feeAssignments) {
+            feeInstallmentRepository.deleteByAssignmentId(fa.getId());
+        }
+        studentFeeAssignmentRepository.deleteByStudentId(id);
+        log.info("[deleteStudent] fee payments, assignments & installments deleted");
+
+        // ── Step 4: Leave requests ─────────────────────────────────────────────
         leaveRequestRepository.deleteByRequesterId(id);
         log.info("[deleteStudent] leave requests deleted");
 
-        // ── Step 4: Delete the student row ────────────────────────────────────
+        // ── Step 5: Notifications & direct messages for this student ──────────
+        if (linkedUserId != null) {
+            appNotificationRepository.deleteByUserId(linkedUserId);
+            messageRepository.deleteByTargetStudentId(id);
+        }
+        log.info("[deleteStudent] notifications & targeted messages deleted");
+
+        // ── Step 6: Delete the student row ────────────────────────────────────
         studentRepository.deleteById(id);
         studentRepository.flush();
         log.info("[deleteStudent] student row deleted id=" + id);
@@ -864,29 +887,66 @@ public class AdminService {
                 .orElse(ApiResponse.error("Teacher not found"));
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public ApiResponse<String> deleteTeacher(Long id, Long schoolId) {
-        return teacherRepository.findById(id)
-                .map(teacher -> {
-                    if (schoolMismatch(schoolId, teacher.getSchoolId()))
-                        return ApiResponse.<String>error("Teacher not found");
-                    User linkedUser = teacher.getUser();
-                    // Cascade: delete all related records first
-                    timetableRepository.deleteByTeacherId(id);
-                    homeworkRepository.deleteByTeacherId(id);
-                    assignmentRepository.deleteByTeacherId(id);
-                    marksRepository.deleteByTeacherId(id);
-                    if (linkedUser != null) {
-                        salaryRepository.deleteByStaffId(linkedUser.getId());
-                        leaveRequestRepository.deleteByRequesterId(linkedUser.getId());
-                    }
-                    teacherRepository.deleteById(id);
-                    if (linkedUser != null) {
-                        userRepository.deleteById(linkedUser.getId());
-                    }
-                    log.info("[deleteTeacher] Deleted teacher id=" + id + " and all related records");
-                    return ApiResponse.success("Teacher and login account removed", "Deleted");
-                })
-                .orElse(ApiResponse.error("Teacher not found"));
+        Teacher teacher = teacherRepository.findById(id).orElse(null);
+        if (teacher == null) return ApiResponse.error("Teacher not found");
+        if (schoolMismatch(schoolId, teacher.getSchoolId()))
+            return ApiResponse.error("Teacher not found");
+
+        User linkedUser = teacher.getUser();
+        Long linkedUserId = linkedUser != null ? linkedUser.getId() : null;
+
+        // ── Step 1: Timetable, homework, assignments, marks ───────────────────
+        timetableRepository.deleteByTeacherId(id);
+        homeworkRepository.deleteByTeacherId(id);
+        assignmentRepository.deleteByTeacherId(id);
+        marksRepository.deleteByTeacherId(id);
+        classDiaryRepository.deleteByTeacherId(id);
+        log.info("[deleteTeacher] academic records deleted for teacherId=" + id);
+
+        // ── Step 2: Messages sent by this teacher ─────────────────────────────
+        if (linkedUserId != null) {
+            messageRepository.deleteBySenderId(linkedUserId);
+        }
+
+        // ── Step 3: Leave requests submitted by this teacher ──────────────────
+        if (linkedUserId != null) {
+            leaveRequestRepository.deleteByRequesterId(linkedUserId);
+        }
+
+        // ── Step 4: Salary records and their payments ─────────────────────────
+        List<com.schoolers.model.Salary> salaries = salaryRepository.findByStaffId(id);
+        for (com.schoolers.model.Salary sal : salaries) {
+            salaryPaymentRepository.deleteBySalaryId(sal.getId());
+        }
+        salaryRepository.deleteByStaffId(id);
+        log.info("[deleteTeacher] salary & payments deleted for teacherId=" + id);
+
+        // ── Step 5: Notifications for this teacher's user account ─────────────
+        if (linkedUserId != null) {
+            appNotificationRepository.deleteByUserId(linkedUserId);
+        }
+
+        // ── Step 6: Reset classroom teacherId if this teacher was class teacher
+        classRoomRepository.findByTeacherId(id).forEach(cls -> {
+            cls.setTeacherId(null);
+            cls.setTeacherName(null);
+            classRoomRepository.save(cls);
+        });
+        log.info("[deleteTeacher] classroom assignments reset for teacherId=" + id);
+
+        // ── Step 7: Class-subject assignments for this teacher ────────────────
+        teacherClassAssignmentRepository.deleteByTeacherId(id);
+
+        // ── Step 8: Delete teacher row then linked user account ───────────────
+        teacherRepository.deleteById(id);
+        teacherRepository.flush();
+        if (linkedUser != null) {
+            userRepository.deleteById(linkedUserId);
+        }
+        log.info("[deleteTeacher] COMPLETE — teacherId=" + id);
+        return ApiResponse.success("Teacher and all related records deleted", "Deleted");
     }
 
     public ApiResponse<String> resetTeacherPassword(Long teacherId, String newPassword, Long schoolId) {
@@ -997,23 +1057,73 @@ public class AdminService {
         }
     }
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public ApiResponse<String> deleteClass(Long id, Long schoolId) {
-        return classRoomRepository.findById(id)
-                .map(classRoom -> {
-                    if (schoolMismatch(schoolId, classRoom.getSchoolId()))
-                        return ApiResponse.<String>error("Class not found");
-                    String className = resolveClassName(classRoom.getName());
-                    String section = normalizeSection(classRoom.getSection());
-                    Long classSchoolId = classRoom.getSchoolId();
-                    int deletedStudents = (classSchoolId != null)
-                            ? studentRepository.deleteBySchoolIdAndClassNameIgnoreCaseAndSectionIgnoreCase(classSchoolId, className, section)
-                            : studentRepository.deleteByClassNameIgnoreCaseAndSectionIgnoreCase(className, section);
-                    classRoomRepository.deleteById(classRoom.getId());
-                    log.info("[deleteClass] Deleted class " + className + "-" + section + " schoolId=" + classSchoolId + " students removed=" + deletedStudents);
-                    return ApiResponse.success("Class deleted", "Deleted");
-                })
-                .orElse(ApiResponse.error("Class not found"));
+        ClassRoom classRoom = classRoomRepository.findById(id).orElse(null);
+        if (classRoom == null) return ApiResponse.error("Class not found");
+        if (schoolMismatch(schoolId, classRoom.getSchoolId()))
+            return ApiResponse.error("Class not found");
+
+        String className   = resolveClassName(classRoom.getName());
+        String section     = normalizeSection(classRoom.getSection());
+        Long   classSchoolId = classRoom.getSchoolId();
+        String classSection  = className + (section != null && !section.isBlank() ? "-" + section : "");
+
+        // ── Step 1: Cascade-delete every student in this class ────────────────
+        List<Student> students = (classSchoolId != null)
+                ? studentRepository.findBySchoolIdAndClassNameIgnoreCaseAndSectionIgnoreCase(classSchoolId, className, section)
+                : studentRepository.findByClassNameIgnoreCaseAndSectionIgnoreCase(className, section);
+
+        for (Student s : students) {
+            Long sid = s.getId();
+            Long sUserId = s.getStudentUserId();
+
+            marksRepository.deleteByStudentId(sid);
+            hallTicketRepository.deleteByStudentId(sid);
+            certificateRepository.deleteByStudentId(sid);
+            attendanceRepository.deleteByStudentId(sid);
+            feeRepository.deleteByStudentId(sid);
+            feePaymentRepository.deleteByStudentId(sid);
+            transportFeeRepository.deleteByStudentId(sid);
+            transportStudentAssignmentRepository.deleteByStudentId(sid);
+            leaveRequestRepository.deleteByRequesterId(sid);
+            messageRepository.deleteByTargetStudentId(sid);
+            List<com.schoolers.model.StudentFeeAssignment> fas =
+                    studentFeeAssignmentRepository.findByStudentId(sid);
+            for (com.schoolers.model.StudentFeeAssignment fa : fas) {
+                feeInstallmentRepository.deleteByAssignmentId(fa.getId());
+            }
+            studentFeeAssignmentRepository.deleteByStudentId(sid);
+            if (sUserId != null) {
+                appNotificationRepository.deleteByUserId(sUserId);
+                userRepository.deleteById(sUserId);
+            }
+            studentRepository.deleteById(sid);
+        }
+        log.info("[deleteClass] cascade-deleted " + students.size() + " students for class " + classSection);
+
+        // ── Step 2: Class-level records ────────────────────────────────────────
+        attendanceRepository.deleteByClassId(id);
+        timetableRepository.deleteByClassSection(classSection);
+        homeworkRepository.deleteByClassSection(classSection);
+        messageRepository.deleteByClassSection(classSection);
+        leaveRequestRepository.deleteByClassSection(classSection);
+        classDiaryRepository.deleteByClassNameAndSection(className, section);
+        teacherClassAssignmentRepository.deleteByClassSection(classSection);
+        log.info("[deleteClass] class-level records deleted for " + classSection);
+
+        // ── Step 3: Reset teacher's primaryClassId if pointing to this class ──
+        teacherRepository.findAll().stream()
+                .filter(t -> id.equals(t.getPrimaryClassId()))
+                .forEach(t -> {
+                    t.setPrimaryClassId(null);
+                    teacherRepository.save(t);
+                });
+
+        // ── Step 4: Delete the classroom row ──────────────────────────────────
+        classRoomRepository.deleteById(id);
+        log.info("[deleteClass] COMPLETE — classId=" + id + " (" + classSection + ")");
+        return ApiResponse.success("Class and all related data deleted", "Deleted");
     }
 
     // ── Fees ───────────────────────────────────────────────────────────────
@@ -2162,6 +2272,83 @@ public class AdminService {
 
     private boolean isClassTeacherRole(String teacherType) {
         return "CLASS_TEACHER".equalsIgnoreCase(teacherType) || "BOTH".equalsIgnoreCase(teacherType);
+    }
+
+    // ===== Teacher Class Assignments =====
+
+    public ApiResponse<List<Map<String, Object>>> getTeacherAssignments(Long teacherId, Long schoolId) {
+        List<TeacherClassAssignment> rows = (teacherId != null)
+                ? teacherClassAssignmentRepository.findByTeacherIdAndSchoolId(teacherId, schoolId)
+                : teacherClassAssignmentRepository.findBySchoolId(schoolId);
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (TeacherClassAssignment a : rows) {
+            Map<String, Object> m = new HashMap<>();
+            m.put("id",           a.getId());
+            m.put("teacherId",    a.getTeacherId());
+            m.put("teacherName",  a.getTeacherName());
+            m.put("classSection", a.getClassSection());
+            m.put("subject",      a.getSubject());
+            m.put("schoolId",     a.getSchoolId());
+            m.put("createdAt",    a.getCreatedAt());
+            result.add(m);
+        }
+        return ApiResponse.success(result);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public ApiResponse<List<Map<String, Object>>> saveTeacherAssignments(Map<String, Object> body, Long schoolId) {
+        try {
+            Object tidObj = body.get("teacherId");
+            if (tidObj == null) return ApiResponse.error("teacherId is required");
+            Long teacherId = Long.valueOf(tidObj.toString());
+
+            Teacher teacher = teacherRepository.findById(teacherId).orElse(null);
+            if (teacher == null) return ApiResponse.error("Teacher not found");
+
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> incoming = (List<Map<String, Object>>) body.get("assignments");
+            if (incoming == null || incoming.isEmpty()) return ApiResponse.error("assignments list is required");
+
+            // Delete only rows for this teacher (not the entire school) so other teachers are unaffected
+            teacherClassAssignmentRepository.deleteByTeacherId(teacherId);
+
+            List<Map<String, Object>> saved = new ArrayList<>();
+            for (Map<String, Object> entry : incoming) {
+                String classSection = (String) entry.get("classSection");
+                String subject      = (String) entry.get("subject");
+                if (classSection == null || classSection.isBlank()) continue;
+                if (subject      == null || subject.isBlank())      continue;
+
+                TeacherClassAssignment a = TeacherClassAssignment.builder()
+                        .teacherId(teacherId)
+                        .teacherName(teacher.getName())
+                        .classSection(classSection.trim())
+                        .subject(subject.trim())
+                        .schoolId(schoolId)
+                        .build();
+                TeacherClassAssignment saved1 = teacherClassAssignmentRepository.save(a);
+
+                Map<String, Object> m = new HashMap<>();
+                m.put("id",           saved1.getId());
+                m.put("teacherId",    saved1.getTeacherId());
+                m.put("teacherName",  saved1.getTeacherName());
+                m.put("classSection", saved1.getClassSection());
+                m.put("subject",      saved1.getSubject());
+                saved.add(m);
+            }
+            return ApiResponse.success("Assignments saved", saved);
+        } catch (Exception e) {
+            return ApiResponse.error("Failed to save assignments: " + e.getMessage());
+        }
+    }
+
+    public ApiResponse<String> deleteTeacherAssignment(Long id, Long schoolId) {
+        TeacherClassAssignment a = teacherClassAssignmentRepository.findById(id).orElse(null);
+        if (a == null) return ApiResponse.error("Assignment not found");
+        if (schoolId != null && !schoolId.equals(a.getSchoolId())) return ApiResponse.error("Forbidden");
+        teacherClassAssignmentRepository.deleteById(id);
+        return ApiResponse.success("Deleted", "OK");
     }
 
     private void syncPrimaryClassAssignment(Teacher teacher, Long previousPrimaryClassId) {

@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Layout from '../../components/Layout';
 import Toast from '../../components/Toast';
 import { useAuth } from '../../context/AuthContext';
+import { useNotifications } from '../../context/NotificationContext';
 import { leaveAPI } from '../../services/api';
 
 const fmt = (d) => {
@@ -18,11 +19,14 @@ const normalizeStatus = (s) => {
 
 export default function TeacherLeaveRequest() {
   const { user } = useAuth();
+  const { notifications } = useNotifications();
   const [leaves, setLeaves]         = useState([]);
   const [loading, setLoading]       = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [showModal, setShowModal]   = useState(false);
   const [toast, setToast]           = useState(null);
+  const prevLeaveDecisionCount = useRef(0);
   const [formData, setFormData]     = useState({
     leaveType: 'Medical',
     fromDate:  '',
@@ -35,8 +39,9 @@ export default function TeacherLeaveRequest() {
     setTimeout(() => setToast(null), 3500);
   };
 
-  const loadLeaves = async () => {
+  const loadLeaves = async (silent = false) => {
     if (!user?.id) return;
+    if (!silent) setLoading(true); else setRefreshing(true);
     try {
       const res  = await leaveAPI.getMyLeaves(user.id, 'TEACHER');
       const data = res.data?.data ?? res.data ?? [];
@@ -45,10 +50,20 @@ export default function TeacherLeaveRequest() {
       // keep existing list on error
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
   useEffect(() => { loadLeaves(); }, [user?.id]);
+
+  // Re-fetch leaves when a new leave_decision notification arrives
+  useEffect(() => {
+    const decisionCount = notifications.filter(n => n.linkType === 'leave_decision').length;
+    if (decisionCount > prevLeaveDecisionCount.current) {
+      loadLeaves(true);
+    }
+    prevLeaveDecisionCount.current = decisionCount;
+  }, [notifications]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -124,6 +139,11 @@ export default function TeacherLeaveRequest() {
       <div className="data-table-card">
         <div className="search-filter-bar">
           <div style={{ flex: 1, fontWeight: 700, fontSize: '15px', color: '#2d3748' }}>My Leave History</div>
+          <button onClick={() => loadLeaves(true)} disabled={refreshing}
+            style={{ marginRight: 8, border: '1px solid #e2e8f0', background: '#fff', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', color: '#718096', fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span className="material-icons" style={{ fontSize: 16, animation: refreshing ? 'spin 1s linear infinite' : 'none' }}>refresh</span>
+            {refreshing ? 'Refreshing…' : 'Refresh'}
+          </button>
           <button className="btn-add" onClick={() => setShowModal(true)}>
             <span className="material-icons">add</span> Apply for Leave
           </button>

@@ -120,7 +120,10 @@ public class TeacherService {
                     profile.put("id", teacher.getId());
                     profile.put("name", teacher.getName());
                     profile.put("employeeId", teacher.getEmployeeId());
-                    profile.put("subject", teacher.getSubject());
+                    String subjectStr = teacher.getSubject() != null ? teacher.getSubject() : "";
+                    profile.put("subject", subjectStr);
+                    profile.put("subjects", java.util.Arrays.stream(subjectStr.split(","))
+                            .map(String::trim).filter(s -> !s.isEmpty()).collect(java.util.stream.Collectors.toList()));
                     profile.put("department", teacher.getDepartment());
                     profile.put("classes", teacher.getClasses());
                     profile.put("teacherType", teacher.getTeacherType());

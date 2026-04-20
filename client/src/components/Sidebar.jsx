@@ -20,6 +20,8 @@ const adminNavItems = [
   { path: '/admin/attendance-report',  icon: 'fact_check',              label: 'Attendance Report',  permKey: 'attendance' },
   { path: '/admin/timetable',          icon: 'schedule',                label: 'Timetable',          permKey: 'timetable' },
   { path: '/admin/examination',        icon: 'verified',                label: 'Exam & Certificates', permKey: 'examination' },
+  { path: '/admin/messages',            icon: 'campaign',                label: 'Messages',            permKey: null },
+  { path: '/admin/teacher-assignments', icon: 'assignment_ind',          label: 'Subject Assignments', permKey: null },
 ];
 
 // SUPER_ADMIN-only items (school management tools)

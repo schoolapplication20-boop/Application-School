@@ -2,9 +2,11 @@ package com.schoolers.repository;
 
 import com.schoolers.model.ClassDiary;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -24,6 +26,12 @@ public interface ClassDiaryRepository extends JpaRepository<ClassDiary, Long> {
     Optional<ClassDiary> findByClassNameAndDiaryDateAndTeacherId(String className, LocalDate diaryDate, Long teacherId);
 
     boolean existsByClassNameAndSubjectAndDiaryDateAndTeacherId(String className, String subject, LocalDate diaryDate, Long teacherId);
+
+    @Modifying @Transactional
+    void deleteByTeacherId(Long teacherId);
+
+    @Modifying @Transactional
+    void deleteByClassNameAndSection(String className, String section);
 
     @Query("SELECT d FROM ClassDiary d WHERE " +
            "(:className IS NULL OR d.className = :className) AND " +

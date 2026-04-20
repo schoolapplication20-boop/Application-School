@@ -157,6 +157,36 @@ public class DatabaseMigration implements CommandLineRunner {
         exec("ALTER TABLE teachers ADD COLUMN IF NOT EXISTS teacher_type VARCHAR(20) DEFAULT 'SUBJECT_TEACHER'");
         System.out.println("[DatabaseMigration] teachers primary_class_id and teacher_type columns ensured.");
 
+        // ── messages: add broadcast columns ───────────────────────────────────────
+        exec("ALTER TABLE messages ADD COLUMN IF NOT EXISTS title VARCHAR(200)");
+        exec("ALTER TABLE messages ADD COLUMN IF NOT EXISTS category VARCHAR(30) DEFAULT 'GENERAL'");
+        exec("ALTER TABLE messages ADD COLUMN IF NOT EXISTS school_id BIGINT");
+        exec("ALTER TABLE messages ADD COLUMN IF NOT EXISTS class_section VARCHAR(20)");
+        exec("ALTER TABLE messages ADD COLUMN IF NOT EXISTS target_student_id BIGINT");
+        exec("ALTER TABLE messages ADD COLUMN IF NOT EXISTS is_school_wide BOOLEAN DEFAULT FALSE");
+        exec("ALTER TABLE messages ADD COLUMN IF NOT EXISTS is_important BOOLEAN DEFAULT FALSE");
+        exec("ALTER TABLE messages ADD COLUMN IF NOT EXISTS read_by_user_ids TEXT DEFAULT ''");
+        System.out.println("[DatabaseMigration] messages broadcast columns ensured.");
+
+        // ── teacher_class_assignments: junction table for teacher→class→subject ──
+        exec("CREATE TABLE IF NOT EXISTS teacher_class_assignments (" +
+             "id BIGSERIAL PRIMARY KEY, " +
+             "teacher_id BIGINT NOT NULL, " +
+             "teacher_name VARCHAR(100), " +
+             "class_section VARCHAR(50) NOT NULL, " +
+             "subject VARCHAR(100) NOT NULL, " +
+             "school_id BIGINT, " +
+             "created_at TIMESTAMP DEFAULT NOW()" +
+             ")");
+        exec("CREATE INDEX IF NOT EXISTS idx_tca_teacher_id ON teacher_class_assignments(teacher_id)");
+        exec("CREATE INDEX IF NOT EXISTS idx_tca_school_id  ON teacher_class_assignments(school_id)");
+        System.out.println("[DatabaseMigration] teacher_class_assignments table ensured.");
+
+        // ── Widen subject columns to TEXT (was VARCHAR) for multi-subject support ──
+        exec("ALTER TABLE teachers ALTER COLUMN subject TYPE TEXT");
+        exec("ALTER TABLE teacher_class_assignments ALTER COLUMN subject TYPE TEXT");
+        System.out.println("[DatabaseMigration] subject columns widened to TEXT.");
+
         System.out.println("[DatabaseMigration] Done.");
     }
 

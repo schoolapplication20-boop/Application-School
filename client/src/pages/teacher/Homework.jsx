@@ -2,14 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import Layout from '../../components/Layout';
 import Toast from '../../components/Toast';
 import { useAuth } from '../../context/AuthContext';
-import { teacherAPI, diaryAPI } from '../../services/api';
+import { teacherAPI, diaryAPI, adminAPI } from '../../services/api';
 
 const TODAY = new Date().toISOString().split('T')[0];
-
-const SUBJECTS = [
-  'Mathematics', 'Science', 'English', 'Social Science', 'Hindi',
-  'Computer Science', 'Physics', 'Chemistry', 'Biology', 'History', 'Geography',
-];
 
 const emptyForm = {
   className: '', section: '', classId: '',
@@ -28,29 +23,28 @@ export default function Homework() {
     setTimeout(() => setToast(null), 3500);
   };
 
-  // ── Teacher's classes ─────────────────────────────────────────────────────
-  // myClasses = full list of ClassRoom objects assigned to this teacher
-  // (combines class-teacher primary class + subject-teacher assignments)
-  const [myClasses, setMyClasses] = useState([]);
-  const [teacherProfile, setTeacherProfile] = useState(null);
-  const [classesLoading, setClassesLoading] = useState(true);
+  // ── Teacher's class-subject assignments ──────────────────────────────────
+  // subjectAssignments = [{ id, classSection, subject, teacherName }]
+  // Falls back to myClasses+profile if no subject assignments exist.
+  const [subjectAssignments, setSubjectAssignments] = useState([]);
+  const [myClasses, setMyClasses]                   = useState([]);
+  const [teacherProfile, setTeacherProfile]         = useState(null);
+  const [classesLoading, setClassesLoading]         = useState(true);
 
   useEffect(() => {
     setClassesLoading(true);
     Promise.all([
-      teacherAPI.getMyClasses(),
-      teacherAPI.getMyProfile().catch(() => ({ data: { data: null } })),
-    ])
-      .then(([classesRes, profileRes]) => {
-        setMyClasses(classesRes.data?.data ?? []);
-        setTeacherProfile(profileRes.data?.data ?? null);
-      })
-      .catch(() => setMyClasses([]))
-      .finally(() => setClassesLoading(false));
+      teacherAPI.getMySubjectAssignments().catch(() => null),
+      teacherAPI.getMyClasses().catch(() => null),
+      teacherAPI.getMyProfile().catch(() => null),
+    ]).then(([assignRes, classesRes, profileRes]) => {
+      setSubjectAssignments(assignRes?.data?.data ?? []);
+      setMyClasses(classesRes?.data?.data ?? []);
+      setTeacherProfile(profileRes?.data?.data ?? null);
+    }).finally(() => setClassesLoading(false));
   }, []);
 
   // Determine if a classroom is where this teacher is the Class Teacher
-  // (their primary class) or a Subject Teacher assignment (all others).
   const getClassRole = (cls) => {
     if (!teacherProfile) return null;
     const isPrimary = teacherProfile.primaryClassId != null
@@ -59,50 +53,108 @@ export default function Homework() {
   };
 
   // ── New entry form ────────────────────────────────────────────────────────
-  const [form, setForm]         = useState(emptyForm);
+  const [form, setForm]               = useState(emptyForm);
+  const [subjectInput, setSubjectInput] = useState('');   // live text in tag input
   const [imagePreview, setImagePreview] = useState(null);
   const [submitting, setSubmitting]     = useState(false);
-  const fileInputRef = useRef(null);
+  const fileInputRef    = useRef(null);
+  const subjectInputRef = useRef(null);
 
-  // Build a flat list of options for the single combined class dropdown.
-  // Each entry = one classroom with its role label.
-  const classOptions = myClasses.map(cls => {
-    const role = getClassRole(cls);
-    const classLabel = `${cls.name}${cls.section ? ` – ${cls.section}` : ''}`;
-    const roleLabel  = role === 'CLASS_TEACHER'
-      ? 'Class Teacher'
-      : `${teacherProfile?.subject ? teacherProfile.subject + ' ' : ''}Subject Teacher`;
-    return { cls, classLabel, roleLabel };
-  });
+  // Derived: subjects as array for tag display; form.subject stays comma-joined string
+  const subjectTags = form.subject ? form.subject.split(',').map(s => s.trim()).filter(Boolean) : [];
 
-  // Derived: the currently selected classroom object and its role
-  const selectedClass = form.classId
-    ? myClasses.find(c => c.id === Number(form.classId))
-    : null;
-  const selectedRole = selectedClass ? getClassRole(selectedClass) : null;
-  const isSubjectTeacher = selectedRole === 'SUBJECT_TEACHER';
+  const addSubjectTag = (raw) => {
+    const val = raw.trim();
+    if (!val) return;
+    const existing = form.subject ? form.subject.split(',').map(s => s.trim()).filter(Boolean) : [];
+    if (existing.includes(val)) return;          // no duplicates
+    const updated = [...existing, val].join(', ');
+    setForm(prev => ({ ...prev, subject: updated }));
+    setSubjectInput('');
+  };
 
-  // Single handler: teacher picks one combined "Class – Section (Role)" option
+  const removeSubjectTag = (tag) => {
+    const updated = subjectTags.filter(t => t !== tag).join(', ');
+    setForm(prev => ({ ...prev, subject: updated }));
+  };
+
+  const handleSubjectKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      addSubjectTag(subjectInput);
+    } else if (e.key === 'Backspace' && !subjectInput && subjectTags.length > 0) {
+      removeSubjectTag(subjectTags[subjectTags.length - 1]);
+    }
+  };
+
+  // ── Class + Subject option building ────────────────────────────────────────
+  // When admin assignments exist: group by classSection so the dropdown shows
+  // unique classes (not one entry per subject).  Subjects for the selected
+  // class are auto-filled into the subject tag input but remain fully editable.
+  const useAssignments = subjectAssignments.length > 0;
+
+  // Map: classSection → [subject1, subject2, …]
+  const assignmentSubjectMap = subjectAssignments.reduce((acc, a) => {
+    const subjects = (a.subject || '').split(',').map(s => s.trim()).filter(Boolean);
+    const existing = acc[a.classSection] || [];
+    acc[a.classSection] = [...new Set([...existing, ...subjects])];
+    return acc;
+  }, {});
+
+  const classOptions = useAssignments
+    ? Object.keys(assignmentSubjectMap).map(cs => ({
+        value: cs,
+        label: cs,
+        classSection: cs,
+        subjects: assignmentSubjectMap[cs],
+      }))
+    : myClasses.map(cls => ({
+        value: `id:${cls.id}`,
+        label: `${cls.name}${cls.section ? ` – ${cls.section}` : ''}`,
+        cls,
+      }));
+
   const handleClassSelect = (e) => {
-    const classId = e.target.value;
-    if (!classId) {
+    const val = e.target.value;
+    if (!val) {
       setForm(prev => ({ ...prev, className: '', section: '', classId: '', subject: '' }));
+      setSubjectInput('');
       return;
     }
-    const cls = myClasses.find(c => c.id === Number(classId));
-    if (!cls) return;
-    const role = getClassRole(cls);
-    const autoSubject = role === 'SUBJECT_TEACHER' && teacherProfile?.subject
-      ? teacherProfile.subject
-      : '';
-    setForm(prev => ({
-      ...prev,
-      className: cls.name,
-      section:   cls.section || '',
-      classId:   cls.id,
-      subject:   autoSubject || (role === 'CLASS_TEACHER' ? prev.subject : ''),
-    }));
+
+    if (useAssignments) {
+      // val IS the classSection string (e.g. "Nursery-A")
+      const opt = classOptions.find(o => o.value === val);
+      if (!opt) return;
+      // Split classSection on last '-' to separate name from section
+      const lastDash = opt.classSection.lastIndexOf('-');
+      const className = lastDash > 0 ? opt.classSection.slice(0, lastDash).trim() : opt.classSection;
+      const section   = lastDash > 0 ? opt.classSection.slice(lastDash + 1).trim() : '';
+      setForm(prev => ({
+        ...prev,
+        className,
+        section,
+        classId: val,
+        subject: opt.subjects.join(', '),   // pre-fill all assigned subjects
+      }));
+      setSubjectInput('');
+    } else {
+      const cls = myClasses.find(c => `id:${c.id}` === val);
+      if (!cls) return;
+      setForm(prev => ({
+        ...prev,
+        className: cls.name,
+        section:   cls.section || '',
+        classId:   val,
+        subject:   prev.subject,
+      }));
+    }
   };
+
+  // Subjects assigned to the currently selected class (for hint display)
+  const assignedSubjectsForClass = useAssignments && form.classId
+    ? (assignmentSubjectMap[form.classId] || [])
+    : [];
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -128,9 +180,10 @@ export default function Homework() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.classId)         { showToast('Please select a class', 'error'); return; }
-    if (!form.topic.trim())    { showToast('Topic is required', 'error'); return; }
-    if (!form.homework.trim()) { showToast('Homework is required', 'error'); return; }
+    if (!form.classId)                          { showToast('Please select a class', 'error'); return; }
+    if (!form.subject.trim())                   { showToast('Subject is required', 'error'); return; }
+    if (!form.topic.trim())                     { showToast('Topic is required', 'error'); return; }
+    if (!form.homework.trim())                  { showToast('Homework is required', 'error'); return; }
 
     setSubmitting(true);
     try {
@@ -141,6 +194,7 @@ export default function Homework() {
       });
       showToast('Diary entry created successfully!');
       setForm(emptyForm);
+      setSubjectInput('');
       setImagePreview(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
       // Switch to My Entries tab and refresh
@@ -182,8 +236,9 @@ export default function Homework() {
   }, [activeTab]);
 
   const filteredEntries = entries.filter(e => {
-    const matchSubject = !filterSubject || e.subject === filterSubject;
-    const matchDate    = !filterDate    || e.diaryDate === filterDate;
+    const entrySubjects = (e.subject || '').split(',').map(s => s.trim()).filter(Boolean);
+    const matchSubject  = !filterSubject || entrySubjects.includes(filterSubject);
+    const matchDate     = !filterDate    || e.diaryDate === filterDate;
     return matchSubject && matchDate;
   });
 
@@ -263,7 +318,7 @@ export default function Homework() {
                   <span className="material-icons" style={{ fontSize: 16, verticalAlign: 'middle', marginRight: 4 }}>hourglass_empty</span>
                   Loading your assigned classes…
                 </div>
-              ) : myClasses.length === 0 ? (
+              ) : (classOptions.length === 0) ? (
                 <div style={{
                   padding: '16px', marginBottom: 16, borderRadius: 10,
                   background: '#fff5f5', border: '1px solid #fed7d7',
@@ -284,27 +339,15 @@ export default function Homework() {
                     required
                   >
                     <option value="">— Select class —</option>
-                    {classOptions.map(({ cls, classLabel, roleLabel }) => (
-                      <option key={cls.id} value={cls.id}>
-                        {classLabel} ({roleLabel})
-                      </option>
+                    {classOptions.map(o => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
                     ))}
                   </select>
-                  {/* Role badge below the dropdown */}
-                  {selectedRole && (
-                    <div style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 5,
-                      marginTop: 5, padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
-                      background: selectedRole === 'CLASS_TEACHER' ? '#ebf8ff' : '#faf5ff',
-                      color:      selectedRole === 'CLASS_TEACHER' ? '#2b6cb0' : '#6b46c1',
-                      border: `1px solid ${selectedRole === 'CLASS_TEACHER' ? '#bee3f8' : '#e9d8fd'}`,
-                    }}>
-                      <span className="material-icons" style={{ fontSize: 12 }}>
-                        {selectedRole === 'CLASS_TEACHER' ? 'school' : 'menu_book'}
-                      </span>
-                      {selectedRole === 'CLASS_TEACHER'
-                        ? 'Class Teacher — can assign any subject'
-                        : `Subject Teacher — restricted to ${teacherProfile?.subject || 'assigned subject'}`}
+                  {/* Hint showing how many subjects are assigned to this class */}
+                  {useAssignments && form.classId && assignedSubjectsForClass.length > 0 && (
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 5, padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: '#f0fff4', color: '#276749', border: '1px solid #c6f6d5' }}>
+                      <span className="material-icons" style={{ fontSize: 12 }}>verified</span>
+                      {assignedSubjectsForClass.length} subject{assignedSubjectsForClass.length > 1 ? 's' : ''} assigned to this class
                     </div>
                   )}
                 </div>
@@ -312,34 +355,61 @@ export default function Homework() {
 
               <div className="row g-3 mb-3">
                 <div className="col-6">
-                  <label className="form-label small fw-medium">Subject</label>
-                  {isSubjectTeacher ? (
-                    /* Subject Teachers: subject is locked to their assigned subject */
-                    <div style={{ position: 'relative' }}>
-                      <input
-                        className="form-control form-control-sm"
-                        value={form.subject || teacherProfile?.subject || ''}
-                        readOnly
-                        style={{ background: '#faf5ff', color: '#6b46c1', fontWeight: 600, paddingRight: 28 }}
-                      />
-                      <span className="material-icons" style={{
-                        position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
-                        fontSize: 14, color: '#6b46c1', pointerEvents: 'none',
-                      }}>lock</span>
+                  <label className="form-label small fw-medium">
+                    Subject *
+                    <span style={{ marginLeft: 6, fontSize: 10, color: '#a0aec0', fontWeight: 400 }}>
+                      ↵ or , to add multiple
+                    </span>
+                  </label>
+
+                  {/* Always an editable tag input — no restrictions */}
+                  <div
+                    onClick={() => subjectInputRef.current?.focus()}
+                    style={{
+                      minHeight: 34, padding: '4px 8px',
+                      border: `1px solid ${!form.subject.trim() ? '#e2e8f0' : '#76C442'}`,
+                      borderRadius: 6, background: '#fff', cursor: 'text',
+                      display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center',
+                      transition: 'border-color 0.15s',
+                    }}
+                  >
+                    {subjectTags.map(tag => (
+                      <span key={tag} style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 3,
+                        padding: '2px 8px', borderRadius: 12, fontSize: 12, fontWeight: 600,
+                        background: '#76C44220', color: '#276749', border: '1px solid #76C44240',
+                      }}>
+                        {tag}
+                        <button type="button"
+                          onClick={ev => { ev.stopPropagation(); removeSubjectTag(tag); }}
+                          style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer', color: '#e53e3e', display: 'flex', lineHeight: 1 }}>
+                          <span className="material-icons" style={{ fontSize: 13 }}>close</span>
+                        </button>
+                      </span>
+                    ))}
+                    <input
+                      ref={subjectInputRef}
+                      type="text"
+                      value={subjectInput}
+                      onChange={e => setSubjectInput(e.target.value)}
+                      onKeyDown={handleSubjectKeyDown}
+                      onBlur={() => { if (subjectInput.trim()) addSubjectTag(subjectInput); }}
+                      placeholder={subjectTags.length === 0 ? 'e.g. English, Maths' : '+ add'}
+                      style={{ border: 'none', outline: 'none', fontSize: 13, padding: '2px 2px', flex: 1, minWidth: 80, background: 'transparent', color: '#2d3748' }}
+                    />
+                  </div>
+
+                  {/* Show assigned subjects as quick-add hints when a class is selected */}
+                  {assignedSubjectsForClass.length > 0 && (
+                    <div style={{ marginTop: 5, display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
+                      <span style={{ fontSize: 10, color: '#a0aec0', fontWeight: 600 }}>Assigned:</span>
+                      {assignedSubjectsForClass.filter(s => !subjectTags.includes(s)).map(s => (
+                        <button key={s} type="button" onClick={() => addSubjectTag(s)}
+                          style={{ fontSize: 11, padding: '2px 8px', borderRadius: 10, border: '1px dashed #76C442', background: 'transparent', color: '#276749', cursor: 'pointer', fontWeight: 600 }}>
+                          + {s}
+                        </button>
+                      ))}
                     </div>
-                  ) : (
-                    /* Class Teachers: free subject selection */
-                    <select className="form-select form-select-sm" value={form.subject}
-                      onChange={e => setForm(prev => ({ ...prev, subject: e.target.value }))}>
-                      <option value="">Select Subject</option>
-                      {SUBJECTS.map(s => <option key={s}>{s}</option>)}
-                    </select>
-                  )}
-                  {isSubjectTeacher && (
-                    <p style={{ margin: '3px 0 0', fontSize: 11, color: '#805ad5' }}>
-                      <span className="material-icons" style={{ fontSize: 11, verticalAlign: 'middle', marginRight: 2 }}>auto_fix_high</span>
-                      Locked to your assigned subject
-                    </p>
                   )}
                 </div>
                 <div className="col-6">
@@ -446,7 +516,9 @@ export default function Homework() {
               <select className="filter-select" value={filterSubject}
                 onChange={e => setFilterSubject(e.target.value)}>
                 <option value="">All Subjects</option>
-                {SUBJECTS.map(s => <option key={s}>{s}</option>)}
+                {[...new Set(entries.flatMap(e =>
+                  (e.subject || '').split(',').map(s => s.trim()).filter(Boolean)
+                ))].sort().map(s => <option key={s} value={s}>{s}</option>)}
               </select>
               <input type="date" className="filter-select" value={filterDate}
                 max={TODAY}

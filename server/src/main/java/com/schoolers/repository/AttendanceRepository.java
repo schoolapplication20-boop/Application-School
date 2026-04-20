@@ -44,6 +44,10 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
     @Transactional
     void deleteByStudentId(Long studentId);
 
+    @Modifying
+    @Transactional
+    void deleteByClassId(Long classId);
+
     // ── School-scoped queries (multi-tenant) ──────────────────────────────────
 
     List<Attendance> findBySchoolIdAndClassIdAndDate(Long schoolId, Long classId, LocalDate date);

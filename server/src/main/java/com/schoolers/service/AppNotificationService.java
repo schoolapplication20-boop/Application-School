@@ -36,13 +36,13 @@ public class AppNotificationService {
     }
 
     public long getUnreadCount(Long userId) {
-        return notificationRepository.countByUserIdAndIsReadFalse(userId);
+        return notificationRepository.countByUserIdAndReadFalse(userId);
     }
 
     public ApiResponse<AppNotification> markRead(Long id) {
         return notificationRepository.findById(id)
                 .map(n -> {
-                    n.setIsRead(true);
+                    n.setRead(true);
                     return ApiResponse.success(notificationRepository.save(n));
                 })
                 .orElse(ApiResponse.error("Notification not found"));
@@ -50,7 +50,7 @@ public class AppNotificationService {
 
     public ApiResponse<String> markAllRead(Long userId) {
         List<AppNotification> notifs = notificationRepository.findByUserIdOrderByCreatedAtDesc(userId);
-        notifs.forEach(n -> n.setIsRead(true));
+        notifs.forEach(n -> n.setRead(true));
         notificationRepository.saveAll(notifs);
         return ApiResponse.success("All marked as read", "OK");
     }

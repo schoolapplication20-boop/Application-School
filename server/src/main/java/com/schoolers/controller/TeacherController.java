@@ -2,6 +2,8 @@ package com.schoolers.controller;
 
 import com.schoolers.dto.ApiResponse;
 import com.schoolers.model.*;
+import com.schoolers.repository.ClassRoomRepository;
+import com.schoolers.repository.TeacherClassAssignmentRepository;
 import com.schoolers.repository.UserRepository;
 import com.schoolers.repository.TeacherRepository;
 import com.schoolers.service.TeacherService;
@@ -14,8 +16,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
 
 @RestController
 @RequestMapping("/api/teacher")
@@ -31,6 +35,12 @@ public class TeacherController {
 
     @Autowired
     private TeacherRepository teacherRepository;
+
+    @Autowired
+    private ClassRoomRepository classRoomRepository;
+
+    @Autowired
+    private TeacherClassAssignmentRepository teacherClassAssignmentRepository;
 
     // ── Helper: resolve teacher id from auth ──────────────────────────────────
 
@@ -65,6 +75,62 @@ public class TeacherController {
             @RequestParam(required = false) Long teacherId) {
         Long resolved = resolveTeacherId(teacherId);
         return ResponseEntity.ok(teacherService.getTeacherProfile(resolved));
+    }
+
+    /** Returns which class (if any) this teacher is assigned as class teacher for. */
+    @GetMapping("/class-teacher-assignment")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getClassTeacherAssignment() {
+        Long teacherId = resolveTeacherId(null);
+        Map<String, Object> result = new HashMap<>();
+
+        if (teacherId == null) {
+            result.put("isClassTeacher", false);
+            return ResponseEntity.ok(ApiResponse.success(result));
+        }
+
+        Teacher teacher = teacherRepository.findById(teacherId).orElse(null);
+        if (teacher == null) {
+            result.put("isClassTeacher", false);
+            return ResponseEntity.ok(ApiResponse.success(result));
+        }
+
+        String type = teacher.getTeacherType();
+        boolean isClassTeacher = "CLASS_TEACHER".equalsIgnoreCase(type) || "BOTH".equalsIgnoreCase(type);
+
+        if (!isClassTeacher) {
+            result.put("isClassTeacher", false);
+            result.put("teacherType", type);
+            return ResponseEntity.ok(ApiResponse.success(result));
+        }
+
+        // Find the classroom: primaryClassId first, then classroom.teacherId match
+        ClassRoom room = null;
+        if (teacher.getPrimaryClassId() != null) {
+            room = classRoomRepository.findById(teacher.getPrimaryClassId()).orElse(null);
+        }
+        if (room == null) {
+            Long schoolId = teacher.getSchoolId();
+            java.util.List<ClassRoom> byTeacher = (schoolId != null)
+                    ? classRoomRepository.findBySchoolIdAndTeacherId(schoolId, teacherId)
+                    : classRoomRepository.findByTeacherId(teacherId);
+            if (!byTeacher.isEmpty()) room = byTeacher.get(0);
+        }
+
+        result.put("isClassTeacher", true);
+        result.put("teacherType", type);
+        if (room != null) {
+            result.put("classId",   room.getId());
+            result.put("className", room.getName());
+            result.put("section",   room.getSection());
+            result.put("schoolId",  room.getSchoolId());
+            result.put("label",     room.getName() + (room.getSection() != null ? " - " + room.getSection() : ""));
+        } else {
+            result.put("classId", null);
+            result.put("className", null);
+            result.put("section", null);
+            result.put("label", null);
+        }
+        return ResponseEntity.ok(ApiResponse.success(result));
     }
 
     // ── Students in a class ───────────────────────────────────────────────────
@@ -207,5 +273,14 @@ public class TeacherController {
     public ResponseEntity<ApiResponse<String>> deleteMarks(@PathVariable Long id) {
         ApiResponse<String> response = teacherService.deleteMarks(id);
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
+    }
+
+    /** Returns all class-subject assignments for the currently authenticated teacher. */
+    @GetMapping("/my-subject-assignments")
+    public ResponseEntity<ApiResponse<List<TeacherClassAssignment>>> getMySubjectAssignments() {
+        Long teacherId = resolveTeacherId(null);
+        if (teacherId == null) return ResponseEntity.ok(ApiResponse.success(List.of()));
+        List<TeacherClassAssignment> assignments = teacherClassAssignmentRepository.findByTeacherId(teacherId);
+        return ResponseEntity.ok(ApiResponse.success(assignments));
     }
 }

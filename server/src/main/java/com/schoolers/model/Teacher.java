@@ -39,7 +39,7 @@ public class Teacher {
     @Column(name = "employee_id", length = 20)
     private String employeeId;
 
-    @Column(length = 50)
+    @Column(columnDefinition = "TEXT")
     private String subject;
 
     @Column(length = 50)

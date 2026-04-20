@@ -57,6 +57,11 @@ import StudentAttendance     from './pages/student/StudentAttendance';
 import StudentDiary          from './pages/student/StudentDiary';
 import StudentFees           from './pages/student/StudentFees';
 import StudentLeaveRequest   from './pages/student/StudentLeaveRequest';
+import StudentMessages       from './pages/student/StudentMessages';
+
+// Admin Messages
+import AdminMessages         from './pages/admin/AdminMessages';
+import TeacherAssignments    from './pages/admin/TeacherAssignments';
 
 // Parent Pages
 import DiaryView from './pages/parent/DiaryView';
@@ -106,6 +111,7 @@ function App() {
             <Route path="/admin/parents"           element={<ProtectedRoute allowedRoles={['ADMIN']} permKey="parents"><Parents /></ProtectedRoute>} />
             <Route path="/admin/timetable"         element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} permKey="timetable"><Timetable /></ProtectedRoute>} />
             <Route path="/admin/examination"       element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} permKey="examination"><Examination /></ProtectedRoute>} />
+            <Route path="/admin/teacher-assignments" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']}><TeacherAssignments /></ProtectedRoute>} />
 
             {/* /superadmin/dashboard:
                 - APPLICATION_OWNER → OwnerDashboard (platform overview, manage all schools)
@@ -154,6 +160,10 @@ function App() {
             <Route path="/student/diary"      element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentDiary /></ProtectedRoute>} />
             <Route path="/student/fees"       element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentFees /></ProtectedRoute>} />
             <Route path="/student/leave"      element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentLeaveRequest /></ProtectedRoute>} />
+            <Route path="/student/messages"   element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentMessages /></ProtectedRoute>} />
+
+            {/* Admin Messages */}
+            <Route path="/admin/messages"     element={<ProtectedRoute allowedRoles={['ADMIN','SUPER_ADMIN']}><AdminMessages /></ProtectedRoute>} />
 
             {/* 404 */}
             <Route path="*" element={

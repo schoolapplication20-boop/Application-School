@@ -23,4 +23,7 @@ public interface TimetableRepository extends JpaRepository<Timetable, Long> {
 
     @Modifying @Transactional
     void deleteByTeacherId(Long teacherId);
+
+    @Modifying @Transactional
+    void deleteByClassSection(String classSection);
 }

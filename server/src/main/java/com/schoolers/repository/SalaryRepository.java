@@ -28,8 +28,6 @@ public interface SalaryRepository extends JpaRepository<Salary, Long> {
     @Query("SELECT COALESCE(SUM(s.paidAmount),0) FROM Salary s WHERE s.schoolId = :schoolId AND s.status = 'PAID'")
     BigDecimal sumPaidSalariesBySchool(@Param("schoolId") Long schoolId);
 
-    // ── Lookup helpers ────────────────────────────────────────────────────────
-
     List<Salary> findByStaffId(Long staffId);
     List<Salary> findByMonthAndYear(String month, String year);
     List<Salary> findByStatus(Salary.Status status);

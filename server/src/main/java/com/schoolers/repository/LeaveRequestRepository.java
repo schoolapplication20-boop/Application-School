@@ -28,5 +28,8 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Long
             LeaveRequest.RequesterType requesterType, Long schoolId);
 
     @Modifying @Transactional
+    void deleteByClassSection(String classSection);
+
+    @Modifying @Transactional
     void deleteByRequesterId(Long requesterId);
 }

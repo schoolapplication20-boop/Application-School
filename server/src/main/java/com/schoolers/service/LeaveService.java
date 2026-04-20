@@ -49,6 +49,18 @@ public class LeaveService {
         LeaveRequest.RequesterType rt = "TEACHER".equalsIgnoreCase(type)
                 ? LeaveRequest.RequesterType.TEACHER
                 : LeaveRequest.RequesterType.STUDENT;
+
+        // For teachers, requesterId from the frontend is the User entity ID.
+        // But leave_requests.requester_id stores the Teacher entity ID.
+        // Resolve the Teacher entity ID so the query finds the right records.
+        if (rt == LeaveRequest.RequesterType.TEACHER) {
+            Long teacherEntityId = teacherRepository.findByUserId(requesterId)
+                    .map(Teacher::getId)
+                    .orElse(requesterId); // fallback: try as-is in case IDs match
+            return ApiResponse.success(
+                    leaveRepository.findByRequesterIdAndRequesterType(teacherEntityId, rt));
+        }
+
         return ApiResponse.success(leaveRepository.findByRequesterIdAndRequesterType(requesterId, rt));
     }
 
@@ -352,8 +364,14 @@ public class LeaveService {
                                 + ") has been " + (approved ? "approved" : "rejected") + " by Admin."
                                 + (adminComment != null && !adminComment.isBlank()
                                         ? " Remark: " + adminComment : "");
+                        // saved.getRequesterId() is the Teacher entity ID.
+                        // Notifications are fetched by User entity ID, so resolve it.
+                        Long notifyUserId = teacherRepository.findById(saved.getRequesterId())
+                                .map(t -> t.getUser() != null ? t.getUser().getId() : null)
+                                .orElse(null);
+                        if (notifyUserId == null) notifyUserId = saved.getRequesterId(); // fallback
                         notificationService.create(
-                                saved.getRequesterId(), msg,
+                                notifyUserId, msg,
                                 approved ? "check_circle" : "cancel",
                                 approved ? "#76C442"      : "#e53e3e",
                                 "leave_decision", saved.getId());

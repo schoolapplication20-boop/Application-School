@@ -14,14 +14,15 @@ import { generateRandomPassword } from '../../utils/passwordGenerator';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const SUBJECTS = ['Mathematics','Science','English','Social Studies','Hindi','Computer Science','Biology','Chemistry','Physics','Accountancy','Economics','Commerce'];
-
-const SUBJECT_COLOR = {
-  Mathematics: '#76C442', Science: '#3182ce', English: '#805ad5',
-  'Social Studies': '#e53e3e', Hindi: '#ed8936', 'Computer Science': '#38b2ac',
-  Biology: '#d69e2e', Chemistry: '#e91e63', Physics: '#667eea',
-  Accountancy: '#48bb78', Economics: '#ed64a6', Commerce: '#f6ad55',
-};
+// Derive a stable colour from any string so subject chips look distinct
+function subjectColor(str) {
+  if (!str) return '#76C442';
+  const palette = ['#76C442','#3182ce','#805ad5','#e53e3e','#ed8936','#38b2ac',
+                   '#d69e2e','#e91e63','#667eea','#48bb78','#ed64a6','#f6ad55'];
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) & 0xffffffff;
+  return palette[Math.abs(h) % palette.length];
+}
 
 const EMPTY_FORM = {
   name: '', empId: '', subject: '', department: '', qualification: '',
@@ -117,6 +118,72 @@ function ClassPicker({ classList = [], value = '', onChange, label = 'Select cla
       {selected.size === 0 && (
         <p style={{ margin: '4px 0 0', fontSize: 11, color: '#a0aec0' }}>{label}</p>
       )}
+    </div>
+  );
+}
+
+// ─── SubjectTagInput ──────────────────────────────────────────────────────────
+// `value`    — comma-separated subjects string, e.g. "English, Maths"
+// `onChange` — called with updated comma-separated string
+// `hasError` — highlights border red
+function SubjectTagInput({ value = '', onChange, hasError = false }) {
+  const [input, setInput] = React.useState('');
+  const inputRef = React.useRef(null);
+
+  const tags = value ? value.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+  const add = (raw) => {
+    const v = raw.trim();
+    if (!v || tags.includes(v)) { setInput(''); return; }
+    onChange([...tags, v].join(', '));
+    setInput('');
+  };
+
+  const remove = (tag) => onChange(tags.filter(t => t !== tag).join(', '));
+
+  const onKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); add(input); }
+    else if (e.key === 'Backspace' && !input && tags.length > 0) remove(tags[tags.length - 1]);
+  };
+
+  return (
+    <div
+      onClick={() => inputRef.current?.focus()}
+      style={{
+        minHeight: 38, padding: '5px 8px',
+        border: `1.5px solid ${hasError ? '#e53e3e' : '#e2e8f0'}`,
+        borderRadius: 8, background: '#fff', cursor: 'text',
+        display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center',
+      }}
+    >
+      {tags.map(tag => (
+        <span key={tag} style={{
+          display: 'inline-flex', alignItems: 'center', gap: 3,
+          padding: '2px 9px', borderRadius: 12, fontSize: 12, fontWeight: 600,
+          background: subjectColor(tag) + '22', color: subjectColor(tag),
+          border: `1px solid ${subjectColor(tag)}44`,
+        }}>
+          {tag}
+          <button type="button" onClick={e => { e.stopPropagation(); remove(tag); }}
+            style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer', color: '#e53e3e', display: 'flex', lineHeight: 1 }}>
+            <span className="material-icons" style={{ fontSize: 13 }}>close</span>
+          </button>
+        </span>
+      ))}
+      <input
+        ref={inputRef}
+        type="text"
+        value={input}
+        onChange={e => setInput(e.target.value)}
+        onKeyDown={onKeyDown}
+        onBlur={() => { if (input.trim()) add(input); }}
+        placeholder={tags.length === 0 ? 'Type subject, press Enter or ,' : '+ add more'}
+        style={{
+          border: 'none', outline: 'none', fontSize: 13, padding: '2px 2px',
+          flex: 1, minWidth: 100, background: 'transparent', color: '#2d3748',
+          fontFamily: 'Poppins, sans-serif',
+        }}
+      />
     </div>
   );
 }
@@ -242,7 +309,8 @@ export default function Teachers() {
       (t.empId || '').toLowerCase().includes(q) ||
       (t.subject || '').toLowerCase().includes(q);
     const matchStatus  = filterStatus === 'All' || t.status === filterStatus;
-    const matchSubject = !filterSubject || t.subject === filterSubject;
+    const teacherSubjects = (t.subject || '').split(',').map(s => s.trim()).filter(Boolean);
+    const matchSubject = !filterSubject || teacherSubjects.some(s => s.toLowerCase().includes(filterSubject.toLowerCase()));
     return matchSearch && matchStatus && matchSubject;
   });
 
@@ -474,7 +542,9 @@ export default function Teachers() {
           </div>
           <select className="filter-select" value={filterSubject} onChange={e => setFilterSubject(e.target.value)}>
             <option value="">All Subjects</option>
-            {SUBJECTS.map(s => <option key={s}>{s}</option>)}
+            {[...new Set(teachers.flatMap(t =>
+              (t.subject || '').split(',').map(s => s.trim()).filter(Boolean)
+            ))].sort().map(s => <option key={s} value={s}>{s}</option>)}
           </select>
           <select className="filter-select" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
             <option value="All">All Status</option>
@@ -511,7 +581,8 @@ export default function Teachers() {
                   </div>
                 </td></tr>
               ) : filtered.map(t => {
-                const color = SUBJECT_COLOR[t.subject] || '#76C442';
+                const firstSubject = (t.subject || '').split(',')[0].trim();
+                const color = subjectColor(firstSubject);
                 return (
                   <tr key={t.id}>
                     <td>
@@ -686,12 +757,15 @@ export default function Teachers() {
                 {/* ── Professional Info ────────────────────────────────── */}
                 <Section icon="school" label="Professional Details" />
                 <Col2>
-                  <Field label="Subject" required error={errors.subject}>
-                    <select style={{ ...inputStyle(errors.subject), cursor: 'pointer' }} value={form.subject}
-                      onChange={e => setForm({ ...form, subject: e.target.value })}>
-                      <option value="">Select subject</option>
-                      {SUBJECTS.map(s => <option key={s}>{s}</option>)}
-                    </select>
+                  <Field label="Subjects" required error={errors.subject}>
+                    <SubjectTagInput
+                      value={form.subject}
+                      onChange={v => setForm({ ...form, subject: v })}
+                      hasError={!!errors.subject}
+                    />
+                    <p style={{ margin: '4px 0 0', fontSize: 11, color: '#a0aec0' }}>
+                      Type a subject and press Enter or , to add. Multiple subjects allowed.
+                    </p>
                   </Field>
                   <Field label="Department" optional>
                     <input style={inputStyle(false)} placeholder="e.g., Science Department" value={form.department}
@@ -931,7 +1005,7 @@ export default function Teachers() {
             <div className="modal-body" style={{ padding: '20px 24px' }}>
               {/* Teacher info */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: '#f7fafc', borderRadius: 10, marginBottom: 20 }}>
-                <div style={{ width: 44, height: 44, borderRadius: '50%', background: `linear-gradient(135deg, ${SUBJECT_COLOR[viewCredTarget.subject] || '#76C442'}, #5fa832)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 15, fontWeight: 700, flexShrink: 0 }}>
+                <div style={{ width: 44, height: 44, borderRadius: '50%', background: `linear-gradient(135deg, ${subjectColor((viewCredTarget.subject || '').split(',')[0].trim())}, #5fa832)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 15, fontWeight: 700, flexShrink: 0 }}>
                   {getInitials(viewCredTarget.name)}
                 </div>
                 <div>
@@ -1031,7 +1105,7 @@ export default function Teachers() {
             <div className="modal-body" style={{ padding: '24px' }}>
               {/* Avatar */}
               <div style={{ textAlign: 'center', marginBottom: 20 }}>
-                <div style={{ width: 72, height: 72, borderRadius: '50%', background: `linear-gradient(135deg, ${SUBJECT_COLOR[viewTeacher.subject] || '#76C442'}, #5fa832)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 26, fontWeight: 700, margin: '0 auto 10px' }}>
+                <div style={{ width: 72, height: 72, borderRadius: '50%', background: `linear-gradient(135deg, ${subjectColor((viewTeacher.subject || '').split(',')[0].trim())}, #5fa832)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 26, fontWeight: 700, margin: '0 auto 10px' }}>
                   {getInitials(viewTeacher.name)}
                 </div>
                 <h3 style={{ margin: '0 0 4px', fontWeight: 800, fontSize: 18, color: '#2d3748' }}>{viewTeacher.name}</h3>

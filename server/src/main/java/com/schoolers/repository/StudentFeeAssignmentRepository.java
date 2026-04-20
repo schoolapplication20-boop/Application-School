@@ -13,6 +13,7 @@ import java.util.Optional;
 public interface StudentFeeAssignmentRepository extends JpaRepository<StudentFeeAssignment, Long> {
     Optional<StudentFeeAssignment> findByStudentIdAndAcademicYear(Long studentId, String academicYear);
     Optional<StudentFeeAssignment> findFirstByStudentIdOrderByCreatedAtDesc(Long studentId);
+    List<StudentFeeAssignment> findByStudentId(Long studentId);
     List<StudentFeeAssignment> findAllByOrderByCreatedAtDesc();
     void deleteByStudentId(Long studentId);
 

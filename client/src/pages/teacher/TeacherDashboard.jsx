@@ -49,11 +49,12 @@ export default function TeacherDashboard() {
   const navigate      = useNavigate();
   const { user }      = useAuth();
 
-  const [teacherProfile,  setTeacherProfile]  = useState(null);
-  const [assignedClasses, setAssignedClasses] = useState([]);   // ClassRoom objects from real API
-  const [classStudents,   setClassStudents]   = useState([]);
-  const [todaySchedule,   setTodaySchedule]   = useState([]);
-  const [todayAttendance, setTodayAttendance] = useState(null); // { present, total } or null
+  const [teacherProfile,      setTeacherProfile]      = useState(null);
+  const [assignedClasses,     setAssignedClasses]     = useState([]);
+  const [classTeacherInfo,    setClassTeacherInfo]    = useState(null); // from dedicated endpoint
+  const [classStudents,       setClassStudents]       = useState([]);
+  const [todaySchedule,       setTodaySchedule]       = useState([]);
+  const [todayAttendance,     setTodayAttendance]     = useState(null);
 
   // ── Load teacher data on mount ───────────────────────────────────────────────
   useEffect(() => {
@@ -63,21 +64,25 @@ export default function TeacherDashboard() {
       fetchTeachers(),
       fetchStudents(),
       fetchTimetable(),
-      teacherAPI.getMyClasses().catch(() => ({ data: { data: [] } })),
-    ]).then(([allTeachers, allStudents, allEntries, classRes]) => {
+      teacherAPI.getMyClasses().catch(() => null),
+      teacherAPI.getClassTeacherAssignment().catch(() => null),
+    ]).then(([allTeachers, allStudents, allEntries, classRes, ctRes]) => {
       // 1. Find teacher profile
       const profile =
         allTeachers.find(t => t.userId === user.id) ||
         allTeachers.find(t => t.email?.toLowerCase() === user.email?.toLowerCase()) ||
         null;
-
       setTeacherProfile(profile);
 
-      // 2. Real assigned classrooms from API
+      // 2. Class teacher assignment (dedicated endpoint — most reliable)
+      const ctData = ctRes?.data?.data ?? null;
+      setClassTeacherInfo(ctData);
+
+      // 3. Real assigned classrooms
       const realClasses = classRes?.data?.data ?? [];
       setAssignedClasses(realClasses);
 
-      // 3. Filter students in those classes using real classroom names
+      // 4. Filter students in assigned classes
       if (realClasses.length > 0) {
         const mine = allStudents.filter(s =>
           realClasses.some(c =>
@@ -87,15 +92,13 @@ export default function TeacherDashboard() {
         );
         setClassStudents(mine);
       } else {
-        // fallback: use free-text classes field from profile
         const classes = profile ? parseClasses(profile.classes) : [];
         if (classes.length > 0) {
-          const mine = allStudents.filter(s => classes.includes(studentClassKey(s)));
-          setClassStudents(mine);
+          setClassStudents(allStudents.filter(s => classes.includes(studentClassKey(s))));
         }
       }
 
-      // 4. Today's timetable (match by auth user.id)
+      // 5. Today's timetable
       const teacherEntries = getTimetableForTeacher(user.id, allEntries);
       const today = teacherEntries
         .filter(e => e.day === todayName)
@@ -127,16 +130,24 @@ export default function TeacherDashboard() {
     });
   }, [assignedClasses]);
 
+  // ── Derived from dedicated class-teacher endpoint ─────────────────────────────
+  const isClassTeacher  = classTeacherInfo?.isClassTeacher === true;
+  const primaryClassLabel = isClassTeacher && classTeacherInfo?.label ? classTeacherInfo.label : null;
+  const primaryClassId    = isClassTeacher ? classTeacherInfo?.classId : null;
+
+  const primaryClass = useMemo(() => {
+    if (!isClassTeacher || !primaryClassId) return null;
+    return assignedClasses.find(c => Number(c.id) === Number(primaryClassId)) ?? null;
+  }, [isClassTeacher, primaryClassId, assignedClasses]);
+
   // ── Derived stats ─────────────────────────────────────────────────────────────
   const stats = useMemo(() => [
     {
-      title: assignedClasses.length === 1 && assignedClasses[0]
-        ? `${assignedClasses[0].name}${assignedClasses[0].section ? '-' + assignedClasses[0].section : ''}`
-        : 'Assigned Classes',
-      value: assignedClasses.length === 1 ? 'Class Teacher' : assignedClasses.length,
-      icon: 'class',
-      color: '#76C442',
-      isText: assignedClasses.length === 1,
+      title: isClassTeacher && primaryClassLabel ? primaryClassLabel : 'Assigned Classes',
+      value: isClassTeacher && primaryClassLabel ? 'Class Teacher' : assignedClasses.length,
+      icon: 'assignment_ind',
+      color: '#276749',
+      isText: !!(isClassTeacher && primaryClassLabel),
     },
     {
       title: todayAttendance ? 'Present Today' : 'My Students',
@@ -159,7 +170,7 @@ export default function TeacherDashboard() {
       color: '#805ad5',
       isText: true,
     },
-  ], [assignedClasses, classStudents, todaySchedule, teacherProfile, user, todayAttendance]);
+  ], [assignedClasses, classStudents, todaySchedule, teacherProfile, user, todayAttendance, isClassTeacher, primaryClassLabel, classTeacherInfo]);
 
   // ── Students grouped by class ────────────────────────────────────────────────
   const studentsByClass = useMemo(() => {
@@ -180,6 +191,60 @@ export default function TeacherDashboard() {
       {/* Page Header */}
       <div className="page-header">
       </div>
+
+      {/* Class Teacher Responsibility Card — always visible */}
+      {classTeacherInfo !== null && (
+        isClassTeacher && primaryClassLabel ? (
+          <div style={{
+            background: 'linear-gradient(135deg, #276749 0%, #38a169 100%)',
+            borderRadius: 14, padding: '18px 24px', marginBottom: 24,
+            display: 'flex', alignItems: 'center', gap: 16,
+            boxShadow: '0 4px 16px rgba(39,103,73,0.25)',
+          }}>
+            <div style={{ width: 52, height: 52, borderRadius: 12, background: 'rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <span className="material-icons" style={{ fontSize: 28, color: '#fff' }}>assignment_ind</span>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', fontWeight: 600, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                Class Teacher Responsibility
+              </div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.65)', marginBottom: 2 }}>Class Teacher Of</div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: '#fff', lineHeight: 1.2 }}>
+                {classTeacherInfo.className}
+                {classTeacherInfo.section && (
+                  <span style={{ fontSize: 20, marginLeft: 6 }}>– Section {classTeacherInfo.section}</span>
+                )}
+              </div>
+            </div>
+            <div style={{ textAlign: 'right', flexShrink: 0 }}>
+              <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', borderRadius: 20, padding: '4px 14px', fontSize: 12, fontWeight: 700 }}>
+                ⭐ Class Teacher
+              </span>
+              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', marginTop: 8, fontWeight: 600 }}>
+                {classStudents.filter(s => s.status !== 'Inactive').length} students
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div style={{
+            background: '#f7fafc', border: '1.5px solid #e2e8f0',
+            borderRadius: 14, padding: '16px 22px', marginBottom: 24,
+            display: 'flex', alignItems: 'center', gap: 14,
+          }}>
+            <div style={{ width: 44, height: 44, borderRadius: 10, background: '#edf2f7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <span className="material-icons" style={{ fontSize: 22, color: '#a0aec0' }}>assignment_ind</span>
+            </div>
+            <div>
+              <div style={{ fontSize: 12, color: '#a0aec0', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>
+                Class Teacher Responsibility
+              </div>
+              <div style={{ fontSize: 14, color: '#718096', fontWeight: 500 }}>
+                You are not assigned as a Class Teacher
+              </div>
+            </div>
+          </div>
+        )
+      )}
 
       {/* Stats */}
       <div className="stats-grid">
@@ -337,9 +402,24 @@ export default function TeacherDashboard() {
               const clsKey = `${cls.name}-${cls.section || 'A'}`;
               const clsStudents = studentsByClass[clsKey] || [];
               const active = clsStudents.filter(s => s.status !== 'Inactive');
-              const color = subjectColor(teacherProfile?.subject);
+              const isPrimary = isClassTeacher && primaryClass && Number(cls.id) === Number(primaryClass.id);
+              const color = isPrimary ? '#276749' : subjectColor(teacherProfile?.subject);
               return (
-                <div key={cls.id} style={{ border: `1.5px solid ${color}30`, borderRadius: 12, padding: '16px 18px', background: color + '08' }}>
+                <div key={cls.id} style={{
+                  border: `1.5px solid ${color}${isPrimary ? '60' : '30'}`,
+                  borderRadius: 12, padding: '16px 18px',
+                  background: isPrimary ? 'linear-gradient(135deg, #f0fff4, #e6fffa)' : color + '08',
+                  position: 'relative', overflow: 'hidden',
+                }}>
+                  {isPrimary && (
+                    <div style={{
+                      position: 'absolute', top: 10, right: 10,
+                      background: '#276749', color: '#fff',
+                      fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 10,
+                    }}>
+                      CLASS TEACHER
+                    </div>
+                  )}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
                     <div>
                       <div style={{ fontSize: 13, fontWeight: 600, color, lineHeight: 1, marginBottom: 2 }}>Class</div>
@@ -348,7 +428,7 @@ export default function TeacherDashboard() {
                       </div>
                     </div>
                     <div style={{ width: 40, height: 40, borderRadius: 10, background: color + '20', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <span className="material-icons" style={{ color, fontSize: 22 }}>groups</span>
+                      <span className="material-icons" style={{ color, fontSize: 22 }}>{isPrimary ? 'assignment_ind' : 'groups'}</span>
                     </div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>

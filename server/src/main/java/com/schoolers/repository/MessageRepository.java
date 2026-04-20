@@ -2,9 +2,11 @@ package com.schoolers.repository;
 
 import com.schoolers.model.Message;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -20,4 +22,28 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     List<Message> findConversation(@Param("u1") Long u1, @Param("u2") Long u2);
 
     long countByReceiverIdAndIsReadFalse(Long receiverId);
+
+    /** All broadcast messages visible to a specific student (school-wide, class, or direct) */
+    @Query("SELECT m FROM Message m WHERE m.schoolId = :schoolId " +
+           "AND (m.isSchoolWide = true OR m.classSection = :classSection OR m.targetStudentId = :studentId) " +
+           "ORDER BY m.createdAt DESC")
+    List<Message> findForStudent(
+            @Param("schoolId") Long schoolId,
+            @Param("classSection") String classSection,
+            @Param("studentId") Long studentId);
+
+    /** All broadcast messages sent for a given school (for admin/teacher views) */
+    @Query("SELECT m FROM Message m WHERE m.schoolId = :schoolId " +
+           "AND (m.isSchoolWide = true OR m.classSection IS NOT NULL) " +
+           "ORDER BY m.createdAt DESC")
+    List<Message> findBroadcastsBySchool(@Param("schoolId") Long schoolId);
+
+    @Modifying @Transactional
+    void deleteBySenderId(Long senderId);
+
+    @Modifying @Transactional
+    void deleteByClassSection(String classSection);
+
+    @Modifying @Transactional
+    void deleteByTargetStudentId(Long targetStudentId);
 }

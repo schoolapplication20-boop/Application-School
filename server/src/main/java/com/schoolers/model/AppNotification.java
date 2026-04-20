@@ -36,7 +36,7 @@ public class AppNotification {
 
     @Column(name = "is_read")
     @Builder.Default
-    private Boolean isRead = false;
+    private boolean read = false;
 
     /** e.g. "teacher_leave" or "leave_decision" — used by frontend to render detail view */
     @Column(name = "link_type", length = 30)
