@@ -84,6 +84,9 @@ public class StudentTransport {
     @Builder.Default
     private String status = "Active";
 
+    @Column(name = "school_id")
+    private Long schoolId;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

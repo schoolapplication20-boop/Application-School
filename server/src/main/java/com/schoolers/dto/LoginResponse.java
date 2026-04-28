@@ -29,6 +29,7 @@ public class LoginResponse {
         private Long    schoolId;
         private SchoolDto school;
         private Boolean needsSchoolSetup;
+        private String  teacherType;
     }
 
     @Data
@@ -36,14 +37,15 @@ public class LoginResponse {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class SchoolDto {
-        private Long   id;
-        private String name;
-        private String code;
-        private String logoUrl;
-        private String primaryColor;
-        private String secondaryColor;
-        private String features;
-        private String subscriptionPlan;
-        private String academicYear;
+        private Long    id;
+        private Integer schoolId;
+        private String  name;
+        private String  code;
+        private String  logoUrl;
+        private String  primaryColor;
+        private String  secondaryColor;
+        private String  features;
+        private String  subscriptionPlan;
+        private String  academicYear;
     }
 }

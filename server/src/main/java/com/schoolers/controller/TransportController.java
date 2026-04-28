@@ -2,10 +2,12 @@ package com.schoolers.controller;
 
 import com.schoolers.dto.ApiResponse;
 import com.schoolers.model.*;
+import com.schoolers.repository.UserRepository;
 import com.schoolers.service.TransportService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,15 +22,25 @@ public class TransportController {
     @Autowired
     private TransportService transportService;
 
+    @Autowired
+    private UserRepository userRepository;
+
+    private Long getCurrentSchoolId(Authentication auth) {
+        if (auth == null) return null;
+        return userRepository.findByEmailIgnoreCase(auth.getName())
+                .map(com.schoolers.model.User::getSchoolId)
+                .orElse(null);
+    }
+
     // Buses
     @GetMapping("/buses")
-    public ResponseEntity<ApiResponse<List<TransportBus>>> getBuses() {
-        return ResponseEntity.ok(transportService.getBuses());
+    public ResponseEntity<ApiResponse<List<TransportBus>>> getBuses(Authentication auth) {
+        return ResponseEntity.ok(transportService.getBuses(getCurrentSchoolId(auth)));
     }
 
     @PostMapping("/buses")
-    public ResponseEntity<?> createBus(@RequestBody Map<String, Object> body) {
-        var response = transportService.createBus(body);
+    public ResponseEntity<?> createBus(@RequestBody Map<String, Object> body, Authentication auth) {
+        var response = transportService.createBus(body, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.status(201).body(response) : ResponseEntity.badRequest().body(response);
     }
 
@@ -46,19 +58,19 @@ public class TransportController {
 
     // Routes
     @GetMapping("/routes")
-    public ResponseEntity<ApiResponse<List<TransportRoute>>> getRoutes() {
-        return ResponseEntity.ok(transportService.getRoutes());
+    public ResponseEntity<ApiResponse<List<TransportRoute>>> getRoutes(Authentication auth) {
+        return ResponseEntity.ok(transportService.getRoutes(getCurrentSchoolId(auth)));
     }
 
     @PostMapping("/routes")
-    public ResponseEntity<?> createRoute(@RequestBody Map<String, Object> body) {
-        var response = transportService.createRoute(body);
+    public ResponseEntity<?> createRoute(@RequestBody Map<String, Object> body, Authentication auth) {
+        var response = transportService.createRoute(body, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.status(201).body(response) : ResponseEntity.badRequest().body(response);
     }
 
     @PutMapping("/routes/{id}")
-    public ResponseEntity<?> updateRoute(@PathVariable Long id, @RequestBody Map<String, Object> body) {
-        var response = transportService.updateRoute(id, body);
+    public ResponseEntity<?> updateRoute(@PathVariable Long id, @RequestBody Map<String, Object> body, Authentication auth) {
+        var response = transportService.updateRoute(id, body, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
@@ -70,13 +82,13 @@ public class TransportController {
 
     // Drivers
     @GetMapping("/drivers")
-    public ResponseEntity<ApiResponse<List<TransportDriver>>> getDrivers() {
-        return ResponseEntity.ok(transportService.getDrivers());
+    public ResponseEntity<ApiResponse<List<TransportDriver>>> getDrivers(Authentication auth) {
+        return ResponseEntity.ok(transportService.getDrivers(getCurrentSchoolId(auth)));
     }
 
     @PostMapping("/drivers")
-    public ResponseEntity<?> createDriver(@RequestBody Map<String, Object> body) {
-        var response = transportService.createDriver(body);
+    public ResponseEntity<?> createDriver(@RequestBody Map<String, Object> body, Authentication auth) {
+        var response = transportService.createDriver(body, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.status(201).body(response) : ResponseEntity.badRequest().body(response);
     }
 
@@ -94,13 +106,13 @@ public class TransportController {
 
     // Stops
     @GetMapping("/stops")
-    public ResponseEntity<ApiResponse<List<TransportStop>>> getStops() {
-        return ResponseEntity.ok(transportService.getStops());
+    public ResponseEntity<ApiResponse<List<TransportStop>>> getStops(Authentication auth) {
+        return ResponseEntity.ok(transportService.getStops(getCurrentSchoolId(auth)));
     }
 
     @PostMapping("/stops")
-    public ResponseEntity<?> createStop(@RequestBody Map<String, Object> body) {
-        var response = transportService.createStop(body);
+    public ResponseEntity<?> createStop(@RequestBody Map<String, Object> body, Authentication auth) {
+        var response = transportService.createStop(body, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.status(201).body(response) : ResponseEntity.badRequest().body(response);
     }
 
@@ -118,19 +130,19 @@ public class TransportController {
 
     // Student Assignments
     @GetMapping("/students")
-    public ResponseEntity<ApiResponse<List<TransportStudentAssignment>>> getStudentAssignments() {
-        return ResponseEntity.ok(transportService.getStudentAssignments());
+    public ResponseEntity<ApiResponse<List<TransportStudentAssignment>>> getStudentAssignments(Authentication auth) {
+        return ResponseEntity.ok(transportService.getStudentAssignments(getCurrentSchoolId(auth)));
     }
 
     @PostMapping("/students")
-    public ResponseEntity<?> assignStudent(@RequestBody Map<String, Object> body) {
-        var response = transportService.assignStudent(body);
+    public ResponseEntity<?> assignStudent(@RequestBody Map<String, Object> body, Authentication auth) {
+        var response = transportService.assignStudent(body, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.status(201).body(response) : ResponseEntity.badRequest().body(response);
     }
 
     @PutMapping("/students/{id}")
-    public ResponseEntity<?> updateStudentAssignment(@PathVariable Long id, @RequestBody Map<String, Object> body) {
-        var response = transportService.updateStudentAssignment(id, body);
+    public ResponseEntity<?> updateStudentAssignment(@PathVariable Long id, @RequestBody Map<String, Object> body, Authentication auth) {
+        var response = transportService.updateStudentAssignment(id, body, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
@@ -142,13 +154,13 @@ public class TransportController {
 
     // Transport Fees
     @GetMapping("/fees")
-    public ResponseEntity<ApiResponse<List<TransportFee>>> getTransportFees() {
-        return ResponseEntity.ok(transportService.getTransportFees());
+    public ResponseEntity<ApiResponse<List<TransportFee>>> getTransportFees(Authentication auth) {
+        return ResponseEntity.ok(transportService.getTransportFees(getCurrentSchoolId(auth)));
     }
 
     @PostMapping("/fees")
-    public ResponseEntity<?> createTransportFee(@RequestBody Map<String, Object> body) {
-        var response = transportService.createTransportFee(body);
+    public ResponseEntity<?> createTransportFee(@RequestBody Map<String, Object> body, Authentication auth) {
+        var response = transportService.createTransportFee(body, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.status(201).body(response) : ResponseEntity.badRequest().body(response);
     }
 
@@ -172,8 +184,8 @@ public class TransportController {
 
     // Student Transport Details
     @GetMapping("/student-transport")
-    public ResponseEntity<ApiResponse<List<com.schoolers.model.StudentTransport>>> getStudentTransports() {
-        return ResponseEntity.ok(transportService.getStudentTransports());
+    public ResponseEntity<ApiResponse<List<StudentTransport>>> getStudentTransports(Authentication auth) {
+        return ResponseEntity.ok(transportService.getStudentTransports(getCurrentSchoolId(auth)));
     }
 
     @GetMapping("/student-transport/{id}")
@@ -183,8 +195,8 @@ public class TransportController {
     }
 
     @PostMapping("/student-transport")
-    public ResponseEntity<?> createStudentTransport(@RequestBody Map<String, Object> body) {
-        var response = transportService.createStudentTransport(body);
+    public ResponseEntity<?> createStudentTransport(@RequestBody Map<String, Object> body, Authentication auth) {
+        var response = transportService.createStudentTransport(body, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.status(201).body(response) : ResponseEntity.badRequest().body(response);
     }
 

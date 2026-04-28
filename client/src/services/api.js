@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Base URL for the Spring Boot backend
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+export const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 // Module-level auth token (no localStorage, no sessionStorage)
 let _authToken = null;
@@ -112,6 +112,7 @@ export const adminAPI = {
   createClass: (data) => api.post('/api/admin/classes', data),
   updateClass: (id, data) => api.put(`/api/admin/classes/${id}`, data),
   deleteClass: (id) => api.delete(`/api/admin/classes/${id}`),
+  getClassCapacityInfo: (className, section) => api.get('/api/admin/classes/capacity-check', { params: { className, section: section || '' } }),
 
   // Fees (legacy)
   getFees: (params) => api.get('/api/admin/fees', { params }),
@@ -149,11 +150,6 @@ export const adminAPI = {
   updateExpense: (id, data) => api.put(`/api/admin/expenses/${id}`, data),
   deleteExpense: (id) => api.delete(`/api/admin/expenses/${id}`),
 
-  // Teacher Class Assignments
-  getTeacherAssignments: (teacherId) => api.get('/api/admin/teacher-assignments', { params: teacherId ? { teacherId } : {} }),
-  saveTeacherAssignments: (data) => api.post('/api/admin/teacher-assignments/batch', data),
-  deleteTeacherAssignment: (id) => api.delete(`/api/admin/teacher-assignments/${id}`),
-
   // Parents
   getParents: () => api.get('/api/admin/parents'),
   createParent: (data) => api.post('/api/admin/parents', data),
@@ -171,7 +167,6 @@ export const teacherAPI = {
   getMyClasses: (teacherId) => api.get('/api/teacher/classes', { params: teacherId ? { teacherId } : {} }),
   getMyProfile: () => api.get('/api/teacher/profile'),
   getClassTeacherAssignment: () => api.get('/api/teacher/class-teacher-assignment'),
-  getMySubjectAssignments: () => api.get('/api/teacher/my-subject-assignments'),
 
   // Students in a class
   getClassStudents: (classId) => api.get(`/api/teacher/class/${classId}/students`),

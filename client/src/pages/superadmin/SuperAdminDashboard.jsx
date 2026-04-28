@@ -51,6 +51,7 @@ function OwnerDashboard() {
   const [expandedRow,  setExpandedRow]  = useState(null); // schoolId of expanded row
   const [deleteTarget, setDeleteTarget] = useState(null); // sa object pending confirmation
   const [deleting,     setDeleting]     = useState(false);
+  const [editTarget,   setEditTarget]   = useState(null); // sa object being edited
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -110,7 +111,7 @@ function OwnerDashboard() {
           style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', background: 'linear-gradient(135deg,#dc2626,#991b1b)', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: 'pointer', boxShadow: '0 2px 8px #dc262640' }}
         >
           <span className="material-icons" style={{ fontSize: 18 }}>add_business</span>
-          Create School &amp; Super Admin
+          Onboard School 
         </button>
       </div>
 
@@ -172,12 +173,14 @@ function OwnerDashboard() {
             <table className="data-table">
               <thead>
                 <tr>
+                  <th>ID</th>
                   <th>School</th>
                   <th>Super Admin</th>
                   <th>Contact</th>
                   <th>Modules</th>
                   <th>Setup</th>
                   <th>Status</th>
+                  <th></th>
                   <th></th>
                   <th></th>
                 </tr>
@@ -188,11 +191,21 @@ function OwnerDashboard() {
                     ? (typeof sa.permissions === 'string' ? (() => { try { return JSON.parse(sa.permissions); } catch { return null; } })() : sa.permissions)
                     : null;
                   const enabledCount = perms ? Object.values(perms).filter(Boolean).length : ALL_MODULES.length;
-                  const isExpanded   = expandedRow === sa.schoolId;
+                  const isExpanded   = expandedRow === sa.schoolDbId;
 
                   return (
                     <React.Fragment key={sa.id}>
                       <tr style={{ background: isExpanded ? '#fafbff' : undefined }}>
+                        {/* School Number */}
+                        <td style={{ textAlign: 'center' }}>
+                          {sa.schoolId != null ? (
+                            <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg,#dc2626,#7c3aed)', color: '#fff', fontSize: 15, fontWeight: 800 }}>
+                              {sa.schoolId}
+                            </div>
+                          ) : (
+                            <span style={{ fontSize: 11, color: '#cbd5e0' }}>—</span>
+                          )}
+                        </td>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                             <div style={{ width: 38, height: 38, borderRadius: 10, background: 'linear-gradient(135deg,#7c3aed,#553c9a)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 13, fontWeight: 700, flexShrink: 0 }}>
@@ -215,7 +228,7 @@ function OwnerDashboard() {
                           {sa.createdAt
                             ? <div>Joined {new Date(sa.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
                             : '—'}
-                          <div style={{ fontSize: 11, color: '#a0aec0' }}>ID #{sa.schoolId}</div>
+                          <div style={{ fontSize: 11, color: '#a0aec0' }}>ID #{sa.schoolDbId}</div>
                         </td>
                         <td>
                           <span style={{ padding: '3px 10px', background: '#3182ce18', color: '#2c5282', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>
@@ -240,13 +253,22 @@ function OwnerDashboard() {
                         </td>
                         <td>
                           <button
-                            onClick={() => setExpandedRow(isExpanded ? null : sa.schoolId)}
+                            onClick={() => setExpandedRow(isExpanded ? null : sa.schoolDbId)}
                             title={isExpanded ? 'Collapse' : 'View details'}
                             style={{ border: 'none', background: isExpanded ? '#ede9fe' : '#f8fafc', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                           >
                             <span className="material-icons" style={{ fontSize: 16, color: isExpanded ? '#7c3aed' : '#a0aec0' }}>
                               {isExpanded ? 'expand_less' : 'expand_more'}
                             </span>
+                          </button>
+                        </td>
+                        <td>
+                          <button
+                            onClick={() => setEditTarget(sa)}
+                            title="Edit School"
+                            style={{ border: 'none', background: '#f0fff4', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          >
+                            <span className="material-icons" style={{ fontSize: 16, color: '#276749' }}>edit</span>
                           </button>
                         </td>
                         <td>
@@ -263,14 +285,14 @@ function OwnerDashboard() {
                       {/* ── Expanded detail row ─────────────────────────────── */}
                       {isExpanded && (
                         <tr>
-                          <td colSpan={8} style={{ padding: 0, background: '#fafbff', borderTop: '1px dashed #e2e8f0' }}>
+                          <td colSpan={10} style={{ padding: 0, background: '#fafbff', borderTop: '1px dashed #e2e8f0' }}>
                             <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
                               {/* School info */}
                               <div style={{ background: '#fff', borderRadius: 10, padding: '12px 14px', border: '1.5px solid #e2e8f0' }}>
                                 <div style={{ fontSize: 11, fontWeight: 700, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>School Info</div>
                                 <InfoRow icon="school"           label="Name"   value={sa.schoolName || '—'} />
                                 <InfoRow icon="tag"              label="Code"   value={<span style={{ fontFamily:'monospace', fontWeight:700 }}>{sa.schoolCode || '—'}</span>} />
-                                <InfoRow icon="fingerprint"      label="DB ID"  value={`#${sa.schoolId}`} />
+                                <InfoRow icon="fingerprint"      label="DB ID"  value={`#${sa.schoolDbId}`} />
                               </div>
                               {/* Super admin */}
                               <div style={{ background: '#fff', borderRadius: 10, padding: '12px 14px', border: '1.5px solid #e2e8f0' }}>
@@ -314,6 +336,15 @@ function OwnerDashboard() {
       {/* ── Credentials Modal ───────────────────────────────────────────────── */}
       {credentials && (
         <CredentialsModal creds={credentials} onClose={() => setCredentials(null)} />
+      )}
+
+      {/* ── Edit School Modal ───────────────────────────────────────────────── */}
+      {editTarget && (
+        <EditSchoolModal
+          sa={editTarget}
+          onClose={() => setEditTarget(null)}
+          onSaved={() => { setEditTarget(null); load(); }}
+        />
       )}
 
       {/* ── Delete Confirmation Modal ───────────────────────────────────────── */}
@@ -389,7 +420,7 @@ const WIZARD_STEPS = [
 ];
 
 const WIZARD_INIT = {
-  name: '', code: '', board: 'CBSE', academicYear: '2025-2026',
+  schoolId: '', name: '', code: '', board: 'CBSE', academicYear: '2025-2026',
   address: '', city: '', state: '', pincode: '', country: 'India',
   phone: '', schoolEmail: '', website: '',
   primaryColor: '#76C442', secondaryColor: '#5fa832',
@@ -450,6 +481,8 @@ function CreateSuperAdminWizard({ onClose, onCreated }) {
 
   const validate = (s) => {
     if (s === 1) {
+      if (!form.schoolId || isNaN(Number(form.schoolId)) || Number(form.schoolId) < 1)
+        return 'School ID must be a positive number (e.g. 1, 2, 3)';
       if (!form.name.trim())        return 'School name is required';
       if (!form.code.trim())        return 'School code is required';
       if (!/^[A-Z0-9]{3,10}$/i.test(form.code.trim())) return 'Code must be 3–10 alphanumeric characters';
@@ -488,13 +521,16 @@ function CreateSuperAdminWizard({ onClose, onCreated }) {
     setError('');
     try {
       // Step 1: Create stub school + Super Admin account
+      // schoolId is included here so it is saved atomically with the stub
+      // school — the second updateSchool call below fills in the remaining details.
       const saRes = await superAdminAPI.createSuperAdmin({
-        name:        form.adminName.trim(),
-        email:       form.adminEmail.trim(),
-        mobile:      form.adminMobile.trim() || undefined,
-        schoolName:  form.name.trim(),
-        schoolCode:  form.code.trim().toUpperCase(),
-        permissions: JSON.stringify(perms),
+        name:         form.adminName.trim(),
+        email:        form.adminEmail.trim(),
+        mobile:       form.adminMobile.trim() || undefined,
+        schoolName:   form.name.trim(),
+        schoolCode:   form.code.trim().toUpperCase(),
+        schoolId: form.schoolId ? Number(form.schoolId) : null,
+        permissions:  JSON.stringify(perms),
       });
       const saData = saRes.data;
       if (!saData?.success || !saData?.data) {
@@ -507,10 +543,12 @@ function CreateSuperAdminWizard({ onClose, onCreated }) {
       const adminPassword   = saData.data.generatedPassword;
       const adminName       = saData.data.name;
 
-      // Step 2: Update the stub school with full details
+      // Step 2: Update the stub school with full details.
+      // schoolId was already saved in step 1 — this fills in address,
+      // contact, branding, and subscription info.
       if (schoolId) {
         try {
-          await schoolAPI.updateSchool(schoolId, {
+          const updateRes = await schoolAPI.updateSchool(schoolId, {
             board:              form.board,
             academicYear:       form.academicYear.trim(),
             address:            form.address.trim(),
@@ -539,8 +577,13 @@ function CreateSuperAdminWizard({ onClose, onCreated }) {
             }),
             isSetupCompleted: true,
           });
-        } catch {
-          // Non-fatal: Super Admin can finish setup on first login
+          if (!updateRes.data?.success) {
+            console.warn('[CreateSuperAdminWizard] School detail update failed:', updateRes.data?.message);
+          }
+        } catch (updateErr) {
+          // School was created with all required fields in step 1.
+          // The Super Admin can complete remaining details from their dashboard.
+          console.warn('[CreateSuperAdminWizard] School detail update error:', updateErr?.message);
         }
       }
 
@@ -609,8 +652,27 @@ function CreateSuperAdminWizard({ onClose, onCreated }) {
           {step === 1 && (
             <div>
               <div style={{ padding: '10px 14px', background: '#fef2f2', borderRadius: 8, borderLeft: '4px solid #dc2626', fontSize: 13, color: '#991b1b', marginBottom: 18 }}>
-                Each school gets one Super Admin. School code must be unique across the platform.
+                Each school gets one Super Admin. School ID and code must be unique across the platform.
               </div>
+
+              {/* School ID — prominent, full-width */}
+              <WizardField label="School ID" required hint="Unique numeric identifier for this school (e.g. 1, 2, 3)" error={error && (isNaN(Number(form.schoolId)) || Number(form.schoolId) < 1) ? error : null}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg,#dc2626,#7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <span className="material-icons" style={{ color: '#fff', fontSize: 20 }}>tag</span>
+                  </div>
+                  <input
+                    type="number"
+                    min="1"
+                    value={form.schoolId}
+                    onChange={on('schoolId')}
+                    placeholder="e.g. 1"
+                    style={{ ...inp(error && (isNaN(Number(form.schoolId)) || Number(form.schoolId) < 1)), width: 120, fontWeight: 700, fontSize: 18, textAlign: 'center' }}
+                  />
+                  <span style={{ fontSize: 12, color: '#718096' }}>All data for this school will be linked to this ID</span>
+                </div>
+              </WizardField>
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 18px' }}>
                 <WizardField label="School Name" required error={error && !form.name.trim() ? error : null}>
                   <input value={form.name} onChange={on('name')} placeholder="e.g. Springfield High School" style={inp(error && !form.name.trim())} />
@@ -841,6 +903,203 @@ function CreateSuperAdminWizard({ onClose, onCreated }) {
               </button>
             )}
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Stable helper components for EditSchoolModal ────────────────────────────
+// IMPORTANT: defined at module level so their reference never changes between
+// renders. If defined inside EditSchoolModal, React treats them as new component
+// types on every keystroke (new function reference = new type) and unmounts/
+// remounts all child inputs, which causes focus loss after every character.
+function EditRow2({ children }) {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>{children}</div>
+  );
+}
+function EditField({ label, children, required }) {
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>
+        {label}{required && <span style={{ color: '#e53e3e', marginLeft: 2 }}>*</span>}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Edit School Modal
+// ═════════════════════════════════════════════════════════════════════════════
+function EditSchoolModal({ sa, onClose, onSaved }) {
+  const school = sa.school || {};
+  const [saving, setSaving] = useState(false);
+  const [error,  setError]  = useState('');
+  const [form,   setForm]   = useState({
+    schoolId:  school.schoolId != null ? String(school.schoolId) : '',
+    name:          school.name          || sa.schoolName || '',
+    code:          school.code          || sa.schoolCode || '',
+    board:         school.board         || '',
+    academicYear:  school.academicYear  || '',
+    address:       school.address       || '',
+    city:          school.city          || '',
+    state:         school.state         || '',
+    pincode:       school.pincode       || '',
+    phone:         school.phone         || '',
+    email:         school.email         || '',
+    website:       school.website       || '',
+    primaryColor:  school.primaryColor  || '#276749',
+    secondaryColor:school.secondaryColor|| '#76C442',
+  });
+
+  const on = (e) => {
+    const { name, value } = e.target;
+    setForm(f => ({ ...f, [name]: value }));
+  };
+
+  const inp = (hasErr) => ({
+    width: '100%', padding: '8px 12px', borderRadius: 8, border: `1.5px solid ${hasErr ? '#fc8181' : '#e2e8f0'}`,
+    fontSize: 14, outline: 'none', boxSizing: 'border-box',
+  });
+
+  const handleSave = async () => {
+    if (!form.name.trim())  { setError('School name is required'); return; }
+    if (!form.code.trim())  { setError('School code is required'); return; }
+    if (form.schoolId && (isNaN(Number(form.schoolId)) || Number(form.schoolId) < 1)) {
+      setError('School ID must be a positive number'); return;
+    }
+    setSaving(true);
+    setError('');
+    try {
+      await schoolAPI.updateSchool(sa.schoolDbId || school.id, {
+        schoolId:  form.schoolId ? Number(form.schoolId) : null,
+        name:          form.name.trim(),
+        code:          form.code.trim().toUpperCase(),
+        board:         form.board,
+        academicYear:  form.academicYear.trim(),
+        address:       form.address.trim(),
+        city:          form.city.trim(),
+        state:         form.state.trim(),
+        pincode:       form.pincode.trim(),
+        phone:         form.phone.trim(),
+        email:         form.email.trim(),
+        website:       form.website.trim() || null,
+        primaryColor:  form.primaryColor,
+        secondaryColor:form.secondaryColor,
+      });
+      onSaved();
+    } catch (e) {
+      setError(e.response?.data?.message || 'Failed to save. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 680, maxHeight: '92vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.25)', overflow: 'hidden' }}>
+
+        {/* Header */}
+        <div style={{ padding: '18px 24px 14px', borderBottom: '1px solid #f0f4f8', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 16, color: '#1a202c' }}>Edit School</div>
+            <div style={{ fontSize: 12, color: '#718096', marginTop: 2 }}>{sa.schoolName || school.name}</div>
+          </div>
+          <button onClick={onClose} style={{ border: 'none', background: '#f7fafc', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span className="material-icons" style={{ fontSize: 18, color: '#718096' }}>close</span>
+          </button>
+        </div>
+
+        {/* Body */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
+          {error && (
+            <div style={{ background: '#fff5f5', border: '1.5px solid #fed7d7', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: '#c53030', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span className="material-icons" style={{ fontSize: 16 }}>error_outline</span>
+              {error}
+            </div>
+          )}
+
+          {/* School ID */}
+          <EditField label="School ID">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <input type="number" min="1" name="schoolId" value={form.schoolId} onChange={on}
+                placeholder="e.g. 1" style={{ ...inp(false), width: 120, fontWeight: 700, fontSize: 18, textAlign: 'center' }} />
+              <span style={{ fontSize: 12, color: '#a0aec0' }}>Unique numeric identifier</span>
+            </div>
+          </EditField>
+
+          {/* Basic */}
+          <EditRow2>
+            <EditField label="School Name" required>
+              <input name="name" value={form.name} onChange={on} placeholder="School name" style={inp(false)} />
+            </EditField>
+            <EditField label="School Code" required>
+              <input name="code" value={form.code} onChange={e => on({ target: { name: 'code', value: e.target.value.toUpperCase() } })}
+                placeholder="e.g. GIS001" style={inp(false)} />
+            </EditField>
+          </EditRow2>
+          <EditRow2>
+            <EditField label="Board / Curriculum">
+              <select name="board" value={form.board} onChange={on}
+                style={{ ...inp(false), background: '#fff' }}>
+                {['', 'CBSE', 'ICSE', 'State Board', 'IB', 'IGCSE', 'Other'].map(b => <option key={b} value={b}>{b || '— Select —'}</option>)}
+              </select>
+            </EditField>
+            <EditField label="Academic Year">
+              <input name="academicYear" value={form.academicYear} onChange={on} placeholder="e.g. 2024-2025" style={inp(false)} />
+            </EditField>
+          </EditRow2>
+
+          {/* Address */}
+          <EditField label="Street Address">
+            <input name="address" value={form.address} onChange={on} placeholder="Street address" style={inp(false)} />
+          </EditField>
+          <EditRow2>
+            <EditField label="City"><input name="city" value={form.city} onChange={on} placeholder="City" style={inp(false)} /></EditField>
+            <EditField label="State"><input name="state" value={form.state} onChange={on} placeholder="State" style={inp(false)} /></EditField>
+          </EditRow2>
+          <EditRow2>
+            <EditField label="Pincode"><input name="pincode" value={form.pincode} onChange={on} placeholder="Pincode" style={inp(false)} /></EditField>
+            <EditField label="Phone"><input name="phone" value={form.phone} onChange={on} placeholder="Phone" style={inp(false)} /></EditField>
+          </EditRow2>
+
+          {/* Contact */}
+          <EditRow2>
+            <EditField label="School Email"><input name="email" value={form.email} onChange={on} placeholder="email@school.com" style={inp(false)} /></EditField>
+            <EditField label="Website"><input name="website" value={form.website} onChange={on} placeholder="https://..." style={inp(false)} /></EditField>
+          </EditRow2>
+
+          {/* Colors */}
+          <EditRow2>
+            <EditField label="Primary Color">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <input type="color" name="primaryColor" value={form.primaryColor} onChange={on}
+                  style={{ width: 40, height: 36, border: '1.5px solid #e2e8f0', borderRadius: 8, padding: 2, cursor: 'pointer' }} />
+                <span style={{ fontSize: 13, color: '#4a5568', fontWeight: 600 }}>{form.primaryColor}</span>
+              </div>
+            </EditField>
+            <EditField label="Secondary Color">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <input type="color" name="secondaryColor" value={form.secondaryColor} onChange={on}
+                  style={{ width: 40, height: 36, border: '1.5px solid #e2e8f0', borderRadius: 8, padding: 2, cursor: 'pointer' }} />
+                <span style={{ fontSize: 13, color: '#4a5568', fontWeight: 600 }}>{form.secondaryColor}</span>
+              </div>
+            </EditField>
+          </EditRow2>
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: '14px 24px', borderTop: '1px solid #f0f4f8', display: 'flex', justifyContent: 'flex-end', gap: 10, flexShrink: 0 }}>
+          <button onClick={onClose} disabled={saving}
+            style={{ padding: '9px 20px', borderRadius: 10, border: '1.5px solid #e2e8f0', background: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', color: '#4a5568' }}>
+            Cancel
+          </button>
+          <button onClick={handleSave} disabled={saving}
+            style={{ padding: '9px 22px', borderRadius: 10, border: 'none', background: saving ? '#a0aec0' : '#276749', color: '#fff', fontSize: 14, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+            {saving ? <><span className="material-icons" style={{ fontSize: 16, animation: 'spin 1s linear infinite' }}>sync</span>Saving…</> : <><span className="material-icons" style={{ fontSize: 16 }}>save</span>Save Changes</>}
+          </button>
         </div>
       </div>
     </div>

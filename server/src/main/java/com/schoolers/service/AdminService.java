@@ -62,8 +62,6 @@ public class AdminService {
     @Autowired private ClassDiaryRepository classDiaryRepository;
     @Autowired private MessageRepository messageRepository;
     @Autowired private SalaryPaymentRepository salaryPaymentRepository;
-    @Autowired private TeacherClassAssignmentRepository teacherClassAssignmentRepository;
-
     private static final String CHARS = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#$!";
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final java.util.regex.Pattern EMAIL_PATTERN =
@@ -300,12 +298,30 @@ public class AdminService {
         String className = resolveClassName(str(body, "className", str(body, "class", "")));
         String section   = normalizeSection(str(body, "section", ""));
 
-        // School-scoped duplicate roll-number check
-        boolean duplicate = (schoolId != null)
-                ? studentRepository.findDuplicateInClassAndSchool(schoolId, rollNumber, className, section).isPresent()
-                : studentRepository.findDuplicateInClass(rollNumber, className, section).isPresent();
-        if (duplicate)
-            return ApiResponse.<Map<String, Object>>error("Roll number " + rollNumber + " already exists in " + (className.isBlank() ? "this class" : className) + (section.isBlank() ? "" : " – " + section));
+        // Roll-number uniqueness is scoped to (school, class, section) only.
+        // Without a schoolId there is no meaningful scope — skip the check.
+        if (schoolId != null &&
+                studentRepository.findDuplicateInClassAndSchool(schoolId, rollNumber, className, section).isPresent())
+            return ApiResponse.<Map<String, Object>>error(
+                "Roll number " + rollNumber + " already exists in " +
+                (className.isBlank() ? "this class" : className) +
+                (section.isBlank() ? "" : " – " + section) +
+                " for this school.");
+
+        // Capacity check: reject if the class is already full
+        if (schoolId != null && !className.isBlank()) {
+            ClassRoom targetRoom = classRoomRepository
+                    .findBySchoolIdAndNameIgnoreCaseAndSectionIgnoreCase(schoolId, className, section != null ? section : "")
+                    .orElse(null);
+            if (targetRoom != null && targetRoom.getCapacity() != null && targetRoom.getCapacity() > 0) {
+                long enrolled = studentRepository.countEnrolledForCapacity(
+                        schoolId, className, section != null ? section : "");
+                if (enrolled >= targetRoom.getCapacity()) {
+                    return ApiResponse.<Map<String, Object>>error(
+                        "Maximum capacity reached for this class. Cannot add more students.");
+                }
+            }
+        }
 
         Student student = Student.builder()
                 .name(name)
@@ -380,7 +396,7 @@ public class AdminService {
             String msg;
             if (lowerDetail.contains("roll_number") || lowerDetail.contains("uq_roll_class_section")) {
                 msg = "Roll number " + rollNumber + " already exists in " + className
-                        + (section.isBlank() ? "" : " – " + section);
+                        + (section.isBlank() ? "" : " – " + section) + " for this school.";
             } else if (lowerDetail.contains("uk_users_email") || lowerDetail.contains("(email)")) {
                 msg = "Email '" + studentEmail + "' is already registered. Please use a different email.";
             } else if (lowerDetail.contains("uk_users_mobile") || lowerDetail.contains("(mobile)")) {
@@ -417,14 +433,35 @@ public class AdminService {
                             ? str(body, "rollNumber", student.getRollNumber()).trim()
                             : student.getRollNumber();
 
-                    studentRepository.findDuplicateInClass(targetRoll, targetClass, targetSection)
-                            .ifPresent(existing -> {
-                                if (!existing.getId().equals(id))
-                                    throw new IllegalArgumentException(
-                                        "Roll number " + targetRoll + " already exists in " +
-                                        (targetClass.isBlank() ? "this class" : targetClass) +
-                                        (targetSection.isBlank() ? "" : " – " + targetSection));
-                            });
+                    // Use the student's own school when the caller context has no school (APPLICATION_OWNER).
+                    Long dupSchoolId = schoolId != null ? schoolId : student.getSchoolId();
+                    if (dupSchoolId != null) {
+                        studentRepository.findDuplicateInClassAndSchool(dupSchoolId, targetRoll, targetClass, targetSection)
+                                .ifPresent(existing -> {
+                                    if (!existing.getId().equals(id))
+                                        throw new IllegalArgumentException(
+                                            "Roll number " + targetRoll + " already exists in " +
+                                            (targetClass.isBlank() ? "this class" : targetClass) +
+                                            (targetSection.isBlank() ? "" : " – " + targetSection) +
+                                            " for this school.");
+                                });
+                    }
+
+                    // Capacity check when moving to a different class/section
+                    boolean classChanging = !targetClass.equalsIgnoreCase(student.getClassName())
+                            || !targetSection.equalsIgnoreCase(normalizeSection(student.getSection()));
+                    if (classChanging && dupSchoolId != null && !targetClass.isBlank()) {
+                        ClassRoom targetRoom = classRoomRepository
+                                .findBySchoolIdAndNameIgnoreCaseAndSectionIgnoreCase(dupSchoolId, targetClass, targetSection)
+                                .orElse(null);
+                        if (targetRoom != null && targetRoom.getCapacity() != null && targetRoom.getCapacity() > 0) {
+                            long enrolled = studentRepository.countEnrolledForCapacity(dupSchoolId, targetClass, targetSection);
+                            if (enrolled >= targetRoom.getCapacity()) {
+                                throw new IllegalArgumentException(
+                                    "Maximum capacity reached for this class. Cannot add more students.");
+                            }
+                        }
+                    }
 
                     if (body.containsKey("name"))            student.setName(str(body, "name", student.getName()));
                     if (body.containsKey("admissionNumber")) student.setAdmissionNumber(str(body, "admissionNumber", student.getAdmissionNumber()));
@@ -486,7 +523,7 @@ public class AdminService {
                     ? e.getMostSpecificCause().getMessage() : e.getMessage();
             String lower = detail != null ? detail.toLowerCase() : "";
             String msg = lower.contains("roll_number") || lower.contains("uq_roll_class_section")
-                    ? "Roll number already exists in this class/section."
+                    ? "Roll number already exists in this class and section for this school."
                     : lower.contains("(mobile)") || lower.contains("uk_users_mobile")
                         ? "A phone number is already registered. Please check parent details."
                         : lower.contains("duplicate") || lower.contains("unique")
@@ -936,10 +973,7 @@ public class AdminService {
         });
         log.info("[deleteTeacher] classroom assignments reset for teacherId=" + id);
 
-        // ── Step 7: Class-subject assignments for this teacher ────────────────
-        teacherClassAssignmentRepository.deleteByTeacherId(id);
-
-        // ── Step 8: Delete teacher row then linked user account ───────────────
+        // ── Step 7: Delete teacher row then linked user account ───────────────
         teacherRepository.deleteById(id);
         teacherRepository.flush();
         if (linkedUser != null) {
@@ -974,6 +1008,37 @@ public class AdminService {
         return ApiResponse.success(classRoomRepository.findAll());
     }
 
+    public ApiResponse<Map<String, Object>> getClassCapacityInfo(String className, String section, Long schoolId) {
+        String resolvedClass   = resolveClassName(className != null ? className : "");
+        String resolvedSection = section != null ? section.trim() : "";
+        if (resolvedClass.isBlank()) return ApiResponse.error("className is required");
+
+        // Look up class — prefer school-scoped, fall back to unscoped (handles both null and non-null schoolId)
+        ClassRoom room = (schoolId != null)
+                ? classRoomRepository.findBySchoolIdAndNameIgnoreCaseAndSectionIgnoreCase(schoolId, resolvedClass, resolvedSection).orElse(null)
+                : classRoomRepository.findByNameIgnoreCaseAndSectionIgnoreCase(resolvedClass, resolvedSection).orElse(null);
+
+        if (room == null) return ApiResponse.error("Class not found");
+
+        Long effectiveSchoolId = schoolId != null ? schoolId : room.getSchoolId();
+        // Always use the authoritative capacity-count query (case-insensitive, handles null isActive)
+        long enrolled = (effectiveSchoolId != null)
+                ? studentRepository.countEnrolledForCapacity(effectiveSchoolId, resolvedClass, resolvedSection)
+                : studentRepository.countByClassNameIgnoreCaseAndSectionIgnoreCase(resolvedClass, resolvedSection);
+
+        int capacity = room.getCapacity() != null ? room.getCapacity() : 0;
+        boolean isFull = capacity > 0 && enrolled >= capacity;
+
+        Map<String, Object> info = new java.util.LinkedHashMap<>();
+        info.put("className",  room.getName());
+        info.put("section",    room.getSection());
+        info.put("capacity",   capacity);
+        info.put("enrolled",   enrolled);
+        info.put("available",  capacity > 0 ? Math.max(0, capacity - enrolled) : -1);
+        info.put("isFull",     isFull);
+        return ApiResponse.success(info);
+    }
+
     @Transactional
     public ApiResponse<ClassRoom> createClass(ClassRoom classRoom, Long schoolId) {
         String name = resolveClassName(classRoom.getName());
@@ -1006,7 +1071,20 @@ public class AdminService {
 
                     if (updated.getName() != null)        c.setName(resolveClassName(updated.getName()));
                     if (updated.getSection() != null)     c.setSection(normalizeSection(updated.getSection()));
-                    if (updated.getTeacherId() != null)   c.setTeacherId(updated.getTeacherId());
+                    if (updated.getTeacherId() != null && !updated.getTeacherId().equals(c.getTeacherId())) {
+                        // Remove class from previous teacher's classes text field
+                        if (c.getTeacherId() != null) {
+                            teacherRepository.findById(c.getTeacherId()).ifPresent(prev ->
+                                removeClassFromTeacherClasses(prev, c.getName(), normalizeSection(c.getSection())));
+                        }
+                        c.setTeacherId(updated.getTeacherId());
+                        // Add class to new teacher's classes text field
+                        teacherRepository.findById(updated.getTeacherId()).ifPresent(newT ->
+                            addClassToTeacherClasses(newT, resolveClassName(updated.getName() != null ? updated.getName() : c.getName()),
+                                normalizeSection(updated.getSection() != null ? updated.getSection() : c.getSection())));
+                    } else if (updated.getTeacherId() != null) {
+                        c.setTeacherId(updated.getTeacherId());
+                    }
                     if (updated.getTeacherName() != null) c.setTeacherName(updated.getTeacherName());
                     if (updated.getCapacity() != null)    c.setCapacity(updated.getCapacity());
                     if (updated.getIsActive() != null)    c.setIsActive(updated.getIsActive());
@@ -1109,7 +1187,6 @@ public class AdminService {
         messageRepository.deleteByClassSection(classSection);
         leaveRequestRepository.deleteByClassSection(classSection);
         classDiaryRepository.deleteByClassNameAndSection(className, section);
-        teacherClassAssignmentRepository.deleteByClassSection(classSection);
         log.info("[deleteClass] class-level records deleted for " + classSection);
 
         // ── Step 3: Reset teacher's primaryClassId if pointing to this class ──
@@ -1794,6 +1871,11 @@ public class AdminService {
             try { status = Expense.PaymentStatus.valueOf(str(body, "status", "UNPAID").toUpperCase()); }
             catch (Exception ignored) {}
 
+            Long schoolId = body.get("schoolId") != null
+                    ? Long.parseLong(body.get("schoolId").toString()) : null;
+            Long addedById = body.get("addedById") != null
+                    ? Long.parseLong(body.get("addedById").toString()) : null;
+
             Expense expense = Expense.builder()
                     .title(title)
                     .amount(amount)
@@ -1802,18 +1884,25 @@ public class AdminService {
                     .status(status)
                     .description(str(body, "description", null))
                     .addedBy(str(body, "addedBy", "Admin"))
-                    .addedById(body.get("addedById") != null ? Long.parseLong(body.get("addedById").toString()) : null)
+                    .addedById(addedById)
+                    .schoolId(schoolId)
                     .build();
 
-            return ApiResponse.success("Expense recorded", expenseRepository.save(expense));
+            log.info("[createExpense] Saving expense title='" + title + "' amount=" + amount
+                    + " date=" + date + " schoolId=" + schoolId);
+            return ApiResponse.success("Expense added successfully", expenseRepository.save(expense));
         } catch (Exception e) {
             return ApiResponse.error("Failed to create expense: " + e.getMessage());
         }
     }
 
-    public ApiResponse<Expense> updateExpense(Long id, Map<String, Object> body) {
+    public ApiResponse<Expense> updateExpense(Long id, Map<String, Object> body, Long schoolId) {
         return expenseRepository.findById(id)
                 .map(expense -> {
+                    // School isolation: reject cross-school updates
+                    if (schoolId != null && expense.getSchoolId() != null
+                            && !schoolId.equals(expense.getSchoolId()))
+                        return ApiResponse.<Expense>error("Expense not found");
                     if (body.containsKey("title"))       expense.setTitle(str(body, "title", expense.getTitle()));
                     if (body.containsKey("description")) expense.setDescription(str(body, "description", expense.getDescription()));
                     if (body.containsKey("paymentMode")) expense.setPaymentMode(str(body, "paymentMode", expense.getPaymentMode()));
@@ -1834,8 +1923,12 @@ public class AdminService {
                 .orElse(ApiResponse.error("Expense not found"));
     }
 
-    public ApiResponse<String> deleteExpense(Long id) {
-        if (!expenseRepository.existsById(id)) return ApiResponse.error("Expense not found");
+    @Transactional
+    public ApiResponse<String> deleteExpense(Long id, Long schoolId) {
+        Expense expense = expenseRepository.findById(id).orElse(null);
+        if (expense == null) return ApiResponse.error("Expense not found");
+        if (schoolId != null && expense.getSchoolId() != null && !schoolId.equals(expense.getSchoolId()))
+            return ApiResponse.error("Expense not found");
         expenseRepository.deleteById(id);
         return ApiResponse.success("Expense deleted", "Deleted");
     }
@@ -1994,11 +2087,16 @@ public class AdminService {
                 .orElse(ApiResponse.error("Parent not found"));
     }
 
-    @org.springframework.transaction.annotation.Transactional
+    @Transactional
     public ApiResponse<String> deleteParent(Long id) {
         return userRepository.findById(id)
                 .filter(u -> u.getRole() == User.Role.PARENT)
                 .map(user -> {
+                    // Unlink any students who reference this parent
+                    studentRepository.findByParentId(id).forEach(s -> {
+                        s.setParentId(null);
+                        studentRepository.save(s);
+                    });
                     parentProfileRepository.findByUser(user)
                             .ifPresent(p -> parentProfileRepository.deleteById(p.getId()));
                     userRepository.deleteById(id);
@@ -2116,7 +2214,10 @@ public class AdminService {
         List<Map<String, Object>> result = new java.util.ArrayList<>();
 
         for (ClassRoom cls : classes) {
-            List<Object[]> rows = attendanceRepository.countByStatusForClassAndDate(cls.getId(), date);
+            Long clsSchool = schoolId != null ? schoolId : cls.getSchoolId();
+            List<Object[]> rows = (clsSchool != null)
+                    ? attendanceRepository.countByStatusForSchoolAndClassAndDate(clsSchool, cls.getId(), date)
+                    : attendanceRepository.countByStatusForClassAndDate(cls.getId(), date);
             Map<String, Object> entry = new LinkedHashMap<>();
             entry.put("classId",   cls.getId());
             entry.put("className", cls.getName());
@@ -2146,14 +2247,21 @@ public class AdminService {
     }
 
     /** Attendance summary for a specific teacher's primary class */
-    public ApiResponse<Map<String, Object>> getTeacherAttendanceSummary(Long teacherId, LocalDate date) {
+    public ApiResponse<Map<String, Object>> getTeacherAttendanceSummary(Long teacherId, LocalDate date, Long schoolId) {
         return teacherRepository.findById(teacherId)
                 .map(teacher -> {
+                    // Enforce school-level access
+                    if (schoolMismatch(schoolId, teacher.getSchoolId()))
+                        return ApiResponse.<Map<String, Object>>error("Access denied: teacher belongs to another school");
+
                     Long classId = teacher.getPrimaryClassId();
                     if (classId == null) return ApiResponse.<Map<String, Object>>error("Teacher has no primary class assigned");
                     ClassRoom classRoom = classRoomRepository.findById(classId).orElse(null);
+                    Long effectiveSchoolId = schoolId != null ? schoolId : teacher.getSchoolId();
 
-                    List<Object[]> rows = attendanceRepository.countByStatusForClassAndDate(classId, date);
+                    List<Object[]> rows = (effectiveSchoolId != null)
+                            ? attendanceRepository.countByStatusForSchoolAndClassAndDate(effectiveSchoolId, classId, date)
+                            : attendanceRepository.countByStatusForClassAndDate(classId, date);
                     long present = 0, absent = 0, leave = 0, others = 0;
                     for (Object[] row : rows) {
                         String status = row[0].toString();
@@ -2182,7 +2290,9 @@ public class AdminService {
 
                     // Also include range summary for the past 30 days
                     LocalDate start = date.minusDays(29);
-                    List<Object[]> rangeRows = attendanceRepository.countByStatusForClassAndDateRange(classId, start, date);
+                    List<Object[]> rangeRows = (effectiveSchoolId != null)
+                            ? attendanceRepository.countByStatusForSchoolAndClassAndDateRange(effectiveSchoolId, classId, start, date)
+                            : attendanceRepository.countByStatusForClassAndDateRange(classId, start, date);
                     long rPresent = 0, rAbsent = 0, rLeave = 0, rOthers = 0;
                     for (Object[] row : rangeRows) {
                         String status = row[0].toString();
@@ -2207,11 +2317,16 @@ public class AdminService {
                 .orElse(ApiResponse.error("Teacher not found"));
     }
 
-    public ApiResponse<Map<String, Object>> getClassAttendanceDetails(Long classId, LocalDate date) {
+    public ApiResponse<Map<String, Object>> getClassAttendanceDetails(Long classId, LocalDate date, Long schoolId) {
         ClassRoom classRoom = classRoomRepository.findById(classId).orElse(null);
         if (classRoom == null) return ApiResponse.error("Class not found");
+        if (schoolMismatch(schoolId, classRoom.getSchoolId()))
+            return ApiResponse.error("Access denied: class belongs to another school");
 
-        List<Attendance> records = attendanceRepository.findByClassIdAndDate(classId, date);
+        Long effectiveSchoolId = schoolId != null ? schoolId : classRoom.getSchoolId();
+        List<Attendance> records = (effectiveSchoolId != null)
+                ? attendanceRepository.findBySchoolIdAndClassIdAndDate(effectiveSchoolId, classId, date)
+                : attendanceRepository.findByClassIdAndDate(classId, date);
         List<Map<String, Object>> details = records.stream()
                 .sorted(Comparator.comparing(Attendance::getStudentId))
                 .map(record -> {
@@ -2229,7 +2344,9 @@ public class AdminService {
                 })
                 .toList();
 
-        List<Object[]> rows = attendanceRepository.countByStatusForClassAndDate(classId, date);
+        List<Object[]> rows = (effectiveSchoolId != null)
+                ? attendanceRepository.countByStatusForSchoolAndClassAndDate(effectiveSchoolId, classId, date)
+                : attendanceRepository.countByStatusForClassAndDate(classId, date);
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("classId", classRoom.getId());
         response.put("className", classRoom.getName());
@@ -2274,83 +2391,6 @@ public class AdminService {
         return "CLASS_TEACHER".equalsIgnoreCase(teacherType) || "BOTH".equalsIgnoreCase(teacherType);
     }
 
-    // ===== Teacher Class Assignments =====
-
-    public ApiResponse<List<Map<String, Object>>> getTeacherAssignments(Long teacherId, Long schoolId) {
-        List<TeacherClassAssignment> rows = (teacherId != null)
-                ? teacherClassAssignmentRepository.findByTeacherIdAndSchoolId(teacherId, schoolId)
-                : teacherClassAssignmentRepository.findBySchoolId(schoolId);
-
-        List<Map<String, Object>> result = new ArrayList<>();
-        for (TeacherClassAssignment a : rows) {
-            Map<String, Object> m = new HashMap<>();
-            m.put("id",           a.getId());
-            m.put("teacherId",    a.getTeacherId());
-            m.put("teacherName",  a.getTeacherName());
-            m.put("classSection", a.getClassSection());
-            m.put("subject",      a.getSubject());
-            m.put("schoolId",     a.getSchoolId());
-            m.put("createdAt",    a.getCreatedAt());
-            result.add(m);
-        }
-        return ApiResponse.success(result);
-    }
-
-    @Transactional(rollbackFor = Exception.class)
-    public ApiResponse<List<Map<String, Object>>> saveTeacherAssignments(Map<String, Object> body, Long schoolId) {
-        try {
-            Object tidObj = body.get("teacherId");
-            if (tidObj == null) return ApiResponse.error("teacherId is required");
-            Long teacherId = Long.valueOf(tidObj.toString());
-
-            Teacher teacher = teacherRepository.findById(teacherId).orElse(null);
-            if (teacher == null) return ApiResponse.error("Teacher not found");
-
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> incoming = (List<Map<String, Object>>) body.get("assignments");
-            if (incoming == null || incoming.isEmpty()) return ApiResponse.error("assignments list is required");
-
-            // Delete only rows for this teacher (not the entire school) so other teachers are unaffected
-            teacherClassAssignmentRepository.deleteByTeacherId(teacherId);
-
-            List<Map<String, Object>> saved = new ArrayList<>();
-            for (Map<String, Object> entry : incoming) {
-                String classSection = (String) entry.get("classSection");
-                String subject      = (String) entry.get("subject");
-                if (classSection == null || classSection.isBlank()) continue;
-                if (subject      == null || subject.isBlank())      continue;
-
-                TeacherClassAssignment a = TeacherClassAssignment.builder()
-                        .teacherId(teacherId)
-                        .teacherName(teacher.getName())
-                        .classSection(classSection.trim())
-                        .subject(subject.trim())
-                        .schoolId(schoolId)
-                        .build();
-                TeacherClassAssignment saved1 = teacherClassAssignmentRepository.save(a);
-
-                Map<String, Object> m = new HashMap<>();
-                m.put("id",           saved1.getId());
-                m.put("teacherId",    saved1.getTeacherId());
-                m.put("teacherName",  saved1.getTeacherName());
-                m.put("classSection", saved1.getClassSection());
-                m.put("subject",      saved1.getSubject());
-                saved.add(m);
-            }
-            return ApiResponse.success("Assignments saved", saved);
-        } catch (Exception e) {
-            return ApiResponse.error("Failed to save assignments: " + e.getMessage());
-        }
-    }
-
-    public ApiResponse<String> deleteTeacherAssignment(Long id, Long schoolId) {
-        TeacherClassAssignment a = teacherClassAssignmentRepository.findById(id).orElse(null);
-        if (a == null) return ApiResponse.error("Assignment not found");
-        if (schoolId != null && !schoolId.equals(a.getSchoolId())) return ApiResponse.error("Forbidden");
-        teacherClassAssignmentRepository.deleteById(id);
-        return ApiResponse.success("Deleted", "OK");
-    }
-
     private void syncPrimaryClassAssignment(Teacher teacher, Long previousPrimaryClassId) {
         if (previousPrimaryClassId != null && !previousPrimaryClassId.equals(teacher.getPrimaryClassId())) {
             classRoomRepository.findById(previousPrimaryClassId).ifPresent(oldClass -> {
@@ -2359,6 +2399,8 @@ public class AdminService {
                     oldClass.setTeacherName(null);
                     classRoomRepository.save(oldClass);
                 }
+                // Remove old class from teacher.classes text field
+                removeClassFromTeacherClasses(teacher, oldClass.getName(), normalizeSection(oldClass.getSection()));
             });
         }
 
@@ -2367,7 +2409,30 @@ public class AdminService {
                 classRoom.setTeacherId(teacher.getId());
                 classRoom.setTeacherName(teacher.getName());
                 classRoomRepository.save(classRoom);
+                // Sync teacher.classes text field so subject-teacher lookup also works
+                addClassToTeacherClasses(teacher, classRoom.getName(), normalizeSection(classRoom.getSection()));
             });
         }
+    }
+
+    private void addClassToTeacherClasses(Teacher teacher, String className, String section) {
+        String label    = className + (section != null && !section.isBlank() ? " - " + section : "");
+        String existing = teacher.getClasses() != null ? teacher.getClasses().trim() : "";
+        boolean present = java.util.Arrays.stream(existing.split(","))
+                .map(String::trim).anyMatch(c -> c.equalsIgnoreCase(label));
+        if (!present) {
+            teacher.setClasses(existing.isBlank() ? label : existing + ", " + label);
+            teacherRepository.save(teacher);
+        }
+    }
+
+    private void removeClassFromTeacherClasses(Teacher teacher, String className, String section) {
+        if (teacher.getClasses() == null || teacher.getClasses().isBlank()) return;
+        String label = className + (section != null && !section.isBlank() ? " - " + section : "");
+        String updated = java.util.Arrays.stream(teacher.getClasses().split(","))
+                .map(String::trim).filter(c -> !c.equalsIgnoreCase(label))
+                .collect(java.util.stream.Collectors.joining(", "));
+        teacher.setClasses(updated.isBlank() ? null : updated);
+        teacherRepository.save(teacher);
     }
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import Layout from '../../components/Layout';
-import { leaveAPI } from '../../services/api';
+import { leaveAPI, teacherAPI } from '../../services/api';
 
 const STATUS_COLORS = {
   PENDING:  { bg: '#fffbeb', color: '#b7791f', label: 'Pending'  },
@@ -9,6 +9,7 @@ const STATUS_COLORS = {
 };
 
 export default function LeaveApproval() {
+  const [teacherType, setTeacherType] = useState(null); // null = loading, string when resolved
   const [leaves,     setLeaves]     = useState([]);
   const [loading,    setLoading]    = useState(true);
   const [error,      setError]      = useState('');
@@ -19,6 +20,16 @@ export default function LeaveApproval() {
   const [remark,     setRemark]     = useState('');
   const [actionType, setActionType] = useState('');   // 'APPROVED' | 'REJECTED'
   const [acting,     setActing]     = useState(false);
+
+  // Resolve teacher type from profile
+  useEffect(() => {
+    teacherAPI.getMyProfile()
+      .then(res => {
+        const profile = res?.data?.data ?? null;
+        setTeacherType(profile?.teacherType ?? 'SUBJECT_TEACHER');
+      })
+      .catch(() => setTeacherType('SUBJECT_TEACHER'));
+  }, []);
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
@@ -33,7 +44,6 @@ export default function LeaveApproval() {
       setLeaves(res.data?.data ?? []);
     } catch (err) {
       const msg = err.response?.data?.message || '';
-      // No primary class assigned → show empty state, not an error
       if (err.response?.status === 200 || msg.toLowerCase().includes('no primary')) {
         setLeaves([]);
       } else {
@@ -44,7 +54,10 @@ export default function LeaveApproval() {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (teacherType && teacherType !== 'SUBJECT_TEACHER') load();
+    else if (teacherType === 'SUBJECT_TEACHER') setLoading(false);
+  }, [teacherType, load]);
 
   const openModal = (leave, action) => {
     setSelected(leave);
@@ -87,6 +100,48 @@ export default function LeaveApproval() {
       </span>
     );
   };
+
+  // Loading profile
+  if (teacherType === null) {
+    return (
+      <Layout pageTitle="Leave Approval">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 300 }}>
+          <div style={{ textAlign: 'center', color: '#a0aec0' }}>
+            <span className="material-icons" style={{ fontSize: 48, display: 'block', marginBottom: 12 }}>hourglass_empty</span>
+            Loading…
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Access denied for subject teachers
+  if (teacherType === 'SUBJECT_TEACHER') {
+    return (
+      <Layout pageTitle="Leave Approval">
+        <div style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          minHeight: 360, textAlign: 'center', padding: 32,
+        }}>
+          <div style={{
+            width: 72, height: 72, borderRadius: '50%', background: '#fff5f5',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20,
+          }}>
+            <span className="material-icons" style={{ fontSize: 36, color: '#e53e3e' }}>lock</span>
+          </div>
+          <h2 style={{ margin: '0 0 8px', fontSize: 20, color: '#2d3748', fontWeight: 700 }}>
+            Access Restricted
+          </h2>
+          <p style={{ margin: '0 0 6px', fontSize: 14, color: '#718096', maxWidth: 360 }}>
+            The Leave Approval module is only available to <strong>Class Teachers</strong>.
+          </p>
+          <p style={{ margin: 0, fontSize: 13, color: '#a0aec0' }}>
+            As a Subject Teacher, you are not assigned as the primary class teacher for any class.
+          </p>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout pageTitle="Leave Approval">

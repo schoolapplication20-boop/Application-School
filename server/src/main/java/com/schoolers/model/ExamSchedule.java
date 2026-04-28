@@ -60,6 +60,9 @@ public class ExamSchedule {
     @Column(length = 500)
     private String instructions;
 
+    @Column(name = "school_id")
+    private Long schoolId;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

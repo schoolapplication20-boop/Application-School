@@ -20,47 +20,44 @@ public class ClassDiaryService {
     public ApiResponse<List<ClassDiary>> getAll(String className, Long teacherId, String date, Long schoolId) {
         LocalDate parsedDate = parseDate(date);
         List<ClassDiary> entries;
-        if (className == null && teacherId == null && parsedDate == null) {
+        if (schoolId != null) {
+            entries = diaryRepository.findWithFiltersAndSchool(schoolId, className, teacherId, parsedDate);
+        } else if (className == null && teacherId == null && parsedDate == null) {
             entries = diaryRepository.findAllByOrderByCreatedAtDesc();
         } else {
             entries = diaryRepository.findWithFilters(className, teacherId, parsedDate);
-        }
-        // Apply school-level filter in-memory (ClassDiary has schoolId but no school-scoped repo query)
-        if (schoolId != null) {
-            entries = entries.stream()
-                    .filter(e -> e.getSchoolId() == null || schoolId.equals(e.getSchoolId()))
-                    .toList();
         }
         return ApiResponse.success(entries);
     }
 
     public ApiResponse<List<ClassDiary>> getByClass(String className, Long schoolId) {
-        List<ClassDiary> entries = diaryRepository.findByClassNameOrderByDiaryDateDesc(className);
-        if (schoolId != null) {
-            entries = entries.stream()
-                    .filter(e -> e.getSchoolId() == null || schoolId.equals(e.getSchoolId()))
-                    .toList();
-        }
+        List<ClassDiary> entries = schoolId != null
+                ? diaryRepository.findBySchoolIdAndClassNameOrderByDiaryDateDesc(schoolId, className)
+                : diaryRepository.findByClassNameOrderByDiaryDateDesc(className);
         return ApiResponse.success(entries);
     }
 
     /** Teacher: fetch only their own diary entries */
-    public ApiResponse<List<ClassDiary>> getForTeacher(Long teacherId) {
-        return ApiResponse.success(diaryRepository.findByTeacherIdOrderByDiaryDateDesc(teacherId));
+    public ApiResponse<List<ClassDiary>> getForTeacher(Long teacherId, Long schoolId) {
+        List<ClassDiary> entries = schoolId != null
+                ? diaryRepository.findBySchoolIdAndTeacherIdOrderByDiaryDateDesc(schoolId, teacherId)
+                : diaryRepository.findByTeacherIdOrderByDiaryDateDesc(teacherId);
+        return ApiResponse.success(entries);
     }
 
     /** Student: fetch all diary entries for their class + section */
     public ApiResponse<List<ClassDiary>> getForStudent(String className, String section, Long schoolId) {
         List<ClassDiary> entries;
-        if (section != null && !section.isBlank()) {
+        if (schoolId != null) {
+            if (section != null && !section.isBlank()) {
+                entries = diaryRepository.findBySchoolIdAndClassNameAndSectionOrderByDiaryDateDesc(schoolId, className, section);
+            } else {
+                entries = diaryRepository.findBySchoolIdAndClassNameOrderByDiaryDateDesc(schoolId, className);
+            }
+        } else if (section != null && !section.isBlank()) {
             entries = diaryRepository.findByClassNameAndSectionOrderByDiaryDateDesc(className, section);
         } else {
             entries = diaryRepository.findByClassNameOrderByDiaryDateDesc(className);
-        }
-        if (schoolId != null) {
-            entries = entries.stream()
-                    .filter(e -> e.getSchoolId() == null || schoolId.equals(e.getSchoolId()))
-                    .toList();
         }
         return ApiResponse.success(entries);
     }
@@ -82,9 +79,14 @@ public class ClassDiaryService {
         LocalDate diaryDate = parseDate(str(body, "diaryDate", null));
         if (diaryDate == null) diaryDate = LocalDate.now();
 
-        // Duplicate check: same teacher + class + subject + date
-        boolean exists = diaryRepository.existsByClassNameAndSubjectAndDiaryDateAndTeacherId(
-                className, subject, diaryDate, teacherId);
+        Long schoolId = longVal(body, "schoolId", null);
+
+        // Duplicate check: same teacher + class + subject + date (school-scoped when available)
+        boolean exists = (schoolId != null)
+                ? diaryRepository.existsBySchoolIdAndClassNameAndSubjectAndDiaryDateAndTeacherId(
+                        schoolId, className, subject, diaryDate, teacherId)
+                : diaryRepository.existsByClassNameAndSubjectAndDiaryDateAndTeacherId(
+                        className, subject, diaryDate, teacherId);
         if (exists) {
             return ApiResponse.error("A diary entry already exists for this class/subject on " + diaryDate);
         }
@@ -102,7 +104,7 @@ public class ClassDiaryService {
                 .imageUrl(str(body, "imageUrl", null))
                 .imageName(str(body, "imageName", null))
                 .description(str(body, "description", null))
-                .schoolId(longVal(body, "schoolId", null))
+                .schoolId(schoolId)
                 .build();
 
         return ApiResponse.success("Diary entry created successfully", diaryRepository.save(diary));

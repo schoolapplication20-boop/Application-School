@@ -25,6 +25,9 @@ public class TransportRoute {
     @Column(nullable = false, length = 50)
     private String name;
 
+    @Column(name = "route_number", length = 20)
+    private String routeNumber;
+
     @Column(length = 100)
     private String area;
 
@@ -44,6 +47,29 @@ public class TransportRoute {
     @Column
     @Builder.Default
     private Integer buses = 0;
+
+    @Column(name = "bus_id")
+    private Long busId;
+
+    @Column(name = "bus_no", length = 20)
+    private String busNo;
+
+    @Column(name = "driver_id")
+    private Long driverId;
+
+    @Column(name = "driver_name", length = 100)
+    private String driverName;
+
+    @Column
+    @Builder.Default
+    private Integer capacity = 0;
+
+    @Column(length = 20)
+    @Builder.Default
+    private String status = "Active";
+
+    @Column(name = "school_id")
+    private Long schoolId;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

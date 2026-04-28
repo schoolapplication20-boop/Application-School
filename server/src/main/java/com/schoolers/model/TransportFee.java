@@ -50,6 +50,9 @@ public class TransportFee {
     @Column(name = "paid_date")
     private LocalDate paidDate;
 
+    @Column(name = "school_id")
+    private Long schoolId;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

@@ -275,6 +275,7 @@ export default function Teachers() {
   const [resetTarget,    setResetTarget]    = useState(null);
   const [resetPwd,       setResetPwd]       = useState('');
   const [deleteId,       setDeleteId]       = useState(null);
+  const [deleting,       setDeleting]       = useState(false);
 
   // form
   const [form,      setForm]      = useState(EMPTY_FORM);
@@ -427,10 +428,22 @@ export default function Teachers() {
 
   // ── Delete ─────────────────────────────────────────────────────────────────
   const handleDelete = async (id) => {
-    await apiDeleteTeacher(id);
-    persist(teachers.filter(x => x.id !== id));
-    setDeleteId(null);
-    showToast('Teacher removed', 'warning');
+    setDeleting(true);
+    try {
+      const result = await apiDeleteTeacher(id);
+      if (result.success) {
+        persist(teachers.filter(x => x.id !== id));
+        setDeleteId(null);
+        showToast('Teacher removed successfully', 'warning');
+      } else {
+        showToast(result.message || 'Failed to delete teacher', 'error');
+        setDeleteId(null);
+      }
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Network error — teacher not deleted', 'error');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   // ── Reset Password ────────────────────────────────────────────────────────
@@ -613,7 +626,7 @@ export default function Teachers() {
                         background: t.teacherType === 'CLASS_TEACHER' ? '#76C44218' : t.teacherType === 'BOTH' ? '#3182ce18' : '#e2e8f0',
                         color: t.teacherType === 'CLASS_TEACHER' ? '#276749' : t.teacherType === 'BOTH' ? '#2b6cb0' : '#718096',
                       }}>
-                        {t.teacherType === 'CLASS_TEACHER' ? 'Class Teacher' : t.teacherType === 'BOTH' ? 'Class + Subject' : 'Subject Teacher'}
+                        {t.teacherType === 'CLASS_TEACHER' ? 'Class Teacher' : t.teacherType === 'BOTH' ? 'Class Teacher + Subject Teacher' : 'Subject Teacher'}
                       </span>
                     </td>
                     <td>
@@ -804,7 +817,7 @@ export default function Teachers() {
                     >
                       <option value="SUBJECT_TEACHER">Subject Teacher</option>
                       <option value="CLASS_TEACHER">Class Teacher</option>
-                      <option value="BOTH">Class + Subject Teacher</option>
+                      <option value="BOTH">Class Teacher + Subject Teacher</option>
                     </select>
                   </Field>
 
@@ -1124,7 +1137,18 @@ export default function Teachers() {
                   { icon: 'work',       label: 'Experience',    value: viewTeacher.experience || '—' },
                   { icon: 'business',   label: 'Department',    value: viewTeacher.department || '—' },
                   { icon: 'event',      label: 'Joining Date',  value: viewTeacher.joining || '—' },
-                  { icon: 'class',      label: 'Classes',       value: (() => { const cls = classList.find(c => Number(c.id) === Number(viewTeacher.primaryClassId)); return cls ? `${cls.name}${cls.section ? ` - ${cls.section}` : ''}` : (viewTeacher.classes || '—'); })(), full: true },
+                  { icon: 'assignment_ind', label: 'Role', value: viewTeacher.teacherType === 'CLASS_TEACHER' ? 'Class Teacher' : viewTeacher.teacherType === 'BOTH' ? 'Class Teacher + Subject Teacher' : 'Subject Teacher' },
+                  { icon: 'class',      label: 'Classes',       value: (() => {
+                    const parts = [];
+                    const cls = classList.find(c => Number(c.id) === Number(viewTeacher.primaryClassId));
+                    if (cls) parts.push(`${cls.name}${cls.section ? ` - ${cls.section}` : ''}`);
+                    if (viewTeacher.classes) {
+                      viewTeacher.classes.split(',').map(s => s.trim()).filter(Boolean).forEach(c => {
+                        if (!parts.some(p => p.toLowerCase() === c.toLowerCase())) parts.push(c);
+                      });
+                    }
+                    return parts.length ? parts.join(', ') : '—';
+                  })(), full: true },
                   { icon: 'calendar_today', label: 'Added On',  value: viewTeacher.createdAt || '—' },
                 ].map(row => (
                   <div key={row.label} style={{ gridColumn: row.full ? '1/-1' : 'auto', display: 'flex', gap: 8, alignItems: 'flex-start', padding: '10px 12px', background: '#f7fafc', borderRadius: 8 }}>
@@ -1214,13 +1238,15 @@ export default function Teachers() {
               <p style={{ margin: 0, fontSize: 12, color: '#e53e3e' }}>This action cannot be undone.</p>
             </div>
             <div className="modal-footer">
-              <button onClick={() => setDeleteId(null)}
-                style={{ padding: '10px 20px', border: '1.5px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: 'pointer', fontWeight: 600, fontFamily: 'Poppins, sans-serif' }}>
+              <button onClick={() => setDeleteId(null)} disabled={deleting}
+                style={{ padding: '10px 20px', border: '1.5px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: deleting ? 'not-allowed' : 'pointer', fontWeight: 600, fontFamily: 'Poppins, sans-serif' }}>
                 Cancel
               </button>
-              <button onClick={() => handleDelete(deleteId)}
-                style={{ padding: '10px 20px', background: '#e53e3e', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, cursor: 'pointer', fontFamily: 'Poppins, sans-serif' }}>
-                Yes, Delete
+              <button onClick={() => handleDelete(deleteId)} disabled={deleting}
+                style={{ padding: '10px 20px', background: '#e53e3e', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, cursor: deleting ? 'not-allowed' : 'pointer', opacity: deleting ? 0.7 : 1, fontFamily: 'Poppins, sans-serif', display: 'flex', alignItems: 'center', gap: 6 }}>
+                {deleting ? (
+                  <><span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} /> Deleting…</>
+                ) : 'Yes, Delete'}
               </button>
             </div>
           </div>

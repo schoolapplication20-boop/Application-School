@@ -75,6 +75,9 @@ public class HallTicket {
     @Builder.Default
     private Boolean isActive = true;
 
+    @Column(name = "school_id")
+    private Long schoolId;
+
     @Column(name = "generated_by", length = 100)
     private String generatedBy;
 

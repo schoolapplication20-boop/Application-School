@@ -10,4 +10,8 @@ import java.util.List;
 public interface AdmissionApplicationRepository extends JpaRepository<AdmissionApplication, Long> {
     List<AdmissionApplication> findByStatus(AdmissionApplication.Status status);
     List<AdmissionApplication> findAllByOrderByCreatedAtDesc();
+
+    // School-scoped queries
+    List<AdmissionApplication> findBySchoolIdOrderByCreatedAtDesc(Long schoolId);
+    List<AdmissionApplication> findByStatusAndSchoolId(AdmissionApplication.Status status, Long schoolId);
 }

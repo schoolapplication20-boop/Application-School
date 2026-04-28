@@ -1,6 +1,8 @@
-import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
 import { setAuthToken, clearAuthToken } from '../services/api';
 import api from '../services/api';
+
+const SESSION_KEY = 'schoolers_session';
 
 const AuthContext = createContext(null);
 
@@ -25,12 +27,36 @@ const parsePermissions = (raw) => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser]           = useState(null);
   const [token, setToken]         = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // true during session restore
 
   // schoolRef allows SchoolContext to register itself so AuthContext can
   // push school data on login without creating a circular dependency.
-  const schoolSetterRef = useRef(null);
+  const schoolSetterRef    = useRef(null);
+  const schoolLoaderRef    = useRef(null);
   const registerSchoolSetter = useCallback((fn) => { schoolSetterRef.current = fn; }, []);
+  const registerSchoolLoader = useCallback((fn) => { schoolLoaderRef.current = fn; }, []);
+
+  // ── Restore session from sessionStorage on first mount ──────────────────
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(SESSION_KEY);
+      if (raw) {
+        const { token: savedToken, user: savedUser } = JSON.parse(raw);
+        if (savedToken && savedUser?.role) {
+          setAuthToken(savedToken);
+          setUser(savedUser);
+          setToken(savedToken);
+          // School data will be re-fetched by SchoolContext once it registers
+          // its loader (happens synchronously during render, before this effect)
+          if (schoolLoaderRef.current) schoolLoaderRef.current();
+        }
+      }
+    } catch {
+      sessionStorage.removeItem(SESSION_KEY);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const login = useCallback((userData, authToken) => {
     setAuthToken(authToken);
@@ -42,9 +68,20 @@ export const AuthProvider = ({ children }) => {
     setUser(finalUser);
     setToken(authToken);
 
+    // Persist session so page refresh doesn't log the user out
+    try {
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ token: authToken, user: finalUser }));
+    } catch { /* storage full or blocked — continue without persistence */ }
+
     // Hydrate school branding from login response (school field on the user DTO)
     if (userData?.school && schoolSetterRef.current) {
       schoolSetterRef.current(userData.school);
+    }
+
+    // Always fetch fresh school data (catches missing logoUrl / branding changes).
+    // APPLICATION_OWNER has no school, so skip for that role.
+    if (userData?.role !== 'APPLICATION_OWNER' && schoolLoaderRef.current) {
+      schoolLoaderRef.current();
     }
   }, []);
 
@@ -52,11 +89,25 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     setToken(null);
     clearAuthToken();
+    sessionStorage.removeItem(SESSION_KEY);
     window.dispatchEvent(new Event('auth:logout'));
   }, []);
 
   const updateUser = useCallback((updatedData) => {
-    setUser(prev => prev ? { ...prev, ...updatedData } : prev);
+    setUser(prev => {
+      if (!prev) return prev;
+      const updated = { ...prev, ...updatedData };
+      // Keep sessionStorage in sync so page refresh sees the latest user data
+      // (e.g. schoolId update from the setup wizard)
+      try {
+        const raw = sessionStorage.getItem(SESSION_KEY);
+        if (raw) {
+          const session = JSON.parse(raw);
+          sessionStorage.setItem(SESSION_KEY, JSON.stringify({ ...session, user: updated }));
+        }
+      } catch { /* ignore storage errors */ }
+      return updated;
+    });
   }, []);
 
   /**
@@ -170,6 +221,7 @@ export const AuthProvider = ({ children }) => {
     getDashboardPath,
     hasPermission,
     registerSchoolSetter,
+    registerSchoolLoader,
   };
 
   return (

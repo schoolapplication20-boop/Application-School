@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import Layout from '../../components/Layout';
 import { messageAPI, adminAPI } from '../../services/api';
 import Toast from '../../components/Toast';
 
@@ -81,7 +82,7 @@ export default function AdminMessages() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f0f4f8', padding: '24px' }}>
+    <Layout pageTitle="Messages">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
       {/* Header */}
@@ -244,6 +245,6 @@ export default function AdminMessages() {
           );
         })}
       </div>
-    </div>
+    </Layout>
   );
 }

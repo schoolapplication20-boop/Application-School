@@ -12,4 +12,9 @@ public interface SchoolRepository extends JpaRepository<School, Long> {
     Optional<School> findByEmail(String email);
     boolean existsByCode(String code);
     boolean existsByEmail(String email);
+    boolean existsBySchoolId(Integer schoolId);
+    /** True if any OTHER school (id != excludeId) already has this schoolId. */
+    boolean existsBySchoolIdAndIdNot(Integer schoolId, Long excludeId);
+    /** Look up a school by its human-assigned display number (the value shown in the UI). */
+    Optional<School> findBySchoolId(Integer schoolId);
 }

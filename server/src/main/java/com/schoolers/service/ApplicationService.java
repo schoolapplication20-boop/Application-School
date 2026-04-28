@@ -15,20 +15,22 @@ public class ApplicationService {
     @Autowired
     private AdmissionApplicationRepository applicationRepository;
 
-    public ApiResponse<List<AdmissionApplication>> getAll() {
+    public ApiResponse<List<AdmissionApplication>> getAll(Long schoolId) {
+        if (schoolId != null) return ApiResponse.success(applicationRepository.findBySchoolIdOrderByCreatedAtDesc(schoolId));
         return ApiResponse.success(applicationRepository.findAllByOrderByCreatedAtDesc());
     }
 
-    public ApiResponse<List<AdmissionApplication>> getByStatus(String status) {
+    public ApiResponse<List<AdmissionApplication>> getByStatus(String status, Long schoolId) {
         try {
             AdmissionApplication.Status s = AdmissionApplication.Status.valueOf(status.toUpperCase());
+            if (schoolId != null) return ApiResponse.success(applicationRepository.findByStatusAndSchoolId(s, schoolId));
             return ApiResponse.success(applicationRepository.findByStatus(s));
         } catch (IllegalArgumentException e) {
             return ApiResponse.error("Invalid status: " + status);
         }
     }
 
-    public ApiResponse<AdmissionApplication> create(Map<String, Object> body) {
+    public ApiResponse<AdmissionApplication> create(Map<String, Object> body, Long schoolId) {
         String studentName = str(body, "studentName", null);
         if (studentName == null || studentName.isBlank()) return ApiResponse.error("Student name is required");
 
@@ -53,29 +55,36 @@ public class ApplicationService {
                 .tcDocName(str(body, "tcDocName", null))
                 .bonafideDoc(str(body, "bonafideDoc", null))
                 .bonafideDocName(str(body, "bonafideDocName", null))
+                .schoolId(schoolId)
                 .status(AdmissionApplication.Status.PENDING)
                 .build();
         return ApiResponse.success("Application submitted", applicationRepository.save(app));
     }
 
-    public ApiResponse<AdmissionApplication> updateStatus(Long id, Map<String, Object> body) {
+    public ApiResponse<AdmissionApplication> updateStatus(Long id, Map<String, Object> body, Long schoolId) {
         return applicationRepository.findById(id)
                 .map(app -> {
+                    if (schoolId != null && app.getSchoolId() != null && !schoolId.equals(app.getSchoolId()))
+                        return ApiResponse.<AdmissionApplication>error("Access denied: application belongs to another school");
                     String statusStr = str(body, "status", null);
                     if (statusStr != null) {
                         try { app.setStatus(AdmissionApplication.Status.valueOf(statusStr.toUpperCase())); }
                         catch (IllegalArgumentException ignored) {}
-                     }
-                    // if (body.containsKey("adminNotes")) app.setAdminNotes(str(body, "adminNotes", app.getAdminNotes()));
+                    }
                     return ApiResponse.success("Application updated", applicationRepository.save(app));
                 })
                 .orElse(ApiResponse.error("Application not found"));
     }
 
-    public ApiResponse<String> delete(Long id) {
-        if (!applicationRepository.existsById(id)) return ApiResponse.error("Application not found");
-        applicationRepository.deleteById(id);
-        return ApiResponse.success("Application deleted", "Deleted");
+    public ApiResponse<String> delete(Long id, Long schoolId) {
+        return applicationRepository.findById(id)
+                .map(app -> {
+                    if (schoolId != null && app.getSchoolId() != null && !schoolId.equals(app.getSchoolId()))
+                        return ApiResponse.<String>error("Access denied: application belongs to another school");
+                    applicationRepository.deleteById(id);
+                    return ApiResponse.success("Application deleted", "Deleted");
+                })
+                .orElse(ApiResponse.error("Application not found"));
     }
 
     private String str(Map<String, Object> map, String key, String fallback) {

@@ -74,8 +74,12 @@ export const resetTeacherPassword = async (id, password) => {
 };
 
 export const deleteTeacher = async (id) => {
-  try { await adminAPI.deleteTeacher(id); return true; }
-  catch { return false; }
+  try {
+    await adminAPI.deleteTeacher(id);
+    return { success: true };
+  } catch (err) {
+    return { success: false, message: err.response?.data?.message || 'Failed to delete teacher. Please try again.' };
+  }
 };
 
 export default { fetchTeachers, createTeacher, updateTeacher, resetTeacherPassword, deleteTeacher };

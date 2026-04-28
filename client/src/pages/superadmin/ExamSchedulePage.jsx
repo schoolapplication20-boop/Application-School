@@ -5,12 +5,6 @@ import { examinationAPI, adminAPI } from '../../services/api';
 // ─── Constants ────────────────────────────────────────────────────────────────
 const EXAM_TYPES = ['ANNUAL', 'HALFYEARLY', 'QUARTERLY', 'MIDTERM', 'UNIT_TEST'];
 const EXAM_TYPE_LABEL = { ANNUAL: 'Annual', HALFYEARLY: 'Half Yearly', QUARTERLY: 'Quarterly', MIDTERM: 'Mid Term', UNIT_TEST: 'Unit Test' };
-const SUBJECTS = [
-  'Mathematics','Science','English','Hindi','Social Studies',
-  'Physics','Chemistry','Biology','History','Geography',
-  'Computer Science','Physical Education','Art','Music',
-  'Sanskrit','Economics','Accountancy','Business Studies',
-];
 const STATUS_OPTS = ['SCHEDULED','ONGOING','COMPLETED','CANCELLED'];
 const STATUS_STYLE = {
   SCHEDULED: { bg: '#ebf8ff', color: '#2b6cb0', label: 'Scheduled'  },
@@ -347,11 +341,9 @@ function ScheduleModal({ initial, onClose, onSaved, dbClasses = [], dbSections =
 
                     {/* Subject */}
                     <div style={{ paddingRight: 8 }}>
-                      <select value={row.subject} onChange={e => updateRow(row._id, 'subject', e.target.value)}
-                        style={cellStyle(re.subject)}>
-                        <option value="">— Subject —</option>
-                        {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
-                      </select>
+                      <input type="text" value={row.subject} onChange={e => updateRow(row._id, 'subject', e.target.value)}
+                        placeholder="e.g. Mathematics"
+                        style={cellStyle(re.subject)} />
                       {re.subject && <div style={{ color: '#c53030', fontSize: 10, marginTop: 2 }}>{re.subject}</div>}
                     </div>
 

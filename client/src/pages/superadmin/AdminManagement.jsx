@@ -147,7 +147,7 @@ export default function AdminManagement() {
           mobile:      formData.mobile || '',
           permissions: JSON.stringify(formData.permissions),
         });
-        addLog('Super Admin', `Updated admin: ${formData.name}`, 'Admin Management');
+        addLog('Super Admin', `Updated admin: ${formData.name}`, 'Admin Management', user?.schoolId);
         showToast('Admin updated successfully');
         setShowModal(false);
         setEditAdmin(null);
@@ -176,7 +176,7 @@ export default function AdminManagement() {
         }
 
         // Log and show success ONLY after backend confirms the record is persisted.
-        addLog('Super Admin', `Created new admin: ${result.name}`, 'Admin Management');
+        addLog('Super Admin', `Created new admin: ${result.name}`, 'Admin Management', user?.schoolId);
         setShowModal(false);
         setFormData(emptyForm);
         setFormErrors({});

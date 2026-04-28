@@ -52,9 +52,10 @@ export default function TeacherDashboard() {
   const [teacherProfile,      setTeacherProfile]      = useState(null);
   const [assignedClasses,     setAssignedClasses]     = useState([]);
   const [classTeacherInfo,    setClassTeacherInfo]    = useState(null); // from dedicated endpoint
-  const [classStudents,       setClassStudents]       = useState([]);
-  const [todaySchedule,       setTodaySchedule]       = useState([]);
-  const [todayAttendance,     setTodayAttendance]     = useState(null);
+  const [classStudents,         setClassStudents]         = useState([]);
+  const [primaryClassStudents,  setPrimaryClassStudents]  = useState([]);
+  const [todaySchedule,         setTodaySchedule]         = useState([]);
+  const [todayAttendance,       setTodayAttendance]       = useState(null);
 
   // ── Load teacher data on mount ───────────────────────────────────────────────
   useEffect(() => {
@@ -66,9 +67,13 @@ export default function TeacherDashboard() {
       fetchTimetable(),
       teacherAPI.getMyClasses().catch(() => null),
       teacherAPI.getClassTeacherAssignment().catch(() => null),
-    ]).then(([allTeachers, allStudents, allEntries, classRes, ctRes]) => {
-      // 1. Find teacher profile
+      teacherAPI.getMyProfile().catch(() => null),
+    ]).then(([allTeachers, allStudents, allEntries, classRes, ctRes, profileRes]) => {
+      // 1. Find teacher profile — prefer the dedicated teacher profile endpoint
+      //    (admin endpoint /api/admin/teachers returns 403 for teacher role)
+      const ownProfile = profileRes?.data?.data ?? null;
       const profile =
+        ownProfile ||
         allTeachers.find(t => t.userId === user.id) ||
         allTeachers.find(t => t.email?.toLowerCase() === user.email?.toLowerCase()) ||
         null;
@@ -130,24 +135,73 @@ export default function TeacherDashboard() {
     });
   }, [assignedClasses]);
 
+  // ── Fetch students for the primary class (class teachers only) ───────────────
+  useEffect(() => {
+    if (!classTeacherInfo?.isClassTeacher || !classTeacherInfo?.classId) return;
+    teacherAPI.getClassStudents(classTeacherInfo.classId)
+      .then(res => {
+        const raw = res?.data?.data ?? [];
+        setPrimaryClassStudents(
+          raw.map(s => ({
+            id:      s.id,
+            name:    s.name    ?? '',
+            class:   s.className ?? s.class ?? '',
+            section: s.section ?? '',
+            rollNo:  s.rollNumber ?? s.rollNo ?? '',
+            status:  s.isActive === false ? 'Inactive' : 'Active',
+          }))
+        );
+      })
+      .catch(() => {});
+  }, [classTeacherInfo]);
+
+  // ── Fetch students for ALL assigned classes via teacher endpoint ───────────
+  // /api/admin/students is admin-only; use /api/teacher/class/:id/students instead
+  useEffect(() => {
+    if (!assignedClasses.length) return;
+    Promise.all(
+      assignedClasses.map(cls =>
+        teacherAPI.getClassStudents(cls.id)
+          .then(res => (res?.data?.data ?? []).map(s => ({
+            id:      s.id,
+            name:    s.name    ?? '',
+            class:   s.className ?? s.class ?? '',
+            section: s.section ?? '',
+            rollNo:  s.rollNumber ?? s.rollNo ?? '',
+            status:  s.isActive === false ? 'Inactive' : 'Active',
+          })))
+          .catch(() => [])
+      )
+    ).then(results => setClassStudents(results.flat()));
+  }, [assignedClasses]);
+
   // ── Derived from dedicated class-teacher endpoint ─────────────────────────────
   const isClassTeacher  = classTeacherInfo?.isClassTeacher === true;
   const primaryClassLabel = isClassTeacher && classTeacherInfo?.label ? classTeacherInfo.label : null;
   const primaryClassId    = isClassTeacher ? classTeacherInfo?.classId : null;
+  // teacherType: prefer API result, fall back to profile, default SUBJECT_TEACHER
+  const teacherType = classTeacherInfo?.teacherType || teacherProfile?.teacherType || 'SUBJECT_TEACHER';
+  const isSubjectTeacherOnly = !isClassTeacher && teacherType !== 'BOTH';
 
   const primaryClass = useMemo(() => {
     if (!isClassTeacher || !primaryClassId) return null;
     return assignedClasses.find(c => Number(c.id) === Number(primaryClassId)) ?? null;
   }, [isClassTeacher, primaryClassId, assignedClasses]);
 
+  const roleLabel = teacherType === 'BOTH'
+    ? 'Class Teacher + Subject Teacher'
+    : teacherType === 'CLASS_TEACHER'
+      ? 'Class Teacher'
+      : 'Subject Teacher';
+
   // ── Derived stats ─────────────────────────────────────────────────────────────
   const stats = useMemo(() => [
     {
-      title: isClassTeacher && primaryClassLabel ? primaryClassLabel : 'Assigned Classes',
-      value: isClassTeacher && primaryClassLabel ? 'Class Teacher' : assignedClasses.length,
+      title: isClassTeacher && primaryClassLabel ? primaryClassLabel : isSubjectTeacherOnly ? 'My Role' : 'Assigned Classes',
+      value: isClassTeacher && primaryClassLabel ? roleLabel : isSubjectTeacherOnly ? 'Subject Teacher' : assignedClasses.length,
       icon: 'assignment_ind',
-      color: '#276749',
-      isText: !!(isClassTeacher && primaryClassLabel),
+      color: isClassTeacher && primaryClassLabel ? '#276749' : isSubjectTeacherOnly ? '#805ad5' : '#276749',
+      isText: !!(isClassTeacher && primaryClassLabel) || isSubjectTeacherOnly,
     },
     {
       title: todayAttendance ? 'Present Today' : 'My Students',
@@ -170,7 +224,7 @@ export default function TeacherDashboard() {
       color: '#805ad5',
       isText: true,
     },
-  ], [assignedClasses, classStudents, todaySchedule, teacherProfile, user, todayAttendance, isClassTeacher, primaryClassLabel, classTeacherInfo]);
+  ], [assignedClasses, classStudents, todaySchedule, teacherProfile, user, todayAttendance, isClassTeacher, primaryClassLabel, classTeacherInfo, isSubjectTeacherOnly, roleLabel]);
 
   // ── Students grouped by class ────────────────────────────────────────────────
   const studentsByClass = useMemo(() => {
@@ -192,7 +246,7 @@ export default function TeacherDashboard() {
       <div className="page-header">
       </div>
 
-      {/* Class Teacher Responsibility Card — always visible */}
+      {/* Role Banner — shows class teacher info or subject teacher badge */}
       {classTeacherInfo !== null && (
         isClassTeacher && primaryClassLabel ? (
           <div style={{
@@ -218,10 +272,42 @@ export default function TeacherDashboard() {
             </div>
             <div style={{ textAlign: 'right', flexShrink: 0 }}>
               <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', borderRadius: 20, padding: '4px 14px', fontSize: 12, fontWeight: 700 }}>
-                ⭐ Class Teacher
+                ⭐ {roleLabel}
               </span>
               <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', marginTop: 8, fontWeight: 600 }}>
-                {classStudents.filter(s => s.status !== 'Inactive').length} students
+                {primaryClassStudents.filter(s => s.status !== 'Inactive').length} students
+              </div>
+            </div>
+          </div>
+        ) : isSubjectTeacherOnly ? (
+          <div style={{
+            background: 'linear-gradient(135deg, #553c9a 0%, #805ad5 100%)',
+            borderRadius: 14, padding: '18px 24px', marginBottom: 24,
+            display: 'flex', alignItems: 'center', gap: 16,
+            boxShadow: '0 4px 16px rgba(128,90,213,0.25)',
+          }}>
+            <div style={{ width: 52, height: 52, borderRadius: 12, background: 'rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <span className="material-icons" style={{ fontSize: 28, color: '#fff' }}>menu_book</span>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', fontWeight: 600, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                Role
+              </div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: '#fff', lineHeight: 1.2 }}>
+                Subject Teacher
+              </div>
+              {(teacherProfile?.subject || user?.subject) && (
+                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', marginTop: 4 }}>
+                  {teacherProfile?.subject || user?.subject}
+                </div>
+              )}
+            </div>
+            <div style={{ textAlign: 'right', flexShrink: 0 }}>
+              <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', borderRadius: 20, padding: '4px 14px', fontSize: 12, fontWeight: 700 }}>
+                Subject Teacher
+              </span>
+              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', marginTop: 8, fontWeight: 600 }}>
+                {assignedClasses.length} class{assignedClasses.length !== 1 ? 'es' : ''} assigned
               </div>
             </div>
           </div>
@@ -239,7 +325,7 @@ export default function TeacherDashboard() {
                 Class Teacher Responsibility
               </div>
               <div style={{ fontSize: 14, color: '#718096', fontWeight: 500 }}>
-                You are not assigned as a Class Teacher
+                No primary class assigned yet
               </div>
             </div>
           </div>

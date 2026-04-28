@@ -125,7 +125,7 @@ export default function Transport() {
         />
       )}
       {activeTab === 'routes' && (
-        <RoutesPanel routes={routes} setRoutes={setRoutes} showToast={showToast} />
+        <RoutesPanel routes={routes} setRoutes={setRoutes} buses={buses} drivers={drivers} showToast={showToast} />
       )}
       {activeTab === 'drivers' && (
         <DriversPanel
@@ -179,7 +179,7 @@ function TableCard({ children, onAdd, addLabel, addIcon, searchValue, onSearch, 
 }
 
 // ─── Modal wrapper ────────────────────────────────────────────────────────────
-function Modal({ title, onClose, onSubmit, submitLabel = 'Save', size = '', children }) {
+function Modal({ title, onClose, onSubmit, submitLabel = 'Save', size = '', children, submitDisabled = false }) {
   return (
     <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
       <div className={`modal-dialog ${size}`}>
@@ -192,7 +192,8 @@ function Modal({ title, onClose, onSubmit, submitLabel = 'Save', size = '', chil
             <div className="modal-body">{children}</div>
             <div className="modal-footer">
               <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
-              <button type="submit" className="btn btn-primary">{submitLabel}</button>
+              <button type="submit" className="btn btn-primary" disabled={submitDisabled}
+                style={submitDisabled ? { opacity: 0.5, cursor: 'not-allowed' } : {}}>{submitLabel}</button>
             </div>
           </form>
         </div>
@@ -403,93 +404,165 @@ function BusesPanel({ buses, setBuses, routes, drivers, showToast }) {
 }
 
 // ─── ROUTES Panel ─────────────────────────────────────────────────────────────
-function RoutesPanel({ routes, setRoutes, showToast }) {
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
-  const [showModal, setShowModal] = useState(false);
-  const [editItem, setEditItem] = useState(null);
-  const [deleteId, setDeleteId] = useState(null);
-  const EMPTY_ROUTE = { name: '', area: '', distance: '', stops: '', pickupTime: '', dropTime: '' };
-  const [form, setForm] = useState(EMPTY_ROUTE);
+function RoutesPanel({ routes, setRoutes, buses, drivers, showToast }) {
+  const [search, setSearch]         = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [page, setPage]             = useState(1);
+  const [showModal, setShowModal]   = useState(false);
+  const [editItem, setEditItem]     = useState(null);
+  const [deleteId, setDeleteId]     = useState(null);
+
+  const EMPTY_ROUTE = {
+    name: '', routeNumber: '', area: '', distance: '',
+    pickupTime: '', dropTime: '',
+    busId: '', busNo: '', driverId: '', driverName: '',
+    capacity: '', status: 'Active',
+  };
+  const [form, setForm]     = useState(EMPTY_ROUTE);
   const [errors, setErrors] = useState({});
 
-  const filtered = routes.filter(r => !search ||
-    r.name?.toLowerCase().includes(search.toLowerCase()) ||
-    r.area?.toLowerCase().includes(search.toLowerCase())
+  const filtered = routes.filter(r =>
+    (!search || r.name?.toLowerCase().includes(search.toLowerCase()) ||
+                r.routeNumber?.toLowerCase().includes(search.toLowerCase()) ||
+                r.area?.toLowerCase().includes(search.toLowerCase())) &&
+    (!filterStatus || r.status === filterStatus)
   );
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
-  const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+  const paginated  = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
   const validate = () => {
     const e = {};
     if (!form.name.trim()) e.name = 'Route name is required';
-    if (!form.area.trim()) e.area = 'Area / zone is required';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
-  const openAdd  = () => { setEditItem(null); setForm(EMPTY_ROUTE); setErrors({}); setShowModal(true); };
+  const openAdd = () => { setEditItem(null); setForm(EMPTY_ROUTE); setErrors({}); setShowModal(true); };
   const openEdit = (item) => {
     setEditItem(item);
-    setForm({ name: item.name || '', area: item.area || '', distance: item.distance || '', stops: item.stops || '', pickupTime: item.pickupTime || '', dropTime: item.dropTime || '' });
+    setForm({
+      name:         item.name         || '',
+      routeNumber:  item.routeNumber  || '',
+      area:         item.area         || '',
+      distance:     item.distance     || '',
+      pickupTime:   item.pickupTime   || '',
+      dropTime:     item.dropTime     || '',
+      busId:        item.busId        || '',
+      busNo:        item.busNo        || '',
+      driverId:     item.driverId     || '',
+      driverName:   item.driverName   || '',
+      capacity:     item.capacity     != null ? String(item.capacity) : '',
+      status:       item.status       || 'Active',
+    });
     setErrors({});
     setShowModal(true);
+  };
+
+  const selectBus = (id) => {
+    const b = buses.find(b => String(b.id) === String(id));
+    setForm(f => ({ ...f, busId: id, busNo: b?.busNo || '' }));
+  };
+  const selectDriver = (id) => {
+    const d = drivers.find(d => String(d.id) === String(id));
+    setForm(f => ({ ...f, driverId: id, driverName: d?.name || '' }));
   };
 
   const handleSave = async (e) => {
     e.preventDefault();
     if (!validate()) return;
-    const payload = { name: form.name, area: form.area, distance: form.distance, stops: form.stops ? Number(form.stops) : 0, pickupTime: form.pickupTime, dropTime: form.dropTime };
+    const payload = {
+      name:        form.name,
+      routeNumber: form.routeNumber || null,
+      area:        form.area        || null,
+      distance:    form.distance    || null,
+      pickupTime:  form.pickupTime  || null,
+      dropTime:    form.dropTime    || null,
+      busId:       form.busId    ? Number(form.busId)    : null,
+      busNo:       form.busNo    || null,
+      driverId:    form.driverId ? Number(form.driverId) : null,
+      driverName:  form.driverName  || null,
+      capacity:    form.capacity ? Number(form.capacity) : 0,
+      status:      form.status,
+    };
     try {
-      let saved;
       if (editItem) {
-        saved = await updateRoute(editItem.id, payload);
+        await updateRoute(editItem.id, payload);
         setRoutes(prev => prev.map(r => r.id === editItem.id ? { ...r, ...payload, id: editItem.id } : r));
-        showToast('Route updated successfully');
+        showToast('Bus route updated successfully');
       } else {
-        saved = await createRoute(payload);
+        const saved = await createRoute(payload);
         setRoutes(prev => [...prev, saved]);
-        showToast('Route added successfully');
+        showToast('Bus route added successfully');
       }
       setShowModal(false);
-    } catch { showToast('Failed to save route', 'error'); }
+    } catch { showToast('Failed to save route. Please try again.', 'error'); }
   };
 
   const handleDelete = async (id) => {
     try {
       await deleteRoute(id);
       setRoutes(prev => prev.filter(r => r.id !== id));
-      showToast('Route removed', 'warning');
+      showToast('Bus route removed', 'warning');
     } catch { showToast('Failed to delete route', 'error'); }
     setDeleteId(null);
   };
 
   return (
     <>
-      <TableCard onAdd={openAdd} addLabel="Add Route" addIcon="add_road"
-        searchValue={search} onSearch={v => { setSearch(v); setPage(1); }} searchPlaceholder="Search route name or area…">
+      <TableCard
+        onAdd={openAdd} addLabel="Add Bus Route" addIcon="add_road"
+        searchValue={search} onSearch={v => { setSearch(v); setPage(1); }}
+        searchPlaceholder="Search route name, number or area…"
+        filters={[{
+          value: filterStatus,
+          onChange: v => { setFilterStatus(v); setPage(1); },
+          options: [{ value: '', label: 'All Status' }, { value: 'Active', label: 'Active' }, { value: 'Inactive', label: 'Inactive' }],
+        }]}
+      >
         <table className="data-table">
           <thead>
-            <tr><th>Route Name</th><th>Area / Zone</th><th>Distance</th><th>Stops</th><th>Pickup</th><th>Drop</th><th>Actions</th></tr>
+            <tr>
+              <th>Route</th><th>Route No.</th><th>Area / Zone</th>
+              <th>Bus</th><th>Driver</th><th>Capacity</th>
+              <th>Pickup</th><th>Drop</th><th>Status</th><th>Actions</th>
+            </tr>
           </thead>
           <tbody>
             {paginated.length === 0 ? (
-              <tr><td colSpan={7}><div className="empty-state"><span className="material-icons">route</span><h3>No routes found</h3></div></td></tr>
+              <tr><td colSpan={10}>
+                <div className="empty-state">
+                  <span className="material-icons">route</span>
+                  <h3>No bus routes found</h3>
+                  <p>Click "Add Bus Route" to create your first route</p>
+                </div>
+              </td></tr>
             ) : paginated.map(r => (
               <tr key={r.id}>
                 <td>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#76C442,#5fa832)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#76C442,#5fa832)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       <span className="material-icons" style={{ color: '#fff', fontSize: 16 }}>route</span>
                     </div>
-                    <span style={{ fontWeight: 600, color: '#2d3748' }}>{r.name}</span>
+                    <div>
+                      <div style={{ fontWeight: 700, color: '#2d3748', fontSize: 13 }}>{r.name}</div>
+                      {r.distance && <div style={{ fontSize: 11, color: '#a0aec0' }}>{r.distance}</div>}
+                    </div>
                   </div>
                 </td>
-                <td style={{ fontSize: 13 }}>{r.area || '—'}</td>
-                <td><span style={{ background: '#f0fff4', color: '#276749', padding: '2px 10px', borderRadius: 12, fontWeight: 600, fontSize: 12 }}>{r.distance || '—'}</span></td>
-                <td style={{ fontWeight: 700, color: '#3182ce' }}>{r.stops || 0}</td>
-                <td style={{ fontWeight: 600, color: '#276749', fontSize: 13 }}>{r.pickupTime || '—'}</td>
-                <td style={{ fontWeight: 600, color: '#c05621', fontSize: 13 }}>{r.dropTime || '—'}</td>
+                <td>
+                  {r.routeNumber
+                    ? <span style={{ background: '#ebf8ff', color: '#2b6cb0', padding: '2px 10px', borderRadius: 12, fontWeight: 700, fontSize: 12 }}>{r.routeNumber}</span>
+                    : <span style={{ color: '#a0aec0' }}>—</span>}
+                </td>
+                <td style={{ fontSize: 12, color: '#4a5568' }}>{r.area || '—'}</td>
+                <td style={{ fontWeight: 700, fontFamily: 'monospace', color: '#2d3748', fontSize: 12 }}>{r.busNo || '—'}</td>
+                <td style={{ fontSize: 12, color: '#4a5568' }}>{r.driverName || '—'}</td>
+                <td style={{ fontWeight: 700, color: '#3182ce' }}>{r.capacity || 0}</td>
+                <td style={{ fontWeight: 600, color: '#276749', fontSize: 12 }}>{r.pickupTime || '—'}</td>
+                <td style={{ fontWeight: 600, color: '#c05621', fontSize: 12 }}>{r.dropTime || '—'}</td>
+                <td>
+                  <span className={`status-badge ${statusColor[r.status] || 'status-pending'}`}>{r.status || 'Active'}</span>
+                </td>
                 <td>
                   <div className="action-btns">
                     <button className="action-btn action-btn-edit" onClick={() => openEdit(r)} title="Edit"><span className="material-icons">edit</span></button>
@@ -504,21 +577,29 @@ function RoutesPanel({ routes, setRoutes, showToast }) {
       </TableCard>
 
       {showModal && (
-        <Modal title={editItem ? 'Edit Route' : 'Add New Route'} onClose={() => setShowModal(false)} onSubmit={handleSave} submitLabel={editItem ? 'Update Route' : 'Add Route'} size="modal-lg">
+        <Modal title={editItem ? 'Edit Bus Route' : 'Add Bus Route'} onClose={() => setShowModal(false)} onSubmit={handleSave} submitLabel={editItem ? 'Update Route' : 'Add Bus Route'} size="modal-lg">
           <div className="row g-3">
-            <div className="col-md-6">
+            {/* Row 1: Route Name + Route Number */}
+            <div className="col-md-8">
               <label className="form-label fw-medium small">Route Name *</label>
               <input type="text" className={`form-control form-control-sm ${errors.name ? 'is-invalid' : ''}`}
-                placeholder="e.g., Route A – North Zone" value={form.name}
+                placeholder="e.g., North Zone Route" value={form.name}
                 onChange={e => setForm({ ...form, name: e.target.value })} />
               {errors.name && <div className="invalid-feedback">{errors.name}</div>}
             </div>
-            <div className="col-md-6">
-              <label className="form-label fw-medium small">Area / Zone *</label>
-              <input type="text" className={`form-control form-control-sm ${errors.area ? 'is-invalid' : ''}`}
-                placeholder="e.g., School Gate → Sector 14" value={form.area}
+            <div className="col-md-4">
+              <label className="form-label fw-medium small">Route Number</label>
+              <input type="text" className="form-control form-control-sm"
+                placeholder="e.g., RT-01" value={form.routeNumber}
+                onChange={e => setForm({ ...form, routeNumber: e.target.value })} />
+            </div>
+
+            {/* Row 2: Area / Zone + Distance */}
+            <div className="col-md-8">
+              <label className="form-label fw-medium small">Area / Zone</label>
+              <input type="text" className="form-control form-control-sm"
+                placeholder="e.g., School Gate → Sector 14 → Bus Stand" value={form.area}
                 onChange={e => setForm({ ...form, area: e.target.value })} />
-              {errors.area && <div className="invalid-feedback">{errors.area}</div>}
             </div>
             <div className="col-md-4">
               <label className="form-label fw-medium small">Distance</label>
@@ -526,27 +607,64 @@ function RoutesPanel({ routes, setRoutes, showToast }) {
                 placeholder="e.g., 12 km" value={form.distance}
                 onChange={e => setForm({ ...form, distance: e.target.value })} />
             </div>
-            <div className="col-md-4">
-              <label className="form-label fw-medium small">No. of Stops</label>
-              <input type="number" className="form-control form-control-sm"
-                placeholder="e.g., 6" value={form.stops} min="0"
-                onChange={e => setForm({ ...form, stops: e.target.value })} />
+
+            {/* Row 3: Bus + Driver */}
+            <div className="col-md-6">
+              <label className="form-label fw-medium small">Assigned Bus</label>
+              <select className="form-select form-select-sm" value={form.busId || ''} onChange={e => selectBus(e.target.value)}>
+                <option value="">— Select Bus —</option>
+                {buses.map(b => (
+                  <option key={b.id} value={b.id}>{b.busNo}{b.model ? ` (${b.model})` : ''} — cap: {b.capacity}</option>
+                ))}
+              </select>
             </div>
-            <div className="col-md-2">
+            <div className="col-md-6">
+              <label className="form-label fw-medium small">Assigned Driver</label>
+              <select className="form-select form-select-sm" value={form.driverId || ''} onChange={e => selectDriver(e.target.value)}>
+                <option value="">— Select Driver —</option>
+                {drivers.filter(d => d.status === 'Active' || !d.status).map(d => (
+                  <option key={d.id} value={d.id}>{d.name}{d.mobile ? ` — ${d.mobile}` : ''}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Row 4: Pickup Time + Drop Time + Capacity + Status */}
+            <div className="col-md-3">
               <label className="form-label fw-medium small">Pickup Time</label>
               <input type="time" className="form-control form-control-sm" value={form.pickupTime}
                 onChange={e => setForm({ ...form, pickupTime: e.target.value })} />
             </div>
-            <div className="col-md-2">
+            <div className="col-md-3">
               <label className="form-label fw-medium small">Drop Time</label>
               <input type="time" className="form-control form-control-sm" value={form.dropTime}
                 onChange={e => setForm({ ...form, dropTime: e.target.value })} />
+            </div>
+            <div className="col-md-3">
+              <label className="form-label fw-medium small">Route Capacity</label>
+              <input type="number" className="form-control form-control-sm"
+                placeholder="e.g., 40" min="0" value={form.capacity}
+                onChange={e => setForm({ ...form, capacity: e.target.value })} />
+            </div>
+            <div className="col-md-3">
+              <label className="form-label fw-medium small">Status</label>
+              <select className="form-select form-select-sm" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
+                <option>Active</option>
+                <option>Inactive</option>
+              </select>
+            </div>
+
+            {/* Info note */}
+            <div className="col-12">
+              <div style={{ background: '#ebf8ff', border: '1px solid #bee3f8', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#2b6cb0' }}>
+                <span className="material-icons" style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 4 }}>info</span>
+                After saving the route, go to the <strong>Stops</strong> tab to add pickup points and their timings for this route.
+              </div>
             </div>
           </div>
         </Modal>
       )}
 
-      {deleteId && <DeleteModal label="Route" onCancel={() => setDeleteId(null)} onConfirm={() => handleDelete(deleteId)} />}
+      {deleteId && <DeleteModal label="Bus Route" onCancel={() => setDeleteId(null)} onConfirm={() => handleDelete(deleteId)} />}
     </>
   );
 }
@@ -773,9 +891,10 @@ function StudentsPanel({ students, setStudents, routes, stops, buses, showToast 
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
-  const EMPTY_STUDENT = { studentId: '', studentName: '', routeId: '', routeName: '', stopId: '', stopName: '', busId: '', busNo: '' };
+  const EMPTY_STUDENT = { studentId: '', studentName: '', routeId: '', routeName: '', stopId: '', stopName: '', busId: '', busNo: '', pickupLocation: '', dropLocation: '', pickupTime: '', dropTime: '', transportFee: '' };
   const [form, setForm] = useState(EMPTY_STUDENT);
   const [errors, setErrors] = useState({});
+  const [busCapacityFull, setBusCapacityFull] = useState(false);
 
   const filteredStops = stops.filter(s => !form.routeId || String(s.routeId) === String(form.routeId));
 
@@ -795,18 +914,25 @@ function StudentsPanel({ students, setStudents, routes, stops, buses, showToast 
     return Object.keys(e).length === 0;
   };
 
-  const openAdd  = () => { setEditItem(null); setForm(EMPTY_STUDENT); setErrors({}); setShowModal(true); };
+  const openAdd  = () => { setEditItem(null); setForm(EMPTY_STUDENT); setErrors({}); setBusCapacityFull(false); setShowModal(true); };
   const openEdit = (item) => {
     setEditItem(item);
+    const b = buses.find(b => String(b.id) === String(item.busId));
+    setBusCapacityFull(b ? (b.currentStudents ?? 0) >= (b.capacity ?? 0) : false);
     setForm({
-      studentId:   item.studentId   || '',
-      studentName: item.studentName || '',
-      routeId:     item.routeId     || '',
-      routeName:   item.routeName   || '',
-      stopId:      item.stopId      || '',
-      stopName:    item.stopName    || '',
-      busId:       item.busId       || '',
-      busNo:       item.busNo       || '',
+      studentId:      item.studentId      || '',
+      studentName:    item.studentName    || '',
+      routeId:        item.routeId        || '',
+      routeName:      item.routeName      || '',
+      stopId:         item.stopId         || '',
+      stopName:       item.stopName       || '',
+      busId:          item.busId          || '',
+      busNo:          item.busNo          || '',
+      pickupLocation: item.pickupLocation || '',
+      dropLocation:   item.dropLocation   || '',
+      pickupTime:     item.pickupTime     || '',
+      dropTime:       item.dropTime       || '',
+      transportFee:   item.transportFee   != null ? String(item.transportFee) : '',
     });
     setErrors({});
     setShowModal(true);
@@ -824,21 +950,31 @@ function StudentsPanel({ students, setStudents, routes, stops, buses, showToast 
   const setBus = (id) => {
     const b = buses.find(b => String(b.id) === String(id));
     setForm(f => ({ ...f, busId: id, busNo: b?.busNo || '' }));
+    setBusCapacityFull(b ? (b.currentStudents ?? 0) >= (b.capacity ?? 0) : false);
   };
 
   const handleSave = async (e) => {
     e.preventDefault();
     if (!validate()) return;
+    if (!editItem && busCapacityFull) {
+      showToast('Transport capacity reached. Cannot assign student.', 'error');
+      return;
+    }
     try {
       const payload = {
-        studentId:   Number(form.studentId),
-        studentName: form.studentName,
-        routeId:     form.routeId  ? Number(form.routeId)  : null,
-        routeName:   form.routeName,
-        stopId:      form.stopId   ? Number(form.stopId)   : null,
-        stopName:    form.stopName,
-        busId:       form.busId    ? Number(form.busId)    : null,
-        busNo:       form.busNo,
+        studentId:      Number(form.studentId),
+        studentName:    form.studentName,
+        routeId:        form.routeId  ? Number(form.routeId)  : null,
+        routeName:      form.routeName,
+        stopId:         form.stopId   ? Number(form.stopId)   : null,
+        stopName:       form.stopName,
+        busId:          form.busId    ? Number(form.busId)    : null,
+        busNo:          form.busNo,
+        pickupLocation: form.pickupLocation || null,
+        dropLocation:   form.dropLocation   || null,
+        pickupTime:     form.pickupTime     || null,
+        dropTime:       form.dropTime       || null,
+        transportFee:   form.transportFee   ? Number(form.transportFee) : null,
       };
       if (editItem) {
         await updateStudentAssignment(editItem.id, payload);
@@ -879,20 +1015,22 @@ function StudentsPanel({ students, setStudents, routes, stops, buses, showToast 
         filters={[{ value: filterRoute, onChange: v => { setFilterRoute(v); setPage(1); }, options: [{ value: '', label: 'All Routes' }, ...routes.map(r => ({ value: r.id, label: r.name }))] }]}>
         <table className="data-table">
           <thead>
-            <tr><th>Student</th><th>Student ID</th><th>Route</th><th>Stop</th><th>Bus</th><th>Actions</th></tr>
+            <tr><th>Student</th><th>Route</th><th>Stop</th><th>Bus</th><th>Pickup</th><th>Drop</th><th>Fee</th><th>Actions</th></tr>
           </thead>
           <tbody>
             {paginated.length === 0 ? (
-              <tr><td colSpan={7}><div className="empty-state"><span className="material-icons">people</span><h3>No students assigned</h3></div></td></tr>
+              <tr><td colSpan={8}><div className="empty-state"><span className="material-icons">people</span><h3>No students assigned</h3></div></td></tr>
             ) : paginated.map(s => (
               <tr key={s.id}>
                 <td>
                   <div className="student-cell">
                     <div className="student-avatar-sm">{getInitials(s.studentName)}</div>
-                    <span className="student-name">{s.studentName}</span>
+                    <div>
+                      <span className="student-name">{s.studentName}</span>
+                      <div style={{ fontFamily: 'monospace', fontSize: 11, color: '#a0aec0' }}>ID: {s.studentId}</div>
+                    </div>
                   </div>
                 </td>
-                <td style={{ fontFamily: 'monospace', fontSize: 12, color: '#718096', fontWeight: 600 }}>ID: {s.studentId}</td>
                 <td style={{ fontSize: 12, color: '#4a5568' }}>{routeName(s.routeId)}</td>
                 <td>
                   <span style={{ background: '#fff5f7', color: '#805ad5', padding: '2px 10px', borderRadius: 12, fontWeight: 600, fontSize: 12 }}>
@@ -900,6 +1038,9 @@ function StudentsPanel({ students, setStudents, routes, stops, buses, showToast 
                   </span>
                 </td>
                 <td style={{ fontWeight: 700, fontFamily: 'monospace', color: '#2d3748' }}>{s.busNo || busNo(s.busId)}</td>
+                <td style={{ fontSize: 12, color: '#276749' }}>{s.pickupTime || '—'}</td>
+                <td style={{ fontSize: 12, color: '#276749' }}>{s.dropTime || '—'}</td>
+                <td style={{ fontWeight: 600, fontSize: 12, color: '#2b6cb0' }}>{s.transportFee != null ? `₹${s.transportFee}` : '—'}</td>
                 <td>
                   <div className="action-btns">
                     <button className="action-btn action-btn-edit" onClick={() => openEdit(s)} title="Edit"><span className="material-icons">edit</span></button>
@@ -914,7 +1055,7 @@ function StudentsPanel({ students, setStudents, routes, stops, buses, showToast 
       </TableCard>
 
       {showModal && (
-        <Modal title={editItem ? 'Edit Transport Assignment' : 'Assign Student to Transport'} onClose={() => setShowModal(false)} onSubmit={handleSave} submitLabel={editItem ? 'Update' : 'Assign'} size="modal-lg">
+        <Modal title={editItem ? 'Edit Transport Assignment' : 'Assign Student to Transport'} onClose={() => setShowModal(false)} onSubmit={handleSave} submitLabel={editItem ? 'Update' : 'Assign'} size="modal-lg" submitDisabled={!editItem && busCapacityFull}>
           <div className="row g-3">
             <div className="col-md-4">
               <label className="form-label fw-medium small">Student ID *</label>
@@ -951,8 +1092,44 @@ function StudentsPanel({ students, setStudents, routes, stops, buses, showToast 
               <label className="form-label fw-medium small">Bus</label>
               <select className="form-select form-select-sm" value={form.busId || ''} onChange={e => setBus(e.target.value)}>
                 <option value="">— Select Bus (optional) —</option>
-                {buses.map(b => <option key={b.id} value={b.id}>{b.busNo}{b.route ? ` — ${b.route}` : ''} (cap: {b.capacity})</option>)}
+                {buses.map(b => {
+                  const cur = b.currentStudents ?? 0;
+                  const cap = b.capacity ?? 0;
+                  const full = cur >= cap;
+                  return <option key={b.id} value={b.id} disabled={full && !editItem}>{b.busNo}{b.route ? ` — ${b.route}` : ''} ({cur}/{cap}{full ? ' FULL' : ''})</option>;
+                })}
               </select>
+              {busCapacityFull && (
+                <div style={{ marginTop: 8, padding: '8px 12px', background: '#fff5f5', border: '1px solid #fc8181', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span className="material-icons" style={{ color: '#e53e3e', fontSize: 18 }}>error</span>
+                  <span style={{ color: '#c53030', fontSize: 13, fontWeight: 600 }}>Transport capacity reached. Cannot assign student.</span>
+                </div>
+              )}
+            </div>
+            <div className="col-md-6">
+              <label className="form-label fw-medium small">Pickup Location</label>
+              <input type="text" className="form-control form-control-sm" placeholder="e.g., Main Gate, Sector 12"
+                value={form.pickupLocation} onChange={e => setForm(f => ({ ...f, pickupLocation: e.target.value }))} />
+            </div>
+            <div className="col-md-6">
+              <label className="form-label fw-medium small">Drop Location</label>
+              <input type="text" className="form-control form-control-sm" placeholder="e.g., School Main Entrance"
+                value={form.dropLocation} onChange={e => setForm(f => ({ ...f, dropLocation: e.target.value }))} />
+            </div>
+            <div className="col-md-4">
+              <label className="form-label fw-medium small">Pickup Time</label>
+              <input type="time" className="form-control form-control-sm"
+                value={form.pickupTime} onChange={e => setForm(f => ({ ...f, pickupTime: e.target.value }))} />
+            </div>
+            <div className="col-md-4">
+              <label className="form-label fw-medium small">Drop Time</label>
+              <input type="time" className="form-control form-control-sm"
+                value={form.dropTime} onChange={e => setForm(f => ({ ...f, dropTime: e.target.value }))} />
+            </div>
+            <div className="col-md-4">
+              <label className="form-label fw-medium small">Transport Fee (₹)</label>
+              <input type="number" className="form-control form-control-sm" placeholder="e.g., 1500" min="0"
+                value={form.transportFee} onChange={e => setForm(f => ({ ...f, transportFee: e.target.value }))} />
             </div>
           </div>
         </Modal>

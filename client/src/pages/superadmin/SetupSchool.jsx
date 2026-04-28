@@ -18,7 +18,7 @@ const STEPS = [
 
 const INITIAL = {
   // Basic
-  name: '', code: '', board: 'CBSE', academicYear: '2024-2025',
+  schoolId: '', name: '', code: '', board: 'CBSE', academicYear: '2024-2025',
   // Address
   address: '', city: '', state: '', pincode: '', country: 'India',
   // Contact
@@ -43,6 +43,8 @@ const INITIAL = {
 const validate = (step, form) => {
   const errors = {};
   if (step === 'basic') {
+    if (!form.schoolId || isNaN(Number(form.schoolId)) || Number(form.schoolId) < 1)
+      errors.schoolId = 'School ID must be a positive number (e.g. 1, 2, 3).';
     if (!form.name.trim())            errors.name = 'School name is required.';
     if (!form.code.trim())            errors.code = 'School code is required.';
     else if (!/^[A-Z0-9]{3,10}$/i.test(form.code.trim()))
@@ -102,15 +104,16 @@ const SetupSchool = () => {
 
   // Pre-fill school name (and code) when in update mode
   React.useEffect(() => {
-    if (isUpdateMode && (school?.name || school?.code)) {
+    if (isUpdateMode && school) {
       setForm(prev => ({
         ...prev,
-        name: school.name  || prev.name,
-        code: school.code  || prev.code,
+        schoolId: school.schoolId != null ? String(school.schoolId) : prev.schoolId,
+        name:         school.name         || prev.name,
+        code:         school.code         || prev.code,
       }));
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isUpdateMode, school?.name, school?.code]);
+  }, [isUpdateMode, school?.schoolId, school?.name, school?.code]);
   const [errors,      setErrors]      = useState({});
   const [logoFile,    setLogoFile]    = useState(null);
   const [logoPreview, setLogoPreview] = useState(null);
@@ -209,7 +212,7 @@ const SetupSchool = () => {
         if (schoolData) setSchool(schoolData);
         updateUser({
           needsSchoolSetup: false,
-          schoolId: schoolData?.id ?? user?.schoolId ?? null,
+          schoolId: schoolData?.schoolId ?? user?.schoolId ?? null,
         });
         setDone(result);
       } else {
@@ -309,6 +312,19 @@ const SetupSchool = () => {
           {stepId === 'basic' && (
             <div>
               <SectionTitle icon="school" title="Basic Information" />
+              <div style={{ marginBottom: 24 }}>
+                <Field label="School ID" required error={errors.schoolId}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <input
+                      type="number" min="1" name="schoolId" value={form.schoolId}
+                      onChange={onChange} placeholder="e.g. 1"
+                      style={{ ...inputStyle(!!errors.schoolId), width: 140, fontWeight: 700, fontSize: 18, textAlign: 'center' }}
+                      onFocus={e => e.target.style.borderColor = '#76C442'}
+                      onBlur={e => e.target.style.borderColor = errors.schoolId ? '#fc8181' : '#e2e8f0'} />
+                    <span style={{ fontSize: 13, color: '#718096' }}>Unique numeric identifier for this school (e.g. 1, 2, 3)</span>
+                  </div>
+                </Field>
+              </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 24px' }}>
                 <Field label="School Name" required error={errors.name}>
                   <input name="name" value={form.name} onChange={onChange}

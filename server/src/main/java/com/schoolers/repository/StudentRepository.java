@@ -34,6 +34,21 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
 
     long countBySchoolIdAndClassNameAndSection(Long schoolId, String className, String section);
 
+    long countBySchoolIdAndClassNameAndSectionAndIsActive(Long schoolId, String className, String section, Boolean isActive);
+
+    /**
+     * Capacity count: case-insensitive match on className + section, scoped to school.
+     * Counts students where isActive is TRUE or NULL (excludes only explicitly inactive students).
+     * This is the authoritative query used for all capacity enforcement.
+     */
+    @Query("SELECT COUNT(s) FROM Student s WHERE s.schoolId = :schoolId " +
+           "AND LOWER(s.className) = LOWER(:className) " +
+           "AND LOWER(COALESCE(s.section, '')) = LOWER(COALESCE(:section, '')) " +
+           "AND (s.isActive IS NULL OR s.isActive = true)")
+    long countEnrolledForCapacity(@Param("schoolId") Long schoolId,
+                                   @Param("className") String className,
+                                   @Param("section") String section);
+
     @Query("SELECT s FROM Student s WHERE s.schoolId = :schoolId AND s.isActive = true AND (LOWER(s.name) LIKE LOWER(CONCAT('%',:search,'%')) OR LOWER(s.rollNumber) LIKE LOWER(CONCAT('%',:search,'%')))")
     Page<Student> searchStudentsBySchool(@Param("schoolId") Long schoolId, @Param("search") String search, Pageable pageable);
 
@@ -42,6 +57,8 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
 
     @Query("SELECT s FROM Student s WHERE s.schoolId = :schoolId AND LOWER(s.rollNumber) = LOWER(:roll) AND LOWER(s.className) = LOWER(:cls) AND LOWER(COALESCE(s.section,'')) = LOWER(COALESCE(:sec,''))")
     Optional<Student> findDuplicateInClassAndSchool(@Param("schoolId") Long schoolId, @Param("roll") String rollNumber, @Param("cls") String className, @Param("sec") String section);
+
+ 
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Transactional

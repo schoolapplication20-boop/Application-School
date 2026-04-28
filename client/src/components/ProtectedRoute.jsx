@@ -64,12 +64,15 @@ const ProtectedRoute = ({ children, allowedRoles, permKey }) => {
   }
 
   // SUPER_ADMIN: school-level owner — must complete school setup before accessing
-  // any other route. Once setup is done, all routes are open (with optional permKey check).
+  // any other route. Once setup is done, block re-entry to the setup page.
   if (user?.role === 'SUPER_ADMIN') {
     const setupRequired = user?.needsSchoolSetup === true;
     const onSetupPage   = location.pathname === '/superadmin/setup-school';
     if (setupRequired && !onSetupPage) {
       return <Navigate to="/superadmin/setup-school" replace />;
+    }
+    if (!setupRequired && onSetupPage) {
+      return <Navigate to="/superadmin/dashboard" replace />;
     }
     if (permKey && !hasPermission(permKey)) {
       return <AccessDenied module={MODULE_NAMES[permKey] || permKey} />;

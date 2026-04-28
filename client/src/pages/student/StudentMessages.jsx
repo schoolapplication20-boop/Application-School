@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import Layout from '../../components/Layout';
 import { messageAPI } from '../../services/api';
 
 const CATEGORIES = ['ALL', 'GENERAL', 'ACADEMIC', 'ANNOUNCEMENT', 'EXAM', 'FEE', 'URGENT'];
@@ -69,7 +70,7 @@ export default function StudentMessages() {
   const unreadCount = messages.filter(m => !m.isRead).length;
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f0f4f8', padding: '24px' }}>
+    <Layout pageTitle="Messages">
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
@@ -221,6 +222,6 @@ export default function StudentMessages() {
           )}
         </div>
       </div>
-    </div>
+    </Layout>
   );
 }

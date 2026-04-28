@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSchool } from '../context/SchoolContext';
@@ -21,7 +21,6 @@ const adminNavItems = [
   { path: '/admin/timetable',          icon: 'schedule',                label: 'Timetable',          permKey: 'timetable' },
   { path: '/admin/examination',        icon: 'verified',                label: 'Exam & Certificates', permKey: 'examination' },
   { path: '/admin/messages',            icon: 'campaign',                label: 'Messages',            permKey: null },
-  { path: '/admin/teacher-assignments', icon: 'assignment_ind',          label: 'Subject Assignments', permKey: null },
 ];
 
 // SUPER_ADMIN-only items (school management tools)
@@ -59,7 +58,7 @@ const studentNavItems = [
   { path: '/student/fees',        icon: 'payments',       label: 'Pay Fees' },
   { path: '/student/leave',       icon: 'event_busy',     label: 'Leave Request' },
   { path: '/student/messages',    icon: 'chat',           label: 'Messages' },
-  { path: '/student/examination', icon: 'verified',       label: 'Hall Ticket & Certs' },
+  { path: '/student/exams',       icon: 'calendar_view_week', label: 'Schedule & Exams' },
 ];
 
 const parentNavItems = [
@@ -75,12 +74,26 @@ const parentNavItems = [
 ];
 
 const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
-  const { user }   = useAuth();
-  const { school } = useSchool();
+  const { user }                      = useAuth();
+  const { school, logoVersion }       = useSchool();
+  const [logoError, setLogoError]     = useState(false);
+
+  // Reset error flag whenever the logo URL or version changes
+  React.useEffect(() => { setLogoError(false); }, [school?.logoUrl, logoVersion]);
 
   // Dynamic accent colour from school branding (fallback to green)
   const primary   = school?.primaryColor   || '#76C442';
   const secondary = school?.secondaryColor || '#5fa832';
+
+  // Build a cache-busted logo URL using a relative path so the Vite proxy (dev)
+  // and reverse proxy (prod) forward the request to the backend without CORS friction.
+  const logoSrc = school?.logoUrl
+    ? `${school.logoUrl}?v=${logoVersion}`
+    : null;
+
+  // Initials fallback: first letter of each word (max 2)
+  const schoolInitials = (school?.name || 'S')
+    .split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2);
 
   /**
    * Returns the nav sections to render.
@@ -177,21 +190,28 @@ const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
     <aside className={`sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
       {/* Brand */}
       <div className="sidebar-brand">
-        <div className="brand-logo" style={{
-          background: school?.logoUrl ? 'transparent' : `linear-gradient(135deg, ${primary}, ${secondary})`,
-          borderRadius: school?.logoUrl ? '0' : undefined,
-          overflow: 'hidden',
-        }}>
-          {school?.logoUrl ? (
+        {/* Logo / Initials avatar */}
+        <div
+          className="brand-logo"
+          style={{
+            background: (logoSrc && !logoError)
+              ? 'transparent'
+              : `linear-gradient(135deg, ${primary}, ${secondary})`,
+          }}
+        >
+          {logoSrc && !logoError ? (
             <img
-              src={`http://localhost:8080${school.logoUrl}`}
-              alt={school.name || 'School logo'}
-              style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: 8 }}
-              onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+              src={logoSrc}
+              alt={school?.name || 'School logo'}
+              className="brand-logo-img"
+              onError={() => setLogoError(true)}
             />
-          ) : null}
-          <span style={{ fontSize: '20px', display: school?.logoUrl ? 'none' : 'flex' }}>🏆</span>
+          ) : (
+            <span className="brand-logo-initials">{schoolInitials}</span>
+          )}
         </div>
+
+        {/* School name + tagline */}
         <div className="brand-text">
           <div className="brand-name" style={{ color: primary }}>
             {school?.name || 'Schoolers'}

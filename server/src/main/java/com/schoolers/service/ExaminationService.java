@@ -35,9 +35,16 @@ public class ExaminationService {
     // EXAM SCHEDULES
     // ============================================================
 
-    public ApiResponse<List<ExamSchedule>> getAllSchedules(String className, String examType) {
+    public ApiResponse<List<ExamSchedule>> getAllSchedules(String className, String examType, Long schoolId) {
         List<ExamSchedule> schedules;
-        if (className != null && !className.isEmpty()) {
+        if (schoolId != null && className != null && !className.isEmpty()) {
+            // Include records with matching school OR school_id IS NULL (legacy/backfill)
+            schedules = examScheduleRepository.findByClassNameAndSchoolIdOrNull(className, schoolId);
+        } else if (schoolId != null && examType != null && !examType.isEmpty()) {
+            schedules = examScheduleRepository.findByExamTypeAndSchoolIdOrNull(examType, schoolId);
+        } else if (schoolId != null) {
+            schedules = examScheduleRepository.findBySchoolIdOrNull(schoolId);
+        } else if (className != null && !className.isEmpty()) {
             schedules = examScheduleRepository.findByClassNameOrderByExamDateAsc(className);
         } else if (examType != null && !examType.isEmpty()) {
             schedules = examScheduleRepository.findByExamTypeOrderByExamDateAsc(examType);
@@ -47,7 +54,7 @@ public class ExaminationService {
         return ApiResponse.success("Exam schedules retrieved", schedules);
     }
 
-    public ApiResponse<ExamSchedule> createSchedule(Map<String, Object> body) {
+    public ApiResponse<ExamSchedule> createSchedule(Map<String, Object> body, Long schoolId) {
         ExamSchedule schedule = ExamSchedule.builder()
                 .examName((String) body.get("examName"))
                 .examType((String) body.get("examType"))
@@ -61,14 +68,17 @@ public class ExaminationService {
                 .maxMarks(Integer.parseInt(String.valueOf(body.getOrDefault("maxMarks", 100))))
                 .status((String) body.getOrDefault("status", "SCHEDULED"))
                 .instructions((String) body.getOrDefault("instructions", ""))
+                .schoolId(schoolId)
                 .build();
         return ApiResponse.success("Exam schedule created", examScheduleRepository.save(schedule));
     }
 
-    public ApiResponse<ExamSchedule> updateSchedule(Long id, Map<String, Object> body) {
+    public ApiResponse<ExamSchedule> updateSchedule(Long id, Map<String, Object> body, Long schoolId) {
         Optional<ExamSchedule> opt = examScheduleRepository.findById(id);
         if (opt.isEmpty()) return ApiResponse.error("Schedule not found");
         ExamSchedule s = opt.get();
+        if (schoolId != null && s.getSchoolId() != null && !schoolId.equals(s.getSchoolId()))
+            return ApiResponse.error("Access denied: schedule belongs to another school");
         if (body.containsKey("examName"))    s.setExamName((String) body.get("examName"));
         if (body.containsKey("examType"))    s.setExamType((String) body.get("examType"));
         if (body.containsKey("className"))   s.setClassName((String) body.get("className"));
@@ -94,9 +104,13 @@ public class ExaminationService {
     // HALL TICKETS
     // ============================================================
 
-    public ApiResponse<List<HallTicket>> getAllHallTickets(String className, String examType) {
+    public ApiResponse<List<HallTicket>> getAllHallTickets(String className, String examType, Long schoolId) {
         List<HallTicket> tickets;
-        if (examType != null && !examType.isEmpty()) {
+        if (schoolId != null && examType != null && !examType.isEmpty()) {
+            tickets = hallTicketRepository.findByExamTypeAndSchoolIdOrderByCreatedAtDesc(examType, schoolId);
+        } else if (schoolId != null) {
+            tickets = hallTicketRepository.findBySchoolIdOrderByCreatedAtDesc(schoolId);
+        } else if (examType != null && !examType.isEmpty()) {
             tickets = hallTicketRepository.findByExamTypeOrderByCreatedAtDesc(examType);
         } else {
             tickets = hallTicketRepository.findAllByOrderByCreatedAtDesc();
@@ -104,12 +118,14 @@ public class ExaminationService {
         return ApiResponse.success("Hall tickets retrieved", tickets);
     }
 
-    public ApiResponse<List<HallTicket>> getHallTicketsByStudent(Long studentId) {
-        return ApiResponse.success("Hall tickets retrieved",
-                hallTicketRepository.findByStudentIdOrderByCreatedAtDesc(studentId));
+    public ApiResponse<List<HallTicket>> getHallTicketsByStudent(Long studentId, Long schoolId) {
+        List<HallTicket> tickets = (schoolId != null)
+                ? hallTicketRepository.findByStudentIdAndSchoolIdOrderByCreatedAtDesc(studentId, schoolId)
+                : hallTicketRepository.findByStudentIdOrderByCreatedAtDesc(studentId);
+        return ApiResponse.success("Hall tickets retrieved", tickets);
     }
 
-    public ApiResponse<HallTicket> createHallTicket(Map<String, Object> body, String generatedBy) {
+    public ApiResponse<HallTicket> createHallTicket(Map<String, Object> body, String generatedBy, Long schoolId) {
         String ticketNumber = generateTicketNumber();
         Object studentIdObj = body.get("studentId");
         if (studentIdObj == null) {
@@ -138,13 +154,14 @@ public class ExaminationService {
                 .registrationNumber((String) body.getOrDefault("registrationNumber", ""))
                 .examCenter((String) body.getOrDefault("examCenter", "Main Campus"))
                 .examCenterAddress((String) body.getOrDefault("examCenterAddress", "Schoolers Institution, Main Road"))
+                .schoolId(schoolId)
                 .generatedBy(generatedBy)
                 .build();
         return ApiResponse.success("Hall ticket generated", hallTicketRepository.save(ticket));
     }
 
     @org.springframework.transaction.annotation.Transactional
-    public ApiResponse<HallTicket> generateBulkHallTickets(Map<String, Object> body, String generatedBy) {
+    public ApiResponse<HallTicket> generateBulkHallTickets(Map<String, Object> body, String generatedBy, Long schoolId) {
         String className = (String) body.get("className");
         String section = (String) body.getOrDefault("section", "");
         String examName = (String) body.get("examName");
@@ -153,7 +170,11 @@ public class ExaminationService {
         String academicYear = (String) body.getOrDefault("academicYear", getCurrentAcademicYear());
 
         List<Student> students;
-        if (section != null && !section.isEmpty()) {
+        if (schoolId != null && section != null && !section.isEmpty()) {
+            students = studentRepository.findBySchoolIdAndClassNameAndSection(schoolId, className, section);
+        } else if (schoolId != null) {
+            students = studentRepository.findBySchoolIdAndClassName(schoolId, className);
+        } else if (section != null && !section.isEmpty()) {
             students = studentRepository.findByClassNameAndSection(className, section);
         } else {
             students = studentRepository.findByClassName(className);
@@ -161,8 +182,10 @@ public class ExaminationService {
 
         List<HallTicket> tickets = new ArrayList<>();
         for (Student student : students) {
-            if (hallTicketRepository.findByStudentIdOrderByCreatedAtDesc(student.getId())
-                    .stream().anyMatch(t -> t.getExamName().equals(examName))) {
+            List<HallTicket> existing = (schoolId != null)
+                    ? hallTicketRepository.findByStudentIdAndSchoolIdOrderByCreatedAtDesc(student.getId(), schoolId)
+                    : hallTicketRepository.findByStudentIdOrderByCreatedAtDesc(student.getId());
+            if (existing.stream().anyMatch(t -> t.getExamName().equals(examName))) {
                 continue; // Skip if already generated
             }
             String dobStr = student.getDateOfBirth() != null ? student.getDateOfBirth().toString() : "";
@@ -185,6 +208,7 @@ public class ExaminationService {
                     .registrationNumber(student.getRollNumber())
                     .examCenter(examCenter)
                     .examCenterAddress(examCenterAddress)
+                    .schoolId(schoolId)
                     .generatedBy(generatedBy)
                     .build();
             tickets.add(ticket);
@@ -193,8 +217,11 @@ public class ExaminationService {
         return ApiResponse.success("Generated " + tickets.size() + " hall tickets", null);
     }
 
-    public ApiResponse<Void> deleteHallTicket(Long id) {
-        if (!hallTicketRepository.existsById(id)) return ApiResponse.error("Hall ticket not found");
+    public ApiResponse<Void> deleteHallTicket(Long id, Long schoolId) {
+        Optional<HallTicket> opt = hallTicketRepository.findById(id);
+        if (opt.isEmpty()) return ApiResponse.error("Hall ticket not found");
+        if (schoolId != null && opt.get().getSchoolId() != null && !schoolId.equals(opt.get().getSchoolId()))
+            return ApiResponse.error("Access denied: hall ticket belongs to another school");
         hallTicketRepository.deleteById(id);
         return ApiResponse.success("Hall ticket deleted", null);
     }
@@ -203,9 +230,13 @@ public class ExaminationService {
     // CERTIFICATES
     // ============================================================
 
-    public ApiResponse<List<Certificate>> getAllCertificates(String type) {
+    public ApiResponse<List<Certificate>> getAllCertificates(String type, Long schoolId) {
         List<Certificate> certs;
-        if (type != null && !type.isEmpty()) {
+        if (schoolId != null && type != null && !type.isEmpty()) {
+            certs = certificateRepository.findByCertificateTypeAndSchoolIdOrderByCreatedAtDesc(type, schoolId);
+        } else if (schoolId != null) {
+            certs = certificateRepository.findBySchoolIdOrderByCreatedAtDesc(schoolId);
+        } else if (type != null && !type.isEmpty()) {
             certs = certificateRepository.findByCertificateTypeOrderByCreatedAtDesc(type);
         } else {
             certs = certificateRepository.findAllByOrderByCreatedAtDesc();
@@ -213,12 +244,14 @@ public class ExaminationService {
         return ApiResponse.success("Certificates retrieved", certs);
     }
 
-    public ApiResponse<List<Certificate>> getCertificatesByStudent(Long studentId) {
-        return ApiResponse.success("Certificates retrieved",
-                certificateRepository.findByStudentIdOrderByCreatedAtDesc(studentId));
+    public ApiResponse<List<Certificate>> getCertificatesByStudent(Long studentId, Long schoolId) {
+        List<Certificate> certs = (schoolId != null)
+                ? certificateRepository.findByStudentIdAndSchoolIdOrderByCreatedAtDesc(studentId, schoolId)
+                : certificateRepository.findByStudentIdOrderByCreatedAtDesc(studentId);
+        return ApiResponse.success("Certificates retrieved", certs);
     }
 
-    public ApiResponse<Certificate> createCertificate(Map<String, Object> body, String generatedBy) {
+    public ApiResponse<Certificate> createCertificate(Map<String, Object> body, String generatedBy, Long schoolId) {
         String certId = generateCertificateId((String) body.get("certificateType"));
         Certificate cert = Certificate.builder()
                 .certificateId(certId)
@@ -232,6 +265,7 @@ public class ExaminationService {
                 .academicYear((String) body.getOrDefault("academicYear", getCurrentAcademicYear()))
                 .extraData((String) body.getOrDefault("extraData", "{}"))
                 .purpose((String) body.getOrDefault("purpose", ""))
+                .schoolId(schoolId)
                 .generatedBy(generatedBy)
                 .build();
         return ApiResponse.success("Certificate generated", certificateRepository.save(cert));
@@ -252,8 +286,11 @@ public class ExaminationService {
                 .orElse(ApiResponse.error("Certificate not found"));
     }
 
-    public ApiResponse<Void> deleteCertificate(Long id) {
-        if (!certificateRepository.existsById(id)) return ApiResponse.error("Certificate not found");
+    public ApiResponse<Void> deleteCertificate(Long id, Long schoolId) {
+        Optional<Certificate> opt = certificateRepository.findById(id);
+        if (opt.isEmpty()) return ApiResponse.error("Certificate not found");
+        if (schoolId != null && opt.get().getSchoolId() != null && !schoolId.equals(opt.get().getSchoolId()))
+            return ApiResponse.error("Access denied: certificate belongs to another school");
         certificateRepository.deleteById(id);
         return ApiResponse.success("Certificate deleted", null);
     }

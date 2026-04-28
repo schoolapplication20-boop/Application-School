@@ -45,23 +45,28 @@ public class LeaveService {
         return ApiResponse.success(leaveRepository.findByRequesterType(LeaveRequest.RequesterType.TEACHER));
     }
 
-    public ApiResponse<List<LeaveRequest>> getLeavesByRequester(Long requesterId, String type) {
+    public ApiResponse<List<LeaveRequest>> getLeavesByRequester(Long requesterId, String type, Long schoolId) {
         LeaveRequest.RequesterType rt = "TEACHER".equalsIgnoreCase(type)
                 ? LeaveRequest.RequesterType.TEACHER
                 : LeaveRequest.RequesterType.STUDENT;
 
-        // For teachers, requesterId from the frontend is the User entity ID.
-        // But leave_requests.requester_id stores the Teacher entity ID.
-        // Resolve the Teacher entity ID so the query finds the right records.
         if (rt == LeaveRequest.RequesterType.TEACHER) {
+            // requesterId from the frontend is the User entity ID.
+            // leave_requests.requester_id stores the Teacher entity ID — resolve it.
             Long teacherEntityId = teacherRepository.findByUserId(requesterId)
                     .map(Teacher::getId)
-                    .orElse(requesterId); // fallback: try as-is in case IDs match
+                    .orElse(requesterId);
+
+            if (schoolId != null) {
+                return ApiResponse.success(
+                        leaveRepository.findByRequesterIdAndRequesterTypeAndSchoolIdOrderByCreatedAtDesc(
+                                teacherEntityId, rt, schoolId));
+            }
             return ApiResponse.success(
-                    leaveRepository.findByRequesterIdAndRequesterType(teacherEntityId, rt));
+                    leaveRepository.findByRequesterIdAndRequesterTypeOrderByCreatedAtDesc(teacherEntityId, rt));
         }
 
-        return ApiResponse.success(leaveRepository.findByRequesterIdAndRequesterType(requesterId, rt));
+        return ApiResponse.success(leaveRepository.findByRequesterIdAndRequesterTypeOrderByCreatedAtDesc(requesterId, rt));
     }
 
     // ── Student: submit leave ───────────────────────────────────────────────
@@ -153,6 +158,12 @@ public class LeaveService {
 
         Teacher teacher = teacherOpt.get();
 
+        // Only CLASS_TEACHER and BOTH types can approve student leave requests
+        String type = teacher.getTeacherType();
+        if ("SUBJECT_TEACHER".equalsIgnoreCase(type)) {
+            return ApiResponse.error("Access denied: only Class Teachers can manage student leave requests");
+        }
+
         // Resolve the classroom where this teacher is the class teacher.
         // Prefer the classroom's own teacherId field (authoritative); fall back to primaryClassId.
         ClassRoom classroom = resolveClassTeacherRoom(teacher);
@@ -164,8 +175,11 @@ public class LeaveService {
                 + (classroom.getSection() != null && !classroom.getSection().isBlank()
                         ? "-" + classroom.getSection() : "");
 
-        List<LeaveRequest> leaves = leaveRepository
-                .findByClassSectionAndRequesterTypeOrderByCreatedAtDesc(
+        Long schoolId = teacher.getSchoolId();
+        List<LeaveRequest> leaves = (schoolId != null)
+                ? leaveRepository.findByClassSectionAndRequesterTypeAndSchoolIdOrderByCreatedAtDesc(
+                        classSection, LeaveRequest.RequesterType.STUDENT, schoolId)
+                : leaveRepository.findByClassSectionAndRequesterTypeOrderByCreatedAtDesc(
                         classSection, LeaveRequest.RequesterType.STUDENT);
         return ApiResponse.success(leaves);
     }
@@ -181,6 +195,12 @@ public class LeaveService {
         var teacherOpt = teacherRepository.findByUserId(userOpt.get().getId());
         if (teacherOpt.isEmpty()) return ApiResponse.error("Teacher profile not found");
         Teacher teacher = teacherOpt.get();
+
+        // Only CLASS_TEACHER and BOTH types can approve/reject student leave requests
+        String tType = teacher.getTeacherType();
+        if ("SUBJECT_TEACHER".equalsIgnoreCase(tType)) {
+            return ApiResponse.error("Access denied: only Class Teachers can approve or reject student leave requests");
+        }
 
         // 2. Find leave request
         LeaveRequest leave = leaveRepository.findById(id).orElse(null);

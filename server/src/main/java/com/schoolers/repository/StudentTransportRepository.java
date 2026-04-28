@@ -13,4 +13,9 @@ public interface StudentTransportRepository extends JpaRepository<StudentTranspo
     List<StudentTransport> findByRouteId(Long routeId);
     List<StudentTransport> findByStatus(String status);
     boolean existsByStudentId(Long studentId);
+
+    // School-scoped queries
+    List<StudentTransport> findBySchoolIdOrderByCreatedAtDesc(Long schoolId);
+    Optional<StudentTransport> findByStudentIdAndSchoolId(Long studentId, Long schoolId);
+    boolean existsByStudentIdAndSchoolId(Long studentId, Long schoolId);
 }

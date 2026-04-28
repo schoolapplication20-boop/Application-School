@@ -18,6 +18,11 @@ public interface HallTicketRepository extends JpaRepository<HallTicket, Long> {
     List<HallTicket> findAllByOrderByCreatedAtDesc();
     boolean existsByTicketNumber(String ticketNumber);
 
+    // School-scoped queries
+    List<HallTicket> findBySchoolIdOrderByCreatedAtDesc(Long schoolId);
+    List<HallTicket> findByExamTypeAndSchoolIdOrderByCreatedAtDesc(String examType, Long schoolId);
+    List<HallTicket> findByStudentIdAndSchoolIdOrderByCreatedAtDesc(Long studentId, Long schoolId);
+
     @Modifying @Transactional
     void deleteByStudentId(Long studentId);
 }

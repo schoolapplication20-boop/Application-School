@@ -59,6 +59,12 @@ public class SchoolService {
         if (schoolRepository.existsByCode(code.toUpperCase()))
             return ApiResponse.error("A school with code '" + code.toUpperCase() + "' already exists.");
 
+        Integer schoolId = intVal(data, "schoolId");
+        if (schoolId == null || schoolId < 1)
+            return ApiResponse.error("School ID is required and must be a positive number (e.g. 1, 2, 3).");
+        if (schoolRepository.existsBySchoolId(schoolId))
+            return ApiResponse.error("School ID '" + schoolId + "' is already in use by another school. Choose a different ID.");
+
         // Validate & normalise admin fields before touching DB
         String adminEmail  = str(data, "adminEmail");
         String adminName   = str(data, "adminName");
@@ -101,31 +107,32 @@ public class SchoolService {
                         + "\"announcements\":true,\"messages\":true}"))
                 .isSetupCompleted(true)
                 .isActive(true)
+                .schoolId(intVal(data, "schoolId"))
                 .build();
 
         school = schoolRepository.save(school);
         log.info("[createSchool] Saved school id=" + school.getId() + " code=" + school.getCode());
 
         // ── 3. Link school to the SUPER_ADMIN who created it ───────────────
-        // Guard: only skip re-link if the creator already has a valid, existing school.
-        // If schoolId is stale (school was deleted), re-link to the new school.
+        // Store the human-assigned display number (school.schoolId) — NOT the DB PK (school.id).
+        // This ensures users.school_id matches the ID shown in the UI (1, 2, 3…).
         if (creatorEmail != null && !creatorEmail.isBlank()) {
-            final Long schoolId = school.getId();
+            final Long displayIdAsLong = school.getSchoolId().longValue();
             userRepository.findByEmailIgnoreCase(creatorEmail).ifPresent(creator -> {
-                if (creator.getSchoolId() != null && schoolRepository.existsById(creator.getSchoolId())) {
+                if (creator.getSchoolId() != null
+                        && schoolRepository.existsBySchoolId(creator.getSchoolId().intValue())) {
                     log.warning("[createSchool] Creator " + creatorEmail
                             + " already has valid schoolId=" + creator.getSchoolId() + ". Skipping re-link.");
                     return;
                 }
-                if (userRepository.existsBySchoolIdAndRole(schoolId, User.Role.SUPER_ADMIN)) {
+                if (userRepository.existsBySchoolIdAndRole(displayIdAsLong, User.Role.SUPER_ADMIN)) {
                     log.warning("[createSchool] Another SUPER_ADMIN already linked to schoolId="
-                            + schoolId + ". Skipping.");
+                            + displayIdAsLong + ". Skipping.");
                     return;
                 }
-                creator.setSchoolId(schoolId);
+                creator.setSchoolId(displayIdAsLong);
                 userRepository.save(creator);
-                log.info("[createSchool] Linked schoolId=" + schoolId + " to creator=" + creatorEmail
-                        + (creator.getSchoolId() != null ? " (replaced stale schoolId)" : ""));
+                log.info("[createSchool] Linked display schoolId=" + displayIdAsLong + " to creator=" + creatorEmail);
             });
         }
 
@@ -142,7 +149,7 @@ public class SchoolService {
                     .password(passwordEncoder.encode(tempPass))
                     .tempPassword(tempPass)
                     .role(User.Role.ADMIN)
-                    .schoolId(school.getId())
+                    .schoolId(school.getSchoolId().longValue())  // store display number, not DB PK
                     .firstLogin(true)
                     .isActive(true)
                     .permissions("{\"students\":true,\"teachers\":true,\"classes\":true,"
@@ -164,10 +171,22 @@ public class SchoolService {
     // READ
     // ────────────────────────────────────────────────────────────────────────
 
-    public ApiResponse<Map<String, Object>> getSchoolById(Long id) {
-        return schoolRepository.findById(id)
+    /**
+     * Look up a school by its human-assigned display number (the value shown in the UI
+     * and stored as the FK in users/students/teachers/etc.).
+     * This is the primary lookup used by API endpoints and service methods.
+     */
+    public ApiResponse<Map<String, Object>> getSchoolById(Integer displayId) {
+        return schoolRepository.findBySchoolId(displayId)
                 .map(s -> ApiResponse.success("School found", toResponse(s)))
-                .orElse(ApiResponse.error("School not found with id: " + id));
+                .orElse(ApiResponse.error("School not found with display ID: " + displayId));
+    }
+
+    /** Internal lookup by DB primary key — used only by JPA-internal operations. */
+    public ApiResponse<Map<String, Object>> getSchoolByDbId(Long dbId) {
+        return schoolRepository.findById(dbId)
+                .map(s -> ApiResponse.success("School found", toResponse(s)))
+                .orElse(ApiResponse.error("School not found with db id: " + dbId));
     }
 
     public ApiResponse<Map<String, Object>> getSchoolByAdminEmail(String email) {
@@ -175,7 +194,10 @@ public class SchoolService {
         if (userOpt.isEmpty()) return ApiResponse.error("User not found.");
         User user = userOpt.get();
         if (user.getSchoolId() == null) return ApiResponse.error("No school linked to this account.");
-        return getSchoolById(user.getSchoolId());
+        // user.schoolId stores the human-assigned display number (not the DB PK)
+        return schoolRepository.findBySchoolId(user.getSchoolId().intValue())
+                .map(s -> ApiResponse.success("School found", toResponse(s)))
+                .orElse(ApiResponse.error("No school found for display ID: " + user.getSchoolId()));
     }
 
     public ApiResponse<List<Map<String, Object>>> getAllSchools() {
@@ -209,16 +231,16 @@ public class SchoolService {
     // method) so that IOException cannot mark the transaction rollback-only.
 
     @Transactional
-    public ApiResponse<Map<String, Object>> updateSchool(Long id, Map<String, Object> data,
+    public ApiResponse<Map<String, Object>> updateSchool(Integer displayId, Map<String, Object> data,
                                                           String newLogoUrl,
                                                           String oldLogoUrl,
                                                           String creatorEmail) {
-        Optional<School> opt = schoolRepository.findById(id);
+        Optional<School> opt = schoolRepository.findBySchoolId(displayId);
         if (opt.isEmpty()) {
             // Stub school was deleted or lost. If we know who is calling (setup wizard),
             // fall back to creating a fresh school and re-linking the user.
             if (creatorEmail != null && !creatorEmail.isBlank()) {
-                log.warning("[updateSchool] School id=" + id + " not found. Falling back to create for " + creatorEmail);
+                log.warning("[updateSchool] School display_id=" + displayId + " not found. Falling back to create for " + creatorEmail);
                 ApiResponse<Map<String, Object>> createResp = createSchool(data, newLogoUrl, creatorEmail);
                 if (createResp.isSuccess()) {
                     // Return just the school object so the response shape matches the update path.
@@ -256,6 +278,14 @@ public class SchoolService {
             school.setSubscriptionExpiry(parseDate(data, "subscriptionExpiry"));
         if (data.containsKey("features"))          school.setFeatures(str(data, "features"));
         if (data.containsKey("isActive"))          school.setIsActive((Boolean) data.get("isActive"));
+        if (data.containsKey("schoolId")) {
+            Integer newSchoolId = intVal(data, "schoolId");
+            if (newSchoolId == null || newSchoolId < 1)
+                return ApiResponse.error("School ID must be a positive number (e.g. 1, 2, 3).");
+            if (schoolRepository.existsBySchoolIdAndIdNot(newSchoolId, school.getId()))
+                return ApiResponse.error("School ID '" + newSchoolId + "' is already in use by another school. Choose a different ID.");
+            school.setSchoolId(newSchoolId);
+        }
         // Allow the Setup School wizard to mark setup as complete via PUT
         if (data.containsKey("isSetupCompleted") && data.get("isSetupCompleted") instanceof Boolean)
             school.setIsSetupCompleted((Boolean) data.get("isSetupCompleted"));
@@ -302,6 +332,7 @@ public class SchoolService {
         m.put("subscriptionExpiry", s.getSubscriptionExpiry());
         m.put("features", s.getFeatures());
         m.put("isActive", s.getIsActive());
+        m.put("schoolId", s.getSchoolId());
         m.put("createdAt", s.getCreatedAt());
         return m;
     }

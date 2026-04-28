@@ -89,7 +89,7 @@ const Login = () => {
         <div className="auth-brand">
           {school?.logoUrl ? (
             <img
-              src={`http://localhost:8080${school.logoUrl}`}
+              src={`${school.logoUrl}`}
               alt={school.name}
               style={{ width: 40, height: 40, objectFit: 'contain', borderRadius: 8, background: 'rgba(255,255,255,0.2)', padding: 4 }}
               onError={e => { e.target.style.display='none'; }}
@@ -111,7 +111,7 @@ const Login = () => {
         <div className="auth-illustration">
           <div className="auth-illustration-placeholder">
             {school?.logoUrl ? (
-              <img src={`http://localhost:8080${school.logoUrl}`} alt={school.name}
+              <img src={`${school.logoUrl}`} alt={school.name}
                 style={{ width: 100, height: 100, objectFit: 'contain', marginBottom: 8, borderRadius: 12, background: 'rgba(255,255,255,0.15)', padding: 8 }}
                 onError={e => { e.target.replaceWith(Object.assign(document.createElement('span'), { style: 'font-size:80px', textContent: '🎓' })); }}
               />
@@ -131,7 +131,7 @@ const Login = () => {
           <div className="auth-form-header">
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
               {school?.logoUrl ? (
-                <img src={`http://localhost:8080${school.logoUrl}`} alt={school.name}
+                <img src={`${school.logoUrl}`} alt={school.name}
                   style={{ width: 36, height: 36, objectFit: 'contain', borderRadius: 8 }}
                   onError={e => e.target.style.display = 'none'} />
               ) : (

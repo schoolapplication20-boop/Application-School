@@ -158,6 +158,7 @@ export default function Timetable() {
   const [form, setForm]     = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Toast
   const [toast, setToast] = useState(null);
@@ -331,11 +332,23 @@ export default function Timetable() {
   };
 
   // ── Delete ────────────────────────────────────────────────────────────────────
-  const confirmDelete = () => {
-    deleteTimetableEntry(deleteTarget.id);
-    setEntries(prev => prev.filter(e => e.id !== deleteTarget.id));
-    setDeleteTarget(null);
-    showToast('Entry deleted');
+  const confirmDelete = async () => {
+    setDeleting(true);
+    try {
+      const result = await deleteTimetableEntry(deleteTarget.id);
+      if (result.success) {
+        setEntries(prev => prev.filter(e => e.id !== deleteTarget.id));
+        setDeleteTarget(null);
+        showToast('Entry deleted');
+      } else {
+        showToast(result.message || 'Failed to delete entry', 'error');
+        setDeleteTarget(null);
+      }
+    } catch (err) {
+      showToast(err?.response?.data?.message || 'Network error — entry not deleted', 'error');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   // ── Bulk save callback ────────────────────────────────────────────────────────
@@ -619,8 +632,12 @@ export default function Timetable() {
                 {deleteTarget.day} · {formatTime(deleteTarget.startTime)} – {formatTime(deleteTarget.endTime)}
               </p>
               <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-                <button onClick={() => setDeleteTarget(null)} style={{ padding: '9px 22px', border: '1.5px solid #e2e8f0', borderRadius: 9, background: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
-                <button onClick={confirmDelete} style={{ padding: '9px 22px', background: '#e53e3e', color: '#fff', border: 'none', borderRadius: 9, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Delete</button>
+                <button onClick={() => setDeleteTarget(null)} disabled={deleting} style={{ padding: '9px 22px', border: '1.5px solid #e2e8f0', borderRadius: 9, background: '#fff', fontWeight: 600, fontSize: 13, cursor: deleting ? 'not-allowed' : 'pointer' }}>Cancel</button>
+                <button onClick={confirmDelete} disabled={deleting} style={{ padding: '9px 22px', background: '#e53e3e', color: '#fff', border: 'none', borderRadius: 9, fontWeight: 600, fontSize: 13, cursor: deleting ? 'not-allowed' : 'pointer', opacity: deleting ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {deleting ? (
+                    <><span style={{ width: 13, height: 13, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} /> Deleting…</>
+                  ) : 'Delete'}
+                </button>
               </div>
             </div>
           </div>

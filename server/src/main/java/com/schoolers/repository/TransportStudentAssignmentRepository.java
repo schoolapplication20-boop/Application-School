@@ -14,6 +14,19 @@ public interface TransportStudentAssignmentRepository extends JpaRepository<Tran
     Optional<TransportStudentAssignment> findByStudentId(Long studentId);
     List<TransportStudentAssignment> findByBusId(Long busId);
 
+    // School-scoped queries
+    List<TransportStudentAssignment> findBySchoolIdOrderByStudentNameAsc(Long schoolId);
+    Optional<TransportStudentAssignment> findByStudentIdAndSchoolId(Long studentId, Long schoolId);
+
     @Modifying @Transactional
     void deleteByStudentId(Long studentId);
+
+    @Modifying @Transactional
+    void deleteByBusId(Long busId);
+
+    @Modifying @Transactional
+    void deleteByRouteId(Long routeId);
+
+    @Modifying @Transactional
+    void deleteByStopId(Long stopId);
 }

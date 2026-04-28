@@ -163,9 +163,25 @@ public class TeacherService {
     }
 
     public ApiResponse<List<Student>> getClassStudents(Long teacherId, Long classId) {
-        ApiResponse<ClassRoom> access = validateClassTeacherAccess(teacherId, classId, true);
-        if (!access.isSuccess()) return ApiResponse.error(access.getMessage());
+        if (teacherId == null) return ApiResponse.error("Teacher not found");
+        if (!hasAnyClassAccess(teacherId, classId))
+            return ApiResponse.error("You are not assigned to this class");
         return getClassStudents(classId);
+    }
+
+    /** Returns true if the teacher has access to the given class via any assignment method:
+     *  (a) primaryClassId, (b) classroom.teacherId, or (c) teacher.classes text field. */
+    private boolean hasAnyClassAccess(Long teacherId, Long classId) {
+        Teacher teacher = teacherRepository.findById(teacherId).orElse(null);
+        if (teacher == null) return false;
+        if (classId.equals(teacher.getPrimaryClassId())) return true;
+        ClassRoom classRoom = classRoomRepository.findById(classId).orElse(null);
+        if (classRoom == null) return false;
+        if (teacherId.equals(classRoom.getTeacherId())) return true;
+        // Check the classes text field (subject-teacher assignments)
+        ApiResponse<List<ClassRoom>> assigned = getTeacherClasses(teacherId);
+        return assigned.isSuccess() && assigned.getData().stream()
+                .anyMatch(c -> classId.equals(c.getId()));
     }
 
     @Transactional
@@ -180,7 +196,13 @@ public class TeacherService {
         if (rollNumber == null || rollNumber.isBlank()) return ApiResponse.error("Roll number is required");
 
         String section = normalizeSection(classRoom.getSection());
-        if (studentRepository.findDuplicateInClass(rollNumber.trim(), classRoom.getName(), section).isPresent()) {
+        Long schoolId = classRoom.getSchoolId();
+
+        // Use school-scoped duplicate check so roll numbers are unique per school, not globally
+        boolean duplicate = (schoolId != null)
+                ? studentRepository.findDuplicateInClassAndSchool(schoolId, rollNumber.trim(), classRoom.getName(), section).isPresent()
+                : studentRepository.findDuplicateInClass(rollNumber.trim(), classRoom.getName(), section).isPresent();
+        if (duplicate) {
             return ApiResponse.error("Roll number " + rollNumber.trim() + " already exists in " + classRoom.getName() + " - " + section);
         }
 
@@ -189,6 +211,7 @@ public class TeacherService {
                 .rollNumber(rollNumber.trim())
                 .className(classRoom.getName())
                 .section(section)
+                .schoolId(schoolId)
                 .parentId(resolveParentUserId(str(body, "parentMobile", str(body, "mobile", null))))
                 .parentName(str(body, "parentName", str(body, "parent", null)))
                 .parentMobile(str(body, "parentMobile", str(body, "mobile", null)))
@@ -335,6 +358,7 @@ public class TeacherService {
                         .date(date)
                         .status(status)
                         .markedBy(markedBy)
+                        .schoolId(classRoom.getSchoolId())
                         .build();
                 attendanceRepository.save(attendance);
             }
@@ -343,56 +367,93 @@ public class TeacherService {
     }
 
     public ApiResponse<List<Attendance>> getAttendanceByClassAndDate(Long classId, LocalDate date) {
+        ClassRoom cls = classRoomRepository.findById(classId).orElse(null);
+        if (cls != null && cls.getSchoolId() != null) {
+            return ApiResponse.success(attendanceRepository.findBySchoolIdAndClassIdAndDate(cls.getSchoolId(), classId, date));
+        }
         return ApiResponse.success(attendanceRepository.findByClassIdAndDate(classId, date));
     }
 
     public ApiResponse<List<Attendance>> getAttendanceByClassAndDate(Long teacherId, Long classId, LocalDate date) {
         ApiResponse<ClassRoom> access = validateClassTeacherAccess(teacherId, classId, true);
         if (!access.isSuccess()) return ApiResponse.error(access.getMessage());
-        return getAttendanceByClassAndDate(classId, date);
+        ClassRoom cls = access.getData();
+        if (cls.getSchoolId() != null) {
+            return ApiResponse.success(attendanceRepository.findBySchoolIdAndClassIdAndDate(cls.getSchoolId(), classId, date));
+        }
+        return ApiResponse.success(attendanceRepository.findByClassIdAndDate(classId, date));
     }
 
     /** Returns { present, absent, leave, others, total } counts for a class on a date */
     public ApiResponse<Map<String, Object>> getAttendanceSummary(Long classId, LocalDate date) {
-        List<Object[]> rows = attendanceRepository.countByStatusForClassAndDate(classId, date);
-        return ApiResponse.success(buildSummary(rows));
+        ClassRoom cls = classRoomRepository.findById(classId).orElse(null);
+        if (cls != null && cls.getSchoolId() != null) {
+            return ApiResponse.success(buildSummary(attendanceRepository.countByStatusForSchoolAndClassAndDate(cls.getSchoolId(), classId, date)));
+        }
+        return ApiResponse.success(buildSummary(attendanceRepository.countByStatusForClassAndDate(classId, date)));
     }
 
     public ApiResponse<Map<String, Object>> getAttendanceSummary(Long teacherId, Long classId, LocalDate date) {
         ApiResponse<ClassRoom> access = validateClassTeacherAccess(teacherId, classId, false);
         if (!access.isSuccess()) return ApiResponse.error(access.getMessage());
-        return getAttendanceSummary(classId, date);
+        ClassRoom cls = access.getData();
+        if (cls.getSchoolId() != null) {
+            return ApiResponse.success(buildSummary(attendanceRepository.countByStatusForSchoolAndClassAndDate(cls.getSchoolId(), classId, date)));
+        }
+        return ApiResponse.success(buildSummary(attendanceRepository.countByStatusForClassAndDate(classId, date)));
     }
 
     /** Returns { present, absent, leave, others, total } counts for a class over a date range */
     public ApiResponse<Map<String, Object>> getAttendanceSummaryRange(Long classId, LocalDate start, LocalDate end) {
-        List<Object[]> rows = attendanceRepository.countByStatusForClassAndDateRange(classId, start, end);
-        return ApiResponse.success(buildSummary(rows));
+        ClassRoom cls = classRoomRepository.findById(classId).orElse(null);
+        if (cls != null && cls.getSchoolId() != null) {
+            return ApiResponse.success(buildSummary(attendanceRepository.countByStatusForSchoolAndClassAndDateRange(cls.getSchoolId(), classId, start, end)));
+        }
+        return ApiResponse.success(buildSummary(attendanceRepository.countByStatusForClassAndDateRange(classId, start, end)));
     }
 
     public ApiResponse<Map<String, Object>> getAttendanceSummaryRange(Long teacherId, Long classId, LocalDate start, LocalDate end) {
         ApiResponse<ClassRoom> access = validateClassTeacherAccess(teacherId, classId, false);
         if (!access.isSuccess()) return ApiResponse.error(access.getMessage());
-        return getAttendanceSummaryRange(classId, start, end);
+        ClassRoom cls = access.getData();
+        if (cls.getSchoolId() != null) {
+            return ApiResponse.success(buildSummary(attendanceRepository.countByStatusForSchoolAndClassAndDateRange(cls.getSchoolId(), classId, start, end)));
+        }
+        return ApiResponse.success(buildSummary(attendanceRepository.countByStatusForClassAndDateRange(classId, start, end)));
     }
 
     /** Returns list of dates when attendance was marked for a class */
     public ApiResponse<List<LocalDate>> getAttendanceDates(Long classId) {
+        ClassRoom cls = classRoomRepository.findById(classId).orElse(null);
+        if (cls != null && cls.getSchoolId() != null) {
+            return ApiResponse.success(attendanceRepository.findDistinctDatesBySchoolIdAndClassId(cls.getSchoolId(), classId));
+        }
         return ApiResponse.success(attendanceRepository.findDistinctDatesByClassId(classId));
     }
 
     public ApiResponse<List<LocalDate>> getAttendanceDates(Long teacherId, Long classId) {
         ApiResponse<ClassRoom> access = validateClassTeacherAccess(teacherId, classId, false);
         if (!access.isSuccess()) return ApiResponse.error(access.getMessage());
-        return getAttendanceDates(classId);
+        ClassRoom cls = access.getData();
+        if (cls.getSchoolId() != null) {
+            return ApiResponse.success(attendanceRepository.findDistinctDatesBySchoolIdAndClassId(cls.getSchoolId(), classId));
+        }
+        return ApiResponse.success(attendanceRepository.findDistinctDatesByClassId(classId));
     }
 
     public ApiResponse<List<Map<String, Object>>> getAttendanceHistory(Long teacherId, Long classId) {
         ApiResponse<ClassRoom> access = validateClassTeacherAccess(teacherId, classId, false);
         if (!access.isSuccess()) return ApiResponse.error(access.getMessage());
 
+        // Use school-scoped query when schoolId is available on the class
+        ClassRoom classRoom = access.getData();
+        Long schoolId = classRoom != null ? classRoom.getSchoolId() : null;
+        List<Object[]> rows = (schoolId != null)
+                ? attendanceRepository.countByDateAndStatusForSchoolAndClass(schoolId, classId)
+                : attendanceRepository.countByDateAndStatusForClass(classId);
+
         Map<LocalDate, Map<String, Object>> byDate = new LinkedHashMap<>();
-        for (Object[] row : attendanceRepository.countByDateAndStatusForClass(classId)) {
+        for (Object[] row : rows) {
             LocalDate date = (LocalDate) row[0];
             String status = row[1].toString();
             long count = ((Number) row[2]).longValue();
@@ -456,24 +517,30 @@ public class TeacherService {
         ClassRoom classRoom = classRoomRepository.findById(classId).orElse(null);
         if (classRoom == null) return ApiResponse.error("Class not found");
 
-        // A teacher has class access if EITHER:
-        //   (a) teacher.primaryClassId == classId  (set during teacher creation)
-        //   (b) classroom.teacherId == teacher.id  (set during class management or via syncPrimaryClassAssignment)
-        boolean isPrimaryClass       = teacher.getPrimaryClassId() != null && teacher.getPrimaryClassId().equals(classId);
-        boolean isAssignedViaClass   = teacherId.equals(classRoom.getTeacherId());
-        boolean hasClassAccess       = isPrimaryClass || isAssignedViaClass;
+        // (a) primary class assignment (CLASS_TEACHER role)
+        boolean isPrimaryClass     = teacher.getPrimaryClassId() != null && teacher.getPrimaryClassId().equals(classId);
+        // (b) classroom.teacherId points to this teacher
+        boolean isAssignedViaClass = teacherId.equals(classRoom.getTeacherId());
+        // (c) class appears in teacher.classes text field (SUBJECT_TEACHER assignments)
+        boolean isAssignedViaText  = false;
+        if (!isPrimaryClass && !isAssignedViaClass) {
+            ApiResponse<List<ClassRoom>> allClasses = getTeacherClasses(teacherId);
+            if (allClasses.isSuccess()) {
+                isAssignedViaText = allClasses.getData().stream().anyMatch(c -> classId.equals(c.getId()));
+            }
+        }
 
+        boolean hasClassAccess = isPrimaryClass || isAssignedViaClass || isAssignedViaText;
         if (!hasClassAccess) {
-            return ApiResponse.error("You are not the class teacher for this class");
+            return ApiResponse.error("You are not assigned to this class");
         }
 
         if (requireClassTeacher) {
             boolean isClassTeacherType = "CLASS_TEACHER".equalsIgnoreCase(teacher.getTeacherType())
                     || "BOTH".equalsIgnoreCase(teacher.getTeacherType());
-            // If the classroom explicitly names this teacher, treat them as class teacher
-            // regardless of the teacherType field (handles cases where type was not set correctly)
-            if (!isClassTeacherType && !isAssignedViaClass) {
-                return ApiResponse.error("Only class teachers can manage attendance");
+            // Allow any teacher who has a legitimate class assignment (all three paths above)
+            if (!isClassTeacherType && !isAssignedViaClass && !isAssignedViaText) {
+                return ApiResponse.error("You are not assigned to this class");
             }
         }
 
@@ -519,10 +586,19 @@ public class TeacherService {
     // ── Assignments ────────────────────────────────────────────────────────────
 
     public ApiResponse<List<Assignment>> getTeacherAssignments(Long teacherId) {
+        Teacher teacher = teacherRepository.findById(teacherId).orElse(null);
+        if (teacher != null && teacher.getSchoolId() != null) {
+            return ApiResponse.success(assignmentRepository.findByTeacherIdAndSchoolId(teacherId, teacher.getSchoolId()));
+        }
         return ApiResponse.success(assignmentRepository.findByTeacherId(teacherId));
     }
 
     public ApiResponse<Assignment> createAssignment(Assignment assignment) {
+        // Stamp schoolId from the teacher record so the record is always school-scoped
+        if (assignment.getTeacherId() != null && assignment.getSchoolId() == null) {
+            teacherRepository.findById(assignment.getTeacherId())
+                    .ifPresent(t -> assignment.setSchoolId(t.getSchoolId()));
+        }
         Assignment saved = assignmentRepository.save(assignment);
         return ApiResponse.success("Assignment created", saved);
     }
@@ -550,10 +626,19 @@ public class TeacherService {
     // ── Marks ──────────────────────────────────────────────────────────────────
 
     public ApiResponse<List<Marks>> getMarksByStudent(Long studentId) {
+        Student student = studentRepository.findById(studentId).orElse(null);
+        if (student != null && student.getSchoolId() != null) {
+            return ApiResponse.success(marksRepository.findByStudentIdAndSchoolId(studentId, student.getSchoolId()));
+        }
         return ApiResponse.success(marksRepository.findByStudentId(studentId));
     }
 
     public ApiResponse<Marks> addMarks(Marks marks) {
+        // Stamp schoolId from the teacher record so marks are always school-scoped
+        if (marks.getTeacherId() != null && marks.getSchoolId() == null) {
+            teacherRepository.findById(marks.getTeacherId())
+                    .ifPresent(t -> marks.setSchoolId(t.getSchoolId()));
+        }
         Marks saved = marksRepository.save(marks);
         return ApiResponse.success("Marks saved", saved);
     }

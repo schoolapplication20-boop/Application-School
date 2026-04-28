@@ -17,6 +17,11 @@ public interface MarksRepository extends JpaRepository<Marks, Long> {
     List<Marks> findByStudentIdAndExamType(Long studentId, String examType);
     List<Marks> findByTeacherId(Long teacherId);
 
+    // School-scoped queries
+    List<Marks> findByStudentIdAndSchoolId(Long studentId, Long schoolId);
+    List<Marks> findByTeacherIdAndSchoolId(Long teacherId, Long schoolId);
+    List<Marks> findBySchoolIdOrderByCreatedAtDesc(Long schoolId);
+
     @Query("SELECT AVG((CAST(m.marks AS double) / m.maxMarks) * 100) FROM Marks m WHERE m.studentId = :sid AND m.maxMarks > 0")
     Double findAveragePercentageByStudentId(@Param("sid") Long studentId);
 

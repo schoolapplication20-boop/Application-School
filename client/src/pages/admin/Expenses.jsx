@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '../../components/Layout';
+import Toast from '../../components/Toast';
 import { adminAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
@@ -53,7 +54,7 @@ function StatusBadge({ status }) {
 
 // ─── Expense Form Modal ───────────────────────────────────────────────────────
 
-function ExpenseModal({ initial, addedBy, addedById, onClose, onSaved }) {
+function ExpenseModal({ initial, addedBy, addedById, onClose, onSaved, onError }) {
   const isEdit = !!initial;
   const [form, setForm] = useState(
     isEdit
@@ -83,18 +84,30 @@ function ExpenseModal({ initial, addedBy, addedById, onClose, onSaved }) {
       const payload = {
         title:       form.title.trim(),
         amount:      parseFloat(form.amount),
-        date:        form.date,
+        date:        form.date,           // already ISO format YYYY-MM-DD from <input type="date">
         paymentMode: form.paymentMode,
         status:      form.status,
         description: form.description.trim() || null,
         addedBy,
         addedById,
       };
-      if (isEdit) await adminAPI.updateExpense(initial.id, payload);
-      else        await adminAPI.createExpense(payload);
-      onSaved();
+      let res;
+      if (isEdit) res = await adminAPI.updateExpense(initial.id, payload);
+      else        res = await adminAPI.createExpense(payload);
+
+      // Check backend success flag (ApiResponse wrapper)
+      const backendOk = res?.data?.success !== false;
+      if (!backendOk) {
+        const msg = res?.data?.message || 'Failed to save expense.';
+        setErr(msg);
+        if (onError) onError(msg);
+        return;
+      }
+      onSaved(isEdit ? 'Expense updated successfully' : 'Expense added successfully');
     } catch (ex) {
-      setErr(ex?.response?.data?.error || ex?.response?.data?.message || 'Failed to save. Please try again.');
+      const msg = ex?.response?.data?.message || ex?.response?.data?.error || 'Failed to save expense. Please try again.';
+      setErr(msg);
+      if (onError) onError(msg);
     } finally {
       setSaving(false);
     }
@@ -286,6 +299,12 @@ export default function Expenses() {
   const [records,  setRecords]  = useState([]);
   const [summary,  setSummary]  = useState(null);
   const [loading,  setLoading]  = useState(true);
+  const [toast,    setToast]    = useState(null);
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3500);
+  };
 
   // filters
   const [search,       setSearch]       = useState('');
@@ -352,6 +371,7 @@ export default function Expenses() {
 
   return (
     <Layout pageTitle="Expenses">
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
       {/* Page header */}
       <div className="page-header" style={{ marginBottom: '20px' }}>
@@ -557,7 +577,8 @@ export default function Expenses() {
           addedBy={user?.name || 'Admin'}
           addedById={user?.id}
           onClose={() => setFormOpen(false)}
-          onSaved={() => { setFormOpen(false); fetchAll(); }}
+          onSaved={(msg) => { setFormOpen(false); fetchAll(); showToast(msg || 'Expense added successfully'); }}
+          onError={(msg) => showToast(msg, 'error')}
         />
       )}
 
@@ -565,7 +586,7 @@ export default function Expenses() {
         <DeleteModal
           expense={deleteTarget}
           onClose={() => setDeleteTarget(null)}
-          onDeleted={() => { setDeleteTarget(null); fetchAll(); }}
+          onDeleted={() => { setDeleteTarget(null); fetchAll(); showToast('Expense deleted', 'warning'); }}
         />
       )}
     </Layout>

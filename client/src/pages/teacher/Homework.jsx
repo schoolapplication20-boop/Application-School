@@ -23,22 +23,16 @@ export default function Homework() {
     setTimeout(() => setToast(null), 3500);
   };
 
-  // ── Teacher's class-subject assignments ──────────────────────────────────
-  // subjectAssignments = [{ id, classSection, subject, teacherName }]
-  // Falls back to myClasses+profile if no subject assignments exist.
-  const [subjectAssignments, setSubjectAssignments] = useState([]);
-  const [myClasses, setMyClasses]                   = useState([]);
-  const [teacherProfile, setTeacherProfile]         = useState(null);
-  const [classesLoading, setClassesLoading]         = useState(true);
+  const [myClasses, setMyClasses]       = useState([]);
+  const [teacherProfile, setTeacherProfile] = useState(null);
+  const [classesLoading, setClassesLoading] = useState(true);
 
   useEffect(() => {
     setClassesLoading(true);
     Promise.all([
-      teacherAPI.getMySubjectAssignments().catch(() => null),
       teacherAPI.getMyClasses().catch(() => null),
       teacherAPI.getMyProfile().catch(() => null),
-    ]).then(([assignRes, classesRes, profileRes]) => {
-      setSubjectAssignments(assignRes?.data?.data ?? []);
+    ]).then(([classesRes, profileRes]) => {
       setMyClasses(classesRes?.data?.data ?? []);
       setTeacherProfile(profileRes?.data?.data ?? null);
     }).finally(() => setClassesLoading(false));
@@ -88,31 +82,11 @@ export default function Homework() {
   };
 
   // ── Class + Subject option building ────────────────────────────────────────
-  // When admin assignments exist: group by classSection so the dropdown shows
-  // unique classes (not one entry per subject).  Subjects for the selected
-  // class are auto-filled into the subject tag input but remain fully editable.
-  const useAssignments = subjectAssignments.length > 0;
-
-  // Map: classSection → [subject1, subject2, …]
-  const assignmentSubjectMap = subjectAssignments.reduce((acc, a) => {
-    const subjects = (a.subject || '').split(',').map(s => s.trim()).filter(Boolean);
-    const existing = acc[a.classSection] || [];
-    acc[a.classSection] = [...new Set([...existing, ...subjects])];
-    return acc;
-  }, {});
-
-  const classOptions = useAssignments
-    ? Object.keys(assignmentSubjectMap).map(cs => ({
-        value: cs,
-        label: cs,
-        classSection: cs,
-        subjects: assignmentSubjectMap[cs],
-      }))
-    : myClasses.map(cls => ({
-        value: `id:${cls.id}`,
-        label: `${cls.name}${cls.section ? ` – ${cls.section}` : ''}`,
-        cls,
-      }));
+  const classOptions = myClasses.map(cls => ({
+    value: `id:${cls.id}`,
+    label: `${cls.name}${cls.section ? ` – ${cls.section}` : ''}`,
+    cls,
+  }));
 
   const handleClassSelect = (e) => {
     const val = e.target.value;
@@ -121,40 +95,17 @@ export default function Homework() {
       setSubjectInput('');
       return;
     }
-
-    if (useAssignments) {
-      // val IS the classSection string (e.g. "Nursery-A")
-      const opt = classOptions.find(o => o.value === val);
-      if (!opt) return;
-      // Split classSection on last '-' to separate name from section
-      const lastDash = opt.classSection.lastIndexOf('-');
-      const className = lastDash > 0 ? opt.classSection.slice(0, lastDash).trim() : opt.classSection;
-      const section   = lastDash > 0 ? opt.classSection.slice(lastDash + 1).trim() : '';
-      setForm(prev => ({
-        ...prev,
-        className,
-        section,
-        classId: val,
-        subject: opt.subjects.join(', '),   // pre-fill all assigned subjects
-      }));
-      setSubjectInput('');
-    } else {
-      const cls = myClasses.find(c => `id:${c.id}` === val);
-      if (!cls) return;
-      setForm(prev => ({
-        ...prev,
-        className: cls.name,
-        section:   cls.section || '',
-        classId:   val,
-        subject:   prev.subject,
-      }));
-    }
+    const cls = myClasses.find(c => `id:${c.id}` === val);
+    if (!cls) return;
+    setForm(prev => ({
+      ...prev,
+      className: cls.name,
+      section:   cls.section || '',
+      classId:   val,
+      subject:   prev.subject,
+    }));
   };
 
-  // Subjects assigned to the currently selected class (for hint display)
-  const assignedSubjectsForClass = useAssignments && form.classId
-    ? (assignmentSubjectMap[form.classId] || [])
-    : [];
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -343,13 +294,6 @@ export default function Homework() {
                       <option key={o.value} value={o.value}>{o.label}</option>
                     ))}
                   </select>
-                  {/* Hint showing how many subjects are assigned to this class */}
-                  {useAssignments && form.classId && assignedSubjectsForClass.length > 0 && (
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 5, padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: '#f0fff4', color: '#276749', border: '1px solid #c6f6d5' }}>
-                      <span className="material-icons" style={{ fontSize: 12 }}>verified</span>
-                      {assignedSubjectsForClass.length} subject{assignedSubjectsForClass.length > 1 ? 's' : ''} assigned to this class
-                    </div>
-                  )}
                 </div>
               )}
 
@@ -399,18 +343,6 @@ export default function Homework() {
                     />
                   </div>
 
-                  {/* Show assigned subjects as quick-add hints when a class is selected */}
-                  {assignedSubjectsForClass.length > 0 && (
-                    <div style={{ marginTop: 5, display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
-                      <span style={{ fontSize: 10, color: '#a0aec0', fontWeight: 600 }}>Assigned:</span>
-                      {assignedSubjectsForClass.filter(s => !subjectTags.includes(s)).map(s => (
-                        <button key={s} type="button" onClick={() => addSubjectTag(s)}
-                          style={{ fontSize: 11, padding: '2px 8px', borderRadius: 10, border: '1px dashed #76C442', background: 'transparent', color: '#276749', cursor: 'pointer', fontWeight: 600 }}>
-                          + {s}
-                        </button>
-                      ))}
-                    </div>
-                  )}
                 </div>
                 <div className="col-6">
                   <label className="form-label small fw-medium">Date</label>

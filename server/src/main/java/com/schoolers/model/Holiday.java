@@ -32,6 +32,9 @@ public class Holiday {
     @Builder.Default
     private boolean recurring = false;
 
+    @Column(name = "school_id")
+    private Long schoolId;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

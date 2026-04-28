@@ -47,6 +47,9 @@ public class Assignment {
     @Column(name = "file_url")
     private String fileUrl;
 
+    @Column(name = "school_id")
+    private Long schoolId;
+
     @Enumerated(EnumType.STRING)
     @Column(length = 20)
     @Builder.Default

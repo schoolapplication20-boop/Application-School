@@ -13,6 +13,10 @@ public interface TransportFeeRepository extends JpaRepository<TransportFee, Long
     List<TransportFee> findByStudentId(Long studentId);
     List<TransportFee> findByStatus(TransportFee.Status status);
 
+    // School-scoped queries
+    List<TransportFee> findBySchoolIdOrderByCreatedAtDesc(Long schoolId);
+    List<TransportFee> findByStudentIdAndSchoolId(Long studentId, Long schoolId);
+
     @Modifying @Transactional
     void deleteByStudentId(Long studentId);
 }

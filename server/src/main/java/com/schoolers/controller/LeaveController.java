@@ -83,13 +83,15 @@ public class LeaveController {
                 : ResponseEntity.badRequest().body(response);
     }
 
-    // ── Legacy: by requesterId path variable (parent / teacher self) ───────
+    // ── Teacher: own leave history (school-scoped) ─────────────────────────
     @GetMapping("/my/{requesterId}")
     @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN', 'SUPER_ADMIN', 'PARENT')")
     public ResponseEntity<ApiResponse<List<LeaveRequest>>> getMyLeaves(
             @PathVariable Long requesterId,
-            @RequestParam(defaultValue = "STUDENT") String type) {
-        return ResponseEntity.ok(leaveService.getLeavesByRequester(requesterId, type));
+            @RequestParam(defaultValue = "STUDENT") String type,
+            Authentication auth) {
+        Long schoolId = getCurrentSchoolId(auth);
+        return ResponseEntity.ok(leaveService.getLeavesByRequester(requesterId, type, schoolId));
     }
 
     // ── Legacy: generic create (teacher / parent self-leave) ───────────────

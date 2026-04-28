@@ -88,13 +88,17 @@ public class ClassDiaryController {
     public ResponseEntity<?> getForTeacher(Authentication auth) {
         Optional<Teacher> teacherOpt = resolveTeacher(auth);
         if (teacherOpt.isEmpty()) return ResponseEntity.status(403).body(ApiResponse.error("Teacher profile not found"));
-        return ResponseEntity.ok(diaryService.getForTeacher(teacherOpt.get().getId()));
+        return ResponseEntity.ok(diaryService.getForTeacher(teacherOpt.get().getId(), getCurrentSchoolId(auth)));
     }
 
     /** Teacher / Admin: create a diary entry */
     @PostMapping
     @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<?> create(@RequestBody Map<String, Object> body, Authentication auth) {
+        // Always inject schoolId from JWT — never trust the client-supplied value
+        Long schoolId = getCurrentSchoolId(auth);
+        if (schoolId != null) body.put("schoolId", schoolId);
+
         // Inject teacherId / teacherName from JWT so frontend cannot spoof them
         Optional<Teacher> teacherOpt = resolveTeacher(auth);
         if (teacherOpt.isPresent()) {

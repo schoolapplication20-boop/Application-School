@@ -31,6 +31,7 @@ export default function Attendance() {
   const [loadingClasses, setLoadingClasses] = useState(true);
   const [primaryClass, setPrimaryClass]     = useState(null);   // teacher's designated class
   const [noClassAssigned, setNoClassAssigned] = useState(false);
+  const [teacherType, setTeacherType]       = useState('SUBJECT_TEACHER');
   const [toast, setToast]                   = useState(null);
 
   // History state
@@ -51,9 +52,11 @@ export default function Attendance() {
       teacherAPI.getMyProfile().catch(() => null),
       teacherAPI.getMyClasses().catch(() => null),
     ]).then(([profileRes, classesRes]) => {
-      const profile = profileRes?.data?.data ?? null;
-      const list    = classesRes?.data?.data  ?? [];
+      const profile     = profileRes?.data?.data ?? null;
+      const list        = classesRes?.data?.data  ?? [];
+      const resolvedType = profile?.teacherType || 'SUBJECT_TEACHER';
 
+      setTeacherType(resolvedType);
       setClasses(list);
 
       if (!list.length) {
@@ -61,11 +64,14 @@ export default function Attendance() {
         return;
       }
 
-      // Resolve primary class: prefer teacher.primaryClassId, else first in list
-      const primaryId = profile?.primaryClassId ?? profile?.primaryClass?.id ?? null;
-      const primary   = primaryId ? (list.find(c => c.id === primaryId) ?? list[0]) : list[0];
+      // For CLASS_TEACHER/BOTH: prefer primaryClassId; for SUBJECT_TEACHER: first class in list
+      const isClassTeacher = resolvedType === 'CLASS_TEACHER' || resolvedType === 'BOTH';
+      const primaryId = isClassTeacher
+        ? (profile?.primaryClassId ?? profile?.primaryClass?.id ?? null)
+        : null;
+      const primary = primaryId ? (list.find(c => c.id === primaryId) ?? list[0]) : list[0];
 
-      setPrimaryClass(primary);
+      setPrimaryClass(isClassTeacher ? primary : null);
       setSelectedClass(primary);
     }).finally(() => setLoadingClasses(false));
   }, []);
@@ -191,7 +197,7 @@ export default function Attendance() {
           <span className="material-icons" style={{ fontSize: 52, color: '#e2e8f0', display: 'block', marginBottom: 12 }}>class</span>
           <h3 style={{ color: '#4a5568', marginBottom: 8 }}>No Class Assigned</h3>
           <p style={{ color: '#718096', fontSize: 14, maxWidth: 400, margin: '0 auto' }}>
-            You have not been assigned as a class teacher yet. Please contact the administrator to assign you to a class and section.
+            No classes have been assigned to you yet. Please contact the administrator to assign classes to your profile.
           </p>
         </div>
       </Layout>
@@ -208,24 +214,41 @@ export default function Attendance() {
           <h1>Attendance Management</h1>
           <p>Mark and track student attendance for your assigned classes</p>
         </div>
-        {/* Class Teacher Badge */}
-        {primaryClass && (
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 10,
-            background: 'linear-gradient(135deg, #76C44215, #76C44230)',
-            border: '1.5px solid #76C44250', borderRadius: 12,
-            padding: '10px 18px',
-          }}>
-            <div style={{ width: 36, height: 36, borderRadius: 9, background: '#76C442', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <span className="material-icons" style={{ color: '#fff', fontSize: 18 }}>school</span>
-            </div>
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 600, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Class Teacher</div>
-              <div style={{ fontSize: 15, fontWeight: 800, color: '#276749' }}>
-                {classLabel(primaryClass)}
+        {/* Role Badge — Class Teacher shows their primary class; Subject Teacher shows their role */}
+        {selectedClass && (
+          primaryClass ? (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              background: 'linear-gradient(135deg, #76C44215, #76C44230)',
+              border: '1.5px solid #76C44250', borderRadius: 12,
+              padding: '10px 18px',
+            }}>
+              <div style={{ width: 36, height: 36, borderRadius: 9, background: '#76C442', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <span className="material-icons" style={{ color: '#fff', fontSize: 18 }}>assignment_ind</span>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  {teacherType === 'BOTH' ? 'Class Teacher + Subject Teacher' : 'Class Teacher'}
+                </div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: '#276749' }}>{classLabel(primaryClass)}</div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              background: 'linear-gradient(135deg, #805ad515, #805ad530)',
+              border: '1.5px solid #805ad550', borderRadius: 12,
+              padding: '10px 18px',
+            }}>
+              <div style={{ width: 36, height: 36, borderRadius: 9, background: '#805ad5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <span className="material-icons" style={{ color: '#fff', fontSize: 18 }}>menu_book</span>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Subject Teacher</div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: '#553c9a' }}>{classLabel(selectedClass)}</div>
+              </div>
+            </div>
+          )
         )}
       </div>
 

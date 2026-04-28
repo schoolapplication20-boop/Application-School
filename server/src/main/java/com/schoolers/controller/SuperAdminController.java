@@ -38,6 +38,17 @@ public class SuperAdminController {
                 .orElse(null);
     }
 
+    private static String strVal(Map<String, Object> m, String key) {
+        Object v = m.get(key);
+        return v != null ? v.toString().trim() : "";
+    }
+
+    private static Integer intVal(Map<String, Object> m, String key) {
+        Object v = m.get(key);
+        if (v == null) return null;
+        try { return Integer.parseInt(v.toString()); } catch (Exception e) { return null; }
+    }
+
     // ── GET /api/superadmin/admins ────────────────────────────────────────────
     @GetMapping("/admins")
     public ResponseEntity<ApiResponse<List<User>>> getAdmins(Authentication auth) {
@@ -89,14 +100,15 @@ public class SuperAdminController {
     // Creates a stub school linked to the new super admin (isSetupCompleted=false).
     @PostMapping("/super-admins")
     public ResponseEntity<ApiResponse<AdminCreatedResponse>> createSuperAdmin(
-            @RequestBody Map<String, String> body, Authentication auth) {
+            @RequestBody Map<String, Object> body, Authentication auth) {
 
-        String name        = body.getOrDefault("name",        "").trim();
-        String email       = body.getOrDefault("email",       "").trim();
-        String mobile      = body.getOrDefault("mobile",      "").trim();
-        String schoolName  = body.getOrDefault("schoolName",  "").trim();
-        String schoolCode  = body.getOrDefault("schoolCode",  "").trim();
-        String permissions = body.get("permissions");   // JSON string of module toggles
+        String name        = strVal(body, "name");
+        String email       = strVal(body, "email");
+        String mobile      = strVal(body, "mobile");
+        String schoolName  = strVal(body, "schoolName");
+        String schoolCode  = strVal(body, "schoolCode");
+        String permissions = body.get("permissions") != null ? body.get("permissions").toString() : null;
+        Integer schoolNumber = intVal(body, "schoolId");
 
         if (name.isEmpty())
             return ResponseEntity.badRequest().body(ApiResponse.error("Name is required"));
@@ -106,11 +118,13 @@ public class SuperAdminController {
             return ResponseEntity.badRequest().body(ApiResponse.error("School name is required"));
         if (schoolCode.isEmpty())
             return ResponseEntity.badRequest().body(ApiResponse.error("School code is required"));
+        if (schoolNumber == null || schoolNumber < 1)
+            return ResponseEntity.badRequest().body(ApiResponse.error("School ID is required and must be a positive number"));
 
         Long callerSchoolId = getCurrentSchoolId(auth);
         ApiResponse<AdminCreatedResponse> response = superAdminService.createSuperAdmin(
                 name, email, mobile.isEmpty() ? null : mobile,
-                schoolName, schoolCode, permissions, callerSchoolId);
+                schoolName, schoolCode, permissions, schoolNumber, callerSchoolId);
 
         return response.isSuccess()
                 ? ResponseEntity.status(201).body(response)

@@ -16,7 +16,7 @@ const getCategory = (name) => {
 // Used by the category filter in the table — derived automatically from class names via getCategory()
 const CATEGORIES = ['Pre-Primary', 'Primary', 'Secondary'];
 
-const initialForm = { className: '', section: '', teacher: '', capacity: '' };
+const initialForm = { className: '', section: '', teacher: '', teacherId: '', capacity: '' };
 
 const iStyle = { padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', background: '#fff', outline: 'none', fontFamily: 'Poppins, sans-serif' };
 
@@ -53,13 +53,14 @@ const Classes = () => {
 
   // ── Map backend ClassRoom to frontend shape ───────────────────────────────
   const mapClass = (c) => ({
-    id:       c.id,
-    name:     c.name,
-    section:  c.section,
-    teacher:  c.teacherName || '',
-    capacity: c.capacity    || 40,
-    category: getCategory(c.name),
-    isActive: c.isActive,
+    id:        c.id,
+    name:      c.name,
+    section:   c.section,
+    teacher:   c.teacherName || '',
+    teacherId: c.teacherId   || '',
+    capacity:  c.capacity    || 40,
+    category:  getCategory(c.name),
+    isActive:  c.isActive,
   });
 
   const loadClasses = () => {
@@ -84,10 +85,16 @@ const Classes = () => {
       .finally(() => setStudLoading(false));
   };
 
-  // ── Load classes + students from backend ─────────────────────────────────
+  const [teacherList, setTeacherList] = useState([]);
+
+  // ── Load classes + students + teachers from backend ──────────────────────
   useEffect(() => {
     loadClasses();
     loadStudents();
+    adminAPI.getTeachers().then(res => {
+      const data = res.data?.data ?? [];
+      setTeacherList(Array.isArray(data) ? data.filter(t => t.isActive !== false) : []);
+    }).catch(() => {});
   }, []);
 
   // ── Compute enrolled count per class from actual students ────────────────
@@ -234,10 +241,12 @@ const Classes = () => {
     if (!name)    { showToast('Class name is required', 'error');  return; }
     if (!section) { showToast('Section is required', 'error');     return; }
 
+    const selectedTeacher = teacherList.find(t => String(t.id) === String(formData.teacherId));
     const payload = {
       name,
       section,
-      teacherName: formData.teacher  || '',
+      teacherId:   formData.teacherId ? Number(formData.teacherId) : null,
+      teacherName: selectedTeacher?.name || formData.teacher || '',
       capacity:    +formData.capacity || 40,
       isActive:    true,
     };
@@ -263,7 +272,7 @@ const Classes = () => {
 
   const openEdit = (c) => {
     setEditClass(c);
-    setFormData({ className: c.name, section: c.section, teacher: c.teacher || '', capacity: c.capacity || '' });
+    setFormData({ className: c.name, section: c.section, teacher: c.teacher || '', teacherId: c.teacherId ? String(c.teacherId) : '', capacity: c.capacity || '' });
     setShowModal(true);
   };
 
@@ -492,21 +501,38 @@ const Classes = () => {
 
               {/* Optional fields */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                {[
-                  { field: 'teacher',  label: 'Class Teacher (Optional)', placeholder: 'Teacher name' },
-                  { field: 'capacity', label: 'Capacity (Optional)',       placeholder: 'Max students', type: 'number' },
-                ].map(f => (
-                  <div key={f.field}>
-                    <label style={{ fontSize: 13, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>{f.label}</label>
-                    <input
-                      type={f.type || 'text'}
-                      style={{ ...iStyle, width: '100%', boxSizing: 'border-box' }}
-                      placeholder={f.placeholder}
-                      value={formData[f.field] || ''}
-                      onChange={e => setFormData({ ...formData, [f.field]: e.target.value })}
-                    />
-                  </div>
-                ))}
+                <div>
+                  <label style={{ fontSize: 13, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>
+                    Class Teacher (Optional)
+                  </label>
+                  <select
+                    style={{ ...iStyle, width: '100%', boxSizing: 'border-box', cursor: 'pointer' }}
+                    value={formData.teacherId || ''}
+                    onChange={e => {
+                      const t = teacherList.find(t => String(t.id) === e.target.value);
+                      setFormData({ ...formData, teacherId: e.target.value, teacher: t?.name || '' });
+                    }}
+                  >
+                    <option value="">— No teacher assigned —</option>
+                    {teacherList.map(t => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}{t.employeeId ? ` (${t.employeeId})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: 13, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>
+                    Capacity (Optional)
+                  </label>
+                  <input
+                    type="number"
+                    style={{ ...iStyle, width: '100%', boxSizing: 'border-box' }}
+                    placeholder="Max students"
+                    value={formData.capacity || ''}
+                    onChange={e => setFormData({ ...formData, capacity: e.target.value })}
+                  />
+                </div>
               </div>
             </div>
             <div className="modal-footer">

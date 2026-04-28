@@ -22,6 +22,51 @@ public class DatabaseMigration implements CommandLineRunner {
     public void run(String... args) {
         System.out.println("[DatabaseMigration] Running expense table patches...");
 
+        // ── students: drop old global roll-number constraint, ensure school-scoped one ──
+        // If the DB was created before school_id was part of the unique key, a constraint
+        // like UNIQUE(roll_number, class_name, section) without school_id may still exist.
+        // That causes cross-school duplicate errors at the DB level.
+        exec("ALTER TABLE students DROP CONSTRAINT IF EXISTS students_roll_number_class_name_section_key");
+        exec("ALTER TABLE students DROP CONSTRAINT IF EXISTS uq_roll_class_section");
+        // Dynamically drop any remaining unique constraints on students that cover roll_number
+        // but do NOT include school_id (catches any auto-generated Hibernate constraint names).
+        execRaw(
+            "DO $$ DECLARE rec RECORD; BEGIN " +
+            "  FOR rec IN " +
+            "    SELECT con.conname FROM pg_constraint con " +
+            "    JOIN pg_class rel ON rel.oid = con.conrelid " +
+            "    WHERE rel.relname = 'students' AND con.contype = 'u' " +
+            "      AND con.conname != 'uq_roll_class_section_school' " +
+            "      AND EXISTS (" +
+            "        SELECT 1 FROM pg_attribute att " +
+            "        WHERE att.attrelid = con.conrelid " +
+            "          AND att.attnum = ANY(con.conkey) " +
+            "          AND att.attname = 'roll_number'" +
+            "      ) " +
+            "      AND NOT EXISTS (" +
+            "        SELECT 1 FROM pg_attribute att " +
+            "        WHERE att.attrelid = con.conrelid " +
+            "          AND att.attnum = ANY(con.conkey) " +
+            "          AND att.attname = 'school_id'" +
+            "      ) " +
+            "  LOOP " +
+            "    EXECUTE 'ALTER TABLE students DROP CONSTRAINT IF EXISTS \"' || rec.conname || '\"'; " +
+            "  END LOOP; " +
+            "END $$"
+        );
+        // Ensure the correct school-scoped constraint exists.
+        execRaw(
+            "DO $$ BEGIN " +
+            "  IF NOT EXISTS (" +
+            "    SELECT 1 FROM pg_constraint WHERE conname = 'uq_roll_class_section_school'" +
+            "  ) THEN " +
+            "    ALTER TABLE students ADD CONSTRAINT uq_roll_class_section_school " +
+            "      UNIQUE (roll_number, class_name, section, school_id); " +
+            "  END IF; " +
+            "END $$"
+        );
+        System.out.println("[DatabaseMigration] students roll-number constraint patched.");
+
         // ── Classrooms: fix multi-tenant unique constraint ─────────────────────
         // Old schema had UNIQUE(class_name, section) without school_id, which
         // prevents the same class/section from existing in two different schools.
@@ -186,6 +231,177 @@ public class DatabaseMigration implements CommandLineRunner {
         exec("ALTER TABLE teachers ALTER COLUMN subject TYPE TEXT");
         exec("ALTER TABLE teacher_class_assignments ALTER COLUMN subject TYPE TEXT");
         System.out.println("[DatabaseMigration] subject columns widened to TEXT.");
+
+        // ── leave_requests: ensure school_id column and indexes exist ─────────
+        exec("ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS school_id BIGINT");
+        exec("CREATE INDEX IF NOT EXISTS idx_leave_requests_school_id ON leave_requests(school_id)");
+        exec("CREATE INDEX IF NOT EXISTS idx_leave_requests_requester ON leave_requests(requester_id, requester_type)");
+        System.out.println("[DatabaseMigration] leave_requests school_id column and indexes ensured.");
+
+        // ── exam_schedules: ensure school_id column exists for multi-tenant isolation ──
+        exec("ALTER TABLE exam_schedules ADD COLUMN IF NOT EXISTS school_id BIGINT");
+        exec("CREATE INDEX IF NOT EXISTS idx_exam_schedules_school_id ON exam_schedules(school_id)");
+        exec("CREATE INDEX IF NOT EXISTS idx_exam_schedules_class_school ON exam_schedules(class_name, school_id)");
+        System.out.println("[DatabaseMigration] exam_schedules school_id column and indexes ensured.");
+
+        // ── assignments: add school_id for tenant isolation ───────────────────────
+        exec("ALTER TABLE assignments ADD COLUMN IF NOT EXISTS school_id BIGINT");
+        exec("CREATE INDEX IF NOT EXISTS idx_assignments_school_id ON assignments(school_id)");
+        System.out.println("[DatabaseMigration] assignments school_id ensured.");
+
+        // ── admission_applications: add school_id ─────────────────────────────────
+        exec("ALTER TABLE admission_applications ADD COLUMN IF NOT EXISTS school_id BIGINT");
+        exec("CREATE INDEX IF NOT EXISTS idx_admission_applications_school_id ON admission_applications(school_id)");
+        System.out.println("[DatabaseMigration] admission_applications school_id ensured.");
+
+        // ── certificates: add school_id ───────────────────────────────────────────
+        exec("ALTER TABLE certificates ADD COLUMN IF NOT EXISTS school_id BIGINT");
+        exec("CREATE INDEX IF NOT EXISTS idx_certificates_school_id ON certificates(school_id)");
+        System.out.println("[DatabaseMigration] certificates school_id ensured.");
+
+        // ── hall_tickets: add school_id ───────────────────────────────────────────
+        exec("ALTER TABLE hall_tickets ADD COLUMN IF NOT EXISTS school_id BIGINT");
+        exec("CREATE INDEX IF NOT EXISTS idx_hall_tickets_school_id ON hall_tickets(school_id)");
+        System.out.println("[DatabaseMigration] hall_tickets school_id ensured.");
+
+        // ── holidays: add school_id ───────────────────────────────────────────────
+        exec("ALTER TABLE holidays ADD COLUMN IF NOT EXISTS school_id BIGINT");
+        exec("CREATE INDEX IF NOT EXISTS idx_holidays_school_id ON holidays(school_id)");
+        System.out.println("[DatabaseMigration] holidays school_id ensured.");
+
+        // ── student_fee_assignments: add school_id, fix unique constraint ─────────
+        exec("ALTER TABLE student_fee_assignments ADD COLUMN IF NOT EXISTS school_id BIGINT");
+        exec("ALTER TABLE student_fee_assignments DROP CONSTRAINT IF EXISTS student_fee_assignments_student_id_academic_year_key");
+        exec("ALTER TABLE student_fee_assignments DROP CONSTRAINT IF EXISTS uq_student_fee_school");
+        execRaw(
+            "DO $$ BEGIN " +
+            "  IF NOT EXISTS (" +
+            "    SELECT 1 FROM pg_constraint WHERE conname = 'uq_student_fee_school'" +
+            "  ) THEN " +
+            "    ALTER TABLE student_fee_assignments ADD CONSTRAINT uq_student_fee_school " +
+            "      UNIQUE (student_id, academic_year, school_id); " +
+            "  END IF; " +
+            "END $$"
+        );
+        exec("CREATE INDEX IF NOT EXISTS idx_student_fee_assignments_school_id ON student_fee_assignments(school_id)");
+        System.out.println("[DatabaseMigration] student_fee_assignments school_id and constraint ensured.");
+
+        // ── student_transport: add school_id ──────────────────────────────────────
+        exec("ALTER TABLE student_transport ADD COLUMN IF NOT EXISTS school_id BIGINT");
+        exec("CREATE INDEX IF NOT EXISTS idx_student_transport_school_id ON student_transport(school_id)");
+        System.out.println("[DatabaseMigration] student_transport school_id ensured.");
+
+        // ── transport_buses: add school_id, relax global unique(bus_no) ──────────
+        exec("ALTER TABLE transport_buses ADD COLUMN IF NOT EXISTS school_id BIGINT");
+        exec("ALTER TABLE transport_buses DROP CONSTRAINT IF EXISTS transport_buses_bus_no_key");
+        exec("CREATE INDEX IF NOT EXISTS idx_transport_buses_school_id ON transport_buses(school_id)");
+        execRaw(
+            "DO $$ BEGIN " +
+            "  IF NOT EXISTS (" +
+            "    SELECT 1 FROM pg_constraint WHERE conname = 'uq_transport_buses_bus_no_school'" +
+            "  ) THEN " +
+            "    ALTER TABLE transport_buses ADD CONSTRAINT uq_transport_buses_bus_no_school " +
+            "      UNIQUE (bus_no, school_id); " +
+            "  END IF; " +
+            "END $$"
+        );
+        System.out.println("[DatabaseMigration] transport_buses school_id ensured.");
+
+        // ── transport_routes, drivers, stops, fees, student_assignments ───────────
+        exec("ALTER TABLE transport_routes ADD COLUMN IF NOT EXISTS school_id BIGINT");
+        exec("CREATE INDEX IF NOT EXISTS idx_transport_routes_school_id ON transport_routes(school_id)");
+
+        exec("ALTER TABLE transport_routes ADD COLUMN IF NOT EXISTS route_number VARCHAR(20)");
+        exec("ALTER TABLE transport_routes ADD COLUMN IF NOT EXISTS bus_id BIGINT");
+        exec("ALTER TABLE transport_routes ADD COLUMN IF NOT EXISTS bus_no VARCHAR(20)");
+        exec("ALTER TABLE transport_routes ADD COLUMN IF NOT EXISTS driver_id BIGINT");
+        exec("ALTER TABLE transport_routes ADD COLUMN IF NOT EXISTS driver_name VARCHAR(100)");
+        exec("ALTER TABLE transport_routes ADD COLUMN IF NOT EXISTS capacity INTEGER DEFAULT 0");
+        exec("ALTER TABLE transport_routes ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'Active'");
+        System.out.println("[DatabaseMigration] transport_routes extra fields ensured.");
+
+        exec("ALTER TABLE transport_drivers ADD COLUMN IF NOT EXISTS school_id BIGINT");
+        exec("CREATE INDEX IF NOT EXISTS idx_transport_drivers_school_id ON transport_drivers(school_id)");
+
+        exec("ALTER TABLE transport_stops ADD COLUMN IF NOT EXISTS school_id BIGINT");
+        exec("CREATE INDEX IF NOT EXISTS idx_transport_stops_school_id ON transport_stops(school_id)");
+
+        exec("ALTER TABLE transport_fees ADD COLUMN IF NOT EXISTS school_id BIGINT");
+        exec("CREATE INDEX IF NOT EXISTS idx_transport_fees_school_id ON transport_fees(school_id)");
+
+        exec("ALTER TABLE transport_student_assignments ADD COLUMN IF NOT EXISTS school_id BIGINT");
+        exec("CREATE INDEX IF NOT EXISTS idx_transport_student_assignments_school_id ON transport_student_assignments(school_id)");
+
+        exec("ALTER TABLE transport_student_assignments ADD COLUMN IF NOT EXISTS pickup_location VARCHAR(200)");
+        exec("ALTER TABLE transport_student_assignments ADD COLUMN IF NOT EXISTS drop_location VARCHAR(200)");
+        exec("ALTER TABLE transport_student_assignments ADD COLUMN IF NOT EXISTS pickup_time VARCHAR(20)");
+        exec("ALTER TABLE transport_student_assignments ADD COLUMN IF NOT EXISTS drop_time VARCHAR(20)");
+        exec("ALTER TABLE transport_student_assignments ADD COLUMN IF NOT EXISTS transport_fee NUMERIC(10,2)");
+        System.out.println("[DatabaseMigration] transport_student_assignments extra fields ensured.");
+
+        System.out.println("[DatabaseMigration] remaining transport tables school_id ensured.");
+
+        // ── schools: rename school_number → school_id (or add school_id if absent) ──
+        execRaw(
+            "DO $$ BEGIN " +
+            "  IF EXISTS (" +
+            "    SELECT 1 FROM information_schema.columns " +
+            "    WHERE table_name='schools' AND column_name='school_number'" +
+            "  ) THEN " +
+            "    ALTER TABLE schools RENAME COLUMN school_number TO school_id; " +
+            "  END IF; " +
+            "END $$"
+        );
+        exec("ALTER TABLE schools ADD COLUMN IF NOT EXISTS school_id INTEGER");
+        // Drop old constraint name if it still exists after rename
+        exec("ALTER TABLE schools DROP CONSTRAINT IF EXISTS uq_schools_school_number");
+        execRaw(
+            "DO $$ BEGIN " +
+            "  IF NOT EXISTS (" +
+            "    SELECT 1 FROM pg_constraint WHERE conname = 'uq_schools_school_id'" +
+            "  ) THEN " +
+            "    ALTER TABLE schools ADD CONSTRAINT uq_schools_school_id UNIQUE (school_id); " +
+            "  END IF; " +
+            "END $$"
+        );
+        System.out.println("[DatabaseMigration] schools.school_id column ensured.");
+
+        // ── Migrate FK references: replace schools.id with schools.school_id ─────
+        // Previously all tables stored the DB auto-generated PK (schools.id) as their
+        // school_id FK.  We now use the human-assigned display number (schools.school_id)
+        // so that every school_id column in the DB matches what is shown in the UI.
+        // This block runs a safe UPDATE for every table.  Rows whose school already has
+        // a school_id set will be updated; rows linked to schools without a school_id
+        // are left unchanged (they will be corrected once the school is configured).
+        System.out.println("[DatabaseMigration] Migrating school_id FKs to display numbers...");
+        String[] fkTables = {
+            "users", "students", "teachers", "classrooms", "assignments",
+            "attendance", "homework", "leave_requests", "fee_payments",
+            "student_fee_assignments", "transport_fees", "class_diary",
+            "admission_applications", "salaries", "teacher_class_assignments",
+            "holidays", "exam_schedules", "certificates", "hall_tickets",
+            "student_transport", "transport_buses", "transport_routes",
+            "transport_drivers", "transport_stops", "transport_student_assignments",
+            "messages", "class_fee_structure"
+        };
+        for (String table : fkTables) {
+            execRaw(
+                "DO $$ BEGIN " +
+                "  IF EXISTS (" +
+                "    SELECT 1 FROM information_schema.columns " +
+                "    WHERE table_name='" + table + "' AND column_name='school_id'" +
+                "  ) THEN " +
+                "    UPDATE " + table + " t " +
+                "    SET school_id = s.school_id " +
+                "    FROM schools s " +
+                "    WHERE t.school_id = s.id " +
+                "      AND s.school_id IS NOT NULL " +
+                "      AND t.school_id != s.school_id; " +
+                "  END IF; " +
+                "END $$"
+            );
+        }
+        System.out.println("[DatabaseMigration] school_id FK migration complete.");
 
         System.out.println("[DatabaseMigration] Done.");
     }

@@ -47,8 +47,8 @@ export default function Schedule() {
   // ── Load on mount ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!user) return;
-    fetchTimetable().then(all => {
-      setEntries(getTimetableForTeacher(user.id, all));
+    fetchTimetable({ teacherId: user.id }).then(entries => {
+      setEntries(entries);
     });
   }, [user]);
 

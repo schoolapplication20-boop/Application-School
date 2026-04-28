@@ -30,6 +30,10 @@ public class School {
     @Column(unique = true, nullable = false, length = 50)
     private String code;
 
+    /** Human-assigned numeric identifier (1, 2, 3 …). Unique across the platform. */
+    @Column(name = "school_id", unique = true)
+    private Integer schoolId;
+
     @Column(length = 50)
     private String board; // CBSE, ICSE, State Board, Other
 

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import api from '../services/api';
 import { useAuth } from './AuthContext';
 
@@ -47,9 +47,10 @@ const applyTheme = (primaryColor, secondaryColor) => {
 };
 
 export const SchoolProvider = ({ children }) => {
-  const { registerSchoolSetter } = useAuth();
-  const [school,   setSchoolState] = useState(null);
-  const [loading,  setLoading]     = useState(false);
+  const { registerSchoolSetter, registerSchoolLoader, user, isLoading: authLoading } = useAuth();
+  const [school,      setSchoolState] = useState(null);
+  const [loading,     setLoading]     = useState(false);
+  const [logoVersion, setLogoVersion] = useState(() => Date.now());
 
   // ── Hydrate from login response (called by AuthContext right after login) ──
   const setSchool = useCallback((schoolData) => {
@@ -59,6 +60,7 @@ export const SchoolProvider = ({ children }) => {
       features: parseFeatures(schoolData.features),
     };
     setSchoolState(enriched);
+    setLogoVersion(Date.now());
     applyTheme(schoolData.primaryColor, schoolData.secondaryColor);
   }, []);
 
@@ -102,6 +104,21 @@ export const SchoolProvider = ({ children }) => {
     if (registerSchoolSetter) registerSchoolSetter(setSchool);
   }, [registerSchoolSetter, setSchool]);
 
+  // Register loadSchool with AuthContext so session restore can refetch school
+  useEffect(() => {
+    if (registerSchoolLoader) registerSchoolLoader(loadSchool);
+  }, [registerSchoolLoader, loadSchool]);
+
+  // Safety net: if the user is authenticated but school hasn't been loaded yet
+  // (e.g. the login response didn't carry school data, or a stub school had
+  // schoolId=null so findBySchoolId returned null), fetch it proactively.
+  // Only runs once per authenticated session — guarded by the loading flag.
+  useEffect(() => {
+    if (!authLoading && user && user.role !== 'APPLICATION_OWNER' && !school && !loading) {
+      loadSchool();
+    }
+  }, [authLoading, user, school, loading, loadSchool]);
+
   // Re-apply theme whenever school changes (e.g. after update)
   useEffect(() => {
     if (school) applyTheme(school.primaryColor, school.secondaryColor);
@@ -117,6 +134,7 @@ export const SchoolProvider = ({ children }) => {
   const value = {
     school,
     loading,
+    logoVersion,
     setSchool,
     loadSchool,
     loadSchoolById,

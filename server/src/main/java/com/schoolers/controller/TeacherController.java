@@ -3,7 +3,6 @@ package com.schoolers.controller;
 import com.schoolers.dto.ApiResponse;
 import com.schoolers.model.*;
 import com.schoolers.repository.ClassRoomRepository;
-import com.schoolers.repository.TeacherClassAssignmentRepository;
 import com.schoolers.repository.UserRepository;
 import com.schoolers.repository.TeacherRepository;
 import com.schoolers.service.TeacherService;
@@ -39,9 +38,6 @@ public class TeacherController {
     @Autowired
     private ClassRoomRepository classRoomRepository;
 
-    @Autowired
-    private TeacherClassAssignmentRepository teacherClassAssignmentRepository;
-
     // ── Helper: resolve teacher id from auth ──────────────────────────────────
 
     private Long resolveTeacherId(Long requestedId) {
@@ -51,7 +47,17 @@ public class TeacherController {
         if (userOpt.isEmpty()) return requestedId;
         User u = userOpt.get();
         boolean isAdmin = "ADMIN".equals(u.getRole().name()) || "SUPER_ADMIN".equals(u.getRole().name());
-        if (isAdmin && requestedId != null) return requestedId;
+        if (isAdmin && requestedId != null) {
+            // APPLICATION_OWNER (schoolId == null) may access any teacher.
+            // ADMIN/SUPER_ADMIN must only access teachers belonging to their own school.
+            if (u.getSchoolId() != null) {
+                Teacher target = teacherRepository.findById(requestedId).orElse(null);
+                if (target != null && !u.getSchoolId().equals(target.getSchoolId())) {
+                    return null; // cross-school access denied
+                }
+            }
+            return requestedId;
+        }
         return teacherRepository.findByUserId(u.getId()).map(Teacher::getId).orElse(null);
     }
 
@@ -275,12 +281,4 @@ public class TeacherController {
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
     }
 
-    /** Returns all class-subject assignments for the currently authenticated teacher. */
-    @GetMapping("/my-subject-assignments")
-    public ResponseEntity<ApiResponse<List<TeacherClassAssignment>>> getMySubjectAssignments() {
-        Long teacherId = resolveTeacherId(null);
-        if (teacherId == null) return ResponseEntity.ok(ApiResponse.success(List.of()));
-        List<TeacherClassAssignment> assignments = teacherClassAssignmentRepository.findByTeacherId(teacherId);
-        return ResponseEntity.ok(ApiResponse.success(assignments));
-    }
 }

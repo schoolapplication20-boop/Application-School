@@ -23,9 +23,17 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Long
     List<LeaveRequest> findByClassSectionAndRequesterTypeOrderByCreatedAtDesc(
             String classSection, LeaveRequest.RequesterType requesterType);
 
+    /** School-scoped: student leaves for a specific class section */
+    List<LeaveRequest> findByClassSectionAndRequesterTypeAndSchoolIdOrderByCreatedAtDesc(
+            String classSection, LeaveRequest.RequesterType requesterType, Long schoolId);
+
     /** School-scoped: all leaves of a given requester type for one school */
     List<LeaveRequest> findByRequesterTypeAndSchoolIdOrderByCreatedAtDesc(
             LeaveRequest.RequesterType requesterType, Long schoolId);
+
+    /** School-scoped: a specific teacher's own leave history */
+    List<LeaveRequest> findByRequesterIdAndRequesterTypeAndSchoolIdOrderByCreatedAtDesc(
+            Long requesterId, LeaveRequest.RequesterType requesterType, Long schoolId);
 
     @Modifying @Transactional
     void deleteByClassSection(String classSection);

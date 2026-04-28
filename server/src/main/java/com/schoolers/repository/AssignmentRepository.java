@@ -15,6 +15,11 @@ public interface AssignmentRepository extends JpaRepository<Assignment, Long> {
     List<Assignment> findByClassIdAndStatus(Long classId, Assignment.Status status);
     List<Assignment> findByTeacherIdAndStatus(Long teacherId, Assignment.Status status);
 
+    // School-scoped queries
+    List<Assignment> findBySchoolIdOrderByCreatedAtDesc(Long schoolId);
+    List<Assignment> findByTeacherIdAndSchoolId(Long teacherId, Long schoolId);
+    List<Assignment> findByClassNameAndSchoolIdOrderByCreatedAtDesc(String className, Long schoolId);
+
     @Modifying @Transactional
     void deleteByTeacherId(Long teacherId);
 }

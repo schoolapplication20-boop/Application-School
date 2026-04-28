@@ -248,6 +248,8 @@ export default function Students() {
   const [apiStatus, setApiStatus]       = useState(null); // 'live' | 'offline'
   const [loadingStudents, setLoadingStudents] = useState(true);
   const [availableClasses, setAvailableClasses] = useState([]); // [{name, section}] from DB
+  const [capacityInfo, setCapacityInfo] = useState(null);   // { capacity, enrolled, available, isFull }
+  const [capacityChecking, setCapacityChecking] = useState(false);
 
   // Load from API — called on mount and after every mutation
   const loadStudents = () => {
@@ -287,6 +289,23 @@ export default function Students() {
   );
 
   useEffect(() => { loadStudents(); }, []);
+
+  // Capacity check — fires whenever class or section changes while form is open
+  useEffect(() => {
+    const cls = formData.class?.trim();
+    const sec = formData.section?.trim() || '';
+    if (!showModal || !cls) { setCapacityInfo(null); return; }
+    // Skip capacity check when editing and class/section hasn't changed
+    if (editStudent && cls === editStudent.class && sec === (editStudent.section || '')) {
+      setCapacityInfo(null); return;
+    }
+    setCapacityChecking(true);
+    setCapacityInfo(null);
+    adminAPI.getClassCapacityInfo(cls, sec)
+      .then(res => setCapacityInfo(res.data?.data ?? null))
+      .catch(() => setCapacityInfo(null))
+      .finally(() => setCapacityChecking(false));
+  }, [formData.class, formData.section, showModal, editStudent]);
 
   const photoRef    = useRef(null);
   const idProofRef  = useRef(null);
@@ -403,6 +422,11 @@ export default function Students() {
   const handleSave = async (e) => {
     e.preventDefault();
     if (saving) return;
+    // Frontend capacity guard (new student only)
+    if (!editStudent && capacityInfo?.isFull) {
+      showToast('Maximum capacity reached for this class. Cannot add more students.', 'error');
+      return;
+    }
     if (!validate()) {
       document.querySelector('.is-invalid')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
@@ -772,6 +796,31 @@ export default function Students() {
                         {sectionsForClass.map(s => <option key={s} value={s}>{s}</option>)}
                       </select>
                     </div>
+                    {/* Capacity indicator */}
+                    {formData.class && (
+                      <div className="col-12" style={{ paddingTop: 2, paddingBottom: 2 }}>
+                        {capacityChecking ? (
+                          <div style={{ fontSize: 12, color: '#718096' }}>Checking class capacity…</div>
+                        ) : capacityInfo ? (
+                          capacityInfo.isFull ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#fff5f5', border: '1px solid #feb2b2', borderRadius: 8, padding: '8px 12px' }}>
+                              <span className="material-icons" style={{ fontSize: 18, color: '#c53030' }}>block</span>
+                              <div>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: '#c53030' }}>Maximum capacity reached for this class. Cannot add more students.</div>
+                                <div style={{ fontSize: 12, color: '#e53e3e' }}>{capacityInfo.enrolled}/{capacityInfo.capacity} seats filled</div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f0fff4', border: '1px solid #9ae6b4', borderRadius: 8, padding: '8px 12px' }}>
+                              <span className="material-icons" style={{ fontSize: 18, color: '#276749' }}>check_circle</span>
+                              <div style={{ fontSize: 12, color: '#276749' }}>
+                                {capacityInfo.available} seat{capacityInfo.available !== 1 ? 's' : ''} available ({capacityInfo.enrolled}/{capacityInfo.capacity} filled)
+                              </div>
+                            </div>
+                          )
+                        ) : null}
+                      </div>
+                    )}
                     <div className="col-md-4">
                       <label className="form-label fw-medium small">Date of Birth</label>
                       <input type="date" className="form-control form-control-sm"
@@ -926,7 +975,13 @@ export default function Students() {
 
                 <div className="modal-footer">
                   <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)} disabled={saving}>Cancel</button>
-                  <button type="submit" className="btn btn-primary" style={{ background: '#76C442', border: 'none', minWidth: 120 }} disabled={saving}>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    style={{ background: (!editStudent && capacityInfo?.isFull) ? '#a0aec0' : '#76C442', border: 'none', minWidth: 120 }}
+                    disabled={saving || (!editStudent && capacityInfo?.isFull)}
+                    title={(!editStudent && capacityInfo?.isFull) ? 'Maximum capacity reached for this class. Cannot add more students.' : undefined}
+                  >
                     {saving ? (editStudent ? 'Updating…' : 'Adding…') : (editStudent ? 'Update Student' : 'Add Student')}
                   </button>
                 </div>

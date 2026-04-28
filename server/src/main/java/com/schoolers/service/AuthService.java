@@ -6,6 +6,7 @@ import com.schoolers.dto.LoginResponse;
 import com.schoolers.model.School;
 import com.schoolers.model.User;
 import com.schoolers.repository.SchoolRepository;
+import com.schoolers.repository.TeacherRepository;
 import com.schoolers.repository.UserRepository;
 import com.schoolers.security.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,10 +27,11 @@ public class AuthService {
 
     private static final Logger log = Logger.getLogger(AuthService.class.getName());
 
-    @Autowired private UserRepository   userRepository;
-    @Autowired private SchoolRepository schoolRepository;
-    @Autowired private JwtUtil          jwtUtil;
-    @Autowired private PasswordEncoder  passwordEncoder;
+    @Autowired private UserRepository    userRepository;
+    @Autowired private SchoolRepository  schoolRepository;
+    @Autowired private TeacherRepository teacherRepository;
+    @Autowired private JwtUtil           jwtUtil;
+    @Autowired private PasswordEncoder   passwordEncoder;
 
     // All OTP data is persisted directly on the User record in the database.
     // No in-memory caches — restarts and multi-instance deployments are safe.
@@ -86,27 +88,43 @@ public class AuthService {
             String token = jwtUtil.generateToken(userDetails, claims);
 
             // ── Step 5: Load school branding ───────────────────────────────
+            // user.getSchoolId() is normally the human-assigned display number (1, 2, 3…).
+            // For stub schools created by /register the DB PK is stored as schoolId and
+            // the school's display schoolId column is null, so findBySchoolId won't match.
+            // We capture the value in an effectively-final variable (required by javac for
+            // lambdas) and fall back to findById so the school is always resolved.
             LoginResponse.SchoolDto schoolDto = null;
             if (user.getSchoolId() != null) {
-                schoolDto = schoolRepository.findById(user.getSchoolId())
-                        .map(this::toSchoolDto)
-                        .orElse(null);
+                Long resolvedSchoolId = user.getSchoolId();
+                java.util.Optional<School> schoolOpt =
+                        schoolRepository.findBySchoolId(resolvedSchoolId.intValue());
+                if (schoolOpt.isEmpty()) {
+                    schoolOpt = schoolRepository.findById(resolvedSchoolId);
+                }
+                schoolDto = schoolOpt.map(this::toSchoolDto).orElse(null);
             }
 
             // ── Step 5b: Determine if SUPER_ADMIN still needs to set up their school ──
             // Each SUPER_ADMIN owns exactly one school. Setup is required when:
             //   a) No school is linked yet  (schoolId == null), OR
             //   b) The linked school's isSetupCompleted flag is still false.
-            // This check is per-user so multiple SUPER_ADMINs each manage their own flow.
+            // user.getSchoolId() is the display number — look up by findBySchoolId.
             Boolean needsSchoolSetup = null;
             if (user.getRole() == User.Role.SUPER_ADMIN) {
                 if (user.getSchoolId() == null) {
                     needsSchoolSetup = true;
                 } else {
-                    needsSchoolSetup = schoolRepository.findById(user.getSchoolId())
+                    needsSchoolSetup = schoolRepository.findBySchoolId(user.getSchoolId().intValue())
                             .map(s -> !Boolean.TRUE.equals(s.getIsSetupCompleted()))
                             .orElse(true);
                 }
+            }
+
+            String teacherType = null;
+            if (user.getRole() == User.Role.TEACHER) {
+                teacherType = teacherRepository.findByUserId(user.getId())
+                        .map(t -> t.getTeacherType() != null ? t.getTeacherType() : "SUBJECT_TEACHER")
+                        .orElse("SUBJECT_TEACHER");
             }
 
             LoginResponse.UserDto userDto = LoginResponse.UserDto.builder()
@@ -120,6 +138,7 @@ public class AuthService {
                     .schoolId(user.getSchoolId())
                     .school(schoolDto)
                     .needsSchoolSetup(needsSchoolSetup)
+                    .teacherType(teacherType)
                     .build();
 
             log.info("[login] Success: " + username + " role=" + user.getRole().name()
@@ -173,7 +192,15 @@ public class AuthService {
                 .isActive(true)
                 .build();
         school = schoolRepository.save(school);
-        log.info("[register] Created school id=" + school.getId() + " code=" + code);
+
+        // Set the display schoolId to the DB PK so findBySchoolId() can locate this stub
+        // school immediately (before the setup wizard runs). The wizard may overwrite it
+        // with a user-chosen display number later.
+        if (!schoolRepository.existsBySchoolId(school.getId().intValue())) {
+            school.setSchoolId(school.getId().intValue());
+            school = schoolRepository.save(school);
+        }
+        log.info("[register] Created school id=" + school.getId() + " schoolId=" + school.getSchoolId() + " code=" + code);
 
         // ── Create SUPER_ADMIN linked to the school ───────────────────────────
         User superAdmin = User.builder()
@@ -307,6 +334,7 @@ public class AuthService {
     private LoginResponse.SchoolDto toSchoolDto(School s) {
         return LoginResponse.SchoolDto.builder()
                 .id(s.getId())
+                .schoolId(s.getSchoolId())
                 .name(s.getName())
                 .code(s.getCode())
                 .logoUrl(s.getLogoUrl())

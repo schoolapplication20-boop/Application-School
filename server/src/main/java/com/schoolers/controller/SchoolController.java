@@ -82,12 +82,14 @@ public class SchoolController {
     }
 
     // ── GET /api/schools/{id} ─────────────────────────────────────────────────
+    // {id} = human-assigned display number (1, 2, 3…) — NOT the DB auto-generated PK.
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> getSchoolById(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getSchoolById(@PathVariable Integer id) {
         return ResponseEntity.ok(schoolService.getSchoolById(id));
     }
 
     // ── PUT /api/schools/{id} ─────────────────────────────────────────────────
+    // {id} = human-assigned display number (1, 2, 3…) — NOT the DB auto-generated PK.
     // Logo upload done here (outside @Transactional) to prevent IOException from
     // poisoning the JPA transaction with rollback-only status.
     // ADMIN must NOT update school settings — only SUPER_ADMIN (their own school)
@@ -95,7 +97,7 @@ public class SchoolController {
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPLICATION_OWNER')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> updateSchool(
-            @PathVariable Long id,
+            @PathVariable Integer id,
             @RequestPart("data") String dataJson,
             @RequestPart(value = "logo", required = false) MultipartFile logo,
             Authentication auth) {
@@ -106,8 +108,6 @@ public class SchoolController {
             String newLogoUrl = null;
             String oldLogoUrl = null;
             if (logo != null && !logo.isEmpty()) {
-                // Fetch old logo URL ONLY when a replacement is being uploaded,
-                // so we can clean up the old file after a successful save.
                 ApiResponse<Map<String, Object>> existing = schoolService.getSchoolById(id);
                 if (existing.getData() != null) {
                     oldLogoUrl = (String) existing.getData().get("logoUrl");
@@ -134,10 +134,11 @@ public class SchoolController {
     }
 
     // ── PATCH /api/schools/{id}/logo ──────────────────────────────────────────
+    // {id} = human-assigned display number (1, 2, 3…) — NOT the DB auto-generated PK.
     @PatchMapping(value = "/{id}/logo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> updateLogo(
-            @PathVariable Long id,
+            @PathVariable Integer id,
             @RequestPart("logo") MultipartFile logo) {
         try {
             String oldLogoUrl = schoolService.getSchoolById(id).getData() != null

@@ -17,6 +17,11 @@ public interface CertificateRepository extends JpaRepository<Certificate, Long> 
     List<Certificate> findAllByOrderByCreatedAtDesc();
     boolean existsByCertificateId(String certificateId);
 
+    // School-scoped queries
+    List<Certificate> findBySchoolIdOrderByCreatedAtDesc(Long schoolId);
+    List<Certificate> findByCertificateTypeAndSchoolIdOrderByCreatedAtDesc(String certificateType, Long schoolId);
+    List<Certificate> findByStudentIdAndSchoolIdOrderByCreatedAtDesc(Long studentId, Long schoolId);
+
     @Modifying @Transactional
     void deleteByStudentId(Long studentId);
 }

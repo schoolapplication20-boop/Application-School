@@ -153,6 +153,7 @@ public class SuperAdminService {
             String name, String email, String mobile,
             String schoolName, String schoolCode,
             String permissions,
+            Integer schoolNumber,
             Long callerSchoolId) {
 
         // ── Gate: only APPLICATION_OWNER (schoolId == null) may create SUPER_ADMINs ──
@@ -179,25 +180,34 @@ public class SuperAdminService {
             return ApiResponse.error("Mobile number '" + normalizedMobile + "' is already registered.");
         if (schoolRepository.existsByCode(normalizedCode))
             return ApiResponse.error("School code '" + normalizedCode + "' is already in use. Choose a different code.");
+        if (schoolNumber == null || schoolNumber < 1)
+            return ApiResponse.error("School ID is required and must be a positive number (e.g. 1, 2, 3).");
+        if (schoolRepository.existsBySchoolId(schoolNumber))
+            return ApiResponse.error("School ID '" + schoolNumber + "' is already in use by another school. Choose a different ID.");
 
         String rawPassword = generatePassword();
 
         try {
-            // ── 1. Create stub school (isSetupCompleted=false) ────────────────
+            // ── 1. Create school — mark setup complete immediately.
+            // The owner fills all details in the wizard before submitting, so by the
+            // time this record is saved the school is fully onboarded. SUPER_ADMIN
+            // should go straight to dashboard on first login, never to setup screen.
             School school = schoolRepository.save(School.builder()
                     .name(schoolName.trim())
                     .code(normalizedCode)
-                    .isSetupCompleted(false)
+                    .schoolId(schoolNumber)
+                    .isSetupCompleted(true)
                     .isActive(true)
                     .build());
-            log.info("[createSuperAdmin] Created stub school id=" + school.getId()
-                    + " code=" + normalizedCode);
+            log.info("[createSuperAdmin] Created school id=" + school.getId()
+                    + " code=" + normalizedCode + " isSetupCompleted=true");
 
             // ── 2. Enforce one SUPER_ADMIN per school ─────────────────────────
-            // This guard is belt-and-suspenders: since the school was just created
-            // above it cannot already have a SUPER_ADMIN. This protects against
-            // future code paths that might call this method with an existing schoolId.
-            if (userRepository.existsBySchoolIdAndRole(school.getId(), User.Role.SUPER_ADMIN)) {
+            // Use the human-assigned display number as the FK — NOT the DB auto-generated PK.
+            // This ensures school_id in users/students/teachers matches what is shown in the UI.
+            Long displayIdAsLong = school.getSchoolId().longValue();
+
+            if (userRepository.existsBySchoolIdAndRole(displayIdAsLong, User.Role.SUPER_ADMIN)) {
                 return ApiResponse.error("A Super Admin already exists for school '"
                         + normalizedCode + "'. Each school can have only one Super Admin.");
             }
@@ -210,13 +220,13 @@ public class SuperAdminService {
                     .password(passwordEncoder.encode(rawPassword))
                     .tempPassword(rawPassword)
                     .role(User.Role.SUPER_ADMIN)
-                    .schoolId(school.getId())    // SUPER_ADMIN must always have a schoolId
+                    .schoolId(displayIdAsLong)   // store display number (1, 2, 3…) not DB PK
                     .isActive(true)
                     .firstLogin(true)            // forced password reset on first login
                     .permissions(permissions)
                     .build());
             log.info("[createSuperAdmin] Created super admin id=" + user.getId()
-                    + " email=" + normalizedEmail + " schoolId=" + school.getId());
+                    + " email=" + normalizedEmail + " displaySchoolId=" + displayIdAsLong);
 
             AdminCreatedResponse response = AdminCreatedResponse.builder()
                     .id(user.getId())
@@ -224,7 +234,7 @@ public class SuperAdminService {
                     .email(user.getEmail())
                     .mobile(user.getMobile())
                     .generatedPassword(rawPassword)
-                    .schoolId(school.getId())
+                    .schoolId(displayIdAsLong)   // frontend uses this for PUT /api/schools/{id}
                     .build();
 
             return ApiResponse.success("Super Admin created successfully", response);
@@ -258,15 +268,31 @@ public class SuperAdminService {
             dto.put("email",     sa.getEmail());
             dto.put("mobile",    sa.getMobile());
             dto.put("isActive",  sa.getIsActive());
-            dto.put("schoolId",  sa.getSchoolId());
+            // schoolDbId is the value used by the frontend for PUT /api/schools/{id}.
+            // It now stores the human-assigned display number (same as schools.school_id),
+            // which is what the SchoolController path variable expects.
+            dto.put("schoolDbId", sa.getSchoolId());
             dto.put("createdAt", sa.getCreatedAt());
 
-            // Enrich with school details
+            // Enrich with school details.
+            // sa.getSchoolId() now stores the human-assigned display number (1, 2, 3…),
+            // so we look up the school by that display number via findBySchoolId().
             if (sa.getSchoolId() != null) {
-                schoolRepository.findById(sa.getSchoolId()).ifPresent(school -> {
-                    dto.put("schoolName",        school.getName());
-                    dto.put("schoolCode",        school.getCode());
-                    dto.put("needsSchoolSetup",  !Boolean.TRUE.equals(school.getIsSetupCompleted()));
+                schoolRepository.findBySchoolId(sa.getSchoolId().intValue()).ifPresent(school -> {
+                    dto.put("schoolName",         school.getName());
+                    dto.put("schoolCode",         school.getCode());
+                    dto.put("schoolId",           school.getSchoolId());  // display number shown in UI
+                    dto.put("needsSchoolSetup",   !Boolean.TRUE.equals(school.getIsSetupCompleted()));
+                    dto.put("board",              school.getBoard());
+                    dto.put("academicYear",       school.getAcademicYear());
+                    dto.put("phone",              school.getPhone());
+                    dto.put("schoolEmail",        school.getEmail());
+                    dto.put("website",            school.getWebsite());
+                    dto.put("city",               school.getCity());
+                    dto.put("state",              school.getState());
+                    dto.put("subscriptionPlan",   school.getSubscriptionPlan());
+                    dto.put("subscriptionExpiry", school.getSubscriptionExpiry());
+                    dto.put("permissions",        sa.getPermissions());
                 });
             } else {
                 dto.put("needsSchoolSetup", true);

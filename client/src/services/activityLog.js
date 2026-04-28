@@ -1,11 +1,18 @@
 const MAX_LOGS = 50;
 
-// In-memory activity log — nothing is persisted to localStorage
-let _logs = [];
+// Keyed by schoolId (string) so each school only sees its own activity.
+// schoolId null/undefined is treated as the platform-level (APPLICATION_OWNER) bucket.
+const _logsBySchool = {};
 
-export const getLogs = () => [..._logs];
+const bucketKey = (schoolId) => (schoolId != null ? String(schoolId) : '__platform__');
 
-export const addLog = (adminName, action, module) => {
+export const getLogs = (schoolId) => {
+  const key = bucketKey(schoolId);
+  return [...(_logsBySchool[key] ?? [])];
+};
+
+export const addLog = (adminName, action, module, schoolId) => {
+  const key = bucketKey(schoolId);
   const newLog = {
     id: Date.now(),
     adminName,
@@ -16,5 +23,5 @@ export const addLog = (adminName, action, module) => {
       hour: '2-digit', minute: '2-digit', hour12: true,
     }),
   };
-  _logs = [newLog, ..._logs].slice(0, MAX_LOGS);
+  _logsBySchool[key] = [newLog, ...(_logsBySchool[key] ?? [])].slice(0, MAX_LOGS);
 };

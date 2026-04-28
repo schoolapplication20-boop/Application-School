@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '../../components/Layout';
 import Toast from '../../components/Toast';
+import { teacherAPI } from '../../services/api';
 
-// Updated grading scale: O/A+/A/B+/B/B-/C/F
 const getGrade = (marks, max) => {
   if (!marks || !max) return '';
   const pct = (marks / max) * 100;
@@ -16,75 +16,102 @@ const getGrade = (marks, max) => {
   return 'F';
 };
 
-const GRADE_LIST = ['O', 'A+', 'A', 'B+', 'B', 'B-', 'C', 'F'];
-
 const gradeColor = { O: '#276749', 'A+': '#276749', A: '#276749', 'B+': '#2b6cb0', B: '#2b6cb0', 'B-': '#c05621', C: '#c05621', F: '#c53030' };
 const gradeBg    = { O: '#f0fff4', 'A+': '#f0fff4', A: '#f0fff4', 'B+': '#ebf8ff', B: '#ebf8ff', 'B-': '#fffaf0', C: '#fffaf0', F: '#fff5f5' };
-
-const mockAssignments = [
-  { id: 1, title: 'Quadratic Equations Practice', description: 'Solve problems 1-20 from textbook chapter 4', class: '10-A', dueDate: '20 Mar 2025', submitted: 30, total: 38, status: 'Active',    createdAt: '10 Mar 2025' },
-  { id: 2, title: 'Trigonometry Worksheet',        description: 'Complete the attached worksheet on sin, cos and tan values', class: '9-B',  dueDate: '22 Mar 2025', submitted: 18, total: 34, status: 'Active',    createdAt: '12 Mar 2025' },
-  { id: 3, title: 'Algebra Test Revision',         description: 'Revise chapters 1-5, focus on word problems', class: '10-B', dueDate: '18 Mar 2025', submitted: 36, total: 36, status: 'Completed', createdAt: '08 Mar 2025' },
-  { id: 4, title: 'Geometry Proofs',               description: 'Prove the given theorems with step by step explanation', class: '8-A',  dueDate: '25 Mar 2025', submitted: 5,  total: 32, status: 'Active',    createdAt: '15 Mar 2025' },
-  { id: 5, title: 'Statistics Project',            description: 'Collect data from school canteen and create statistical analysis', class: '10-A', dueDate: '30 Mar 2025', submitted: 0,  total: 38, status: 'Active',    createdAt: '17 Mar 2025' },
-];
-
-const mockSubmissions = [
-  { id: 1, name: 'Arjun Patel',   rollNo: 'S001', submittedAt: '18 Mar 2025 10:30 AM', grade: 'A',  marks: 42, maxMarks: 50, status: 'Graded',    starred: false },
-  { id: 2, name: 'Sneha Gupta',   rollNo: 'S002', submittedAt: '18 Mar 2025 11:15 AM', grade: '',   marks: '',  maxMarks: 50, status: 'Submitted', starred: false },
-  { id: 3, name: 'Ravi Kumar',    rollNo: 'S003', submittedAt: '19 Mar 2025 09:00 AM', grade: 'O',  marks: 48, maxMarks: 50, status: 'Graded',    starred: true  },
-  { id: 4, name: 'Ananya Singh',  rollNo: 'S004', submittedAt: '',                     grade: '',   marks: '',  maxMarks: 50, status: 'Pending',   starred: false },
-  { id: 5, name: 'Kiran Reddy',   rollNo: 'S005', submittedAt: '18 Mar 2025 03:00 PM', grade: '',   marks: '',  maxMarks: 50, status: 'Submitted', starred: false },
-];
-
 const statusColor = { Active: '#76C442', Completed: '#3182ce', Overdue: '#e53e3e' };
 
+const EMPTY_FORM = { title: '', description: '', classSection: '', dueDate: '', maxMarks: '' };
+
 export default function Assignments() {
-  const [assignments, setAssignments]       = useState(mockAssignments);
-  const [showModal, setShowModal]           = useState(false);
-  const [showGradeModal, setShowGradeModal] = useState(false);
-  const [selectedAssignment, setSelectedAssignment] = useState(null);
-  const [submissions, setSubmissions]       = useState(mockSubmissions);
-  const [filterStatus, setFilterStatus]     = useState('');
-  const [formData, setFormData]             = useState({ title: '', description: '', class: '', dueDate: '' });
-  const [toast, setToast]                   = useState(null);
+  const [assignments,  setAssignments]  = useState([]);
+  const [loading,      setLoading]      = useState(true);
+  const [filterStatus, setFilterStatus] = useState('');
+  const [showModal,    setShowModal]    = useState(false);
+  const [formData,     setFormData]     = useState(EMPTY_FORM);
+  const [saving,       setSaving]       = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting,     setDeleting]     = useState(false);
+  const [toast,        setToast]        = useState(null);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
+    setTimeout(() => setToast(null), 3500);
+  };
+
+  // ── Load assignments from backend ─────────────────────────────────────────
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await teacherAPI.getAssignments();
+      const data = res.data?.data ?? res.data ?? [];
+      setAssignments(Array.isArray(data) ? data : []);
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to load assignments', 'error');
+      setAssignments([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  // ── Create ────────────────────────────────────────────────────────────────
+  const handleSave = async (e) => {
+    e.preventDefault();
+    if (!formData.title.trim())        { showToast('Title is required', 'error'); return; }
+    if (!formData.classSection.trim()) { showToast('Class is required', 'error'); return; }
+
+    setSaving(true);
+    try {
+      const res = await teacherAPI.createAssignment({
+        title:        formData.title.trim(),
+        description:  formData.description.trim(),
+        classSection: formData.classSection.trim(),
+        dueDate:      formData.dueDate || null,
+        maxMarks:     formData.maxMarks ? Number(formData.maxMarks) : null,
+        status:       'Active',
+      });
+      const created = res.data?.data ?? res.data;
+      if (res.data?.success === false) {
+        showToast(res.data.message || 'Failed to create assignment', 'error');
+        return;
+      }
+      // Only add to state after confirmed backend save
+      if (created?.id) {
+        setAssignments(prev => [created, ...prev]);
+      } else {
+        await load(); // fallback: reload from DB
+      }
+      setShowModal(false);
+      setFormData(EMPTY_FORM);
+      showToast('Assignment created successfully');
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Network error — assignment not saved', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ── Delete ────────────────────────────────────────────────────────────────
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await teacherAPI.deleteAssignment(deleteTarget.id);
+      // Only remove from UI after backend confirms deletion
+      setAssignments(prev => prev.filter(a => a.id !== deleteTarget.id));
+      setDeleteTarget(null);
+      showToast('Assignment deleted', 'warning');
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Failed to delete assignment. Please try again.';
+      showToast(msg, 'error');
+      setDeleteTarget(null);
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const filtered = assignments.filter(a => !filterStatus || a.status === filterStatus);
-
-  const handleSave = (e) => {
-    e.preventDefault();
-    if (!formData.title || !formData.class) { showToast('Title and Class are required', 'error'); return; }
-    setAssignments([...assignments, {
-      id: Date.now(), ...formData, submitted: 0, total: 38, status: 'Active',
-      createdAt: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-    }]);
-    setShowModal(false);
-    setFormData({ title: '', description: '', class: '', dueDate: '' });
-    showToast('Assignment created successfully');
-  };
-
-  const openGradeModal = (a) => {
-    setSelectedAssignment(a);
-    setShowGradeModal(true);
-  };
-
-  const saveGrade = (subId, marks, maxMarks) => {
-    const grade = getGrade(marks, maxMarks);
-    setSubmissions(prev => prev.map(s => s.id === subId
-      ? { ...s, marks: +marks, maxMarks: +maxMarks, grade, status: marks !== '' ? 'Graded' : s.status }
-      : s));
-  };
-
-  const toggleStar = (subId) => {
-    setSubmissions(prev => prev.map(s => s.id === subId ? { ...s, starred: !s.starred } : s));
-  };
-
-  const getInitials = (name) => name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
   return (
     <Layout pageTitle="Assignments">
@@ -95,15 +122,16 @@ export default function Assignments() {
         <p>Create and manage assignments for your classes</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '16px', marginBottom: '24px' }}>
+      {/* Stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 24 }}>
         {[
-          { label: 'Total',       value: assignments.length,                                            color: '#76C442' },
-          { label: 'Active',      value: assignments.filter(a => a.status === 'Active').length,         color: '#3182ce' },
-          { label: 'Completed',   value: assignments.filter(a => a.status === 'Completed').length,      color: '#805ad5' },
-          { label: 'Avg Submission', value: Math.round(assignments.reduce((acc, a) => acc + (a.submitted / a.total), 0) / assignments.length * 100) + '%', color: '#ed8936' },
+          { label: 'Total',     value: assignments.length,                                       color: '#76C442' },
+          { label: 'Active',    value: assignments.filter(a => a.status === 'Active').length,    color: '#3182ce' },
+          { label: 'Completed', value: assignments.filter(a => a.status === 'Completed').length, color: '#805ad5' },
+          { label: 'Overdue',   value: assignments.filter(a => a.status === 'Overdue').length,   color: '#e53e3e' },
         ].map(c => (
           <div key={c.label} className="stat-card">
-            <div style={{ fontSize: '28px', fontWeight: 700, color: c.color }}>{c.value}</div>
+            <div style={{ fontSize: 28, fontWeight: 700, color: c.color }}>{c.value}</div>
             <div className="stat-label">{c.label} Assignments</div>
           </div>
         ))}
@@ -117,218 +145,203 @@ export default function Assignments() {
             <option>Completed</option>
             <option>Overdue</option>
           </select>
-          <button className="btn-add" onClick={() => setShowModal(true)}>
+          <button className="btn-add" onClick={() => { setFormData(EMPTY_FORM); setShowModal(true); }}>
             <span className="material-icons">add</span> New Assignment
           </button>
         </div>
 
-        <div style={{ display: 'grid', gap: '16px' }}>
-          {filtered.map(a => {
-            const submittedPct = Math.round((a.submitted / a.total) * 100);
-            const color = statusColor[a.status] || '#76C442';
-            return (
-              <div key={a.id} style={{ border: '1px solid #f0f4f8', borderRadius: '12px', padding: '20px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-                      <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: color + '15', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <span className="material-icons" style={{ color, fontSize: '18px' }}>assignment</span>
-                      </div>
-                      <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#2d3748', margin: 0 }}>{a.title}</h3>
-                    </div>
-                    <p style={{ fontSize: '13px', color: '#718096', margin: '0 0 10px', lineHeight: '1.5' }}>{a.description}</p>
-                    <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                      {[
-                        { icon: 'class',               text: `Class ${a.class}` },
-                        { icon: 'calendar_today',       text: `Due: ${a.dueDate}` },
-                        { icon: 'assignment_turned_in', text: `${a.submitted}/${a.total} submitted` },
-                        { icon: 'event',               text: `Created: ${a.createdAt}` },
-                      ].map((info, i) => (
-                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <span className="material-icons" style={{ fontSize: '14px', color: '#a0aec0' }}>{info.icon}</span>
-                          <span style={{ fontSize: '12px', color: '#718096' }}>{info.text}</span>
+        {loading ? (
+          <div style={{ padding: 40, textAlign: 'center', color: '#a0aec0' }}>
+            <span className="material-icons" style={{ fontSize: 36, display: 'block', marginBottom: 8, animation: 'spin 1s linear infinite' }}>autorenew</span>
+            Loading assignments…
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="empty-state" style={{ padding: 48, textAlign: 'center' }}>
+            <span className="material-icons" style={{ fontSize: 48, color: '#e2e8f0', display: 'block', marginBottom: 12 }}>assignment</span>
+            <p style={{ color: '#a0aec0', marginBottom: 16 }}>
+              {filterStatus ? `No ${filterStatus.toLowerCase()} assignments.` : 'No assignments yet.'}
+            </p>
+            {!filterStatus && (
+              <button className="btn-add" onClick={() => setShowModal(true)}>
+                <span className="material-icons">add</span> Create First Assignment
+              </button>
+            )}
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gap: 16 }}>
+            {filtered.map(a => {
+              const color = statusColor[a.status] || '#76C442';
+              const submitted = a.submittedCount ?? a.submitted ?? 0;
+              const total     = a.totalStudents  ?? a.total     ?? 0;
+              const pct       = total > 0 ? Math.round((submitted / total) * 100) : 0;
+              return (
+                <div key={a.id} style={{ border: '1px solid #f0f4f8', borderRadius: 12, padding: 20 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                        <div style={{ width: 36, height: 36, borderRadius: 10, background: color + '15', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <span className="material-icons" style={{ color, fontSize: 18 }}>assignment</span>
                         </div>
-                      ))}
+                        <h3 style={{ fontSize: 15, fontWeight: 700, color: '#2d3748', margin: 0 }}>{a.title}</h3>
+                      </div>
+                      {a.description && (
+                        <p style={{ fontSize: 13, color: '#718096', margin: '0 0 10px', lineHeight: 1.5 }}>{a.description}</p>
+                      )}
+                      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                        {a.classSection && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <span className="material-icons" style={{ fontSize: 14, color: '#a0aec0' }}>class</span>
+                            <span style={{ fontSize: 12, color: '#718096' }}>Class {a.classSection}</span>
+                          </div>
+                        )}
+                        {a.dueDate && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <span className="material-icons" style={{ fontSize: 14, color: '#a0aec0' }}>calendar_today</span>
+                            <span style={{ fontSize: 12, color: '#718096' }}>Due: {a.dueDate}</span>
+                          </div>
+                        )}
+                        {total > 0 && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <span className="material-icons" style={{ fontSize: 14, color: '#a0aec0' }}>assignment_turned_in</span>
+                            <span style={{ fontSize: 12, color: '#718096' }}>{submitted}/{total} submitted</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, marginLeft: 16 }}>
+                      <span style={{ padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600, background: color + '15', color }}>{a.status || 'Active'}</span>
+                      <div className="action-btns">
+                        <button
+                          className="action-btn action-btn-delete"
+                          title="Delete Assignment"
+                          onClick={() => setDeleteTarget(a)}
+                        >
+                          <span className="material-icons">delete</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px', marginLeft: 16 }}>
-                    <span style={{ padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, background: color + '15', color }}>{a.status}</span>
-                    <div className="action-btns">
-                      <button className="action-btn" title="Grade Submissions" style={{ color: '#805ad5', background: '#f3e8ff' }} onClick={() => openGradeModal(a)}>
-                        <span className="material-icons">grade</span>
-                      </button>
-                      <button className="action-btn action-btn-delete" onClick={() => { setAssignments(assignments.filter(x => x.id !== a.id)); showToast('Assignment deleted', 'warning'); }}>
-                        <span className="material-icons">delete</span>
-                      </button>
+                  {total > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ flex: 1 }}>
+                        <div className="progress-bar-custom">
+                          <div className="progress-fill" style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                      <span style={{ fontSize: 12, fontWeight: 600, color, minWidth: 40 }}>{pct}%</span>
                     </div>
-                  </div>
+                  )}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ flex: 1 }}>
-                    <div className="progress-bar-custom">
-                      <div className="progress-fill" style={{ width: `${submittedPct}%` }} />
-                    </div>
-                  </div>
-                  <span style={{ fontSize: '12px', fontWeight: 600, color, minWidth: '40px' }}>{submittedPct}%</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      {/* Create Assignment Modal */}
+      {/* ── Create Assignment Modal ──────────────────────────────────────────── */}
       {showModal && (
-        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">Create New Assignment</h5>
-                <button className="btn-close" onClick={() => setShowModal(false)} />
-              </div>
-              <form onSubmit={handleSave}>
-                <div className="modal-body">
-                  <div className="mb-3">
-                    <label className="form-label fw-medium small">Title *</label>
-                    <input type="text" className="form-control form-control-sm" placeholder="Assignment title"
-                      value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} />
-                  </div>
-                  <div className="mb-3">
-                    <label className="form-label fw-medium small">Description</label>
-                    <textarea className="form-control form-control-sm" rows={3} placeholder="Assignment instructions..."
-                      value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} />
-                  </div>
-                  <div className="row g-3">
-                    <div className="col-6">
-                      <label className="form-label fw-medium small">Class *</label>
-                      <select className="form-select form-select-sm" value={formData.class}
-                        onChange={e => setFormData({ ...formData, class: e.target.value })}>
-                        <option value="">Select Class</option>
-                        {['10-A', '9-B', '10-B', '8-A'].map(c => <option key={c}>{c}</option>)}
-                      </select>
-                    </div>
-                    <div className="col-6">
-                      <label className="form-label fw-medium small">Due Date</label>
-                      <input type="date" className="form-control form-control-sm"
-                        min={new Date().toISOString().split('T')[0]}
-                        value={formData.dueDate} onChange={e => setFormData({ ...formData, dueDate: e.target.value })} />
-                    </div>
-                  </div>
-                </div>
-                <div className="modal-footer">
-                  <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
-                  <button type="submit" className="btn btn-primary">Create Assignment</button>
-                </div>
-              </form>
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && !saving && setShowModal(false)}>
+          <div className="modal-container" style={{ maxWidth: 480 }}>
+            <div className="modal-header">
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Create New Assignment</h3>
+              <button onClick={() => setShowModal(false)} disabled={saving}
+                style={{ border: 'none', background: 'none', fontSize: 20, cursor: 'pointer', color: '#718096' }}>✕</button>
             </div>
+            <form onSubmit={handleSave}>
+              <div className="modal-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div>
+                  <label style={{ display: 'block', fontWeight: 600, fontSize: 13, marginBottom: 5 }}>
+                    Title <span style={{ color: '#e53e3e' }}>*</span>
+                  </label>
+                  <input
+                    type="text" className="form-control form-control-sm"
+                    placeholder="Assignment title"
+                    value={formData.title}
+                    onChange={e => setFormData(f => ({ ...f, title: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontWeight: 600, fontSize: 13, marginBottom: 5 }}>Description</label>
+                  <textarea
+                    className="form-control form-control-sm" rows={3}
+                    placeholder="Assignment instructions…"
+                    value={formData.description}
+                    onChange={e => setFormData(f => ({ ...f, description: e.target.value }))}
+                  />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 600, fontSize: 13, marginBottom: 5 }}>
+                      Class <span style={{ color: '#e53e3e' }}>*</span>
+                    </label>
+                    <input
+                      type="text" className="form-control form-control-sm"
+                      placeholder="e.g. 10-A"
+                      value={formData.classSection}
+                      onChange={e => setFormData(f => ({ ...f, classSection: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 600, fontSize: 13, marginBottom: 5 }}>Due Date</label>
+                    <input
+                      type="date" className="form-control form-control-sm"
+                      min={new Date().toISOString().split('T')[0]}
+                      value={formData.dueDate}
+                      onChange={e => setFormData(f => ({ ...f, dueDate: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                <div style={{ width: '50%' }}>
+                  <label style={{ display: 'block', fontWeight: 600, fontSize: 13, marginBottom: 5 }}>Max Marks</label>
+                  <input
+                    type="number" className="form-control form-control-sm"
+                    placeholder="e.g. 100" min={1}
+                    value={formData.maxMarks}
+                    onChange={e => setFormData(f => ({ ...f, maxMarks: e.target.value }))}
+                  />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" onClick={() => setShowModal(false)} disabled={saving}
+                  style={{ padding: '9px 20px', border: '1.5px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: 'pointer', fontWeight: 600 }}>
+                  Cancel
+                </button>
+                <button type="submit" disabled={saving}
+                  style={{ padding: '9px 20px', background: saving ? '#a0aec0' : '#76C442', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {saving ? (
+                    <><span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} /> Saving…</>
+                  ) : 'Create Assignment'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
 
-      {/* Grade Submissions Modal */}
-      {showGradeModal && selectedAssignment && (
-        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog modal-lg">
-            <div className="modal-content">
-              <div className="modal-header">
-                <div>
-                  <h5 className="modal-title">Grade Submissions</h5>
-                  <p className="text-muted small mb-0">{selectedAssignment.title} · Class {selectedAssignment.class}</p>
-                </div>
-                <button className="btn-close" onClick={() => setShowGradeModal(false)} />
+      {/* ── Delete Confirm Modal ─────────────────────────────────────────────── */}
+      {deleteTarget && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && !deleting && setDeleteTarget(null)}>
+          <div className="modal-container" style={{ maxWidth: 400 }}>
+            <div className="modal-body" style={{ padding: '32px 28px', textAlign: 'center' }}>
+              <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#fff5f5', border: '3px solid #fc8181', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                <span className="material-icons" style={{ fontSize: 32, color: '#e53e3e' }}>delete_outline</span>
               </div>
-
-              {/* Grade Scale Reference */}
-              <div style={{ padding: '12px 20px', background: '#f7fafc', borderBottom: '1px solid #f0f4f8' }}>
-                <div style={{ fontSize: '11px', fontWeight: 700, color: '#718096', marginBottom: '6px' }}>Grading Scale:</div>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  {[
-                    { grade: 'O',  range: '90–100' },
-                    { grade: 'A+', range: '80–89'  },
-                    { grade: 'A',  range: '70–79'  },
-                    { grade: 'B+', range: '60–69'  },
-                    { grade: 'B',  range: '50–59'  },
-                    { grade: 'B-', range: '40–49'  },
-                    { grade: 'C',  range: '33–39'  },
-                    { grade: 'F',  range: '0–32'   },
-                  ].map(g => (
-                    <span key={g.grade} style={{ padding: '3px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 700,
-                      background: gradeBg[g.grade], color: gradeColor[g.grade] }}>
-                      {g.grade}: {g.range}%
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              <div className="modal-body p-0">
-                <table className="table table-hover align-middle mb-0">
-                  <thead className="table-light">
-                    <tr>
-                      <th className="ps-3">Student</th>
-                      <th>Submitted At</th>
-                      <th>Max Marks</th>
-                      <th>Marks</th>
-                      <th>Grade</th>
-                      <th>Star</th>
-                      <th className="pe-3">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {submissions.map(s => {
-                      const autoGrade = getGrade(s.marks, s.maxMarks);
-                      return (
-                        <tr key={s.id}>
-                          <td className="ps-3">
-                            <div className="d-flex align-items-center gap-2">
-                              <div className="student-avatar-sm" style={{ width: 32, height: 32, fontSize: 12 }}>{getInitials(s.name)}</div>
-                              <div>
-                                <div className="fw-medium small">{s.name}</div>
-                                <div className="text-muted" style={{ fontSize: 11 }}>{s.rollNo}</div>
-                              </div>
-                            </div>
-                          </td>
-                          <td style={{ fontSize: 12, color: '#718096' }}>{s.submittedAt || '—'}</td>
-                          <td style={{ fontSize: 13, fontWeight: 600 }}>{s.maxMarks}</td>
-                          <td>
-                            <input type="number" className="form-control form-control-sm" style={{ width: 70 }}
-                              placeholder="0" min={0} max={s.maxMarks}
-                              value={s.marks === '' ? '' : s.marks}
-                              onChange={e => saveGrade(s.id, e.target.value, s.maxMarks)}
-                              disabled={s.status === 'Pending'} />
-                          </td>
-                          <td>
-                            {autoGrade ? (
-                              <span style={{ padding: '3px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 700,
-                                background: gradeBg[autoGrade], color: gradeColor[autoGrade] }}>
-                                {autoGrade}
-                              </span>
-                            ) : <span style={{ color: '#a0aec0' }}>—</span>}
-                          </td>
-                          <td>
-                            <button
-                              onClick={() => toggleStar(s.id)}
-                              title={s.starred ? 'Remove star' : 'Star this submission'}
-                              style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '4px',
-                                color: s.starred ? '#f6ad55' : '#e2e8f0', fontSize: '22px', lineHeight: 1 }}>
-                              <span className="material-icons" style={{ fontSize: 22 }}>
-                                {s.starred ? 'star' : 'star_border'}
-                              </span>
-                            </button>
-                          </td>
-                          <td className="pe-3">
-                            <span className={`badge ${s.status === 'Graded' ? 'bg-success' : s.status === 'Submitted' ? 'bg-primary' : 'bg-secondary'}`} style={{ fontSize: 10 }}>
-                              {s.status}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-              <div className="modal-footer">
-                <button className="btn btn-secondary" onClick={() => setShowGradeModal(false)}>Close</button>
-                <button className="btn btn-primary" onClick={() => { setShowGradeModal(false); showToast('Grades saved successfully'); }}>Save Grades</button>
+              <h3 style={{ fontSize: 17, fontWeight: 700, margin: '0 0 8px' }}>Delete Assignment?</h3>
+              <p style={{ fontSize: 13, color: '#718096', margin: '0 0 4px' }}>
+                <strong>{deleteTarget.title}</strong>
+              </p>
+              <p style={{ fontSize: 12, color: '#a0aec0', margin: '0 0 24px' }}>This action cannot be undone.</p>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+                <button onClick={() => setDeleteTarget(null)} disabled={deleting}
+                  style={{ padding: '9px 22px', border: '1.5px solid #e2e8f0', borderRadius: 9, background: '#fff', fontWeight: 600, fontSize: 13, cursor: deleting ? 'not-allowed' : 'pointer' }}>
+                  Cancel
+                </button>
+                <button onClick={handleDelete} disabled={deleting}
+                  style={{ padding: '9px 22px', background: '#e53e3e', color: '#fff', border: 'none', borderRadius: 9, fontWeight: 700, fontSize: 13, cursor: deleting ? 'not-allowed' : 'pointer', opacity: deleting ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {deleting ? (
+                    <><span style={{ width: 13, height: 13, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} /> Deleting…</>
+                  ) : 'Delete'}
+                </button>
               </div>
             </div>
           </div>

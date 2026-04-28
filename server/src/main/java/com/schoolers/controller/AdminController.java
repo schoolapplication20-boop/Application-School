@@ -38,6 +38,13 @@ public class AdminController {
                 .orElse(null);
     }
 
+    private Long getCurrentUserId(Authentication auth) {
+        if (auth == null) return null;
+        return userRepository.findByEmailIgnoreCase(auth.getName())
+                .map(com.schoolers.model.User::getId)
+                .orElse(null);
+    }
+
     // ===== Permissions =====
     @GetMapping("/permissions")
     public ResponseEntity<ApiResponse<String>> getPermissions() {
@@ -142,6 +149,15 @@ public class AdminController {
     @GetMapping("/classes")
     public ResponseEntity<ApiResponse<List<ClassRoom>>> getClasses(Authentication auth) {
         return ResponseEntity.ok(adminService.getClasses(getCurrentSchoolId(auth)));
+    }
+
+    @GetMapping("/classes/capacity-check")
+    public ResponseEntity<?> getClassCapacityInfo(
+            @RequestParam String className,
+            @RequestParam(required = false, defaultValue = "") String section,
+            Authentication auth) {
+        var response = adminService.getClassCapacityInfo(className, section, getCurrentSchoolId(auth));
+        return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
     @PostMapping("/classes")
@@ -295,20 +311,23 @@ public class AdminController {
     }
 
     @PostMapping("/expenses")
-    public ResponseEntity<ApiResponse<Expense>> createExpense(@RequestBody Map<String, Object> body) {
+    public ResponseEntity<ApiResponse<Expense>> createExpense(@RequestBody Map<String, Object> body, Authentication auth) {
+        body.put("schoolId", getCurrentSchoolId(auth));
+        body.put("addedById", getCurrentUserId(auth));
         ApiResponse<Expense> response = adminService.createExpense(body);
         return response.isSuccess() ? ResponseEntity.status(201).body(response) : ResponseEntity.badRequest().body(response);
     }
 
     @PutMapping("/expenses/{id}")
-    public ResponseEntity<?> updateExpense(@PathVariable Long id, @RequestBody Map<String, Object> body) {
-        ApiResponse<Expense> response = adminService.updateExpense(id, body);
+    public ResponseEntity<?> updateExpense(@PathVariable Long id, @RequestBody Map<String, Object> body, Authentication auth) {
+        body.put("schoolId", getCurrentSchoolId(auth));
+        ApiResponse<Expense> response = adminService.updateExpense(id, body, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
     @DeleteMapping("/expenses/{id}")
-    public ResponseEntity<ApiResponse<String>> deleteExpense(@PathVariable Long id) {
-        ApiResponse<String> response = adminService.deleteExpense(id);
+    public ResponseEntity<ApiResponse<String>> deleteExpense(@PathVariable Long id, Authentication auth) {
+        ApiResponse<String> response = adminService.deleteExpense(id, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
     }
 
@@ -362,46 +381,21 @@ public class AdminController {
     @GetMapping("/teachers/{id}/attendance-summary")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getTeacherAttendanceSummary(
             @PathVariable Long id,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            Authentication auth) {
         if (date == null) date = LocalDate.now();
-        ApiResponse<Map<String, Object>> response = adminService.getTeacherAttendanceSummary(id, date);
+        ApiResponse<Map<String, Object>> response = adminService.getTeacherAttendanceSummary(id, date, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
     @GetMapping("/attendance/classes/{classId}/details")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getClassAttendanceDetails(
             @PathVariable Long classId,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            Authentication auth) {
         if (date == null) date = LocalDate.now();
-        ApiResponse<Map<String, Object>> response = adminService.getClassAttendanceDetails(classId, date);
+        ApiResponse<Map<String, Object>> response = adminService.getClassAttendanceDetails(classId, date, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
-    // ===== Teacher Class Assignments =====
-
-    /** Get all teacher-class-subject assignments for this school */
-    @GetMapping("/teacher-assignments")
-    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getTeacherAssignments(
-            @RequestParam(required = false) Long teacherId, Authentication auth) {
-        return ResponseEntity.ok(adminService.getTeacherAssignments(teacherId, getCurrentSchoolId(auth)));
-    }
-
-    /**
-     * Batch-assign a single teacher to one or more classes with a subject per class.
-     * Body: { teacherId: Long, assignments: [{ classSection: String, subject: String }] }
-     * Existing assignments for this teacher+school are replaced.
-     */
-    @PostMapping("/teacher-assignments/batch")
-    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> saveTeacherAssignments(
-            @RequestBody Map<String, Object> body, Authentication auth) {
-        var response = adminService.saveTeacherAssignments(body, getCurrentSchoolId(auth));
-        return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
-    }
-
-    /** Delete a single assignment row */
-    @DeleteMapping("/teacher-assignments/{id}")
-    public ResponseEntity<ApiResponse<String>> deleteTeacherAssignment(@PathVariable Long id, Authentication auth) {
-        var response = adminService.deleteTeacherAssignment(id, getCurrentSchoolId(auth));
-        return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
-    }
 }

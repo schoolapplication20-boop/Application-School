@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "student_fee_assignments",
-       uniqueConstraints = @UniqueConstraint(columnNames = {"student_id", "academic_year"}))
+       uniqueConstraints = @UniqueConstraint(name = "uq_student_fee_school", columnNames = {"student_id", "academic_year", "school_id"}))
 @Data
 @Builder
 @NoArgsConstructor
@@ -69,6 +69,9 @@ public class StudentFeeAssignment {
 
     @Column(columnDefinition = "TEXT")
     private String remarks;
+
+    @Column(name = "school_id")
+    private Long schoolId;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

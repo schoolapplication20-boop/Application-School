@@ -63,7 +63,12 @@ export const updateTimetableEntry = async (id, updates) => {
 };
 
 export const deleteTimetableEntry = async (id) => {
-  try { await timetableAPI.delete(id); } catch {}
+  try {
+    await timetableAPI.delete(id);
+    return { success: true };
+  } catch (err) {
+    return { success: false, message: err.response?.data?.message || 'Failed to delete timetable entry.' };
+  }
 };
 
 /**

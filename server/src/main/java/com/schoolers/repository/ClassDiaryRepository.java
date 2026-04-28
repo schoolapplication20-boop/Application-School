@@ -42,4 +42,28 @@ public interface ClassDiaryRepository extends JpaRepository<ClassDiary, Long> {
             @Param("className") String className,
             @Param("teacherId") Long teacherId,
             @Param("date") LocalDate date);
+
+    // ── School-scoped queries (multi-tenant) ──────────────────────────────────
+
+    List<ClassDiary> findBySchoolIdOrderByCreatedAtDesc(Long schoolId);
+
+    List<ClassDiary> findBySchoolIdAndClassNameOrderByDiaryDateDesc(Long schoolId, String className);
+
+    List<ClassDiary> findBySchoolIdAndClassNameAndSectionOrderByDiaryDateDesc(Long schoolId, String className, String section);
+
+    List<ClassDiary> findBySchoolIdAndTeacherIdOrderByDiaryDateDesc(Long schoolId, Long teacherId);
+
+    boolean existsBySchoolIdAndClassNameAndSubjectAndDiaryDateAndTeacherId(
+            Long schoolId, String className, String subject, LocalDate diaryDate, Long teacherId);
+
+    @Query("SELECT d FROM ClassDiary d WHERE d.schoolId = :schoolId AND " +
+           "(:className IS NULL OR d.className = :className) AND " +
+           "(:teacherId IS NULL OR d.teacherId = :teacherId) AND " +
+           "(:date IS NULL OR d.diaryDate = :date) " +
+           "ORDER BY d.createdAt DESC")
+    List<ClassDiary> findWithFiltersAndSchool(
+            @Param("schoolId") Long schoolId,
+            @Param("className") String className,
+            @Param("teacherId") Long teacherId,
+            @Param("date") LocalDate date);
 }
