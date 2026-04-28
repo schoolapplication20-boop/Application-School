@@ -7,7 +7,7 @@ import { exportCSV } from '../../services/attendanceStore';
 const TODAY = new Date().toISOString().split('T')[0];
 
 const STATUS_CONFIG = {
-  PRESENT: { label: 'Present', short: 'P', bg: '#76C442', light: '#f0fff4', text: '#276749', icon: 'check_circle' },
+  PRESENT: { label: 'Present', short: 'P', bg: '#0de1e8', light: '#f0fff4', text: '#276749', icon: 'check_circle' },
   ABSENT:  { label: 'Absent',  short: 'A', bg: '#e53e3e', light: '#fff5f5', text: '#c53030', icon: 'cancel'       },
   LEAVE:   { label: 'Leave',   short: 'L', bg: '#ed8936', light: '#fffaf0', text: '#c05621', icon: 'event_busy'   },
   OTHERS:  { label: 'Others',  short: 'O', bg: '#805ad5', light: '#faf5ff', text: '#553c9a', icon: 'more_horiz'   },
@@ -219,11 +219,11 @@ export default function Attendance() {
           primaryClass ? (
             <div style={{
               display: 'flex', alignItems: 'center', gap: 10,
-              background: 'linear-gradient(135deg, #76C44215, #76C44230)',
-              border: '1.5px solid #76C44250', borderRadius: 12,
+              background: 'linear-gradient(135deg, #0de1e815, #0de1e830)',
+              border: '1.5px solid #0de1e850', borderRadius: 12,
               padding: '10px 18px',
             }}>
-              <div style={{ width: 36, height: 36, borderRadius: 9, background: '#76C442', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 9, background: '#0de1e8', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <span className="material-icons" style={{ color: '#fff', fontSize: 18 }}>assignment_ind</span>
               </div>
               <div>
@@ -258,7 +258,7 @@ export default function Attendance() {
           <button key={t.key} onClick={() => setActiveTab(t.key)} style={{
             display: 'flex', alignItems: 'center', gap: 6, padding: '9px 20px',
             border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13,
-            background: activeTab === t.key ? '#76C442' : 'transparent',
+            background: activeTab === t.key ? '#0de1e8' : 'transparent',
             color:      activeTab === t.key ? '#fff'    : '#718096',
             transition: 'all 0.2s',
           }}>
@@ -295,7 +295,7 @@ export default function Attendance() {
                   onChange={e => setSelectedDate(e.target.value)} />
               </div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <button onClick={() => markAll('PRESENT')} style={{ padding: '8px 12px', background: '#76C44218', border: '1.5px solid #76C44250', borderRadius: 8, color: '#276749', fontWeight: 600, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <button onClick={() => markAll('PRESENT')} style={{ padding: '8px 12px', background: '#0de1e818', border: '1.5px solid #0de1e850', borderRadius: 8, color: '#276749', fontWeight: 600, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
                   <span className="material-icons" style={{ fontSize: 15 }}>done_all</span> All Present
                 </button>
                 <button onClick={() => markAll('ABSENT')} style={{ padding: '8px 12px', background: '#e53e3e18', border: '1.5px solid #e53e3e50', borderRadius: 8, color: '#c53030', fontWeight: 600, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -417,7 +417,7 @@ export default function Attendance() {
 
                 <div style={{ padding: '16px 0 0', display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #f0f4f8', marginTop: 12, gap: 10 }}>
                   <button onClick={handleSave} disabled={saving} style={{
-                    padding: '12px 32px', background: saving ? '#a0aec0' : '#76C442', border: 'none', borderRadius: 10,
+                    padding: '12px 32px', background: saving ? '#a0aec0' : '#0de1e8', border: 'none', borderRadius: 10,
                     color: '#fff', fontWeight: 700, fontSize: 15, cursor: saving ? 'not-allowed' : 'pointer',
                     display: 'flex', alignItems: 'center', gap: 8,
                     boxShadow: saving ? 'none' : '0 4px 12px rgba(118,196,66,0.35)',
@@ -506,7 +506,7 @@ function HistoryRow({ date, classId, expanded, expandedStudents, onToggle, clsLa
 
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: '#2d3748', minWidth: 110 }}>{new Date(date + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
-          <span style={{ background: '#76C44215', color: '#276749', padding: '2px 10px', borderRadius: 12, fontWeight: 700, fontSize: 12 }}>{clsLabel}</span>
+          <span style={{ background: '#0de1e815', color: '#276749', padding: '2px 10px', borderRadius: 12, fontWeight: 700, fontSize: 12 }}>{clsLabel}</span>
 
           {summary ? (
             <>
@@ -519,7 +519,7 @@ function HistoryRow({ date, classId, expanded, expandedStudents, onToggle, clsLa
               {pct !== null && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
                   <div style={{ width: 50, height: 6, background: '#e2e8f0', borderRadius: 4, overflow: 'hidden' }}>
-                    <div style={{ width: `${pct}%`, height: '100%', background: pct >= 90 ? '#76C442' : pct >= 75 ? '#ed8936' : '#e53e3e', borderRadius: 4 }} />
+                    <div style={{ width: `${pct}%`, height: '100%', background: pct >= 90 ? '#0de1e8' : pct >= 75 ? '#ed8936' : '#e53e3e', borderRadius: 4 }} />
                   </div>
                   <span style={{ fontWeight: 700, fontSize: 13, color: pctColor(pct) }}>{pct}%</span>
                 </div>

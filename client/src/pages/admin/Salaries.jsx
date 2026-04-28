@@ -247,7 +247,7 @@ export default function Salaries() {
           <div className="row g-3 mb-3">
             {[
               { label: 'Total Staff', value: stats.total, icon: 'groups', color: '#4361ee' },
-              { label: 'Total Payable', value: fmt(stats.totalCalc), icon: 'account_balance_wallet', color: '#76C442' },
+              { label: 'Total Payable', value: fmt(stats.totalCalc), icon: 'account_balance_wallet', color: '#0de1e8' },
               { label: 'Paid', value: `${stats.paid} staff`, icon: 'check_circle', color: '#28a745' },
               { label: 'Unpaid / Partial', value: `${stats.unpaid + stats.partial}`, icon: 'pending', color: '#ffc107' },
             ].map((s, i) => (
@@ -741,7 +741,7 @@ export default function Salaries() {
               </div>
               <div className="modal-body" id="salary-slip">
                 <div className="text-center border-bottom pb-3 mb-3">
-                  <h4 className="fw-bold mb-0" style={{ color: '#76C442' }}>Schoolers Management System</h4>
+                  <h4 className="fw-bold mb-0" style={{ color: '#0de1e8' }}>Schoolers Management System</h4>
                   <p className="text-muted mb-1 small">School Campus, Education City</p>
                   <h6 className="fw-bold mt-2 mb-0">SALARY SLIP</h6>
                   <p className="text-muted small mb-0">For the month of {slipModal.month} {slipModal.year}</p>

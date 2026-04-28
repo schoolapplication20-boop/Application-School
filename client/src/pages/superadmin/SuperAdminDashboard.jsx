@@ -10,7 +10,6 @@ const ALL_MODULES = [
   { key: 'teachers',     label: 'Teachers',           icon: 'person' },
   { key: 'classes',      label: 'Classes',            icon: 'class' },
   { key: 'applications', label: 'Applications',       icon: 'assignment_ind' },
-  { key: 'parents',      label: 'Parents',            icon: 'family_restroom' },
   { key: 'fees',         label: 'Fees & Payments',    icon: 'payments' },
   { key: 'collectFee',   label: 'Collect Fee',        icon: 'point_of_sale' },
   { key: 'salaries',     label: 'Salaries',           icon: 'account_balance_wallet' },
@@ -190,7 +189,7 @@ function OwnerDashboard() {
                   const perms = sa.permissions
                     ? (typeof sa.permissions === 'string' ? (() => { try { return JSON.parse(sa.permissions); } catch { return null; } })() : sa.permissions)
                     : null;
-                  const enabledCount = perms ? Object.values(perms).filter(Boolean).length : ALL_MODULES.length;
+                  const enabledCount = perms ? ALL_MODULES.filter(m => perms[m.key]).length : ALL_MODULES.length;
                   const isExpanded   = expandedRow === sa.schoolDbId;
 
                   return (
@@ -494,8 +493,9 @@ function CreateSuperAdminWizard({ onClose, onCreated }) {
       if (!form.state.trim())   return 'State is required';
     }
     if (s === 3) {
-      if (!form.phone.trim())      return 'Phone is required';
-      if (!form.schoolEmail.trim()) return 'Email is required';
+      if (!form.phone.trim())               return 'Phone number is required';
+      if (!/^\d{10}$/.test(form.phone))     return 'Phone number must be exactly 10 digits';
+      if (!form.schoolEmail.trim())          return 'Email is required';
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.schoolEmail)) return 'Enter a valid email';
     }
     if (s === 6) {
@@ -576,7 +576,7 @@ function CreateSuperAdminWizard({ onClose, onCreated }) {
               messages:   perms.messages   ?? true,
             }),
             isSetupCompleted: true,
-          });
+          }, logoFile || null);
           if (!updateRes.data?.success) {
             console.warn('[CreateSuperAdminWizard] School detail update failed:', updateRes.data?.message);
           }
@@ -714,8 +714,15 @@ function CreateSuperAdminWizard({ onClose, onCreated }) {
           {/* ── Step 3: Contact ───────────────────────────────────────────────── */}
           {step === 3 && (
             <div>
-              <WizardField label="Phone Number" required>
-                <input value={form.phone} onChange={on('phone')} placeholder="e.g. +91 98765 43210" style={inp(false)} />
+              <WizardField label="Phone Number" required hint="10-digit mobile number">
+                <input
+                  type="tel"
+                  value={form.phone}
+                  onChange={e => set('phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
+                  placeholder="e.g. 9876543210"
+                  maxLength={10}
+                  style={inp(false)}
+                />
               </WizardField>
               <WizardField label="School Email" required>
                 <input type="email" value={form.schoolEmail} onChange={on('schoolEmail')} placeholder="e.g. info@springfield.edu" style={inp(false)} />

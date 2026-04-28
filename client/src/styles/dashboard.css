@@ -82,8 +82,8 @@
 }
 
 .chart-period-btn.active {
-  background: #76C442;
-  border-color: #76C442;
+  background: #e06a0a;
+  border-color: #0de1e8;
   color: #fff;
 }
 
@@ -125,7 +125,7 @@
 
 .btn-view-all {
   font-size: 13px;
-  color: #76C442;
+  color: #0de1e8;
   font-weight: 600;
   background: none;
   border: none;
@@ -136,7 +136,7 @@
 }
 
 .btn-view-all:hover {
-  color: #5fa832;
+  color: #0eb5da;
   text-decoration: underline;
 }
 
@@ -185,7 +185,7 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #76C442, #5fa832);
+  background: linear-gradient(135deg, #0de1e8, #0eb5da);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -270,12 +270,12 @@
 }
 
 .action-btn-edit {
-  background: rgba(118, 196, 66, 0.1);
-  color: #76C442;
+  background: rgba(13, 225, 232, 0.1);
+  color: #0de1e8;
 }
 
 .action-btn-edit:hover {
-  background: rgba(118, 196, 66, 0.2);
+  background: rgba(13, 225, 232, 0.2);
 }
 
 .action-btn-delete {
@@ -403,8 +403,8 @@
 }
 
 .search-input:focus {
-  border-color: #76C442;
-  box-shadow: 0 0 0 3px rgba(118, 196, 66, 0.15);
+  border-color: #0de1e8;
+  box-shadow: 0 0 0 3px rgba(13, 225, 232, 0.15);
   background: #fff;
 }
 
@@ -422,7 +422,7 @@
 }
 
 .filter-select:focus {
-  border-color: #76C442;
+  border-color: #0de1e8;
 }
 
 .btn-add {
@@ -430,7 +430,7 @@
   align-items: center;
   gap: 6px;
   padding: 10px 18px;
-  background: #76C442;
+  background: #0de1e8;
   border: none;
   border-radius: 10px;
   color: #fff;
@@ -442,9 +442,9 @@
 }
 
 .btn-add:hover {
-  background: #5fa832;
+  background: #0eb5da;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(118, 196, 66, 0.4);
+  box-shadow: 0 4px 12px rgba(13, 225, 232, 0.4);
 }
 
 .btn-add .material-icons {
@@ -461,7 +461,7 @@
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #76C442, #5fa832);
+  background: linear-gradient(90deg, #0de1e8, #0eb5da);
   border-radius: 3px;
   transition: width 0.5s ease;
 }
@@ -524,7 +524,7 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #76C442;
+  background: #0de1e8;
   flex-shrink: 0;
 }
 
@@ -552,7 +552,7 @@
 
 /* Fee Summary Card */
 .fee-summary {
-  background: linear-gradient(135deg, #76C442, #5fa832);
+  background: linear-gradient(135deg, #0de1e8, #0eb5da);
   border-radius: 14px;
   padding: 24px;
   color: #fff;
@@ -601,7 +601,7 @@
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #76C442, #5fa832);
+  background: linear-gradient(135deg, #0de1e8, #0eb5da);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -638,13 +638,13 @@
 }
 
 .message-unread .message-sender {
-  color: #76C442;
+  color: #0de1e8;
 }
 
 .message-unread-dot {
   width: 8px;
   height: 8px;
-  background: #76C442;
+  background: #0de1e8;
   border-radius: 50%;
   margin-top: 6px;
   flex-shrink: 0;
@@ -652,7 +652,7 @@
 
 /* Child Info Card (Parent) */
 .child-info-card {
-  background: linear-gradient(135deg, #76C442 0%, #5fa832 100%);
+  background: linear-gradient(135deg, #0de1e8 0%, #0eb5da 100%);
   border-radius: 16px;
   padding: 28px;
   color: #fff;
@@ -754,13 +754,13 @@
 }
 
 .page-btn:hover {
-  border-color: #76C442;
-  color: #76C442;
+  border-color: #0de1e8;
+  color: #0de1e8;
 }
 
 .page-btn.active {
-  background: #76C442;
-  border-color: #76C442;
+  background: #0de1e8;
+  border-color: #0de1e8;
   color: #fff;
 }
 

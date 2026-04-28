@@ -5,14 +5,14 @@
 .app-layout {
   display: flex;
   min-height: 100vh;
-  background-color: #f7fafc;
+  background-color: #f8fafc;
 }
 
 /* Sidebar */
 .sidebar {
   width: 260px;
   min-width: 260px;
-  background: #1e2a3a;
+  background: #0f172a;
   box-shadow: 2px 0 12px rgba(0, 0, 0, 0.2);
   display: flex;
   flex-direction: column;
@@ -117,7 +117,7 @@
   right: -16px;
   width: 32px;
   height: 32px;
-  background: #76C442;
+  background: #0de1e8;
   border: 3px solid #fff;
   border-radius: 50%;
   display: flex;
@@ -131,7 +131,7 @@
 }
 
 .sidebar-toggle:hover {
-  background: #5fa832;
+  background: #0eb5da;
   transform: scale(1.1);
 }
 
@@ -180,13 +180,13 @@
 }
 
 .nav-item:hover {
-  background-color: rgba(118, 196, 66, 0.15);
-  color: #76C442;
+  background-color: rgba(13, 225, 232, 0.15);
+  color: #0de1e8;
 }
 
 .nav-item.active {
-  background-color: rgba(118, 196, 66, 0.2);
-  color: #76C442;
+  background-color: rgba(13, 225, 232, 0.2);
+  color: #0de1e8;
   font-weight: 600;
 }
 
@@ -197,7 +197,7 @@
   top: 8px;
   bottom: 8px;
   width: 3px;
-  background-color: #76C442;
+  background-color: #0de1e8;
   border-radius: 0 3px 3px 0;
 }
 
@@ -219,7 +219,7 @@
 
 .nav-item .nav-badge {
   margin-left: auto;
-  background-color: #76C442;
+  background-color: #0de1e8;
   color: #fff;
   font-size: 10px;
   font-weight: 700;
@@ -283,7 +283,7 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #76C442, #5fa832);
+  background: linear-gradient(135deg, #0de1e8, #0eb5da);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -391,8 +391,8 @@
 }
 
 .navbar-icon-btn:hover {
-  background: rgba(118, 196, 66, 0.1);
-  color: #76C442;
+  background: rgba(13, 225, 232, 0.1);
+  color: #0de1e8;
 }
 
 .navbar-icon-btn .notification-dot {
@@ -417,14 +417,14 @@
 }
 
 .navbar-user:hover {
-  background-color: #f7fafc;
+  background-color: #f8fafc;
 }
 
 .navbar-user .user-avatar {
   width: 38px;
   height: 38px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #76C442, #5fa832);
+  background: linear-gradient(135deg, #0de1e8, #0eb5da);
   display: flex;
   align-items: center;
   justify-content: center;

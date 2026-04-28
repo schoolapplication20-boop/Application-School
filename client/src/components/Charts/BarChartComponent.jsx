@@ -43,7 +43,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 const BarChartComponent = ({
   data,
   bars = [
-    { key: 'revenue', name: 'Revenue', color: '#76C442' },
+    { key: 'revenue', name: 'Revenue', color: '#0de1e8' },
     { key: 'expenses', name: 'Expenses', color: '#e53e3e' },
   ],
   height = 300,

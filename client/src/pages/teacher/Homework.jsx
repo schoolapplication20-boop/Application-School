@@ -247,8 +247,8 @@ export default function Homework() {
             display: 'flex', alignItems: 'center', gap: '6px',
             padding: '10px 20px', border: 'none', background: 'none', cursor: 'pointer',
             fontSize: '14px', fontWeight: 600,
-            color: activeTab === tab.key ? '#76C442' : '#718096',
-            borderBottom: activeTab === tab.key ? '2px solid #76C442' : '2px solid transparent',
+            color: activeTab === tab.key ? '#0de1e8' : '#718096',
+            borderBottom: activeTab === tab.key ? '2px solid #0de1e8' : '2px solid transparent',
             marginBottom: '-2px', transition: 'all 0.2s',
           }}>
             <span className="material-icons" style={{ fontSize: '18px' }}>{tab.icon}</span>
@@ -311,7 +311,7 @@ export default function Homework() {
                     onClick={() => subjectInputRef.current?.focus()}
                     style={{
                       minHeight: 34, padding: '4px 8px',
-                      border: `1px solid ${!form.subject.trim() ? '#e2e8f0' : '#76C442'}`,
+                      border: `1px solid ${!form.subject.trim() ? '#e2e8f0' : '#0de1e8'}`,
                       borderRadius: 6, background: '#fff', cursor: 'text',
                       display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center',
                       transition: 'border-color 0.15s',
@@ -321,7 +321,7 @@ export default function Homework() {
                       <span key={tag} style={{
                         display: 'inline-flex', alignItems: 'center', gap: 3,
                         padding: '2px 8px', borderRadius: 12, fontSize: 12, fontWeight: 600,
-                        background: '#76C44220', color: '#276749', border: '1px solid #76C44240',
+                        background: '#0de1e820', color: '#276749', border: '1px solid #0de1e840',
                       }}>
                         {tag}
                         <button type="button"
@@ -411,7 +411,7 @@ export default function Homework() {
                     <div>
                       <img src={imagePreview} alt="Preview"
                         style={{ maxHeight: '140px', maxWidth: '100%', borderRadius: '8px', objectFit: 'contain' }} />
-                      <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#76C442' }}>
+                      <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#0de1e8' }}>
                         {form.imageName} — click to change
                       </p>
                     </div>
@@ -429,7 +429,7 @@ export default function Homework() {
               <button type="submit" disabled={submitting}
                 style={{
                   display: 'block', width: '100%', padding: '11px',
-                  background: '#76C442', border: 'none', borderRadius: '10px',
+                  background: '#0de1e8', border: 'none', borderRadius: '10px',
                   color: '#fff', fontWeight: 700, fontSize: '14px', cursor: 'pointer',
                 }}>
                 {submitting ? 'Saving…' : 'Save Diary Entry'}
@@ -463,7 +463,7 @@ export default function Homework() {
                 </button>
               )}
               <button onClick={fetchEntries}
-                style={{ marginLeft: 'auto', padding: '8px 16px', borderRadius: '8px', border: 'none', background: '#76C44215', color: '#276749', fontSize: '13px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                style={{ marginLeft: 'auto', padding: '8px 16px', borderRadius: '8px', border: 'none', background: '#0de1e815', color: '#276749', fontSize: '13px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
                 <span className="material-icons" style={{ fontSize: 16 }}>refresh</span> Refresh
               </button>
             </div>
@@ -491,13 +491,13 @@ export default function Homework() {
                     {/* Left: image or icon */}
                     <div style={{
                       width: 56, height: 56, borderRadius: 12, flexShrink: 0,
-                      background: '#76C44215', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: '#0de1e815', display: 'flex', alignItems: 'center', justifyContent: 'center',
                       overflow: 'hidden', cursor: entry.imageUrl ? 'pointer' : 'default',
                     }} onClick={() => entry.imageUrl && setPreviewEntry(entry)}>
                       {entry.imageUrl
                         ? <img src={entry.imageUrl} alt="diary"
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        : <span className="material-icons" style={{ color: '#76C442', fontSize: 26 }}>menu_book</span>
+                        : <span className="material-icons" style={{ color: '#0de1e8', fontSize: 26 }}>menu_book</span>
                       }
                     </div>
 
@@ -597,7 +597,7 @@ export default function Homework() {
                   Cancel
                 </button>
                 <button type="submit" disabled={saving}
-                  style={{ padding: '9px 24px', borderRadius: 8, border: 'none', background: '#76C442', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>
+                  style={{ padding: '9px 24px', borderRadius: 8, border: 'none', background: '#0de1e8', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>
                   {saving ? 'Saving…' : 'Save Changes'}
                 </button>
               </div>

@@ -134,8 +134,8 @@ export default function ParentDashboard() {
         <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
           {children.map((c, i) => (
             <button key={c.id} onClick={() => setSelectedIdx(i)} style={{
-              padding: '8px 18px', borderRadius: 20, border: `2px solid ${i === selectedIdx ? '#76C442' : '#e2e8f0'}`,
-              background: i === selectedIdx ? '#76C44220' : '#fff', color: i === selectedIdx ? '#276749' : '#718096',
+              padding: '8px 18px', borderRadius: 20, border: `2px solid ${i === selectedIdx ? '#0de1e8' : '#e2e8f0'}`,
+              background: i === selectedIdx ? '#0de1e820' : '#fff', color: i === selectedIdx ? '#276749' : '#718096',
               fontWeight: 700, fontSize: 13, cursor: 'pointer',
             }}>
               {c.name}
@@ -165,7 +165,7 @@ export default function ParentDashboard() {
       {/* Stats */}
       <div className="stats-grid" style={{ marginBottom: '24px' }}>
         {[
-          { title: 'Attendance',  value: `${attendancePct}%`, icon: 'fact_check', color: '#76C442' },
+          { title: 'Attendance',  value: `${attendancePct}%`, icon: 'fact_check', color: '#0de1e8' },
           { title: 'Days Present', value: presentDays,         icon: 'check_circle', color: '#3182ce' },
           { title: 'Fee Due',     value: `₹${pendingFee.toLocaleString()}`, icon: 'payments', color: '#e53e3e' },
           { title: 'Total Marks', value: marks.length > 0 ? `${marks.reduce((s,m)=>s+m.marks,0)}/${marks.reduce((s,m)=>s+m.maxMarks,0)}` : '—', icon: 'grade', color: '#805ad5' },
@@ -188,12 +188,12 @@ export default function ParentDashboard() {
               <div className="chart-card-title">Attendance Trend</div>
               <div className="chart-card-subtitle">Monthly attendance percentage</div>
             </div>
-            <span style={{ padding: '4px 12px', background: '#76C44220', color: '#76C442', borderRadius: '20px', fontSize: '12px', fontWeight: 600 }}>
+            <span style={{ padding: '4px 12px', background: '#0de1e820', color: '#0de1e8', borderRadius: '20px', fontSize: '12px', fontWeight: 600 }}>
               {attendancePct}% Avg
             </span>
           </div>
           {attendanceTrend.length > 0
-            ? <LineChartComponent data={attendanceTrend} lines={[{ key: 'attendance', name: 'Attendance %', color: '#76C442' }]} height={200} />
+            ? <LineChartComponent data={attendanceTrend} lines={[{ key: 'attendance', name: 'Attendance %', color: '#0de1e8' }]} height={200} />
             : <div style={{ padding: '40px 0', textAlign: 'center', color: '#a0aec0', fontSize: 13 }}>No attendance data yet</div>
           }
         </div>
@@ -222,9 +222,9 @@ export default function ParentDashboard() {
                 <div style={{ fontSize: '13px', color: '#718096', marginBottom: '16px' }}>Due: {nextDue.dueDate || '—'}</div>
               </>
             ) : (
-              <div style={{ fontSize: '14px', fontWeight: 600, color: '#76C442', marginBottom: '16px' }}>All fees paid!</div>
+              <div style={{ fontSize: '14px', fontWeight: 600, color: '#0de1e8', marginBottom: '16px' }}>All fees paid!</div>
             )}
-            <button onClick={() => navigate('/parent/pay-fees')} style={{ display: 'block', width: '100%', padding: '10px', background: '#76C442', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: 600, cursor: 'pointer' }}>
+            <button onClick={() => navigate('/parent/pay-fees')} style={{ display: 'block', width: '100%', padding: '10px', background: '#0de1e8', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: 600, cursor: 'pointer' }}>
               {nextDue ? 'Pay Now' : 'View Fees'}
             </button>
           </div>
@@ -236,7 +236,7 @@ export default function ParentDashboard() {
         <div className="data-table-card">
           <div className="data-table-header">
             <span className="data-table-title">Recent Marks</span>
-            <button className="btn-view-all" onClick={() => navigate('/parent/performance')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#76C442', fontWeight: 600 }}>View All →</button>
+            <button className="btn-view-all" onClick={() => navigate('/parent/performance')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0de1e8', fontWeight: 600 }}>View All →</button>
           </div>
           {recentMarks.length === 0 ? (
             <div style={{ padding: '32px 0', textAlign: 'center', color: '#a0aec0', fontSize: 13 }}>No marks recorded yet</div>
@@ -275,7 +275,7 @@ export default function ParentDashboard() {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '8px 0' }}>
             {[
-              { label: 'View Attendance',   icon: 'fact_check',   path: '/parent/attendance',  color: '#76C442' },
+              { label: 'View Attendance',   icon: 'fact_check',   path: '/parent/attendance',  color: '#0de1e8' },
               { label: 'Performance',       icon: 'grade',        path: '/parent/performance', color: '#805ad5' },
               { label: 'Pay Fees',          icon: 'payments',     path: '/parent/pay-fees',    color: '#e53e3e' },
               { label: 'Leave Request',     icon: 'event_busy',   path: '/parent/leave',       color: '#ed8936' },

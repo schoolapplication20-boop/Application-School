@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { parentAPI } from '../../services/api';
 
 const STATUS_CONFIG = {
-  PRESENT: { label: 'Present', badge: 'status-present', color: '#76C442' },
+  PRESENT: { label: 'Present', badge: 'status-present', color: '#0de1e8' },
   ABSENT:  { label: 'Absent',  badge: 'status-absent',  color: '#e53e3e' },
   LEAVE:   { label: 'Leave',   badge: 'status-pending',  color: '#ed8936' },
   LATE:    { label: 'Late',    badge: 'status-late',     color: '#ed8936' },
@@ -114,7 +114,7 @@ export default function AttendanceView() {
 
       <div className="stats-grid" style={{ marginBottom: '24px' }}>
         {[
-          { label: 'Overall %',   value: attendancePct + '%', color: '#76C442', icon: 'fact_check' },
+          { label: 'Overall %',   value: attendancePct + '%', color: '#0de1e8', icon: 'fact_check' },
           { label: 'Days Present', value: presentCount,        color: '#3182ce', icon: 'check_circle' },
           { label: 'Days Absent',  value: absentCount,         color: '#e53e3e', icon: 'cancel' },
           { label: 'Other',        value: lateCount,           color: '#ed8936', icon: 'schedule' },
@@ -135,7 +135,7 @@ export default function AttendanceView() {
             <div className="chart-card-title">Monthly Attendance</div>
           </div>
           {attendanceTrend.length > 0
-            ? <LineChartComponent data={attendanceTrend} lines={[{ key: 'attendance', name: 'Attendance %', color: '#76C442' }]} height={200} />
+            ? <LineChartComponent data={attendanceTrend} lines={[{ key: 'attendance', name: 'Attendance %', color: '#0de1e8' }]} height={200} />
             : <div style={{ padding: '40px 0', textAlign: 'center', color: '#a0aec0', fontSize: 13 }}>No attendance data yet</div>
           }
         </div>
@@ -149,7 +149,7 @@ export default function AttendanceView() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {[
-                { label: 'Present', count: presentCount, color: '#76C442', icon: 'check_circle' },
+                { label: 'Present', count: presentCount, color: '#0de1e8', icon: 'check_circle' },
                 { label: 'Absent',  count: absentCount,  color: '#e53e3e', icon: 'cancel'       },
                 { label: 'Other',   count: lateCount,    color: '#ed8936', icon: 'schedule'     },
               ].map(item => (
@@ -167,7 +167,7 @@ export default function AttendanceView() {
                 </div>
               ))}
               <div style={{ marginTop: '8px', padding: '14px', background: attendancePct >= 75 ? '#f0fff4' : '#fff5f5', borderRadius: '10px', textAlign: 'center' }}>
-                <span className="material-icons" style={{ color: attendancePct >= 75 ? '#76C442' : '#e53e3e', fontSize: '28px' }}>
+                <span className="material-icons" style={{ color: attendancePct >= 75 ? '#0de1e8' : '#e53e3e', fontSize: '28px' }}>
                   {attendancePct >= 75 ? 'check_circle' : 'warning'}
                 </span>
                 <div style={{ fontSize: '13px', fontWeight: 600, color: attendancePct >= 75 ? '#276749' : '#c53030', marginTop: '4px' }}>

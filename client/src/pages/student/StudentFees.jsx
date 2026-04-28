@@ -118,7 +118,7 @@ export default function StudentFees() {
     <Layout pageTitle="My Fees">
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 400, gap: 16, color: '#a0aec0' }}>
-        <div style={{ width: 48, height: 48, border: '4px solid #e2e8f0', borderTopColor: '#76C442', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+        <div style={{ width: 48, height: 48, border: '4px solid #e2e8f0', borderTopColor: '#1A56DB', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
         <span style={{ fontSize: 14, fontWeight: 600 }}>Loading your fee details…</span>
       </div>
     </Layout>
@@ -130,7 +130,7 @@ export default function StudentFees() {
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 400, gap: 12 }}>
         <span className="material-icons" style={{ fontSize: 52, color: '#e53e3e' }}>error_outline</span>
         <p style={{ fontSize: 15, color: '#e53e3e', fontWeight: 600, margin: 0 }}>{error}</p>
-        <button onClick={load} style={{ padding: '9px 22px', background: '#76C442', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+        <button onClick={load} style={{ padding: '9px 22px', background: '#1A56DB', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
           Try Again
         </button>
       </div>
@@ -221,7 +221,7 @@ export default function StudentFees() {
           <div style={{ height: 10, background: '#edf2f7', borderRadius: 99, overflow: 'hidden' }}>
             <div style={{
               height: '100%', width: `${paidPct}%`,
-              background: paidPct >= 100 ? '#38a169' : 'linear-gradient(90deg, #76C442, #5fa832)',
+              background: paidPct >= 100 ? '#38a169' : 'linear-gradient(90deg, #1A56DB, #1E429F)',
               borderRadius: 99, transition: 'width 0.7s cubic-bezier(.4,0,.2,1)',
             }} />
           </div>
@@ -267,13 +267,13 @@ export default function StudentFees() {
               display: 'flex', alignItems: 'center', gap: 6, padding: '10px 18px',
               border: 'none', background: 'none', cursor: 'pointer', fontSize: 13,
               fontWeight: 600, color: activeTab === t.key ? '#276749' : '#718096',
-              borderBottom: activeTab === t.key ? '2.5px solid #76C442' : '2.5px solid transparent',
+              borderBottom: activeTab === t.key ? '2.5px solid #1A56DB' : '2.5px solid transparent',
               marginBottom: '-2px', transition: 'all 0.18s',
             }}>
               <span className="material-icons" style={{ fontSize: 16 }}>{t.icon}</span>
               {t.label}
               {t.count > 0 && (
-                <span style={{ background: activeTab === t.key ? '#76C44225' : '#f0f4f8', color: activeTab === t.key ? '#276749' : '#718096', borderRadius: 99, fontSize: 10, fontWeight: 800, padding: '1px 7px' }}>
+                <span style={{ background: activeTab === t.key ? '#1A56DB25' : '#f0f4f8', color: activeTab === t.key ? '#276749' : '#718096', borderRadius: 99, fontSize: 10, fontWeight: 800, padding: '1px 7px' }}>
                   {t.count}
                 </span>
               )}

@@ -32,7 +32,7 @@ function CredentialCard({ label, value, mono }) {
         <div style={{ fontSize: 11, color: '#a0aec0', fontWeight: 600, marginBottom: 2 }}>{label}</div>
         <div style={{ fontSize: 14, fontWeight: 700, color: '#2d3748', fontFamily: mono ? 'monospace' : 'inherit', wordBreak: 'break-all' }}>{value}</div>
       </div>
-      <button onClick={copy} title="Copy" style={{ border: 'none', background: copied ? '#f0fff4' : '#e2e8f0', borderRadius: 7, padding: '6px 8px', cursor: 'pointer', color: copied ? '#76C442' : '#718096', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, fontFamily: 'Poppins, sans-serif', flexShrink: 0 }}>
+      <button onClick={copy} title="Copy" style={{ border: 'none', background: copied ? '#f0fff4' : '#e2e8f0', borderRadius: 7, padding: '6px 8px', cursor: 'pointer', color: copied ? '#0de1e8' : '#718096', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, fontFamily: 'Poppins, sans-serif', flexShrink: 0 }}>
         <span className="material-icons" style={{ fontSize: 15 }}>{copied ? 'check' : 'content_copy'}</span>
         {copied ? 'Copied' : 'Copy'}
       </button>
@@ -226,7 +226,7 @@ export default function Parents() {
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '16px', marginBottom: '24px' }}>
         {[
-          { label: 'Total Parents', value: stats.total,    color: '#76C442', icon: 'family_restroom' },
+          { label: 'Total Parents', value: stats.total,    color: '#0de1e8', icon: 'family_restroom' },
           { label: 'Active',        value: stats.active,   color: '#3182ce', icon: 'check_circle' },
           { label: 'Inactive',      value: stats.inactive, color: '#e53e3e', icon: 'cancel' },
         ].map(c => (
@@ -301,7 +301,7 @@ export default function Parents() {
                       ) : '—'}
                     </td>
                     <td>
-                      <button onClick={() => handleToggleStatus(p)} style={{ padding: '3px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: 700, border: 'none', cursor: 'pointer', background: isActive ? '#f0fff4' : '#fff5f5', color: isActive ? '#76C442' : '#e53e3e' }}>
+                      <button onClick={() => handleToggleStatus(p)} style={{ padding: '3px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: 700, border: 'none', cursor: 'pointer', background: isActive ? '#f0fff4' : '#fff5f5', color: isActive ? '#0de1e8' : '#e53e3e' }}>
                         {isActive ? 'Active' : 'Inactive'}
                       </button>
                     </td>
@@ -397,12 +397,12 @@ export default function Parents() {
                     <div style={{ gridColumn: '1 / -1' }}>
                       <label style={labelStyle}>Auto-Generated Password</label>
                       <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        <div style={{ flex: 1, padding: '9px 14px', background: '#f0fff4', border: '1.5px solid #76C442', borderRadius: '8px', fontFamily: 'monospace', fontSize: '15px', fontWeight: 700, color: '#276749', letterSpacing: '0.1em' }}>
+                        <div style={{ flex: 1, padding: '9px 14px', background: '#f0fff4', border: '1.5px solid #0de1e8', borderRadius: '8px', fontFamily: 'monospace', fontSize: '15px', fontWeight: 700, color: '#276749', letterSpacing: '0.1em' }}>
                           {form.password}
                         </div>
                         <button type="button" title="Regenerate password"
                           onClick={() => setForm({ ...form, password: generateRandomPassword() })}
-                          style={{ padding: '8px 12px', border: '1.5px solid #76C442', borderRadius: '8px', background: '#f0fff4', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', color: '#276749', fontWeight: 600, fontSize: '12px', fontFamily: 'Poppins, sans-serif', flexShrink: 0 }}>
+                          style={{ padding: '8px 12px', border: '1.5px solid #0de1e8', borderRadius: '8px', background: '#f0fff4', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', color: '#276749', fontWeight: 600, fontSize: '12px', fontFamily: 'Poppins, sans-serif', flexShrink: 0 }}>
                           <span className="material-icons" style={{ fontSize: '16px' }}>refresh</span>
                           Regenerate
                         </button>
@@ -416,7 +416,7 @@ export default function Parents() {
                 <button type="button" onClick={() => { setShowModal(false); setEditParent(null); setForm(EMPTY_FORM()); setErrors({}); }}
                   style={{ padding: '10px 20px', border: '1.5px solid #e2e8f0', borderRadius: '8px', background: '#fff', cursor: 'pointer', fontWeight: 600 }}>Cancel</button>
                 <button type="submit" disabled={saving}
-                  style={{ padding: '10px 24px', background: saving ? '#a0aec0' : '#76C442', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer' }}>
+                  style={{ padding: '10px 24px', background: saving ? '#a0aec0' : '#0de1e8', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer' }}>
                   {saving ? 'Saving...' : editParent ? 'Update Parent' : 'Create Parent'}
                 </button>
               </div>
@@ -473,7 +473,7 @@ export default function Parents() {
                   <div style={{ fontWeight: 700, fontSize: '15px', color: '#2d3748' }}>{viewParent.name}</div>
                   <div style={{ fontSize: '12px', color: '#718096' }}>{viewParent.email}</div>
                   {viewParent.mobile && <div style={{ fontSize: '12px', color: '#718096', marginTop: '2px' }}>{viewParent.mobile}</div>}
-                  <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: 700, background: (viewParent.isActive ?? true) ? '#f0fff4' : '#fff5f5', color: (viewParent.isActive ?? true) ? '#76C442' : '#e53e3e', display: 'inline-block', marginTop: '4px' }}>
+                  <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: 700, background: (viewParent.isActive ?? true) ? '#f0fff4' : '#fff5f5', color: (viewParent.isActive ?? true) ? '#0de1e8' : '#e53e3e', display: 'inline-block', marginTop: '4px' }}>
                     {(viewParent.isActive ?? true) ? 'Active' : 'Inactive'}
                   </span>
                 </div>
@@ -502,7 +502,7 @@ export default function Parents() {
             </div>
             <div className="modal-footer">
               <button onClick={() => setShowView(false)} style={{ padding: '10px 20px', border: '1.5px solid #e2e8f0', borderRadius: '8px', background: '#fff', cursor: 'pointer', fontWeight: 600 }}>Close</button>
-              <button onClick={() => { setShowView(false); handleEdit(viewParent); }} style={{ padding: '10px 20px', background: '#76C442', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>Edit Parent</button>
+              <button onClick={() => { setShowView(false); handleEdit(viewParent); }} style={{ padding: '10px 20px', background: '#0de1e8', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>Edit Parent</button>
             </div>
           </div>
         </div>
@@ -523,13 +523,13 @@ export default function Parents() {
                   value={resetPwd} onChange={e => setResetPwd(e.target.value)} />
                 <button type="button" onClick={() => setResetPwd(generateRandomPassword())}
                   style={{ padding: '0 10px', border: '1.5px solid #e2e8f0', borderRadius: '8px', background: '#f7fafc', cursor: 'pointer', flexShrink: 0 }}>
-                  <span className="material-icons" style={{ fontSize: '18px', color: '#76C442' }}>auto_fix_high</span>
+                  <span className="material-icons" style={{ fontSize: '18px', color: '#0de1e8' }}>auto_fix_high</span>
                 </button>
               </div>
             </div>
             <div className="modal-footer">
               <button onClick={() => setShowReset(false)} style={{ padding: '10px 20px', border: '1.5px solid #e2e8f0', borderRadius: '8px', background: '#fff', cursor: 'pointer', fontWeight: 600 }}>Cancel</button>
-              <button onClick={handleReset} style={{ padding: '10px 24px', background: '#76C442', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>Reset Password</button>
+              <button onClick={handleReset} style={{ padding: '10px 24px', background: '#0de1e8', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>Reset Password</button>
             </div>
           </div>
         </div>

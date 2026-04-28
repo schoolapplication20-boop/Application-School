@@ -17,7 +17,7 @@ const normalizeStatus = (s) => {
   return lower.charAt(0).toUpperCase() + lower.slice(1);
 };
 
-const STATUS_COLOR = { Pending: '#ed8936', Approved: '#76C442', Rejected: '#e53e3e' };
+const STATUS_COLOR = { Pending: '#ed8936', Approved: '#0de1e8', Rejected: '#e53e3e' };
 const STATUS_BG    = { Pending: '#fffaf0', Approved: '#f0fff4', Rejected: '#fff5f5' };
 const STATUS_ICON  = { Pending: 'schedule', Approved: 'check_circle', Rejected: 'cancel' };
 
@@ -158,7 +158,7 @@ export default function TeacherLeaveRequest() {
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '16px', marginBottom: '24px' }}>
         {[
-          { label: 'Total',    value: leaves.length, color: '#76C442', icon: 'event_note'      },
+          { label: 'Total',    value: leaves.length, color: '#0de1e8', icon: 'event_note'      },
           { label: 'Pending',  value: pending,        color: '#ed8936', icon: 'pending_actions' },
           { label: 'Approved', value: approved,       color: '#3182ce', icon: 'check_circle'    },
           { label: 'Rejected', value: rejected,       color: '#e53e3e', icon: 'cancel'          },
@@ -223,7 +223,7 @@ export default function TeacherLeaveRequest() {
                     <tr key={l.id} style={decided ? { background: bg } : {}}>
                       <td>
                         <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 600,
-                          background: '#76C44215', color: '#5fa832' }}>{l.leaveType || '—'}</span>
+                          background: '#0de1e815', color: '#0eb5da' }}>{l.leaveType || '—'}</span>
                       </td>
                       <td style={{ fontSize: '13px' }}>{l.fromDate || '—'}</td>
                       <td style={{ fontSize: '13px' }}>{l.toDate   || '—'}</td>

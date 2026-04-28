@@ -230,7 +230,7 @@ const Classes = () => {
     const pct = (enrolled / (capacity || 1)) * 100;
     if (pct >= 95) return '#e53e3e';
     if (pct >= 80) return '#ed8936';
-    return '#76C442';
+    return '#0de1e8';
   };
 
   // ── Save (add / edit) ────────────────────────────────────────────────────
@@ -291,7 +291,7 @@ const Classes = () => {
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '16px', marginBottom: '24px' }}>
         {[
-          { label: 'Total Classes',  value: withEnrolled.length,                                                       icon: 'class',     color: '#76C442' },
+          { label: 'Total Classes',  value: withEnrolled.length,                                                       icon: 'class',     color: '#0de1e8' },
           { label: 'Total Capacity', value: withEnrolled.reduce((a, c) => a + (c.capacity || 0), 0),                   icon: 'people',    color: '#3182ce' },
           { label: 'Total Enrolled', value: allStudents.length,                                                         icon: 'school',    color: '#805ad5' },
           { label: 'Avg Occupancy',  value: withEnrolled.length ? Math.round(withEnrolled.reduce((a, c) => a + (c.enrolled || 0) / (c.capacity || 1), 0) / withEnrolled.length * 100) + '%' : '0%', icon: 'bar_chart', color: '#ed8936' },
@@ -354,7 +354,7 @@ const Classes = () => {
         {(filterClass || filterSection || filterCategory) && (
           <div style={{ padding: '8px 16px 0', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
             {filterClass && (
-              <span style={{ padding: '3px 10px', background: '#76C44220', color: '#276749', borderRadius: '20px', fontSize: '11px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ padding: '3px 10px', background: '#0de1e820', color: '#276749', borderRadius: '20px', fontSize: '11px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
                 {filterClass}
                 <span className="material-icons" style={{ fontSize: '12px', cursor: 'pointer' }} onClick={() => setFilterClass('')}>close</span>
               </span>
@@ -405,8 +405,8 @@ const Classes = () => {
                   <tr key={c.id}>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div style={{ width: 38, height: 38, borderRadius: '10px', background: '#76C44215', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <span className="material-icons" style={{ color: '#76C442', fontSize: '20px' }}>class</span>
+                        <div style={{ width: 38, height: 38, borderRadius: '10px', background: '#0de1e815', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <span className="material-icons" style={{ color: '#0de1e8', fontSize: '20px' }}>class</span>
                         </div>
                         <div>
                           <div style={{ fontWeight: 700, fontSize: '14px' }}>{c.name} – {c.section}</div>
@@ -432,7 +432,7 @@ const Classes = () => {
                           </div>
                           <span style={{ fontSize: '12px', fontWeight: 600, color, minWidth: 40 }}>{c.enrolled}/{c.capacity}</span>
                         </div>
-                        <div style={{ fontSize: '11px', color: '#a0aec0', marginTop: 2 }}>{pct}% full · <span style={{ color: '#76C442' }}>view</span></div>
+                        <div style={{ fontSize: '11px', color: '#a0aec0', marginTop: 2 }}>{pct}% full · <span style={{ color: '#0de1e8' }}>view</span></div>
                       </div>
                     </td>
                     <td>
@@ -539,7 +539,7 @@ const Classes = () => {
               <button onClick={() => { setShowModal(false); setEditClass(null); setFormData(initialForm); }}
                 style={{ padding: '10px 20px', border: '1.5px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: 'pointer', fontWeight: 600 }}>Cancel</button>
               <button onClick={handleSave}
-                style={{ padding: '10px 24px', background: '#76C442', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
+                style={{ padding: '10px 24px', background: '#0de1e8', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
                 {editClass ? 'Update' : 'Add Class'}
               </button>
             </div>
@@ -555,7 +555,7 @@ const Classes = () => {
             <div className="modal-header">
               <div>
                 <span className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span className="material-icons" style={{ color: '#76C442', fontSize: 20 }}>groups</span>
+                  <span className="material-icons" style={{ color: '#0de1e8', fontSize: 20 }}>groups</span>
                   Students List
                 </span>
                 <p style={{ fontSize: 12, color: '#a0aec0', margin: '2px 0 0' }}>
@@ -617,7 +617,7 @@ const Classes = () => {
                         <td style={{ paddingLeft: 20, color: '#a0aec0', fontSize: 12 }}>{idx + 1}</td>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#76C442,#5fa832)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
+                            <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#0de1e8,#0eb5da)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
                               {getInitials(s.name)}
                             </div>
                             <span style={{ fontWeight: 600, fontSize: 13 }}>{s.name}</span>
@@ -625,7 +625,7 @@ const Classes = () => {
                         </td>
                         <td style={{ fontSize: 12, color: '#718096' }}>{s.rollNumber || s.rollNo || '—'}</td>
                         <td>
-                          <span style={{ padding: '2px 8px', background: '#76C44220', color: '#276749', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>
+                          <span style={{ padding: '2px 8px', background: '#0de1e820', color: '#276749', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>
                             {String(s.className || s.class || '—').replace(/^Class\s+/i, '')}
                           </span>
                         </td>
@@ -636,7 +636,7 @@ const Classes = () => {
                         </td>
                         <td style={{ fontSize: 13, color: '#4a5568' }}>{s.parentName || s.parent || '—'}</td>
                         <td>
-                          <span style={{ padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: (s.isActive ?? s.status === 'Active') ? '#f0fff4' : '#fff5f5', color: (s.isActive ?? s.status === 'Active') ? '#76C442' : '#e53e3e' }}>
+                          <span style={{ padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: (s.isActive ?? s.status === 'Active') ? '#f0fff4' : '#fff5f5', color: (s.isActive ?? s.status === 'Active') ? '#0de1e8' : '#e53e3e' }}>
                             {(s.isActive ?? s.status === 'Active') ? 'Active' : 'Inactive'}
                           </span>
                         </td>
@@ -657,12 +657,12 @@ const Classes = () => {
               <button
                 onClick={handleExportCSV}
                 disabled={viewStudents.length === 0}
-                style={{ padding: '10px 20px', border: '1.5px solid #76C442', borderRadius: 8, background: '#fff', color: '#76C442', fontWeight: 700, cursor: viewStudents.length === 0 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: viewStudents.length === 0 ? 0.5 : 1 }}>
+                style={{ padding: '10px 20px', border: '1.5px solid #0de1e8', borderRadius: 8, background: '#fff', color: '#0de1e8', fontWeight: 700, cursor: viewStudents.length === 0 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: viewStudents.length === 0 ? 0.5 : 1 }}>
                 <span className="material-icons" style={{ fontSize: 18 }}>download</span>
                 Export CSV
               </button>
               <button onClick={() => setViewClass(null)}
-                style={{ padding: '10px 24px', background: '#76C442', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
+                style={{ padding: '10px 24px', background: '#0de1e8', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
                 Close
               </button>
             </div>

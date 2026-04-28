@@ -23,12 +23,12 @@ const DAYS_ORDER = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Sat
 
 const DAY_COLOR = {
   Monday: '#4361ee', Tuesday: '#38b2ac', Wednesday: '#805ad5',
-  Thursday: '#ed8936', Friday: '#e53e3e', Saturday: '#76C442',
+  Thursday: '#ed8936', Friday: '#e53e3e', Saturday: '#0de1e8',
 };
 
 const PALETTE = [
   '#4361ee','#38b2ac','#805ad5','#e53e3e','#ed8936','#009688',
-  '#d69e2e','#e91e63','#667eea','#48bb78','#76C442','#2b6cb0',
+  '#d69e2e','#e91e63','#667eea','#48bb78','#0de1e8','#2b6cb0',
 ];
 const subjectColor = (name = '') => {
   let h = 0;
@@ -152,7 +152,7 @@ export default function StudentExams() {
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 24 }}>
         {[
-          { label: 'Subjects/Week', value: timetable.filter(e => e.isActive !== false).length, color: '#76C442', icon: 'menu_book'    },
+          { label: 'Subjects/Week', value: timetable.filter(e => e.isActive !== false).length, color: '#0de1e8', icon: 'menu_book'    },
           { label: 'Total Exams',   value: exams.length,                                         color: '#805ad5', icon: 'assignment'   },
           { label: 'Upcoming Exams',value: upcomingExams,                                         color: '#3182ce', icon: 'event'        },
         ].map(c => (
@@ -175,7 +175,7 @@ export default function StudentExams() {
           <button key={t.key} onClick={() => setTab(t.key)} style={{
             padding: '10px 20px', borderRadius: 10, border: 'none', cursor: 'pointer',
             fontWeight: 600, fontSize: 14, display: 'flex', alignItems: 'center', gap: 8,
-            background: tab === t.key ? '#76C442' : '#f7fafc',
+            background: tab === t.key ? '#0de1e8' : '#f7fafc',
             color:      tab === t.key ? '#fff'    : '#718096',
             boxShadow:  tab === t.key ? '0 2px 8px rgba(118,196,66,0.3)' : 'none',
             transition: 'all 0.2s',
@@ -428,7 +428,7 @@ function ExamCard({ exam }) {
     <div style={{
       borderRadius: 12, border: '1.5px solid #e2e8f0', background: '#fff',
       overflow: 'hidden',
-      boxShadow: exam.status === 'ONGOING' ? '0 0 0 2px #76C44240' : '0 1px 4px rgba(0,0,0,0.06)',
+      boxShadow: exam.status === 'ONGOING' ? '0 0 0 2px #0de1e840' : '0 1px 4px rgba(0,0,0,0.06)',
     }}>
       <div style={{ background: tc.bg, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 10,

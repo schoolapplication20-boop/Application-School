@@ -240,7 +240,7 @@ export default function AdminManagement() {
   const getPermCount = (a) => {
     try {
       const p = typeof a.permissions === 'string' ? JSON.parse(a.permissions) : a.permissions;
-      return p ? Object.values(p).filter(Boolean).length : MODULES.length;
+      return p ? MODULES.filter(m => p[m.key]).length : MODULES.length;
     } catch { return MODULES.length; }
   };
 
@@ -769,7 +769,7 @@ export default function AdminManagement() {
           const p = typeof viewAdmin.permissions === 'string' ? JSON.parse(viewAdmin.permissions) : viewAdmin.permissions;
           viewPerms = p ? { ...DEFAULT_PERMS, ...p } : { ...DEFAULT_PERMS };
         } catch { viewPerms = { ...DEFAULT_PERMS }; }
-        const enabledCount = Object.values(viewPerms).filter(Boolean).length;
+        const enabledCount = MODULES.filter(m => viewPerms[m.key]).length;
         return (
           <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowView(false)}>
             <div className="modal-container" style={{ maxWidth: 520 }}>

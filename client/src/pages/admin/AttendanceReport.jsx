@@ -11,7 +11,7 @@ import { exportCSV, exportPrintReport } from '../../services/attendanceStore';
 const TODAY = new Date().toISOString().split('T')[0];
 
 const fmtDate  = (d) => { if (!d) return '—'; const s = typeof d === 'string' ? d : String(d); return new Date(s + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }); };
-const pctColor = (p) => p >= 90 ? '#76C442' : p >= 75 ? '#ed8936' : '#e53e3e';
+const pctColor = (p) => p >= 90 ? '#0de1e8' : p >= 75 ? '#ed8936' : '#e53e3e';
 const pctBg    = (p) => p >= 90 ? '#f0fff4' : p >= 75 ? '#fffaf0' : '#fff5f5';
 const pctText  = (p) => p >= 90 ? '#276749' : p >= 75 ? '#c05621' : '#c53030';
 
@@ -207,7 +207,7 @@ export default function AttendanceReport() {
     showToast('PDF report opened for printing');
   };
 
-  const STATUS_COLORS = { PRESENT: '#76C442', ABSENT: '#e53e3e', LEAVE: '#ed8936', OTHERS: '#805ad5' };
+  const STATUS_COLORS = { PRESENT: '#0de1e8', ABSENT: '#e53e3e', LEAVE: '#ed8936', OTHERS: '#805ad5' };
 
   const TABS = [
     { key: 'overview',    label: 'Overview',      icon: 'dashboard'   },
@@ -272,7 +272,7 @@ export default function AttendanceReport() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 24 }}>
         {[
           { label: 'Overall Attendance', value: `${stats.overallPct}%`,           icon: 'percent',       color: pctColor(stats.overallPct) },
-          { label: 'Present Today',      value: stats.todayPresent,               icon: 'check_circle',  color: '#76C442'                  },
+          { label: 'Present Today',      value: stats.todayPresent,               icon: 'check_circle',  color: '#0de1e8'                  },
           { label: 'Absent Today',       value: stats.todayAbsent,                icon: 'cancel',        color: '#e53e3e'                  },
           { label: 'Low Attendance Classes', value: stats.lowAttendanceClasses,   icon: 'person_off',    color: '#805ad5'                  },
         ].map(c => (
@@ -292,7 +292,7 @@ export default function AttendanceReport() {
           <button key={t.key} onClick={() => setActiveTab(t.key)} style={{
             display: 'flex', alignItems: 'center', gap: 6, padding: '9px 20px', position: 'relative',
             border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap',
-            background: activeTab === t.key ? '#76C442' : 'transparent',
+            background: activeTab === t.key ? '#0de1e8' : 'transparent',
             color:      activeTab === t.key ? '#fff'    : '#718096',
             transition: 'all 0.2s',
           }}>
@@ -328,7 +328,7 @@ export default function AttendanceReport() {
                       <YAxis tick={{ fontSize: 11 }} />
                       <Tooltip content={<ChartTooltip />} />
                       <Legend wrapperStyle={{ fontSize: 12 }} />
-                      <Bar dataKey="Present" fill="#76C442" radius={[3,3,0,0]} />
+                      <Bar dataKey="Present" fill="#0de1e8" radius={[3,3,0,0]} />
                       <Bar dataKey="Absent"  fill="#e53e3e" radius={[3,3,0,0]} />
                       <Bar dataKey="Leave"   fill="#ed8936" radius={[3,3,0,0]} />
                     </BarChart>
@@ -346,7 +346,7 @@ export default function AttendanceReport() {
                       <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                       <YAxis domain={[0,100]} tick={{ fontSize: 11 }} unit="%" />
                       <Tooltip content={<ChartTooltip />} />
-                      <Bar dataKey="%" fill="#76C442" radius={[3,3,0,0]} />
+                      <Bar dataKey="%" fill="#0de1e8" radius={[3,3,0,0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 )}
@@ -377,7 +377,7 @@ export default function AttendanceReport() {
                       <tr>
                         <th>Class</th>
                         <th>Teacher</th>
-                        <th style={{ color: '#76C442' }}>Present</th>
+                        <th style={{ color: '#0de1e8' }}>Present</th>
                         <th style={{ color: '#e53e3e' }}>Absent</th>
                         <th style={{ color: '#ed8936' }}>Leave</th>
                         <th style={{ color: '#805ad5' }}>Others</th>
@@ -394,7 +394,7 @@ export default function AttendanceReport() {
                           <tr key={s.classId}>
                             <td style={{ fontWeight: 700 }}>{label}</td>
                             <td style={{ color: '#718096', fontSize: 12 }}>{s.teacherName || '—'}</td>
-                            <td><span style={{ fontWeight: 700, color: '#76C442' }}>{s.present || 0}</span></td>
+                            <td><span style={{ fontWeight: 700, color: '#0de1e8' }}>{s.present || 0}</span></td>
                             <td><span style={{ fontWeight: 700, color: '#e53e3e' }}>{s.absent  || 0}</span></td>
                             <td><span style={{ fontWeight: 700, color: '#ed8936' }}>{s.leave   || 0}</span></td>
                             <td><span style={{ fontWeight: 700, color: '#805ad5' }}>{s.others  || 0}</span></td>
@@ -481,7 +481,7 @@ export default function AttendanceReport() {
               </h3>
               {longAbsentClasses.length === 0 ? (
                 <div className="empty-state">
-                  <span className="material-icons" style={{ color: '#76C442' }}>check_circle</span>
+                  <span className="material-icons" style={{ color: '#0de1e8' }}>check_circle</span>
                   <h3>All classes have good attendance!</h3>
                   <p>No classes below the threshold for {fmtDate(filterDate)}</p>
                 </div>
@@ -507,7 +507,7 @@ export default function AttendanceReport() {
                           <tr key={s.classId}>
                             <td style={{ fontWeight: 700 }}>{label}</td>
                             <td style={{ color: '#718096', fontSize: 12 }}>{s.teacherName || '—'}</td>
-                            <td><span style={{ fontWeight: 700, color: '#76C442' }}>{s.present || 0}</span></td>
+                            <td><span style={{ fontWeight: 700, color: '#0de1e8' }}>{s.present || 0}</span></td>
                             <td><span style={{ fontWeight: 700, color: '#e53e3e' }}>{s.absent  || 0}</span></td>
                             <td>{s.total}</td>
                             <td>
@@ -536,7 +536,7 @@ export default function AttendanceReport() {
               </h3>
               {notifications.length === 0 ? (
                 <div className="empty-state">
-                  <span className="material-icons" style={{ color: '#76C442' }}>notifications_active</span>
+                  <span className="material-icons" style={{ color: '#0de1e8' }}>notifications_active</span>
                   <h3>No alerts for {fmtDate(filterDate)}</h3>
                   <p>All classes have acceptable attendance</p>
                 </div>

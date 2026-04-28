@@ -144,17 +144,17 @@ export default function PayFees() {
           <title>Fee Receipt</title>
           <style>
             body { font-family: Arial, sans-serif; margin: 0; padding: 24px; color: #2d3748; }
-            .receipt-header { text-align: center; border-bottom: 2px solid #76C442; padding-bottom: 16px; margin-bottom: 20px; }
+            .receipt-header { text-align: center; border-bottom: 2px solid #0de1e8; padding-bottom: 16px; margin-bottom: 20px; }
             .receipt-header h2 { margin: 0 0 4px; color: #2d3748; font-size: 22px; }
             .receipt-header p { margin: 0; color: #718096; font-size: 13px; }
-            .receipt-title { font-size: 18px; font-weight: 700; text-align: center; margin: 12px 0; color: #76C442; }
+            .receipt-title { font-size: 18px; font-weight: 700; text-align: center; margin: 12px 0; color: #0de1e8; }
             table { width: 100%; border-collapse: collapse; margin-top: 16px; }
             td { padding: 10px 12px; border-bottom: 1px solid #f0f4f8; font-size: 13px; }
             td:first-child { font-weight: 600; color: #718096; width: 40%; }
             .total-row td { font-size: 16px; font-weight: 700; color: #2d3748; background: #f0fff4; }
             .receipt-footer { text-align: center; margin-top: 24px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #a0aec0; }
             .paid-stamp { text-align: center; margin: 16px 0; }
-            .paid-stamp span { border: 3px solid #76C442; color: #76C442; padding: 6px 24px; border-radius: 8px; font-size: 20px; font-weight: 900; transform: rotate(-12deg); display: inline-block; }
+            .paid-stamp span { border: 3px solid #0de1e8; color: #0de1e8; padding: 6px 24px; border-radius: 8px; font-size: 20px; font-weight: 900; transform: rotate(-12deg); display: inline-block; }
           </style>
         </head>
         <body>${content}</body>
@@ -182,7 +182,7 @@ export default function PayFees() {
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '16px', marginBottom: '24px' }}>
         {[
-          { label: 'Total Paid',     value: `₹${totalPaid.toLocaleString()}`,     color: '#76C442', icon: 'check_circle' },
+          { label: 'Total Paid',     value: `₹${totalPaid.toLocaleString()}`,     color: '#0de1e8', icon: 'check_circle' },
           { label: 'Pending Amount', value: `₹${totalPending.toLocaleString()}`,   color: '#e53e3e', icon: 'pending_actions' },
           { label: 'Annual Fee',     value: `₹${totalFee.toLocaleString()}`,     color: '#3182ce', icon: 'payments' },
         ].map(c => (
@@ -197,7 +197,7 @@ export default function PayFees() {
       </div>
 
       {/* Progress */}
-      <div style={{ background: 'linear-gradient(135deg, #76C442 0%, #5fa832 100%)', borderRadius: '16px', padding: '28px', color: '#fff', marginBottom: '24px' }}>
+      <div style={{ background: 'linear-gradient(135deg, #0de1e8 0%, #0eb5da 100%)', borderRadius: '16px', padding: '28px', color: '#fff', marginBottom: '24px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
           <div>
             <div style={{ fontSize: '14px', opacity: 0.85, marginBottom: '4px' }}>Annual Fee Payment Progress</div>
@@ -223,7 +223,7 @@ export default function PayFees() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <div className="data-table-title">Pending Payments</div>
             {checkedFees.length > 0 && (
-              <button onClick={handlePaySelected} style={{ padding: '8px 16px', background: '#76C442', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>
+              <button onClick={handlePaySelected} style={{ padding: '8px 16px', background: '#0de1e8', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>
                 Pay Selected ({checkedFees.length}) — ₹{fees.filter(f => checkedFees.includes(f.id)).reduce((a, f) => a + f.amount, 0).toLocaleString()}
               </button>
             )}
@@ -242,7 +242,7 @@ export default function PayFees() {
                 <div style={{ fontSize: '20px', fontWeight: 800, color: '#e53e3e' }}>₹{f.amount.toLocaleString()}</div>
                 {getStatusBadge(f.status)}
               </div>
-              <button onClick={() => handlePaySingle(f)} style={{ padding: '10px 20px', background: '#76C442', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>
+              <button onClick={() => handlePaySingle(f)} style={{ padding: '10px 20px', background: '#0de1e8', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>
                 Pay Now
               </button>
             </div>
@@ -272,7 +272,7 @@ export default function PayFees() {
                   <td style={{ fontWeight: 600, fontSize: '13px' }}>{f.type}</td>
                   <td style={{ fontWeight: 700 }}>₹{f.amount.toLocaleString()}</td>
                   <td style={{ fontSize: '12px', color: '#718096' }}>{f.dueDate}</td>
-                  <td style={{ fontSize: '12px', color: '#76C442', fontWeight: 500 }}>{f.paidDate || '—'}</td>
+                  <td style={{ fontSize: '12px', color: '#0de1e8', fontWeight: 500 }}>{f.paidDate || '—'}</td>
                   <td style={{ fontSize: '12px', color: '#a0aec0' }}>{f.method || '—'}</td>
                   <td>{getStatusBadge(f.status)}</td>
                   <td>
@@ -316,12 +316,12 @@ export default function PayFees() {
                     { value: 'cash', icon: 'payments',    label: 'Cash' },
                   ].map(m => (
                     <div key={m.value} onClick={() => setPaymentMethod(m.value)} style={{
-                      padding: '14px 8px', border: paymentMethod === m.value ? '2px solid #76C442' : '1.5px solid #e2e8f0',
+                      padding: '14px 8px', border: paymentMethod === m.value ? '2px solid #0de1e8' : '1.5px solid #e2e8f0',
                       borderRadius: '10px', textAlign: 'center', cursor: 'pointer',
                       background: paymentMethod === m.value ? '#f0fff4' : '#fafafa'
                     }}>
-                      <span className="material-icons" style={{ fontSize: '24px', color: paymentMethod === m.value ? '#76C442' : '#a0aec0', display: 'block', marginBottom: '4px' }}>{m.icon}</span>
-                      <span style={{ fontSize: '11px', fontWeight: 600, color: paymentMethod === m.value ? '#76C442' : '#718096' }}>{m.label}</span>
+                      <span className="material-icons" style={{ fontSize: '24px', color: paymentMethod === m.value ? '#0de1e8' : '#a0aec0', display: 'block', marginBottom: '4px' }}>{m.icon}</span>
+                      <span style={{ fontSize: '11px', fontWeight: 600, color: paymentMethod === m.value ? '#0de1e8' : '#718096' }}>{m.label}</span>
                     </div>
                   ))}
                 </div>
@@ -394,11 +394,11 @@ export default function PayFees() {
               <div className="modal-body">
                 {/* Printable area */}
                 <div ref={receiptRef}>
-                  <div className="receipt-header" style={{ textAlign: 'center', borderBottom: '2px solid #76C442', paddingBottom: 16, marginBottom: 20 }}>
+                  <div className="receipt-header" style={{ textAlign: 'center', borderBottom: '2px solid #0de1e8', paddingBottom: 16, marginBottom: 20 }}>
                     <div style={{ fontSize: '22px', fontWeight: 800, color: '#2d3748' }}>🏆 Schoolers</div>
                     <div style={{ fontSize: '13px', color: '#718096' }}>Management System</div>
                   </div>
-                  <div style={{ textAlign: 'center', fontWeight: 700, fontSize: '17px', color: '#76C442', marginBottom: '16px' }}>
+                  <div style={{ textAlign: 'center', fontWeight: 700, fontSize: '17px', color: '#0de1e8', marginBottom: '16px' }}>
                     PAYMENT RECEIPT
                   </div>
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -420,7 +420,7 @@ export default function PayFees() {
                     </tbody>
                   </table>
                   <div style={{ textAlign: 'center', margin: '20px 0 8px' }}>
-                    <span style={{ border: '3px solid #76C442', color: '#76C442', padding: '6px 24px', borderRadius: '8px', fontSize: '18px', fontWeight: 900, display: 'inline-block', transform: 'rotate(-5deg)' }}>
+                    <span style={{ border: '3px solid #0de1e8', color: '#0de1e8', padding: '6px 24px', borderRadius: '8px', fontSize: '18px', fontWeight: 900, display: 'inline-block', transform: 'rotate(-5deg)' }}>
                       PAID ✓
                     </span>
                   </div>

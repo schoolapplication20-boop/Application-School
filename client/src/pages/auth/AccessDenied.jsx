@@ -91,7 +91,7 @@ export default function AccessDenied({ module }) {
               width: 36,
               height: 36,
               borderRadius: '50%',
-              background: 'linear-gradient(135deg, #76C442, #5fa832)',
+              background: 'linear-gradient(135deg, #0de1e8, #0eb5da)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -112,8 +112,8 @@ export default function AccessDenied({ module }) {
               borderRadius: '20px',
               fontSize: '10px',
               fontWeight: 700,
-              background: '#76C44220',
-              color: '#276749',
+              background: '#0de1e820',
+              color: '#0eb5da',
             }}>
               {user.role}
             </span>
@@ -148,7 +148,7 @@ export default function AccessDenied({ module }) {
               padding: '11px 22px',
               border: 'none',
               borderRadius: '10px',
-              background: 'linear-gradient(135deg, #76C442, #5fa832)',
+              background: 'linear-gradient(135deg, #0de1e8, #0eb5da)',
               color: '#fff',
               fontWeight: 700,
               fontSize: '14px',

@@ -249,7 +249,7 @@ const ForgotPassword = () => {
             <div style={{ textAlign: 'center', marginBottom: '20px' }}>
               <div style={{
                 width: '56px', height: '56px', borderRadius: '50%',
-                background: 'linear-gradient(135deg, #76C442, #5aad2e)',
+                background: 'linear-gradient(135deg, #0de1e8, #5aad2e)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 margin: '0 auto 14px',
               }}>
@@ -257,21 +257,21 @@ const ForgotPassword = () => {
               </div>
               <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#2d3748', margin: '0 0 6px' }}>Enter OTP</h2>
               <p style={{ fontSize: '13px', color: '#718096', margin: 0 }}>
-                OTP sent to <span style={{ fontWeight: 600, color: '#76C442' }}>{maskMobile(mobile)}</span>
+                OTP sent to <span style={{ fontWeight: 600, color: '#0de1e8' }}>{maskMobile(mobile)}</span>
               </p>
             </div>
 
             {/* OTP info — dev mode: show OTP directly */}
             {devOtp && (
               <div style={{
-                background: '#f0fff4', border: '1px solid #76C442', borderRadius: '8px',
+                background: '#e0fafa', border: '1px solid #0de1e8', borderRadius: '8px',
                 padding: '10px 14px', marginBottom: '16px', textAlign: 'center',
               }}>
-                <div style={{ fontSize: '12px', color: '#276749', marginBottom: '4px' }}>
+                <div style={{ fontSize: '12px', color: '#0eb5da', marginBottom: '4px' }}>
                   <span className="material-icons" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: '4px' }}>info</span>
                   Your OTP (dev mode)
                 </div>
-                <div style={{ fontSize: '28px', fontWeight: 800, letterSpacing: '8px', color: '#276749' }}>
+                <div style={{ fontSize: '28px', fontWeight: 800, letterSpacing: '8px', color: '#0de1e8' }}>
                   {devOtp}
                 </div>
               </div>

@@ -52,7 +52,7 @@ export default function StudentDiary() {
       {/* Summary stats */}
       <div className="stats-grid" style={{ marginBottom: '24px' }}>
         {[
-          { label: 'Total Entries',  value: entries.length,          icon: 'menu_book',   color: '#76C442' },
+          { label: 'Total Entries',  value: entries.length,          icon: 'menu_book',   color: '#1A56DB' },
           { label: 'Subjects',       value: subjects.length,          icon: 'science',     color: '#3182ce' },
           { label: 'This Month',     value: entries.filter(e => {
               if (!e.diaryDate) return false;
@@ -124,7 +124,7 @@ export default function StudentDiary() {
                   <td>
                     <span style={{
                       padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600,
-                      background: '#76C44215', color: '#276749',
+                      background: '#1A56DB15', color: '#276749',
                     }}>
                       {entry.subject || 'General'}
                     </span>

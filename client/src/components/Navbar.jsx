@@ -128,7 +128,7 @@ const Navbar = ({ onMenuToggle }) => {
               fontSize: '13px', color: '#4a5568', background: '#fafafa', outline: 'none',
               width: '220px', transition: 'all 0.2s'
             }}
-            onFocus={e => { e.target.style.borderColor = '#76C442'; e.target.style.width = '260px'; }}
+            onFocus={e => { e.target.style.borderColor = '#0de1e8'; e.target.style.width = '260px'; }}
             onBlur={e => { e.target.style.borderColor = '#e2e8f0'; e.target.style.width = '220px'; }}
           />
         </div>
@@ -161,7 +161,7 @@ const Navbar = ({ onMenuToggle }) => {
                   Notifications {unreadCount > 0 && <span style={{ background: '#e53e3e', color: '#fff', borderRadius: '12px', padding: '1px 7px', fontSize: '11px', marginLeft: 6 }}>{unreadCount}</span>}
                 </span>
                 {unreadCount > 0 && (
-                  <span style={{ fontSize: '11px', color: '#76C442', cursor: 'pointer', fontWeight: 600 }}
+                  <span style={{ fontSize: '11px', color: '#0de1e8', cursor: 'pointer', fontWeight: 600 }}
                     onClick={() => markAllRead(user?.id)}>Mark all read</span>
                 )}
               </div>
@@ -191,15 +191,15 @@ const Navbar = ({ onMenuToggle }) => {
                     >
                       <div style={{
                         width: '36px', height: '36px', borderRadius: '10px',
-                        background: (n.color || '#76C442') + '20',
+                        background: (n.color || '#0de1e8') + '20',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
                       }}>
-                        <span className="material-icons" style={{ fontSize: '18px', color: n.color || '#76C442' }}>{iconForNotif(n)}</span>
+                        <span className="material-icons" style={{ fontSize: '18px', color: n.color || '#0de1e8' }}>{iconForNotif(n)}</span>
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: '13px', color: '#2d3748', fontWeight: n.read ? 400 : 600, lineHeight: 1.4 }}>{n.text}</div>
                         <div style={{ fontSize: '11px', color: '#a0aec0', marginTop: '3px' }}>{n.time}
-                          {n.details && <span style={{ marginLeft: 6, color: '#76C442', fontWeight: 600 }}>· view details</span>}
+                          {n.details && <span style={{ marginLeft: 6, color: '#0de1e8', fontWeight: 600 }}>· view details</span>}
                         </div>
                       </div>
                     </div>
@@ -207,7 +207,7 @@ const Navbar = ({ onMenuToggle }) => {
                     {/* Right side: unread dot + delete */}
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
                       {!n.read && (
-                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#76C442' }} />
+                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#0de1e8' }} />
                       )}
                       <button
                         className="notif-delete"
@@ -239,7 +239,7 @@ const Navbar = ({ onMenuToggle }) => {
           >
             <div className="user-avatar" style={{
               width: '38px', height: '38px', borderRadius: '50%',
-              background: 'linear-gradient(135deg, #76C442, #5fa832)',
+              background: 'linear-gradient(135deg, #0de1e8, #0eb5da)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: '#fff', fontSize: '15px', fontWeight: 700
             }}>
@@ -296,7 +296,7 @@ const Navbar = ({ onMenuToggle }) => {
             <form onSubmit={handleProfileSave}>
               <div style={{ padding: '24px' }}>
                 <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-                  <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'linear-gradient(135deg,#76C442,#5fa832)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px', fontSize: '26px', fontWeight: 700, color: '#fff' }}>
+                  <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'linear-gradient(135deg,#0de1e8,#0eb5da)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px', fontSize: '26px', fontWeight: 700, color: '#fff' }}>
                     {getInitials(profileForm.name)}
                   </div>
                   <div style={{ fontSize: '12px', color: '#a0aec0' }}>{user?.role}</div>
@@ -320,7 +320,7 @@ const Navbar = ({ onMenuToggle }) => {
                           fontSize: '13px', background: f.disabled ? '#f7fafc' : '#fff',
                           color: f.disabled ? '#a0aec0' : '#2d3748', outline: 'none', boxSizing: 'border-box'
                         }}
-                        onFocus={e => !f.disabled && (e.target.style.borderColor = '#76C442')}
+                        onFocus={e => !f.disabled && (e.target.style.borderColor = '#0de1e8')}
                         onBlur={e => e.target.style.borderColor = '#e2e8f0'}
                       />
                     </div>
@@ -333,7 +333,7 @@ const Navbar = ({ onMenuToggle }) => {
                   Cancel
                 </button>
                 <button type="submit"
-                  style={{ padding: '9px 24px', background: profileSaved ? '#38a169' : '#76C442', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: 600, fontSize: '13px', cursor: 'pointer', transition: 'background 0.2s' }}>
+                  style={{ padding: '9px 24px', background: profileSaved ? '#38a169' : '#0de1e8', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: 600, fontSize: '13px', cursor: 'pointer', transition: 'background 0.2s' }}>
                   {profileSaved ? '✓ Saved!' : 'Save Changes'}
                 </button>
               </div>
@@ -357,8 +357,8 @@ const Navbar = ({ onMenuToggle }) => {
           <div style={{ background: '#fff', borderRadius: '16px', width: '460px', maxWidth: '95vw', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
             {/* Header */}
             <div style={{ padding: '18px 24px', borderBottom: '1px solid #f0f4f8', display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: 42, height: 42, borderRadius: '12px', background: (selectedNotif.color || '#76C442') + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <span className="material-icons" style={{ color: selectedNotif.color || '#76C442', fontSize: '22px' }}>{iconForNotif(selectedNotif)}</span>
+              <div style={{ width: 42, height: 42, borderRadius: '12px', background: (selectedNotif.color || '#0de1e8') + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <span className="material-icons" style={{ color: selectedNotif.color || '#0de1e8', fontSize: '22px' }}>{iconForNotif(selectedNotif)}</span>
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 700, fontSize: '15px', color: '#2d3748' }}>Notification Details</div>
@@ -370,7 +370,7 @@ const Navbar = ({ onMenuToggle }) => {
             {/* Body */}
             <div style={{ padding: '20px 24px' }}>
               {/* Summary text */}
-              <div style={{ background: (selectedNotif.color || '#76C442') + '10', borderLeft: `3px solid ${selectedNotif.color || '#76C442'}`, borderRadius: '0 8px 8px 0', padding: '12px 16px', marginBottom: '20px', fontSize: '13px', color: '#2d3748', lineHeight: 1.5 }}>
+              <div style={{ background: (selectedNotif.color || '#0de1e8') + '10', borderLeft: `3px solid ${selectedNotif.color || '#0de1e8'}`, borderRadius: '0 8px 8px 0', padding: '12px 16px', marginBottom: '20px', fontSize: '13px', color: '#2d3748', lineHeight: 1.5 }}>
                 {selectedNotif.text}
               </div>
 
@@ -448,7 +448,7 @@ const Navbar = ({ onMenuToggle }) => {
             {/* Footer */}
             <div style={{ padding: '14px 24px', borderTop: '1px solid #f0f4f8', display: 'flex', justifyContent: 'flex-end' }}>
               <button onClick={() => setSelectedNotif(null)}
-                style={{ padding: '9px 24px', background: '#76C442', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>
+                style={{ padding: '9px 24px', background: '#0de1e8', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>
                 Close
               </button>
             </div>

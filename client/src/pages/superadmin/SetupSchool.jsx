@@ -24,7 +24,7 @@ const INITIAL = {
   // Contact
   phone: '', email: '', website: '',
   // Branding
-  primaryColor: '#76C442', secondaryColor: '#5fa832',
+  primaryColor: '#0de1e8', secondaryColor: '#0eb5da',
   // Academic
   totalClasses: '', sections: 'A,B,C,D',
   // Admin account
@@ -258,7 +258,7 @@ const SetupSchool = () => {
               </button>
             )}
             <button onClick={() => navigate('/superadmin/dashboard')}
-              style={{ padding: '10px 28px', background: '#76C442', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+              style={{ padding: '10px 28px', background: '#0de1e8', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
               Go to Dashboard
             </button>
           </div>
@@ -289,9 +289,9 @@ const SetupSchool = () => {
                 style={{
                   display: 'flex', alignItems: 'center', gap: 6, flex: '0 0 auto',
                   padding: '8px 14px', borderRadius: 30, fontSize: 12, fontWeight: 600,
-                  background: active ? '#76C442' : done_ ? '#e6f9ed' : '#fff',
+                  background: active ? '#0de1e8' : done_ ? '#e6f9ed' : '#fff',
                   color: active ? '#fff' : done_ ? '#276749' : '#a0aec0',
-                  border: `1.5px solid ${active ? '#76C442' : done_ ? '#9ae6b4' : '#e2e8f0'}`,
+                  border: `1.5px solid ${active ? '#0de1e8' : done_ ? '#9ae6b4' : '#e2e8f0'}`,
                   cursor: done_ ? 'pointer' : 'default', transition: 'all 0.2s',
                 }}
                 onClick={() => done_ && setCurrentStep(i)}
@@ -319,7 +319,7 @@ const SetupSchool = () => {
                       type="number" min="1" name="schoolId" value={form.schoolId}
                       onChange={onChange} placeholder="e.g. 1"
                       style={{ ...inputStyle(!!errors.schoolId), width: 140, fontWeight: 700, fontSize: 18, textAlign: 'center' }}
-                      onFocus={e => e.target.style.borderColor = '#76C442'}
+                      onFocus={e => e.target.style.borderColor = '#0de1e8'}
                       onBlur={e => e.target.style.borderColor = errors.schoolId ? '#fc8181' : '#e2e8f0'} />
                     <span style={{ fontSize: 13, color: '#718096' }}>Unique numeric identifier for this school (e.g. 1, 2, 3)</span>
                   </div>
@@ -330,14 +330,14 @@ const SetupSchool = () => {
                   <input name="name" value={form.name} onChange={onChange}
                     placeholder="e.g. Greenfield International School"
                     style={inputStyle(!!errors.name)}
-                    onFocus={e => e.target.style.borderColor = '#76C442'}
+                    onFocus={e => e.target.style.borderColor = '#0de1e8'}
                     onBlur={e => e.target.style.borderColor = errors.name ? '#fc8181' : '#e2e8f0'} />
                 </Field>
                 <Field label="School Code (unique)" required error={errors.code}>
                   <input name="code" value={form.code} onChange={e => onChange({ target: { name: 'code', value: e.target.value.toUpperCase() } })}
                     placeholder="e.g. GIS001"
                     style={inputStyle(!!errors.code)}
-                    onFocus={e => e.target.style.borderColor = '#76C442'}
+                    onFocus={e => e.target.style.borderColor = '#0de1e8'}
                     onBlur={e => e.target.style.borderColor = errors.code ? '#fc8181' : '#e2e8f0'} />
                 </Field>
                 <Field label="Board / Curriculum" error={errors.board}>
@@ -349,7 +349,7 @@ const SetupSchool = () => {
                   <input name="academicYear" value={form.academicYear} onChange={onChange}
                     placeholder="e.g. 2024-2025"
                     style={inputStyle(!!errors.academicYear)}
-                    onFocus={e => e.target.style.borderColor = '#76C442'}
+                    onFocus={e => e.target.style.borderColor = '#0de1e8'}
                     onBlur={e => e.target.style.borderColor = errors.academicYear ? '#fc8181' : '#e2e8f0'} />
                 </Field>
               </div>
@@ -364,32 +364,32 @@ const SetupSchool = () => {
                 <textarea name="address" value={form.address} onChange={onChange}
                   rows={2} placeholder="Building no, street name, area..."
                   style={{ ...inputStyle(!!errors.address), resize: 'vertical' }}
-                  onFocus={e => e.target.style.borderColor = '#76C442'}
+                  onFocus={e => e.target.style.borderColor = '#0de1e8'}
                   onBlur={e => e.target.style.borderColor = errors.address ? '#fc8181' : '#e2e8f0'} />
               </Field>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 24px' }}>
                 <Field label="City" required error={errors.city}>
                   <input name="city" value={form.city} onChange={onChange} placeholder="City"
                     style={inputStyle(!!errors.city)}
-                    onFocus={e => e.target.style.borderColor = '#76C442'}
+                    onFocus={e => e.target.style.borderColor = '#0de1e8'}
                     onBlur={e => e.target.style.borderColor = errors.city ? '#fc8181' : '#e2e8f0'} />
                 </Field>
                 <Field label="State" required error={errors.state}>
                   <input name="state" value={form.state} onChange={onChange} placeholder="State"
                     style={inputStyle(!!errors.state)}
-                    onFocus={e => e.target.style.borderColor = '#76C442'}
+                    onFocus={e => e.target.style.borderColor = '#0de1e8'}
                     onBlur={e => e.target.style.borderColor = errors.state ? '#fc8181' : '#e2e8f0'} />
                 </Field>
                 <Field label="PIN Code" error={errors.pincode}>
                   <input name="pincode" value={form.pincode} onChange={onChange} placeholder="e.g. 500001"
                     style={inputStyle(!!errors.pincode)}
-                    onFocus={e => e.target.style.borderColor = '#76C442'}
+                    onFocus={e => e.target.style.borderColor = '#0de1e8'}
                     onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
                 </Field>
                 <Field label="Country" error={errors.country}>
                   <input name="country" value={form.country} onChange={onChange} placeholder="Country"
                     style={inputStyle(false)}
-                    onFocus={e => e.target.style.borderColor = '#76C442'}
+                    onFocus={e => e.target.style.borderColor = '#0de1e8'}
                     onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
                 </Field>
               </div>
@@ -404,21 +404,21 @@ const SetupSchool = () => {
                 <Field label="Phone Number" required error={errors.phone}>
                   <input name="phone" value={form.phone} onChange={onChange} placeholder="+91 9876543210"
                     style={inputStyle(!!errors.phone)}
-                    onFocus={e => e.target.style.borderColor = '#76C442'}
+                    onFocus={e => e.target.style.borderColor = '#0de1e8'}
                     onBlur={e => e.target.style.borderColor = errors.phone ? '#fc8181' : '#e2e8f0'} />
                 </Field>
                 <Field label="Official Email" required error={errors.email}>
                   <input name="email" type="email" value={form.email} onChange={onChange}
                     placeholder="principal@school.edu"
                     style={inputStyle(!!errors.email)}
-                    onFocus={e => e.target.style.borderColor = '#76C442'}
+                    onFocus={e => e.target.style.borderColor = '#0de1e8'}
                     onBlur={e => e.target.style.borderColor = errors.email ? '#fc8181' : '#e2e8f0'} />
                 </Field>
                 <Field label="Website" error={errors.website} style={{ gridColumn: '1 / -1' }}>
                   <input name="website" value={form.website} onChange={onChange}
                     placeholder="https://www.school.edu"
                     style={inputStyle(false)}
-                    onFocus={e => e.target.style.borderColor = '#76C442'}
+                    onFocus={e => e.target.style.borderColor = '#0de1e8'}
                     onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
                 </Field>
               </div>
@@ -441,7 +441,7 @@ const SetupSchool = () => {
                       justifyContent: 'center', cursor: 'pointer', overflow: 'hidden',
                       background: logoPreview ? 'transparent' : '#fafafa', flexShrink: 0,
                     }}
-                    onMouseEnter={e => e.currentTarget.style.borderColor = '#76C442'}
+                    onMouseEnter={e => e.currentTarget.style.borderColor = '#0de1e8'}
                     onMouseLeave={e => e.currentTarget.style.borderColor = '#e2e8f0'}
                   >
                     {logoPreview ? (
@@ -456,7 +456,7 @@ const SetupSchool = () => {
                   </div>
                   <div>
                     <button type="button" onClick={() => logoInputRef.current?.click()}
-                      style={{ padding: '8px 18px', border: '1.5px solid #76C442', borderRadius: 8, background: '#fff', color: '#76C442', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+                      style={{ padding: '8px 18px', border: '1.5px solid #0de1e8', borderRadius: 8, background: '#fff', color: '#0de1e8', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
                       {logoPreview ? 'Change Logo' : 'Upload Logo'}
                     </button>
                     {logoPreview && (
@@ -481,8 +481,8 @@ const SetupSchool = () => {
                       onChange={onChange}
                       style={{ width: 48, height: 40, padding: 2, border: '1.5px solid #e2e8f0', borderRadius: 8, cursor: 'pointer' }} />
                     <input name="primaryColor" value={form.primaryColor} onChange={onChange}
-                      placeholder="#76C442" style={{ ...inputStyle(false), flex: 1 }}
-                      onFocus={e => e.target.style.borderColor = '#76C442'}
+                      placeholder="#0de1e8" style={{ ...inputStyle(false), flex: 1 }}
+                      onFocus={e => e.target.style.borderColor = '#0de1e8'}
                       onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
                   </div>
                 </Field>
@@ -492,8 +492,8 @@ const SetupSchool = () => {
                       onChange={onChange}
                       style={{ width: 48, height: 40, padding: 2, border: '1.5px solid #e2e8f0', borderRadius: 8, cursor: 'pointer' }} />
                     <input name="secondaryColor" value={form.secondaryColor} onChange={onChange}
-                      placeholder="#5fa832" style={{ ...inputStyle(false), flex: 1 }}
-                      onFocus={e => e.target.style.borderColor = '#76C442'}
+                      placeholder="#0eb5da" style={{ ...inputStyle(false), flex: 1 }}
+                      onFocus={e => e.target.style.borderColor = '#0de1e8'}
                       onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
                   </div>
                 </Field>
@@ -530,14 +530,14 @@ const SetupSchool = () => {
                   <input name="totalClasses" type="number" value={form.totalClasses} onChange={onChange}
                     placeholder="e.g. 12"
                     style={inputStyle(!!errors.totalClasses)}
-                    onFocus={e => e.target.style.borderColor = '#76C442'}
+                    onFocus={e => e.target.style.borderColor = '#0de1e8'}
                     onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
                 </Field>
                 <Field label="Sections (comma-separated)" error={errors.sections}>
                   <input name="sections" value={form.sections} onChange={onChange}
                     placeholder="e.g. A,B,C,D"
                     style={inputStyle(false)}
-                    onFocus={e => e.target.style.borderColor = '#76C442'}
+                    onFocus={e => e.target.style.borderColor = '#0de1e8'}
                     onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
                 </Field>
               </div>
@@ -562,21 +562,21 @@ const SetupSchool = () => {
                   <input name="adminName" value={form.adminName} onChange={onChange}
                     placeholder="e.g. Ravi Kumar"
                     style={inputStyle(false)}
-                    onFocus={e => e.target.style.borderColor = '#76C442'}
+                    onFocus={e => e.target.style.borderColor = '#0de1e8'}
                     onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
                 </Field>
                 <Field label="Admin Email" error={errors.adminEmail}>
                   <input name="adminEmail" type="email" value={form.adminEmail} onChange={onChange}
                     placeholder="admin@school.edu"
                     style={inputStyle(!!errors.adminEmail)}
-                    onFocus={e => e.target.style.borderColor = '#76C442'}
+                    onFocus={e => e.target.style.borderColor = '#0de1e8'}
                     onBlur={e => e.target.style.borderColor = errors.adminEmail ? '#fc8181' : '#e2e8f0'} />
                 </Field>
                 <Field label="Admin Mobile" error={errors.adminMobile}>
                   <input name="adminMobile" value={form.adminMobile} onChange={onChange}
                     placeholder="+91 9876543210"
                     style={inputStyle(false)}
-                    onFocus={e => e.target.style.borderColor = '#76C442'}
+                    onFocus={e => e.target.style.borderColor = '#0de1e8'}
                     onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
                 </Field>
               </div>
@@ -598,7 +598,7 @@ const SetupSchool = () => {
                     onClick={() => setForm(prev => ({ ...prev, subscriptionPlan: plan }))}
                     style={{
                       padding: '20px 16px', borderRadius: 12, cursor: 'pointer', textAlign: 'center',
-                      border: `2px solid ${form.subscriptionPlan === plan ? '#76C442' : '#e2e8f0'}`,
+                      border: `2px solid ${form.subscriptionPlan === plan ? '#0de1e8' : '#e2e8f0'}`,
                       background: form.subscriptionPlan === plan ? '#f0fff4' : '#fff',
                       transition: 'all 0.2s',
                     }}
@@ -607,7 +607,7 @@ const SetupSchool = () => {
                     <div style={{ fontWeight: 700, fontSize: 15, color: '#2d3748', marginBottom: 4 }}>{plan}</div>
                     <div style={{ fontSize: 12, color: '#718096' }}>{desc}</div>
                     {form.subscriptionPlan === plan && (
-                      <div style={{ marginTop: 10, fontSize: 11, color: '#76C442', fontWeight: 700 }}>✓ Selected</div>
+                      <div style={{ marginTop: 10, fontSize: 11, color: '#0de1e8', fontWeight: 700 }}>✓ Selected</div>
                     )}
                   </div>
                 ))}
@@ -615,7 +615,7 @@ const SetupSchool = () => {
               <Field label="Subscription Expiry Date" error={errors.subscriptionExpiry}>
                 <input name="subscriptionExpiry" type="date" value={form.subscriptionExpiry} onChange={onChange}
                   style={inputStyle(false)}
-                  onFocus={e => e.target.style.borderColor = '#76C442'}
+                  onFocus={e => e.target.style.borderColor = '#0de1e8'}
                   onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
               </Field>
             </div>
@@ -651,7 +651,7 @@ const SetupSchool = () => {
                   >
                     <div style={{
                       width: 38, height: 38, borderRadius: 10, flexShrink: 0,
-                      background: form.features[key] ? '#76C44220' : '#f0f4f8',
+                      background: form.features[key] ? '#0de1e820' : '#f0f4f8',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
                       <span className="material-icons" style={{ fontSize: 20, color: form.features[key] ? '#276749' : '#a0aec0' }}>{icon}</span>
@@ -660,7 +660,7 @@ const SetupSchool = () => {
                     {/* Toggle Switch */}
                     <div style={{
                       width: 40, height: 22, borderRadius: 11, transition: 'background 0.2s',
-                      background: form.features[key] ? '#76C442' : '#cbd5e0', position: 'relative', flexShrink: 0,
+                      background: form.features[key] ? '#0de1e8' : '#cbd5e0', position: 'relative', flexShrink: 0,
                     }}>
                       <div style={{
                         position: 'absolute', top: 3, transition: 'left 0.2s',
@@ -700,13 +700,13 @@ const SetupSchool = () => {
 
             {currentStep < STEPS.length - 1 ? (
               <button type="button" onClick={goNext}
-                style={{ padding: '10px 28px', background: '#76C442', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+                style={{ padding: '10px 28px', background: '#0de1e8', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
                 Next →
               </button>
             ) : (
               <button type="button" onClick={handleSubmit} disabled={submitting}
                 style={{
-                  padding: '10px 32px', background: submitting ? '#a0aec0' : '#76C442',
+                  padding: '10px 32px', background: submitting ? '#a0aec0' : '#0de1e8',
                   border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, fontSize: 14, cursor: submitting ? 'not-allowed' : 'pointer',
                   display: 'flex', alignItems: 'center', gap: 8,
                 }}>
@@ -728,7 +728,7 @@ const SetupSchool = () => {
 // ── Small helper: section title ───────────────────────────────────────────────
 const SectionTitle = ({ icon, title }) => (
   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 22 }}>
-    <div style={{ width: 38, height: 38, borderRadius: 10, background: '#76C44220', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ width: 38, height: 38, borderRadius: 10, background: '#0de1e820', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <span className="material-icons" style={{ fontSize: 20, color: '#276749' }}>{icon}</span>
     </div>
     <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#2d3748' }}>{title}</h3>

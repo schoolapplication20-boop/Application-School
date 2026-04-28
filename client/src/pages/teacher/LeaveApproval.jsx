@@ -166,7 +166,7 @@ export default function LeaveApproval() {
       <div className="stats-grid" style={{ marginBottom: 24 }}>
         {[
           { label: 'Pending',  value: pending.length,  icon: 'pending_actions', color: '#ed8936' },
-          { label: 'Approved', value: leaves.filter(l => l.status === 'APPROVED').length, icon: 'check_circle', color: '#76C442' },
+          { label: 'Approved', value: leaves.filter(l => l.status === 'APPROVED').length, icon: 'check_circle', color: '#0de1e8' },
           { label: 'Rejected', value: leaves.filter(l => l.status === 'REJECTED').length, icon: 'cancel',       color: '#e53e3e' },
           { label: 'Total',    value: leaves.length,   icon: 'list_alt',        color: '#3182ce' },
         ].map(s => (
@@ -266,7 +266,7 @@ export default function LeaveApproval() {
         <div className="data-table-card">
           <div className="data-table-header">
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span className="material-icons" style={{ color: '#76C442', fontSize: 18 }}>task_alt</span>
+              <span className="material-icons" style={{ color: '#0de1e8', fontSize: 18 }}>task_alt</span>
               <span className="data-table-title">Decided ({decided.length})</span>
             </div>
           </div>

@@ -171,7 +171,7 @@ export default function AdminDashboard() {
     {
       title: 'Total Students',
       value: statsLoading ? '…' : (dbStats?.totalStudents ?? 0),
-      icon: 'school', color: '#76C442',
+      icon: 'school', color: '#0de1e8',
     },
     {
       title: 'Total Teachers',
@@ -257,9 +257,9 @@ export default function AdminDashboard() {
           {/* Admin Overview */}
           <div className="data-table-card">
             <div style={{ fontWeight: 700, fontSize: '15px', color: '#2d3748', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span className="material-icons" style={{ color: '#76C442', fontSize: '20px' }}>manage_accounts</span>
+              <span className="material-icons" style={{ color: '#0de1e8', fontSize: '20px' }}>manage_accounts</span>
               Admin Overview
-              <span style={{ marginLeft: 'auto', background: '#76C44220', color: '#276749', padding: '2px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 700 }}>{admins.length} admins</span>
+              <span style={{ marginLeft: 'auto', background: '#0de1e820', color: '#276749', padding: '2px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 700 }}>{admins.length} admins</span>
             </div>
             {admins.length === 0 ? (
               <div style={{ padding: '32px', textAlign: 'center' }}>
@@ -277,7 +277,7 @@ export default function AdminDashboard() {
                       <tr key={a.id}>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#76C442,#5fa832)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '11px', fontWeight: 700, flexShrink: 0 }}>
+                            <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#0de1e8,#0eb5da)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '11px', fontWeight: 700, flexShrink: 0 }}>
                               {a.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                             </div>
                             <div>
@@ -287,7 +287,7 @@ export default function AdminDashboard() {
                           </div>
                         </td>
                         <td>
-                          <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 700, background: !(a.isActive ?? true) ? '#fff5f5' : '#f0fff4', color: !(a.isActive ?? true) ? '#e53e3e' : '#76C442' }}>
+                          <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 700, background: !(a.isActive ?? true) ? '#fff5f5' : '#f0fff4', color: !(a.isActive ?? true) ? '#e53e3e' : '#0de1e8' }}>
                             {(a.isActive ?? true) ? 'Active' : 'Inactive'}
                           </span>
                         </td>
@@ -343,7 +343,7 @@ export default function AdminDashboard() {
           <h6 className="fw-bold mb-3">Quick Actions</h6>
           <div className="d-flex gap-2 flex-wrap">
             {[
-              { label: 'Add Student', icon: 'person_add', path: '/admin/students', color: '#76C442' },
+              { label: 'Add Student', icon: 'person_add', path: '/admin/students', color: '#0de1e8' },
               { label: 'Add Teacher', icon: 'person', path: '/admin/teachers', color: '#4361ee' },
               { label: 'Collect Fee', icon: 'point_of_sale', path: '/admin/collect-fee', color: '#dd6b20' },
               { label: 'Applications', icon: 'assignment_ind', path: '/admin/applications', color: '#805ad5' },
@@ -387,7 +387,7 @@ export default function AdminDashboard() {
           <BarChartComponent
             data={chartPeriod === '3M' ? revenueData.slice(-3) : chartPeriod === '6M' ? revenueData.slice(-6) : revenueData}
             bars={[
-              { key: 'revenue', name: 'Revenue', color: '#76C442' },
+              { key: 'revenue', name: 'Revenue', color: '#0de1e8' },
               { key: 'expenses', name: 'Expenses', color: '#e53e3e' },
             ]}
             height={280}
@@ -396,7 +396,7 @@ export default function AdminDashboard() {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {[
-            { title: 'Total Classes',   value: statsLoading ? '…' : (dbStats?.totalClasses ?? 0),             icon: 'class',          color: '#76C442', desc: 'Active classrooms' },
+            { title: 'Total Classes',   value: statsLoading ? '…' : (dbStats?.totalClasses ?? 0),             icon: 'class',          color: '#0de1e8', desc: 'Active classrooms' },
             { title: 'Total Exams',     value: statsLoading ? '…' : (dbStats?.totalExams ?? 0),               icon: 'event_note',     color: '#3182ce', desc: 'Exam schedules' },
             { title: 'Pending Apps',    value: statsLoading ? '…' : (dbStats?.pendingApplications ?? 0),      icon: 'pending_actions',color: '#e53e3e', desc: 'Awaiting review' },
             { title: 'Hall Tickets',    value: statsLoading ? '…' : (dbStats?.totalHallTickets ?? 0),         icon: 'confirmation_number', color: '#805ad5', desc: 'Generated' },
@@ -432,7 +432,7 @@ export default function AdminDashboard() {
         </div>
         <LineChartComponent
           data={attendanceData}
-          lines={[{ key: 'attendance', name: 'Attendance %', color: '#76C442' }]}
+          lines={[{ key: 'attendance', name: 'Attendance %', color: '#0de1e8' }]}
           height={220}
         />
       </div>
@@ -443,7 +443,7 @@ export default function AdminDashboard() {
         <div className="data-table-card">
           <div className="data-table-header">
             <span className="data-table-title">Recent Applications</span>
-            <button className="btn-view-all" onClick={() => navigate('/admin/applications')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#76C442', fontWeight: 600 }}>View All →</button>
+            <button className="btn-view-all" onClick={() => navigate('/admin/applications')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0de1e8', fontWeight: 600 }}>View All →</button>
           </div>
           <div style={{ overflowX: 'auto' }}>
             {appsLoading ? (
@@ -502,7 +502,7 @@ export default function AdminDashboard() {
         <div className="data-table-card">
           <div className="data-table-header">
             <span className="data-table-title">Recent Fee Collections</span>
-            <button className="btn-view-all" onClick={() => navigate('/admin/collect-fee')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#76C442', fontWeight: 600 }}>Collect Fee →</button>
+            <button className="btn-view-all" onClick={() => navigate('/admin/collect-fee')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0de1e8', fontWeight: 600 }}>Collect Fee →</button>
           </div>
           <div style={{ overflowX: 'auto' }}>
             {feesLoading ? (

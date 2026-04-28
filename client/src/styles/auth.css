@@ -4,7 +4,7 @@
 
 .auth-wrapper {
   min-height: 100vh;
-  background-color: #76C442;
+  background-color: #0de1e8;
   display: flex;
   align-items: stretch;
 }
@@ -12,7 +12,7 @@
 /* Left Panel - Green Side */
 .auth-left {
   flex: 1;
-  background-color: #76C442;
+  background-color: #0de1e8;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -190,9 +190,9 @@
 }
 
 .login-toggle-btn.active {
-  background-color: #76C442;
+  background-color: #0de1e8;
   color: #ffffff;
-  box-shadow: 0 2px 8px rgba(118, 196, 66, 0.4);
+  box-shadow: 0 2px 8px rgba(13, 225, 232, 0.4);
 }
 
 .login-toggle-btn .material-icons {
@@ -229,8 +229,8 @@
 }
 
 .input-wrapper .form-control:focus {
-  border-color: #76C442;
-  box-shadow: 0 0 0 3px rgba(118, 196, 66, 0.15);
+  border-color: #0de1e8;
+  box-shadow: 0 0 0 3px rgba(13, 225, 232, 0.15);
   background-color: #ffffff;
   outline: none;
 }
@@ -252,7 +252,7 @@
 }
 
 .input-wrapper .input-icon:hover {
-  color: #76C442;
+  color: #0de1e8;
 }
 
 .input-wrapper .input-icon-left {
@@ -279,7 +279,7 @@
 /* Forgot Password Link */
 .forgot-password-link {
   font-size: 13px;
-  color: #76C442;
+  color: #0de1e8;
   font-weight: 600;
   text-decoration: none;
   float: right;
@@ -288,7 +288,7 @@
 }
 
 .forgot-password-link:hover {
-  color: #5fa832;
+  color: #0eb5da;
   text-decoration: underline;
 }
 
@@ -296,7 +296,7 @@
 .btn-auth-submit {
   width: 100%;
   padding: 14px;
-  background-color: #76C442;
+  background-color: #0de1e8;
   border: none;
   border-radius: 10px;
   color: #ffffff;
@@ -311,9 +311,9 @@
 }
 
 .btn-auth-submit:hover {
-  background-color: #5fa832;
+  background-color: #0eb5da;
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(118, 196, 66, 0.45);
+  box-shadow: 0 6px 20px rgba(13, 225, 232, 0.45);
 }
 
 .btn-auth-submit:active {
@@ -344,7 +344,7 @@
 }
 
 .btn-back:hover {
-  color: #76C442;
+  color: #0de1e8;
 }
 
 .btn-back .material-icons {
@@ -374,14 +374,14 @@
 }
 
 .otp-input:focus {
-  border-color: #76C442;
-  box-shadow: 0 0 0 3px rgba(118, 196, 66, 0.2);
+  border-color: #0de1e8;
+  box-shadow: 0 0 0 3px rgba(13, 225, 232, 0.2);
   background-color: #fff;
 }
 
 .otp-input.filled {
-  border-color: #76C442;
-  background-color: rgba(118, 196, 66, 0.08);
+  border-color: #0de1e8;
+  background-color: rgba(13, 225, 232, 0.08);
 }
 
 /* OTP Timer */
@@ -396,7 +396,7 @@
 }
 
 .otp-resend a {
-  color: #76C442;
+  color: #0de1e8;
   font-weight: 600;
   cursor: pointer;
   text-decoration: none;
@@ -428,7 +428,7 @@
 .auth-icon-box {
   width: 80px;
   height: 80px;
-  background-color: rgba(118, 196, 66, 0.1);
+  background-color: rgba(13, 225, 232, 0.1);
   border-radius: 20px;
   display: flex;
   align-items: center;
@@ -438,7 +438,7 @@
 
 .auth-icon-box .material-icons {
   font-size: 40px;
-  color: #76C442;
+  color: #0de1e8;
 }
 
 /* Alert Messages */

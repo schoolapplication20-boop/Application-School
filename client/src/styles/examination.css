@@ -24,7 +24,7 @@
 
 .exam-page-title .material-icons {
   font-size: 26px;
-  color: #76C442;
+  color: #0de1e8;
 }
 
 .exam-page-subtitle {
@@ -65,7 +65,7 @@
 
 .exam-tab.active {
   background: #fff;
-  color: #276749;
+  color: #0de1e8;
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 
@@ -159,7 +159,7 @@
 }
 
 .exam-search-box input:focus {
-  border-color: #76C442;
+  border-color: #0de1e8;
 }
 
 .exam-filter-select {
@@ -175,13 +175,13 @@
 }
 
 .exam-filter-select:focus {
-  border-color: #76C442;
+  border-color: #0de1e8;
 }
 
 /* Primary and secondary action buttons */
 .btn-exam-primary {
   padding: 9px 18px;
-  background: #76C442;
+  background: #0de1e8;
   color: #fff;
   border: none;
   border-radius: 9px;
@@ -196,7 +196,7 @@
 }
 
 .btn-exam-primary:hover {
-  background: #5fa832;
+  background: #0eb5da;
 }
 
 .btn-exam-secondary {
@@ -276,7 +276,7 @@
   font-weight: 600;
 }
 
-.exam-badge-green   { background: #f0fff4; color: #276749; }
+.exam-badge-green   { background: #f0fff4; color: #0de1e8; }
 .exam-badge-blue    { background: #ebf8ff; color: #2b6cb0; }
 .exam-badge-orange  { background: #fffaf0; color: #c05621; }
 .exam-badge-red     { background: #fff5f5; color: #c53030; }
@@ -301,8 +301,8 @@
 
 .exam-action-btn:hover { background: #e2e8f0; }
 .exam-action-btn.danger:hover { background: #fff5f5; color: #c53030; }
-.exam-action-btn.success:hover { background: #f0fff4; color: #276749; }
-.exam-action-btn.primary:hover { background: #f0fff4; color: #276749; }
+.exam-action-btn.success:hover { background: #f0fff4; color: #0de1e8; }
+.exam-action-btn.primary:hover { background: #f0fff4; color: #0de1e8; }
 .exam-action-btn .material-icons { font-size: 16px; }
 
 /* Empty state */
@@ -372,7 +372,7 @@
 
 .exam-modal-header h2 .material-icons {
   font-size: 20px;
-  color: #76C442;
+  color: #0de1e8;
 }
 
 .exam-modal-close {
@@ -468,7 +468,7 @@
 .exam-form-group input:focus,
 .exam-form-group select:focus,
 .exam-form-group textarea:focus {
-  border-color: #76C442;
+  border-color: #0de1e8;
 }
 
 .exam-form-error {
@@ -790,7 +790,7 @@
   border: 1px solid #c6f6d5;
   border-radius: 9px;
   font-size: 13px;
-  color: #276749;
+  color: #0de1e8;
   font-weight: 600;
   margin-bottom: 16px;
 }

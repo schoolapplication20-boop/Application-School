@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { parentAPI } from '../../services/api';
 
 const subjectColors = {
-  'Mathematics': '#76C442', 'Math': '#76C442',
+  'Mathematics': '#0de1e8', 'Math': '#0de1e8',
   'Science': '#3182ce',
   'English': '#805ad5',
   'Social Studies': '#e53e3e', 'Social': '#e53e3e',
@@ -78,7 +78,7 @@ export default function AssignmentsView() {
         {[
           { label: 'Total',         value: assignments.length,                                       color: '#3182ce', icon: 'assignment' },
           { label: 'Pending',       value: assignments.filter(a => a.status === 'Pending').length,   color: '#ed8936', icon: 'pending_actions' },
-          { label: 'Submitted',     value: assignments.filter(a => a.status === 'Submitted').length, color: '#76C442', icon: 'assignment_turned_in' },
+          { label: 'Submitted',     value: assignments.filter(a => a.status === 'Submitted').length, color: '#0de1e8', icon: 'assignment_turned_in' },
           { label: 'High Priority', value: assignments.filter(a => a.priority === 'High').length,    color: '#e53e3e', icon: 'priority_high' },
         ].map(c => (
           <div key={c.label} className="stat-card">
@@ -108,9 +108,9 @@ export default function AssignmentsView() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {filtered.map(a => {
-              const subjectColor = subjectColors[a.subject] || '#76C442';
+              const subjectColor = subjectColors[a.subject] || '#0de1e8';
               const isExpanded   = expandedId === a.id;
-              const priorityColor = a.priority === 'High' ? '#e53e3e' : a.priority === 'Medium' ? '#ed8936' : '#76C442';
+              const priorityColor = a.priority === 'High' ? '#e53e3e' : a.priority === 'Medium' ? '#ed8936' : '#0de1e8';
               return (
                 <div key={a.id} style={{ border: `1px solid ${isExpanded ? subjectColor + '40' : '#f0f4f8'}`, borderRadius: '12px', overflow: 'hidden', transition: 'all 0.2s' }}>
                   <div

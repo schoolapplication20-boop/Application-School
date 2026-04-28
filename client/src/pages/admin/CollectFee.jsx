@@ -192,10 +192,10 @@ export default function CollectFee() {
         .row { display:flex; justify-content:space-between; margin-bottom:8px; font-size:14px; }
         .label { color:#718096; }
         .value { font-weight:600; color:#1a202c; }
-        .amount-box { background:#f0fff4; border:2px solid #76C442; border-radius:8px; padding:14px 20px; margin:16px 0; text-align:center; }
+        .amount-box { background:#f0fff4; border:2px solid #0de1e8; border-radius:8px; padding:14px 20px; margin:16px 0; text-align:center; }
         .amount-label { font-size:12px; color:#276749; text-transform:uppercase; letter-spacing:0.05em; }
         .amount-value { font-size:30px; font-weight:800; color:#276749; }
-        .watermark { font-size:50px; font-weight:900; color:#76C44220; text-align:center; margin:10px 0; letter-spacing:8px; text-transform:uppercase; }
+        .watermark { font-size:50px; font-weight:900; color:#0de1e820; text-align:center; margin:10px 0; letter-spacing:8px; text-transform:uppercase; }
         .footer { margin-top:30px; display:flex; justify-content:space-between; font-size:12px; color:#718096; }
         .sig-line { border-top:1px solid #2d3748; padding-top:6px; width:180px; font-size:11px; color:#718096; }
         @media print { body { padding: 20px; } }
@@ -279,7 +279,7 @@ export default function CollectFee() {
                     <div style={{ fontWeight: 700, fontSize: 14, color: '#2d3748' }}>{s.name}</div>
                     <div style={{ fontSize: 12, color: '#a0aec0' }}>{s.className} · Roll: {s.rollNumber}</div>
                   </div>
-                  <span className="material-icons" style={{ color: '#76C442', fontSize: 18 }}>chevron_right</span>
+                  <span className="material-icons" style={{ color: '#0de1e8', fontSize: 18 }}>chevron_right</span>
                 </div>
               ))}
             </div>
@@ -303,7 +303,7 @@ export default function CollectFee() {
               {/* Student card */}
               <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 20 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
-                  <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'linear-gradient(135deg, #76C442, #5fa832)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 18, fontWeight: 800 }}>
+                  <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'linear-gradient(135deg, #0de1e8, #0eb5da)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 18, fontWeight: 800 }}>
                     {(student.name || '?')[0].toUpperCase()}
                   </div>
                   <div>
@@ -335,7 +335,7 @@ export default function CollectFee() {
                         <span style={{ fontSize: 14, fontWeight: 800, color: due > 0 ? '#e53e3e' : '#276749' }}>₹{fmt(due)}</span>
                       </div>
                       <div style={{ background: '#f0f4f8', borderRadius: 6, height: 8, overflow: 'hidden', marginBottom: 8 }}>
-                        <div style={{ width: `${paidPct}%`, height: '100%', background: paidPct >= 100 ? '#76C442' : '#f6ad55', borderRadius: 6, transition: 'width 0.4s' }} />
+                        <div style={{ width: `${paidPct}%`, height: '100%', background: paidPct >= 100 ? '#0de1e8' : '#f6ad55', borderRadius: 6, transition: 'width 0.4s' }} />
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#a0aec0' }}>
                         <span>{paidPct.toFixed(0)}% paid</span>
@@ -344,7 +344,7 @@ export default function CollectFee() {
                     </div>
 
                     {assignment.status === 'PAID' && (
-                      <div style={{ marginTop: 14, padding: '12px', background: '#f0fff4', border: '1.5px solid #76C44240', borderRadius: 8, textAlign: 'center', color: '#276749', fontWeight: 700, fontSize: 13 }}>
+                      <div style={{ marginTop: 14, padding: '12px', background: '#f0fff4', border: '1.5px solid #0de1e840', borderRadius: 8, textAlign: 'center', color: '#276749', fontWeight: 700, fontSize: 13 }}>
                         ✓ Fee fully paid
                       </div>
                     )}
@@ -369,7 +369,7 @@ export default function CollectFee() {
                           onClick={() => !isPaid && pickInstallment(inst)}
                           style={{
                             padding: '10px 16px',
-                            borderLeft: selected ? '3px solid #76C442' : '3px solid transparent',
+                            borderLeft: selected ? '3px solid #0de1e8' : '3px solid transparent',
                             background: selected ? '#f0fff4' : isPaid ? '#fafafa' : '#fff',
                             cursor: isPaid ? 'default' : 'pointer',
                             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -405,7 +405,7 @@ export default function CollectFee() {
 
               {/* Payment form */}
               {assignment && selectedInstallment && (
-                <div style={{ background: '#fff', border: '2px solid #76C442', borderRadius: 12, padding: 20 }}>
+                <div style={{ background: '#fff', border: '2px solid #0de1e8', borderRadius: 12, padding: 20 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                     <h4 style={{ margin: 0, fontSize: 14, fontWeight: 800, color: '#276749' }}>
                       Collect: {selectedInstallment.termName}
@@ -422,7 +422,7 @@ export default function CollectFee() {
                       type="number" min="1" max={selectedInstallment.amount} value={amount}
                       onChange={e => setAmount(e.target.value)}
                       placeholder={`Max ₹${fmt(selectedInstallment.amount)}`}
-                      style={{ width: '100%', padding: '9px 12px', border: '2px solid #76C442', borderRadius: 8, fontSize: 15, fontWeight: 700, outline: 'none', boxSizing: 'border-box' }}
+                      style={{ width: '100%', padding: '9px 12px', border: '2px solid #0de1e8', borderRadius: 8, fontSize: 15, fontWeight: 700, outline: 'none', boxSizing: 'border-box' }}
                     />
                   </div>
                   <div style={{ marginBottom: 12 }}>
@@ -442,7 +442,7 @@ export default function CollectFee() {
                   </div>
 
                   <button onClick={handleCollect} disabled={paying}
-                    style={{ width: '100%', padding: '12px', background: '#76C442', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 800, fontSize: 14, cursor: 'pointer', opacity: paying ? 0.7 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                    style={{ width: '100%', padding: '12px', background: '#0de1e8', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 800, fontSize: 14, cursor: 'pointer', opacity: paying ? 0.7 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                     <span className="material-icons" style={{ fontSize: 18 }}>payments</span>
                     {paying ? 'Processing...' : `Collect ₹${amount ? fmt(amount) : '—'}`}
                   </button>
@@ -462,7 +462,7 @@ export default function CollectFee() {
 
               {/* Receipt card */}
               {receiptData && (
-                <div style={{ background: '#fff', border: '2px solid #76C442', borderRadius: 12, padding: 24 }}>
+                <div style={{ background: '#fff', border: '2px solid #0de1e8', borderRadius: 12, padding: 24 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                     <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#276749' }}>Payment Confirmed</h3>
                     <button onClick={printReceipt}

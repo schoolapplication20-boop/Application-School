@@ -264,7 +264,7 @@ export default function Fees() {
   /* ── tab bar ── */
   const TAB_STYLE = (active) => ({
     padding: '8px 20px', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13,
-    borderBottom: active ? '2.5px solid #76C442' : '2.5px solid transparent',
+    borderBottom: active ? '2.5px solid #0de1e8' : '2.5px solid transparent',
     color: active ? '#276749' : '#718096', background: 'none',
   });
 
@@ -293,7 +293,7 @@ export default function Fees() {
             <p style={{ margin: 0, fontSize: 13, color: '#a0aec0' }}>Manage class fee structures and student fee assignments</p>
           </div>
           {tab === 'students' && (
-            <button onClick={() => openAssignModal()} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 18px', background: '#76C442', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+            <button onClick={() => openAssignModal()} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 18px', background: '#0de1e8', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
               <span className="material-icons" style={{ fontSize: 18 }}>person_add</span> Assign Fee
             </button>
           )}
@@ -302,7 +302,7 @@ export default function Fees() {
         {/* Stats (students tab) */}
         {tab === 'students' && (
           <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
-            <StatCard label="Total Billed"   value={`₹${fmt(stats.totalBilled)}`} color="#76C442" icon="receipt_long" />
+            <StatCard label="Total Billed"   value={`₹${fmt(stats.totalBilled)}`} color="#0de1e8" icon="receipt_long" />
             <StatCard label="Total Collected" value={`₹${fmt(stats.totalPaid)}`}  color="#3182ce" icon="payments"     />
             <StatCard label="Total Due"       value={`₹${fmt(stats.totalDue)}`}   color="#e53e3e" icon="pending"      />
             <StatCard label="Paid Students"   value={`${stats.paid}/${stats.total}`} color="#805ad5" icon="check_circle" />
@@ -356,7 +356,7 @@ export default function Fees() {
                             {s ? `₹${fmt(total)}` : '—'}
                           </td>
                           <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                            <button onClick={() => openFeeModal(cls)} style={{ padding: '5px 14px', background: s ? '#76C44218' : '#76C442', color: s ? '#276749' : '#fff', border: s ? '1px solid #76C44240' : 'none', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                            <button onClick={() => openFeeModal(cls)} style={{ padding: '5px 14px', background: s ? '#0de1e818' : '#0de1e8', color: s ? '#276749' : '#fff', border: s ? '1px solid #0de1e840' : 'none', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                               {s ? 'Edit' : 'Set Fee'}
                             </button>
                           </td>
@@ -424,7 +424,7 @@ export default function Fees() {
                             <td style={{ padding: '12px 14px', textAlign: 'right', color: due > 0 ? '#e53e3e' : '#276749', fontWeight: 700 }}>₹{fmt(due)}</td>
                             <td style={{ padding: '12px 14px' }}><StatusBadge status={a.status} /></td>
                             <td style={{ padding: '12px 14px' }}>
-                              <button onClick={() => openAssignModal(a)} title="Edit Assignment" style={{ border: 'none', background: '#76C44218', color: '#276749', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+                              <button onClick={() => openAssignModal(a)} title="Edit Assignment" style={{ border: 'none', background: '#0de1e818', color: '#276749', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
                                 Edit
                               </button>
                             </td>
@@ -498,7 +498,7 @@ export default function Fees() {
               ))}
             </div>
             {/* Total preview */}
-            <div style={{ background: '#f0fff4', border: '1.5px solid #76C44240', borderRadius: 8, padding: '10px 14px', marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ background: '#f0fff4', border: '1.5px solid #0de1e840', borderRadius: 8, padding: '10px 14px', marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontWeight: 700, color: '#276749', fontSize: 14 }}>Total Annual Fee</span>
               <span style={{ fontWeight: 800, color: '#276749', fontSize: 18 }}>
                 ₹{fmt(Object.values(feeForm).reduce((sum, v) => sum + Number(v || 0), 0))}
@@ -506,7 +506,7 @@ export default function Fees() {
             </div>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
               <button onClick={() => setShowFeeModal(false)} style={{ padding: '9px 20px', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', color: '#4a5568', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>Cancel</button>
-              <button onClick={saveFeeStructure} disabled={saving} style={{ padding: '9px 22px', background: '#76C442', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: saving ? 0.7 : 1 }}>
+              <button onClick={saveFeeStructure} disabled={saving} style={{ padding: '9px 22px', background: '#0de1e8', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: saving ? 0.7 : 1 }}>
                 {saving ? 'Saving...' : 'Save Structure'}
               </button>
             </div>
@@ -568,7 +568,7 @@ export default function Fees() {
                 </div>
                 {/* Class fee hint */}
                 {structureMap[assignStudent.className] && (
-                  <div style={{ fontSize: 11, color: '#76C442', fontWeight: 600 }}>
+                  <div style={{ fontSize: 11, color: '#0de1e8', fontWeight: 600 }}>
                     Class fee: ₹{fmt(['tuitionFee','transportFee','labFee','examFee','sportsFee','otherFee'].reduce((s,k) => s + Number(structureMap[assignStudent.className][k]||0), 0))}
                   </div>
                 )}
@@ -612,7 +612,7 @@ export default function Fees() {
                     <span style={{ fontSize: 11, fontWeight: 400, color: '#a0aec0', textTransform: 'none', letterSpacing: 0, marginLeft: 6 }}>(optional)</span>
                   </div>
                   <button type="button" onClick={addInstallment}
-                    style={{ fontSize: 12, color: '#76C442', background: 'none', border: '1px solid #76C442', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontWeight: 600 }}>
+                    style={{ fontSize: 12, color: '#0de1e8', background: 'none', border: '1px solid #0de1e8', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontWeight: 600 }}>
                     + Add Term
                   </button>
                 </div>
@@ -675,7 +675,7 @@ export default function Fees() {
 
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
               <button onClick={() => setShowAssignModal(false)} style={{ padding: '9px 20px', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', color: '#4a5568', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>Cancel</button>
-              <button onClick={saveAssignment} disabled={saving} style={{ padding: '9px 22px', background: '#76C442', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: saving ? 0.7 : 1 }}>
+              <button onClick={saveAssignment} disabled={saving} style={{ padding: '9px 22px', background: '#0de1e8', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: saving ? 0.7 : 1 }}>
                 {saving ? 'Saving...' : assignTarget ? 'Update Assignment' : 'Assign Fee'}
               </button>
             </div>

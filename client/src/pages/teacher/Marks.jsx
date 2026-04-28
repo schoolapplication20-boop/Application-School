@@ -309,7 +309,7 @@ export default function Marks() {
       {/* ── Stats ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 24 }}>
         {[
-          { label: 'Total Records', value: allMarks.length, icon: 'grade', color: '#76C442' },
+          { label: 'Total Records', value: allMarks.length, icon: 'grade', color: '#0de1e8' },
           { label: 'Avg Score',     value: avgPct + '%',    icon: 'bar_chart', color: '#3182ce' },
           { label: 'O / A+',        value: allMarks.filter(m => m.grade === 'O' || m.grade === 'A+').length, icon: 'star', color: '#ed8936' },
           { label: 'Failing',       value: allMarks.filter(m => m.grade === 'F').length, icon: 'warning', color: '#e53e3e' },
@@ -400,7 +400,7 @@ export default function Marks() {
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <div style={{ width: 54 }}>
                               <div className="progress-bar-custom">
-                                <div className="progress-fill" style={{ width: `${avgPctGroup}%`, background: avgPctGroup >= 80 ? '#76C442' : avgPctGroup >= 60 ? '#3182ce' : avgPctGroup >= 50 ? '#ed8936' : '#e53e3e' }} />
+                                <div className="progress-fill" style={{ width: `${avgPctGroup}%`, background: avgPctGroup >= 80 ? '#0de1e8' : avgPctGroup >= 60 ? '#3182ce' : avgPctGroup >= 50 ? '#ed8936' : '#e53e3e' }} />
                               </div>
                             </div>
                             <span style={{ fontSize: 12, fontWeight: 600 }}>{avgPctGroup}%</span>
@@ -416,9 +416,9 @@ export default function Marks() {
                             <button
                               title={isExpanded ? 'Hide subject marks' : 'View subject marks'}
                               onClick={() => toggleStudent(group.studentId)}
-                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 8, border: 'none', background: isExpanded ? '#76C44220' : '#4361ee15', cursor: 'pointer' }}
+                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 8, border: 'none', background: isExpanded ? '#0de1e820' : '#4361ee15', cursor: 'pointer' }}
                             >
-                              <span className="material-icons" style={{ fontSize: 18, color: isExpanded ? '#76C442' : '#4361ee' }}>
+                              <span className="material-icons" style={{ fontSize: 18, color: isExpanded ? '#0de1e8' : '#4361ee' }}>
                                 {isExpanded ? 'visibility_off' : 'visibility'}
                               </span>
                             </button>
@@ -444,7 +444,7 @@ export default function Marks() {
                               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                 <div style={{ width: 54 }}>
                                   <div className="progress-bar-custom">
-                                    <div className="progress-fill" style={{ width: `${pct}%`, background: pct >= 80 ? '#76C442' : pct >= 60 ? '#3182ce' : pct >= 50 ? '#ed8936' : '#e53e3e' }} />
+                                    <div className="progress-fill" style={{ width: `${pct}%`, background: pct >= 80 ? '#0de1e8' : pct >= 60 ? '#3182ce' : pct >= 50 ? '#ed8936' : '#e53e3e' }} />
                                   </div>
                                 </div>
                                 <span style={{ fontSize: 12, fontWeight: 600 }}>{pct}%</span>
@@ -543,8 +543,8 @@ export default function Marks() {
                 {SUBJECTS.map(sub => {
                   const checked = bulkSubjects.includes(sub);
                   return (
-                    <label key={sub} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 20, border: `1.5px solid ${checked ? '#76C442' : '#e2e8f0'}`, background: checked ? '#f0fff4' : '#fff', cursor: 'pointer', fontSize: 12, fontWeight: checked ? 700 : 400, color: checked ? '#276749' : '#718096', userSelect: 'none', transition: 'all 0.15s' }}>
-                      <input type="checkbox" checked={checked} onChange={() => toggleSubject(sub)} style={{ accentColor: '#76C442', cursor: 'pointer', width: 13, height: 13 }} />
+                    <label key={sub} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 20, border: `1.5px solid ${checked ? '#0de1e8' : '#e2e8f0'}`, background: checked ? '#f0fff4' : '#fff', cursor: 'pointer', fontSize: 12, fontWeight: checked ? 700 : 400, color: checked ? '#276749' : '#718096', userSelect: 'none', transition: 'all 0.15s' }}>
+                      <input type="checkbox" checked={checked} onChange={() => toggleSubject(sub)} style={{ accentColor: '#0de1e8', cursor: 'pointer', width: 13, height: 13 }} />
                       {sub}
                     </label>
                   );
@@ -598,7 +598,7 @@ export default function Marks() {
                           {/* Student name (sticky left) */}
                           <td style={{ padding: '9px 14px', borderBottom: '1px solid #f0f4f8', position: 'sticky', left: 0, background: idx % 2 === 0 ? '#fff' : '#fafbfc', zIndex: 1 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                              <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#76C44220', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, color: '#76C442', flexShrink: 0 }}>
+                              <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#0de1e820', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, color: '#0de1e8', flexShrink: 0 }}>
                                 {getInitials(student.name)}
                               </div>
                               <div>
@@ -627,7 +627,7 @@ export default function Marks() {
                                   style={{
                                     width: 78, padding: '6px 8px', fontSize: 13, fontWeight: 600,
                                     textAlign: 'center',
-                                    border: `1.5px solid ${isOver ? '#e53e3e' : val ? '#76C442' : '#e2e8f0'}`,
+                                    border: `1.5px solid ${isOver ? '#e53e3e' : val ? '#0de1e8' : '#e2e8f0'}`,
                                     borderRadius: 8, outline: 'none',
                                     background: isOver ? '#fff5f5' : val ? '#f0fff4' : '#fff',
                                     color: isOver ? '#e53e3e' : '#2d3748',
@@ -677,7 +677,7 @@ export default function Marks() {
                   disabled={saving || !bulkClassId || bulkSubjects.length === 0 || filledCount === 0}
                   style={{
                     padding: '9px 24px',
-                    background: (saving || !bulkClassId || bulkSubjects.length === 0 || filledCount === 0) ? '#a0aec0' : '#76C442',
+                    background: (saving || !bulkClassId || bulkSubjects.length === 0 || filledCount === 0) ? '#a0aec0' : '#0de1e8',
                     color: '#fff', border: 'none', borderRadius: 9, fontWeight: 600, fontSize: 13,
                     cursor: (saving || !bulkClassId || bulkSubjects.length === 0 || filledCount === 0) ? 'not-allowed' : 'pointer',
                     display: 'flex', alignItems: 'center', gap: 6,

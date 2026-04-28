@@ -16,10 +16,10 @@ const SUBJECT_COLOR = {
   'Social Studies': '#e53e3e', Hindi: '#ed8936', 'Computer Science': '#009688',
   Biology: '#d69e2e', Chemistry: '#e91e63', Physics: '#667eea',
   Accountancy: '#48bb78', Economics: '#ed64a6', Commerce: '#f6ad55',
-  'Physical Education': '#76C442', Art: '#dd6b20',
+  'Physical Education': '#0de1e8', Art: '#dd6b20',
 };
 
-const subjectColor = (subject) => SUBJECT_COLOR[subject] || '#76C442';
+const subjectColor = (subject) => SUBJECT_COLOR[subject] || '#0de1e8';
 
 const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const todayName = DAYS[new Date().getDay()];
@@ -357,7 +357,7 @@ export default function TeacherDashboard() {
           <h6 className="fw-bold mb-3">Quick Actions</h6>
           <div className="d-flex gap-2 flex-wrap">
             {[
-              { label: 'Mark Attendance', icon: 'fact_check',    path: '/teacher/attendance', color: '#76C442' },
+              { label: 'Mark Attendance', icon: 'fact_check',    path: '/teacher/attendance', color: '#0de1e8' },
               { label: 'My Schedule',     icon: 'calendar_today', path: '/teacher/schedule',   color: '#4361ee' },
               { label: 'Student Marks',   icon: 'grade',          path: '/teacher/marks',      color: '#805ad5' },
               { label: 'Homework',        icon: 'menu_book',      path: '/teacher/homework',   color: '#ed8936' },
@@ -388,7 +388,7 @@ export default function TeacherDashboard() {
                 {todayName} · {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long' })}
               </div>
             </div>
-            <span style={{ padding: '4px 12px', background: '#76C44220', color: '#76C442', borderRadius: '20px', fontSize: '12px', fontWeight: 600 }}>
+            <span style={{ padding: '4px 12px', background: '#0de1e820', color: '#0de1e8', borderRadius: '20px', fontSize: '12px', fontWeight: 600 }}>
               {todaySchedule.length} {todaySchedule.length === 1 ? 'Class' : 'Classes'}
             </span>
           </div>
@@ -453,7 +453,7 @@ export default function TeacherDashboard() {
           </div>
           <LineChartComponent
             data={attendanceTrend}
-            lines={[{ key: 'attendance', name: 'Attendance %', color: '#76C442' }]}
+            lines={[{ key: 'attendance', name: 'Attendance %', color: '#0de1e8' }]}
             height={200}
           />
         </div>
@@ -471,7 +471,7 @@ export default function TeacherDashboard() {
             </div>
           </div>
           <button onClick={() => navigate('/teacher/attendance')}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#76C442', fontWeight: 600, fontSize: 13 }}>
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0de1e8', fontWeight: 600, fontSize: 13 }}>
             Mark Attendance →
           </button>
         </div>
@@ -542,7 +542,7 @@ export default function TeacherDashboard() {
               <div style={{ fontSize: 12, color: '#a0aec0', marginTop: 2 }}>Students in your assigned classes</div>
             </div>
             <button onClick={() => navigate('/teacher/attendance')}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#76C442', fontWeight: 600, fontSize: 13 }}>
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0de1e8', fontWeight: 600, fontSize: 13 }}>
               View All →
             </button>
           </div>
@@ -560,7 +560,7 @@ export default function TeacherDashboard() {
                   <tr key={s.id} style={{ borderBottom: '1px solid #f0f4f8', background: i % 2 === 0 ? '#fff' : '#fafbfc' }}>
                     <td style={{ padding: '12px 16px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div style={{ width: 32, height: 32, borderRadius: 8, background: '#76C44220', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#276749' }}>
+                        <div style={{ width: 32, height: 32, borderRadius: 8, background: '#0de1e820', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#276749' }}>
                           {s.name.charAt(0)}
                         </div>
                         <span style={{ fontWeight: 600, color: '#2d3748' }}>{s.name}</span>
@@ -588,7 +588,7 @@ export default function TeacherDashboard() {
             {classStudents.length > 8 && (
               <div style={{ padding: '12px 16px', textAlign: 'center', fontSize: 12, color: '#a0aec0', borderTop: '1px solid #f0f4f8' }}>
                 Showing 8 of {classStudents.length} students ·{' '}
-                <button onClick={() => navigate('/teacher/attendance')} style={{ background: 'none', border: 'none', color: '#76C442', fontWeight: 600, cursor: 'pointer', fontSize: 12 }}>
+                <button onClick={() => navigate('/teacher/attendance')} style={{ background: 'none', border: 'none', color: '#0de1e8', fontWeight: 600, cursor: 'pointer', fontSize: 12 }}>
                   See all
                 </button>
               </div>

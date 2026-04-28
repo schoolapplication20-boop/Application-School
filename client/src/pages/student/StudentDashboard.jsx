@@ -118,7 +118,7 @@ export default function StudentDashboard() {
       {/* Stats */}
       <div className="stats-grid" style={{ marginBottom: '24px' }}>
         {[
-          { title: 'Attendance',   value: `${attendancePct}%`, icon: 'fact_check',   color: '#76C442' },
+          { title: 'Attendance',   value: `${attendancePct}%`, icon: 'fact_check',   color: '#0de1e8' },
           { title: 'Days Present', value: presentDays,          icon: 'check_circle', color: '#3182ce' },
           { title: 'Fee Due',      value: `₹${pendingFee.toLocaleString()}`, icon: 'payments', color: '#e53e3e' },
           { title: 'Total Marks',  value: marks.length > 0 ? `${marks.reduce((s,m)=>s+m.marks,0)}/${marks.reduce((s,m)=>s+m.maxMarks,0)}` : '—', icon: 'grade', color: '#805ad5' },
@@ -141,12 +141,12 @@ export default function StudentDashboard() {
               <div className="chart-card-title">Attendance Trend</div>
               <div className="chart-card-subtitle">Monthly attendance percentage</div>
             </div>
-            <span style={{ padding: '4px 12px', background: '#76C44220', color: '#76C442', borderRadius: '20px', fontSize: '12px', fontWeight: 600 }}>
+            <span style={{ padding: '4px 12px', background: '#0de1e820', color: '#0de1e8', borderRadius: '20px', fontSize: '12px', fontWeight: 600 }}>
               {attendancePct}% Avg
             </span>
           </div>
           {attendanceTrend.length > 0
-            ? <LineChartComponent data={attendanceTrend} lines={[{ key: 'attendance', name: 'Attendance %', color: '#76C442' }]} height={200} />
+            ? <LineChartComponent data={attendanceTrend} lines={[{ key: 'attendance', name: 'Attendance %', color: '#0de1e8' }]} height={200} />
             : <div style={{ padding: '40px 0', textAlign: 'center', color: '#a0aec0', fontSize: 13 }}>No attendance data yet</div>
           }
         </div>
@@ -175,9 +175,9 @@ export default function StudentDashboard() {
                 <div style={{ fontSize: '13px', color: '#718096', marginBottom: '16px' }}>Due: {nextDue.dueDate || '—'}</div>
               </>
             ) : (
-              <div style={{ fontSize: '14px', fontWeight: 600, color: '#76C442', marginBottom: '16px' }}>All fees paid!</div>
+              <div style={{ fontSize: '14px', fontWeight: 600, color: '#0de1e8', marginBottom: '16px' }}>All fees paid!</div>
             )}
-            <button onClick={() => navigate('/student/fees')} style={{ display: 'block', width: '100%', padding: '10px', background: '#76C442', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: 600, cursor: 'pointer' }}>
+            <button onClick={() => navigate('/student/fees')} style={{ display: 'block', width: '100%', padding: '10px', background: '#0de1e8', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: 600, cursor: 'pointer' }}>
               {nextDue ? 'Pay Now' : 'View Fees'}
             </button>
           </div>
@@ -227,7 +227,7 @@ export default function StudentDashboard() {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '8px 0' }}>
             {[
-              { label: 'View Attendance', icon: 'fact_check',    path: '/student/attendance',  color: '#76C442' },
+              { label: 'View Attendance', icon: 'fact_check',    path: '/student/attendance',  color: '#0de1e8' },
 
               { label: 'Pay Fees',        icon: 'payments',       path: '/student/fees',        color: '#e53e3e' },
               { label: 'Leave Request',   icon: 'event_busy',     path: '/student/leave',       color: '#ed8936' },

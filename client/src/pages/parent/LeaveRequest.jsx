@@ -75,7 +75,7 @@ export default function LeaveRequest() {
   };
 
   const getStatusBadge = (status) => {
-    const map = { Pending: '#ed8936', Approved: '#76C442', Rejected: '#e53e3e' };
+    const map = { Pending: '#ed8936', Approved: '#0de1e8', Rejected: '#e53e3e' };
     const bg  = { Pending: '#fffaf0', Approved: '#f0fff4', Rejected: '#fff5f5' };
     return (
       <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: 700,
@@ -96,7 +96,7 @@ export default function LeaveRequest() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '16px', marginBottom: '24px' }}>
         {[
-          { label: 'Total Requests', value: myLeaves.length, color: '#76C442', icon: 'event_note' },
+          { label: 'Total Requests', value: myLeaves.length, color: '#0de1e8', icon: 'event_note' },
           { label: 'Pending', value: myLeaves.filter(l => l.finalStatus === 'Pending').length, color: '#ed8936', icon: 'pending_actions' },
           { label: 'Approved', value: myLeaves.filter(l => l.finalStatus === 'Approved').length, color: '#3182ce', icon: 'check_circle' },
         ].map(c => (
@@ -148,7 +148,7 @@ export default function LeaveRequest() {
                     </td>
                     <td>
                       <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 600,
-                        background: '#76C44215', color: '#5fa832' }}>{l.leaveType}</span>
+                        background: '#0de1e815', color: '#0eb5da' }}>{l.leaveType}</span>
                     </td>
                     <td style={{ fontSize: '13px' }}>{l.fromDate}</td>
                     <td style={{ fontSize: '13px' }}>{l.toDate}</td>

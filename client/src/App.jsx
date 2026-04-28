@@ -171,7 +171,7 @@ function App() {
                 <span className="material-icons" style={{ fontSize: '64px', color: '#e2e8f0' }}>error_outline</span>
                 <h1 style={{ fontSize: '48px', fontWeight: 800, color: '#e2e8f0', margin: 0 }}>404</h1>
                 <p style={{ fontSize: '18px', color: '#a0aec0', marginBottom: '24px' }}>Page not found</p>
-                <a href="/login" style={{ padding: '12px 28px', background: '#76C442', color: '#fff', borderRadius: '10px', fontWeight: 600, textDecoration: 'none' }}>Go to Login</a>
+                <a href="/login" style={{ padding: '12px 28px', background: '#0de1e8', color: '#fff', borderRadius: '10px', fontWeight: 600, textDecoration: 'none' }}>Go to Login</a>
               </div>
             } />
           </Routes>

@@ -54,7 +54,7 @@ export const NotificationProvider = ({ children }) => {
           _serverId: n.id,             // kept for API calls on read/delete
           text:      n.message,
           icon:      n.icon  || 'notifications',
-          color:     n.color || '#76C442',
+          color:     n.color || '#0de1e8',
           read:      n.isRead,
           time:      new Date(n.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
           linkType:  n.linkType,

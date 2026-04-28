@@ -45,7 +45,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 const LineChartComponent = ({
   data,
   lines = [
-    { key: 'attendance', name: 'Attendance %', color: '#76C442' },
+    { key: 'attendance', name: 'Attendance %', color: '#0de1e8' },
   ],
   height = 300,
   useArea = true,

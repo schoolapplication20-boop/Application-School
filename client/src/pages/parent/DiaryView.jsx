@@ -4,7 +4,7 @@ import Toast from '../../components/Toast';
 import { useAuth } from '../../context/AuthContext';
 import { parentAPI, diaryAPI } from '../../services/api';
 
-const STATUS_COLOR = { PENDING: '#ed8936', APPROVED: '#76C442', REJECTED: '#e53e3e' };
+const STATUS_COLOR = { PENDING: '#ed8936', APPROVED: '#0de1e8', REJECTED: '#e53e3e' };
 
 export default function DiaryView() {
   const { user } = useAuth();
@@ -80,7 +80,7 @@ export default function DiaryView() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '16px', marginBottom: '24px' }}>
           {[
             { label: 'Total Entries', value: entries.length,                                      color: '#3182ce', icon: 'photo_library' },
-            { label: 'This Month',    value: entries.filter(e => e.diaryDate?.startsWith(new Date().toISOString().slice(0,7))).length, color: '#76C442', icon: 'calendar_today' },
+            { label: 'This Month',    value: entries.filter(e => e.diaryDate?.startsWith(new Date().toISOString().slice(0,7))).length, color: '#0de1e8', icon: 'calendar_today' },
             { label: 'This Week',     value: entries.filter(e => {
                 if (!e.diaryDate) return false;
                 const d = new Date(e.diaryDate);
@@ -123,7 +123,7 @@ export default function DiaryView() {
             <div key={date} style={{ marginBottom: '32px' }}>
               {/* Date Header */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                <div style={{ background: '#76C442', color: '#fff', borderRadius: '10px', padding: '6px 14px', fontSize: '13px', fontWeight: 700 }}>
+                <div style={{ background: '#0de1e8', color: '#fff', borderRadius: '10px', padding: '6px 14px', fontSize: '13px', fontWeight: 700 }}>
                   {new Date(date + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}
                 </div>
                 <div style={{ flex: 1, height: '1px', background: '#f0f4f8' }} />

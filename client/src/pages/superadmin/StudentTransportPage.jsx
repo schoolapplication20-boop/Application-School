@@ -97,7 +97,7 @@ function FormTextarea({ label, required, error, style, ...props }) {
 function SectionTitle({ icon, children }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '20px 0 12px', borderBottom: '2px solid #edf2f7', paddingBottom: '8px' }}>
-      <span className="material-icons" style={{ fontSize: '18px', color: '#76C442' }}>{icon}</span>
+      <span className="material-icons" style={{ fontSize: '18px', color: '#0de1e8' }}>{icon}</span>
       <span style={{ fontWeight: 700, fontSize: '13px', color: '#2d3748', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{children}</span>
     </div>
   );
@@ -168,7 +168,7 @@ export default function StudentTransportPage() {
 
   // Stats
   const stats = [
-    { label: 'Total Records', value: records.length, icon: 'directions_bus', color: '#76C442' },
+    { label: 'Total Records', value: records.length, icon: 'directions_bus', color: '#0de1e8' },
     { label: 'Transport Needed', value: records.filter(r => r.transportNeeded).length, icon: 'check_circle', color: '#3182ce' },
     { label: 'Active', value: records.filter(r => r.status === 'Active').length, icon: 'verified', color: '#38a169' },
     { label: 'Routes Used', value: [...new Set(records.map(r => r.routeId).filter(Boolean))].length, icon: 'route', color: '#805ad5' },
@@ -337,7 +337,7 @@ export default function StudentTransportPage() {
         </select>
         <button
           onClick={openAdd}
-          style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 18px', background: '#76C442', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}
+          style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 18px', background: '#0de1e8', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}
         >
           <span className="material-icons" style={{ fontSize: '16px' }}>add</span>
           Add Record
@@ -437,7 +437,7 @@ export default function StudentTransportPage() {
               </button>
               {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
                 <button key={p} onClick={() => setPage(p)}
-                  style={{ padding: '5px 12px', border: '1px solid', borderColor: page === p ? '#76C442' : '#e2e8f0', borderRadius: '6px', background: page === p ? '#76C442' : '#fff', color: page === p ? '#fff' : '#4a5568', cursor: 'pointer', fontSize: '13px', fontWeight: page === p ? 700 : 400 }}>
+                  style={{ padding: '5px 12px', border: '1px solid', borderColor: page === p ? '#0de1e8' : '#e2e8f0', borderRadius: '6px', background: page === p ? '#0de1e8' : '#fff', color: page === p ? '#fff' : '#4a5568', cursor: 'pointer', fontSize: '13px', fontWeight: page === p ? 700 : 400 }}>
                   {p}
                 </button>
               ))}
@@ -457,7 +457,7 @@ export default function StudentTransportPage() {
             {/* Modal header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px', borderBottom: '1px solid #edf2f7' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span className="material-icons" style={{ color: '#76C442', fontSize: '22px' }}>directions_bus</span>
+                <span className="material-icons" style={{ color: '#0de1e8', fontSize: '22px' }}>directions_bus</span>
                 <div>
                   <h2 style={{ margin: 0, fontSize: '17px', fontWeight: 700, color: '#2d3748' }}>
                     {editId ? 'Edit Transport Record' : 'New Transport Record'}
@@ -511,7 +511,7 @@ export default function StudentTransportPage() {
                       type="button"
                       onClick={() => handleChange('transportNeeded', isYes)}
                       style={{
-                        flex: 1, padding: '12px', border: `2px solid ${active ? '#76C442' : '#e2e8f0'}`,
+                        flex: 1, padding: '12px', border: `2px solid ${active ? '#0de1e8' : '#e2e8f0'}`,
                         borderRadius: '10px', background: active ? '#f0faf0' : '#fafafa',
                         cursor: 'pointer', fontWeight: 700, fontSize: '14px',
                         color: active ? '#276749' : '#a0aec0', transition: 'all 0.15s',
@@ -677,7 +677,7 @@ export default function StudentTransportPage() {
               <button
                 onClick={handleSubmit}
                 disabled={saving}
-                style={{ padding: '9px 22px', border: 'none', borderRadius: '8px', background: saving ? '#9ae6b4' : '#76C442', color: '#fff', fontWeight: 700, fontSize: '13px', cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                style={{ padding: '9px 22px', border: 'none', borderRadius: '8px', background: saving ? '#9ae6b4' : '#0de1e8', color: '#fff', fontWeight: 700, fontSize: '13px', cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
               >
                 {saving && <span className="material-icons" style={{ fontSize: '15px', animation: 'spin 1s linear infinite' }}>sync</span>}
                 {saving ? 'Saving...' : editId ? 'Update Record' : 'Create Record'}
@@ -691,7 +691,7 @@ export default function StudentTransportPage() {
       {viewRecord && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
           <div style={{ background: '#fff', borderRadius: '16px', width: '100%', maxWidth: '600px', maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px', borderBottom: '1px solid #edf2f7', background: 'linear-gradient(135deg,#76C442 0%,#5ba832 100%)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px', borderBottom: '1px solid #edf2f7', background: 'linear-gradient(135deg,#0de1e8 0%,#5ba832 100%)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <span className="material-icons" style={{ color: '#fff', fontSize: '22px' }}>person</span>
@@ -724,7 +724,7 @@ export default function StudentTransportPage() {
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', padding: '14px 24px', borderTop: '1px solid #edf2f7' }}>
               <button onClick={() => { setViewRecord(null); openEdit(viewRecord); }}
-                style={{ padding: '8px 18px', border: 'none', borderRadius: '8px', background: '#76C442', color: '#fff', fontWeight: 600, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                style={{ padding: '8px 18px', border: 'none', borderRadius: '8px', background: '#0de1e8', color: '#fff', fontWeight: 600, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span className="material-icons" style={{ fontSize: '15px' }}>edit</span>
                 Edit Record
               </button>
@@ -774,7 +774,7 @@ function DetailRow({ icon, label, value, highlight }) {
   return (
     <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', padding: '10px 0', borderBottom: '1px solid #f0f4f8' }}>
       <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#f0faf0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-        <span className="material-icons" style={{ fontSize: '16px', color: '#76C442' }}>{icon}</span>
+        <span className="material-icons" style={{ fontSize: '16px', color: '#0de1e8' }}>{icon}</span>
       </div>
       <div>
         <div style={{ fontSize: '11px', color: '#a0aec0', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</div>

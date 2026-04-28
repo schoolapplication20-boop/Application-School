@@ -236,7 +236,7 @@ export default function StudentExportModal({ students, onClose }) {
 
         {/* ── Header ─────────────────────────────────────────────────────────── */}
         <div style={{
-          background: 'linear-gradient(135deg, #1a6b1a, #276749)',
+          background: 'linear-gradient(135deg, #0de1e8, #0eb5da)',
           padding: '18px 24px', flexShrink: 0,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -339,7 +339,7 @@ export default function StudentExportModal({ students, onClose }) {
                     <label key={g.key} style={{
                       display: 'flex', alignItems: 'flex-start', gap: '10px',
                       padding: '12px 14px', borderRadius: '10px', cursor: 'pointer',
-                      border: `1.5px solid ${includeFields[g.key] ? '#76C442' : '#e2e8f0'}`,
+                      border: `1.5px solid ${includeFields[g.key] ? '#0de1e8' : '#e2e8f0'}`,
                       background: includeFields[g.key] ? '#f0fff4' : '#fafafa',
                       transition: 'all 0.15s',
                     }}>
@@ -347,11 +347,11 @@ export default function StudentExportModal({ students, onClose }) {
                         type="checkbox"
                         checked={includeFields[g.key]}
                         onChange={() => setIncludeFields(f => ({ ...f, [g.key]: !f[g.key] }))}
-                        style={{ marginTop: '2px', accentColor: '#76C442', cursor: 'pointer' }}
+                        style={{ marginTop: '2px', accentColor: '#0de1e8', cursor: 'pointer' }}
                       />
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '3px' }}>
-                          <span className="material-icons" style={{ fontSize: '14px', color: '#76C442' }}>{g.icon}</span>
+                          <span className="material-icons" style={{ fontSize: '14px', color: '#0de1e8' }}>{g.icon}</span>
                           <span style={{ fontSize: '13px', fontWeight: 700, color: '#1a202c' }}>{g.label}</span>
                         </div>
                         <div style={{ fontSize: '11px', color: '#a0aec0', lineHeight: 1.4 }}>
@@ -374,12 +374,12 @@ export default function StudentExportModal({ students, onClose }) {
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span className="material-icons" style={{ color: '#76C442', fontSize: '16px' }}>preview</span>
+                    <span className="material-icons" style={{ color: '#0de1e8', fontSize: '16px' }}>preview</span>
                     <span style={{ color: '#fff', fontWeight: 700, fontSize: '13px' }}>Preview</span>
                   </div>
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                     <span style={{
-                      background: previewStudents.length ? '#76C442' : '#e53e3e',
+                      background: previewStudents.length ? '#0de1e8' : '#e53e3e',
                       color: '#fff', fontSize: '11px', fontWeight: 700,
                       padding: '2px 10px', borderRadius: '12px',
                     }}>
@@ -399,7 +399,7 @@ export default function StudentExportModal({ students, onClose }) {
                         {['S.No', ...selectedCols].map(h => (
                           <th key={h} style={{
                             padding: '7px 10px', textAlign: 'left', whiteSpace: 'nowrap',
-                            color: '#276749', fontWeight: 700, borderBottom: '1.5px solid #c6f6d5',
+                            color: '#0eb5da', fontWeight: 700, borderBottom: '1.5px solid #bfdbfe',
                             fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.3px',
                           }}>{h}</th>
                         ))}
@@ -546,7 +546,7 @@ export default function StudentExportModal({ students, onClose }) {
               style={{
                 padding: '10px 24px', borderRadius: '9px', border: 'none', fontWeight: 700,
                 fontSize: '13px', cursor: (loading || !previewStudents.length) ? 'not-allowed' : 'pointer',
-                background: (loading || !previewStudents.length) ? '#a0aec0' : 'linear-gradient(135deg, #76C442, #5fa832)',
+                background: (loading || !previewStudents.length) ? '#a0aec0' : 'linear-gradient(135deg, #0de1e8, #0eb5da)',
                 color: '#fff', display: 'flex', alignItems: 'center', gap: '8px',
               }}
             >

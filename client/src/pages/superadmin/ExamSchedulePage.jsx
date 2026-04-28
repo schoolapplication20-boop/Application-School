@@ -546,7 +546,7 @@ export default function ExamSchedulePage() {
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#1a202c', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span className="material-icons" style={{ color: '#76C442', fontSize: 28 }}>event_note</span>
+            <span className="material-icons" style={{ color: '#0de1e8', fontSize: 28 }}>event_note</span>
             Exam Schedule
           </h1>
           <p style={{ margin: '4px 0 0', fontSize: 13, color: '#718096' }}>Create timetables for all subjects at once — manage, edit and delete exam schedules</p>

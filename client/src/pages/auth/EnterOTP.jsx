@@ -158,7 +158,7 @@ const EnterOTP = () => {
             <p>
               Please Enter Your OTP To Continue
               <br />
-              <span style={{ fontWeight: 600, color: '#76C442' }}>
+              <span style={{ fontWeight: 600, color: '#0de1e8' }}>
                 OTP sent to {maskMobile(mobile)}
               </span>
             </p>

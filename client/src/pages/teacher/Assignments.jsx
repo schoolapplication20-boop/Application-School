@@ -18,7 +18,7 @@ const getGrade = (marks, max) => {
 
 const gradeColor = { O: '#276749', 'A+': '#276749', A: '#276749', 'B+': '#2b6cb0', B: '#2b6cb0', 'B-': '#c05621', C: '#c05621', F: '#c53030' };
 const gradeBg    = { O: '#f0fff4', 'A+': '#f0fff4', A: '#f0fff4', 'B+': '#ebf8ff', B: '#ebf8ff', 'B-': '#fffaf0', C: '#fffaf0', F: '#fff5f5' };
-const statusColor = { Active: '#76C442', Completed: '#3182ce', Overdue: '#e53e3e' };
+const statusColor = { Active: '#0de1e8', Completed: '#3182ce', Overdue: '#e53e3e' };
 
 const EMPTY_FORM = { title: '', description: '', classSection: '', dueDate: '', maxMarks: '' };
 
@@ -125,7 +125,7 @@ export default function Assignments() {
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 24 }}>
         {[
-          { label: 'Total',     value: assignments.length,                                       color: '#76C442' },
+          { label: 'Total',     value: assignments.length,                                       color: '#0de1e8' },
           { label: 'Active',    value: assignments.filter(a => a.status === 'Active').length,    color: '#3182ce' },
           { label: 'Completed', value: assignments.filter(a => a.status === 'Completed').length, color: '#805ad5' },
           { label: 'Overdue',   value: assignments.filter(a => a.status === 'Overdue').length,   color: '#e53e3e' },
@@ -170,7 +170,7 @@ export default function Assignments() {
         ) : (
           <div style={{ display: 'grid', gap: 16 }}>
             {filtered.map(a => {
-              const color = statusColor[a.status] || '#76C442';
+              const color = statusColor[a.status] || '#0de1e8';
               const submitted = a.submittedCount ?? a.submitted ?? 0;
               const total     = a.totalStudents  ?? a.total     ?? 0;
               const pct       = total > 0 ? Math.round((submitted / total) * 100) : 0;
@@ -307,7 +307,7 @@ export default function Assignments() {
                   Cancel
                 </button>
                 <button type="submit" disabled={saving}
-                  style={{ padding: '9px 20px', background: saving ? '#a0aec0' : '#76C442', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  style={{ padding: '9px 20px', background: saving ? '#a0aec0' : '#0de1e8', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
                   {saving ? (
                     <><span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} /> Saving…</>
                   ) : 'Create Assignment'}

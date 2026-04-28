@@ -43,8 +43,8 @@ const DocUpload = ({ label, required, fileRef, fileName, onFileChange, onRemove 
       {label}{required ? ' *' : ' (optional)'}
     </label>
     {fileName ? (
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 12px', background: '#f0fff4', border: '1.5px solid #76C442', borderRadius: '8px' }}>
-        <span className="material-icons" style={{ color: '#76C442', fontSize: '18px' }}>description</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 12px', background: '#f0fff4', border: '1.5px solid #0de1e8', borderRadius: '8px' }}>
+        <span className="material-icons" style={{ color: '#0de1e8', fontSize: '18px' }}>description</span>
         <span style={{ fontSize: '12px', fontWeight: 600, color: '#276749', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fileName}</span>
         <button type="button" onClick={onRemove} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#e53e3e', display: 'flex', padding: 0 }}>
           <span className="material-icons" style={{ fontSize: '18px' }}>close</span>
@@ -53,7 +53,7 @@ const DocUpload = ({ label, required, fileRef, fileName, onFileChange, onRemove 
     ) : (
       <div onClick={() => fileRef.current?.click()}
         style={{ border: '2px dashed #e2e8f0', borderRadius: '8px', padding: '14px 12px', textAlign: 'center', cursor: 'pointer', transition: 'border-color 0.2s' }}
-        onMouseEnter={e => e.currentTarget.style.borderColor = '#76C442'}
+        onMouseEnter={e => e.currentTarget.style.borderColor = '#0de1e8'}
         onMouseLeave={e => e.currentTarget.style.borderColor = '#e2e8f0'}>
         <span className="material-icons" style={{ color: '#a0aec0', fontSize: '22px', display: 'block', marginBottom: '4px' }}>upload_file</span>
         <span style={{ fontSize: '12px', color: '#a0aec0' }}>Click to upload</span>
@@ -65,7 +65,7 @@ const DocUpload = ({ label, required, fileRef, fileName, onFileChange, onRemove 
 
 const SectionLabel = ({ icon, label }) => (
   <div style={{ gridColumn: '1/-1', display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 0 4px', borderBottom: '1.5px solid #e2e8f0', marginBottom: '2px' }}>
-    <span className="material-icons" style={{ color: '#76C442', fontSize: '18px' }}>{icon}</span>
+    <span className="material-icons" style={{ color: '#0de1e8', fontSize: '18px' }}>{icon}</span>
     <span style={{ fontSize: '12px', fontWeight: 700, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</span>
   </div>
 );
@@ -261,7 +261,7 @@ const Applications = () => {
         {[
           { label: 'Total', value: stats.total, color: '#3182ce', icon: 'description' },
           { label: 'Pending', value: stats.pending, color: '#ed8936', icon: 'pending_actions' },
-          { label: 'Approved', value: stats.approved, color: '#76C442', icon: 'check_circle' },
+          { label: 'Approved', value: stats.approved, color: '#0de1e8', icon: 'check_circle' },
           { label: 'Rejected', value: stats.rejected, color: '#e53e3e', icon: 'cancel' },
         ].map(c => (
           <div key={c.label} className="stat-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab(c.label === 'Total' ? 'All' : c.label)}>
@@ -280,7 +280,7 @@ const Applications = () => {
           {['All', 'Pending', 'Approved', 'Rejected'].map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)} style={{
               padding: '8px 18px', border: 'none', borderRadius: '8px', cursor: 'pointer',
-              background: activeTab === tab ? '#76C442' : '#f7fafc',
+              background: activeTab === tab ? '#0de1e8' : '#f7fafc',
               color: activeTab === tab ? '#fff' : '#718096',
               fontWeight: 600, fontSize: '13px',
             }}>
@@ -336,7 +336,7 @@ const Applications = () => {
                       </button>
                       {app.status === 'Pending' && (
                         <>
-                          <button title="Approve" onClick={() => handleApprove(app.id)} style={{ padding: '4px 10px', background: '#76C44215', border: 'none', borderRadius: '6px', color: '#76C442', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
+                          <button title="Approve" onClick={() => handleApprove(app.id)} style={{ padding: '4px 10px', background: '#0de1e815', border: 'none', borderRadius: '6px', color: '#0de1e8', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
                             Approve
                           </button>
                           <button title="Reject" onClick={() => { setSelectedApp(app); setRejectReason(''); setFormErrors({}); setShowRejectModal(true); }} style={{ padding: '4px 10px', background: '#e53e3e15', border: 'none', borderRadius: '6px', color: '#e53e3e', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
@@ -516,7 +516,7 @@ const Applications = () => {
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn btn-secondary" onClick={() => setShowAddModal(false)}>Cancel</button>
-                <button type="submit" disabled={saving} className="btn" style={{ background: saving ? '#a0aec0' : '#76C442', color: '#fff', fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer' }}>
+                <button type="submit" disabled={saving} className="btn" style={{ background: saving ? '#a0aec0' : '#0de1e8', color: '#fff', fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer' }}>
                   {saving ? 'Submitting...' : 'Submit Application'}
                 </button>
               </div>
@@ -536,7 +536,7 @@ const Applications = () => {
             <div className="modal-body" style={{ maxHeight: '72vh', overflowY: 'auto', padding: '20px 24px' }}>
               {/* Avatar + name */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px', padding: '16px', background: '#f7fafc', borderRadius: '12px' }}>
-                <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'linear-gradient(135deg,#76C442,#5fa832)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '20px', fontWeight: 700 }}>
+                <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'linear-gradient(135deg,#0de1e8,#0eb5da)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '20px', fontWeight: 700 }}>
                   {selectedApp.studentName.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase()}
                 </div>
                 <div>
@@ -548,7 +548,7 @@ const Applications = () => {
 
               {/* Student Info */}
               <div style={{ fontSize: '12px', fontWeight: 700, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span className="material-icons" style={{ color: '#76C442', fontSize: '16px' }}>person</span> Student Information
+                <span className="material-icons" style={{ color: '#0de1e8', fontSize: '16px' }}>person</span> Student Information
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
                 {[['Gender', selectedApp.gender], ['Date of Birth', selectedApp.dob], ['Previous School', selectedApp.prevSchool], ['Email', selectedApp.email]].map(([l, v]) => v ? (
@@ -561,7 +561,7 @@ const Applications = () => {
 
               {/* Parent & Guardian */}
               <div style={{ fontSize: '12px', fontWeight: 700, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span className="material-icons" style={{ color: '#76C442', fontSize: '16px' }}>family_restroom</span> Parent & Guardian
+                <span className="material-icons" style={{ color: '#0de1e8', fontSize: '16px' }}>family_restroom</span> Parent & Guardian
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
                 {[
@@ -581,7 +581,7 @@ const Applications = () => {
 
               {/* Address */}
               <div style={{ fontSize: '12px', fontWeight: 700, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span className="material-icons" style={{ color: '#76C442', fontSize: '16px' }}>location_on</span> Address
+                <span className="material-icons" style={{ color: '#0de1e8', fontSize: '16px' }}>location_on</span> Address
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
                 {[['Permanent Address', selectedApp.permanentAddress || selectedApp.address], ['Alternate Address', selectedApp.alternateAddress]].map(([l, v]) => v ? (
@@ -596,12 +596,12 @@ const Applications = () => {
               {(selectedApp.idProofName || selectedApp.tcDocName || selectedApp.bonafideDocName) && (
                 <>
                   <div style={{ fontSize: '12px', fontWeight: 700, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span className="material-icons" style={{ color: '#76C442', fontSize: '16px' }}>folder</span> Documents
+                    <span className="material-icons" style={{ color: '#0de1e8', fontSize: '16px' }}>folder</span> Documents
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {[['ID Proof', selectedApp.idProofName, selectedApp.idProof], ['TC Document', selectedApp.tcDocName, selectedApp.tcDoc], ['Bonafide Certificate', selectedApp.bonafideDocName, selectedApp.bonafideDoc]].map(([l, name, data]) => name ? (
                       <div key={l} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', background: '#f0fff4', border: '1px solid #c6f6d5', borderRadius: '8px' }}>
-                        <span className="material-icons" style={{ color: '#76C442', fontSize: '20px' }}>description</span>
+                        <span className="material-icons" style={{ color: '#0de1e8', fontSize: '20px' }}>description</span>
                         <div style={{ flex: 1 }}>
                           <div style={{ fontSize: '11px', color: '#a0aec0', fontWeight: 600 }}>{l}</div>
                           <div style={{ fontSize: '13px', fontWeight: 600, color: '#276749' }}>{name}</div>
@@ -619,7 +619,7 @@ const Applications = () => {
               <button className="btn btn-secondary" onClick={() => setShowViewModal(false)}>Close</button>
               {selectedApp.status === 'Pending' && (
                 <>
-                  <button className="btn" style={{ background: '#76C442', color: '#fff', fontWeight: 600 }}
+                  <button className="btn" style={{ background: '#0de1e8', color: '#fff', fontWeight: 600 }}
                     onClick={() => { handleApprove(selectedApp.id); setShowViewModal(false); }}>Approve</button>
                   <button className="btn" style={{ background: '#e53e3e', color: '#fff', fontWeight: 600 }}
                     onClick={() => { setShowViewModal(false); setShowRejectModal(true); }}>Reject</button>

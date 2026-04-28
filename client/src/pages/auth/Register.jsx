@@ -15,8 +15,8 @@ const Register = () => {
   const [error,        setError]               = useState('');
   const [success,      setSuccess]             = useState(false);
 
-  const primary   = '#76C442';
-  const secondary = '#5fa832';
+  const primary   = '#0de1e8';
+  const secondary = '#0eb5da';
 
   const set = (field) => (e) => {
     setForm(f => ({ ...f, [field]: e.target.value }));

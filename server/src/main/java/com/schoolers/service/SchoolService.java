@@ -194,10 +194,17 @@ public class SchoolService {
         if (userOpt.isEmpty()) return ApiResponse.error("User not found.");
         User user = userOpt.get();
         if (user.getSchoolId() == null) return ApiResponse.error("No school linked to this account.");
-        // user.schoolId stores the human-assigned display number (not the DB PK)
-        return schoolRepository.findBySchoolId(user.getSchoolId().intValue())
+        // user.schoolId stores the human-assigned display number (not the DB PK).
+        // Fall back to findById (DB PK) if the display number lookup fails — handles
+        // the case where the display schoolId was changed in the setup wizard but the
+        // user's school_id column still holds the original DB PK.
+        Optional<School> schoolOpt = schoolRepository.findBySchoolId(user.getSchoolId().intValue());
+        if (schoolOpt.isEmpty()) {
+            schoolOpt = schoolRepository.findById(user.getSchoolId());
+        }
+        return schoolOpt
                 .map(s -> ApiResponse.success("School found", toResponse(s)))
-                .orElse(ApiResponse.error("No school found for display ID: " + user.getSchoolId()));
+                .orElse(ApiResponse.error("No school found for ID: " + user.getSchoolId()));
     }
 
     public ApiResponse<List<Map<String, Object>>> getAllSchools() {

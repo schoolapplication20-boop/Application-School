@@ -38,7 +38,7 @@ const SetNewPassword = () => {
     if (score <= 2) return { level: score, label: 'Weak', color: '#e53e3e' };
     if (score <= 3) return { level: score, label: 'Fair', color: '#ed8936' };
     if (score <= 4) return { level: score, label: 'Good', color: '#3182ce' };
-    return { level: score, label: 'Strong', color: '#76C442' };
+    return { level: score, label: 'Strong', color: '#0de1e8' };
   };
 
   const handleChange = (e) => {
@@ -185,7 +185,7 @@ const SetNewPassword = () => {
                 <p style={{ fontSize: '11px', color: '#e53e3e', marginTop: '6px' }}>Passwords do not match</p>
               )}
               {formData.confirmPassword && formData.newPassword === formData.confirmPassword && (
-                <p style={{ fontSize: '11px', color: '#76C442', marginTop: '6px' }}>
+                <p style={{ fontSize: '11px', color: '#0de1e8', marginTop: '6px' }}>
                   <span className="material-icons" style={{ fontSize: '12px', verticalAlign: 'middle' }}>check_circle</span>
                   {' '}Passwords match
                 </p>

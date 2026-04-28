@@ -18,12 +18,12 @@ const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
 
 const DAY_COLOR = {
   Monday: '#4361ee', Tuesday: '#38b2ac', Wednesday: '#805ad5',
-  Thursday: '#ed8936', Friday: '#e53e3e', Saturday: '#76C442',
+  Thursday: '#ed8936', Friday: '#e53e3e', Saturday: '#0de1e8',
 };
 
 const PALETTE = [
   '#4361ee','#38b2ac','#805ad5','#e53e3e','#ed8936','#009688',
-  '#d69e2e','#e91e63','#667eea','#48bb78','#ed64a6','#dd6b20','#76C442','#2b6cb0',
+  '#d69e2e','#e91e63','#667eea','#48bb78','#ed64a6','#dd6b20','#0de1e8','#2b6cb0',
 ];
 const subjectColor = (name = '') => {
   let h = 0;
@@ -382,7 +382,7 @@ export default function Timetable() {
           </button>
           <button
             onClick={openAdd}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 20px', background: '#76C442', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 20px', background: '#0de1e8', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
           >
             <span className="material-icons" style={{ fontSize: 18 }}>add</span>
             Add Schedule
@@ -408,7 +408,7 @@ export default function Timetable() {
               <button onClick={() => setShowBulk(true)} style={{ padding: '10px 24px', background: '#4361ee', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 600, cursor: 'pointer' }}>
                 Bulk Assign
               </button>
-              <button onClick={openAdd} style={{ padding: '10px 24px', background: '#76C442', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 600, cursor: 'pointer' }}>
+              <button onClick={openAdd} style={{ padding: '10px 24px', background: '#0de1e8', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 600, cursor: 'pointer' }}>
                 Add Schedule
               </button>
             </div>
@@ -438,7 +438,7 @@ export default function Timetable() {
                         <td style={{ color: '#a0aec0', fontSize: 12 }}>{idx + 1}</td>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#76C44220', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, color: '#76C442', flexShrink: 0 }}>
+                            <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#0de1e820', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, color: '#0de1e8', flexShrink: 0 }}>
                               {(group.teacherName || '?').slice(0, 2).toUpperCase()}
                             </div>
                             <span style={{ fontWeight: 600, fontSize: 13 }}>{group.teacherName || '—'}</span>
@@ -447,7 +447,7 @@ export default function Timetable() {
                         <td>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                             {uniqueClasses.map(cls => (
-                              <span key={cls} style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: '#76C44220', color: '#276749' }}>{cls}</span>
+                              <span key={cls} style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: '#0de1e820', color: '#276749' }}>{cls}</span>
                             ))}
                           </div>
                         </td>
@@ -469,9 +469,9 @@ export default function Timetable() {
                             <button
                               title={isExpanded ? 'Hide schedule' : 'View schedule'}
                               onClick={() => toggleTeacher(group.teacherId)}
-                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 8, border: 'none', background: isExpanded ? '#76C44220' : '#4361ee15', cursor: 'pointer' }}
+                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 8, border: 'none', background: isExpanded ? '#0de1e820' : '#4361ee15', cursor: 'pointer' }}
                             >
-                              <span className="material-icons" style={{ fontSize: 18, color: isExpanded ? '#76C442' : '#4361ee' }}>
+                              <span className="material-icons" style={{ fontSize: 18, color: isExpanded ? '#0de1e8' : '#4361ee' }}>
                                 {isExpanded ? 'visibility_off' : 'visibility'}
                               </span>
                             </button>
@@ -493,7 +493,7 @@ export default function Timetable() {
                               </div>
                             </td>
                             <td>
-                              <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: '#76C44220', color: '#276749' }}>
+                              <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: '#0de1e820', color: '#276749' }}>
                                 {entry.classSection}
                               </span>
                             </td>
@@ -575,7 +575,7 @@ export default function Timetable() {
                   })}
                 </div>
                 {!editId && form.days.length > 0 && (
-                  <div style={{ marginTop: '6px', fontSize: '11px', color: '#76C442', fontWeight: 600 }}>
+                  <div style={{ marginTop: '6px', fontSize: '11px', color: '#0de1e8', fontWeight: 600 }}>
                     {form.days.length} day{form.days.length > 1 ? 's' : ''} selected — will create {form.days.length} entr{form.days.length > 1 ? 'ies' : 'y'}
                   </div>
                 )}
@@ -597,7 +597,7 @@ export default function Timetable() {
             </div>
             <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
               <button onClick={closeForm} style={{ padding: '9px 20px', border: '1.5px solid #e2e8f0', borderRadius: 9, background: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handleSave} disabled={saving} style={{ padding: '9px 24px', background: saving ? '#a0aec0' : '#76C442', color: '#fff', border: 'none', borderRadius: 9, fontWeight: 600, fontSize: 13, cursor: saving ? 'not-allowed' : 'pointer' }}>
+              <button onClick={handleSave} disabled={saving} style={{ padding: '9px 24px', background: saving ? '#a0aec0' : '#0de1e8', color: '#fff', border: 'none', borderRadius: 9, fontWeight: 600, fontSize: 13, cursor: saving ? 'not-allowed' : 'pointer' }}>
                 {saving ? 'Saving...' : (editId ? 'Update Entry' : `Add ${form.days.length > 1 ? `${form.days.length} Entries` : 'Entry'}`)}
               </button>
             </div>
@@ -874,14 +874,14 @@ function BulkAssignModal({ teachers, classes, entries, onSave, onClose }) {
                     <div style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
                       <button
                         onClick={() => { setSelClasses([...classes]); setErrors(p => ({ ...p, classes: '' })); }}
-                        style={{ fontSize: 11, fontWeight: 600, color: '#76C442', background: 'none', border: '1px solid #76C44250', borderRadius: 6, padding: '3px 10px', cursor: 'pointer' }}
+                        style={{ fontSize: 11, fontWeight: 600, color: '#0de1e8', background: 'none', border: '1px solid #0de1e850', borderRadius: 6, padding: '3px 10px', cursor: 'pointer' }}
                       >Select All</button>
                       <button
                         onClick={() => setSelClasses([])}
                         style={{ fontSize: 11, fontWeight: 600, color: '#718096', background: 'none', border: '1px solid #e2e8f0', borderRadius: 6, padding: '3px 10px', cursor: 'pointer' }}
                       >Clear</button>
                       {selClasses.length > 0 && (
-                        <span style={{ fontSize: 11, color: '#76C442', fontWeight: 700, marginLeft: 'auto' }}>
+                        <span style={{ fontSize: 11, color: '#0de1e8', fontWeight: 700, marginLeft: 'auto' }}>
                           {selClasses.length} selected
                         </span>
                       )}
@@ -892,12 +892,12 @@ function BulkAssignModal({ teachers, classes, entries, onSave, onClose }) {
                         return (
                           <label key={cls} style={{
                             display: 'flex', alignItems: 'center', gap: 6, padding: '6px 8px',
-                            borderRadius: 7, border: `1.5px solid ${checked ? '#76C442' : '#e2e8f0'}`,
-                            background: checked ? '#76C44215' : '#fff', cursor: 'pointer', userSelect: 'none',
+                            borderRadius: 7, border: `1.5px solid ${checked ? '#0de1e8' : '#e2e8f0'}`,
+                            background: checked ? '#0de1e815' : '#fff', cursor: 'pointer', userSelect: 'none',
                           }}>
                             <input type="checkbox" checked={checked}
                               onChange={() => { toggleClass(cls); setErrors(p => ({ ...p, classes: '' })); }}
-                              style={{ accentColor: '#76C442', width: 13, height: 13 }} />
+                              style={{ accentColor: '#0de1e8', width: 13, height: 13 }} />
                             <span style={{ fontSize: 12, fontWeight: checked ? 700 : 500, color: checked ? '#276749' : '#4a5568' }}>{cls}</span>
                           </label>
                         );
@@ -1126,7 +1126,7 @@ function BulkAssignModal({ teachers, classes, entries, onSave, onClose }) {
                 </div>
                 <button
                   onClick={addRow}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 0', background: 'none', border: '1.5px dashed #76C44260', borderRadius: 9, color: '#76C442', fontWeight: 600, fontSize: 13, cursor: 'pointer', width: '100%', justifyContent: 'center' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 0', background: 'none', border: '1.5px dashed #0de1e860', borderRadius: 9, color: '#0de1e8', fontWeight: 600, fontSize: 13, cursor: 'pointer', width: '100%', justifyContent: 'center' }}
                 >
                   <span className="material-icons" style={{ fontSize: 18 }}>add</span> Add Row
                 </button>
@@ -1212,7 +1212,7 @@ function BulkAssignModal({ teachers, classes, entries, onSave, onClose }) {
                       <tr key={i} style={{ borderBottom: '1px solid #f0f4f8', background: conflict ? '#fff5f5' : i % 2 === 0 ? '#fff' : '#fafbfc' }}>
                         <td style={{ padding: '8px 12px', color: '#a0aec0', fontSize: 11 }}>{i + 1}</td>
                         <td style={{ padding: '8px 12px' }}>
-                          <span style={{ padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 700, background: '#76C44220', color: '#276749' }}>{entry.classSection}</span>
+                          <span style={{ padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 700, background: '#0de1e820', color: '#276749' }}>{entry.classSection}</span>
                         </td>
                         <td style={{ padding: '8px 12px' }}>
                           <span style={{ padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 700, background: dColor + '18', color: dColor }}>{entry.day.slice(0, 3)}</span>
@@ -1287,7 +1287,7 @@ function BulkAssignModal({ teachers, classes, entries, onSave, onClose }) {
                   style={{
                     display: 'flex', alignItems: 'center', gap: 6,
                     padding: '9px 24px',
-                    background: validCount === 0 || saving ? '#a0aec0' : '#76C442',
+                    background: validCount === 0 || saving ? '#a0aec0' : '#0de1e8',
                     color: '#fff', border: 'none', borderRadius: 9, fontWeight: 600, fontSize: 13,
                     cursor: validCount === 0 || saving ? 'not-allowed' : 'pointer',
                   }}

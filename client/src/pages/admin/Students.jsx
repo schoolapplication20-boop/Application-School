@@ -155,8 +155,8 @@ function SectionLabel({ icon, text }) {
       display: 'flex', alignItems: 'center', gap: 8, margin: '20px 0 12px',
       paddingBottom: 8, borderBottom: '1.5px solid #f0f4f8',
     }}>
-      <div style={{ width: 28, height: 28, borderRadius: 7, background: '#76C44218', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <span className="material-icons" style={{ fontSize: 16, color: '#76C442' }}>{icon}</span>
+      <div style={{ width: 28, height: 28, borderRadius: 7, background: '#0de1e818', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <span className="material-icons" style={{ fontSize: 16, color: '#0de1e8' }}>{icon}</span>
       </div>
       <span style={{ fontWeight: 700, fontSize: 13, color: '#2d3748', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{text}</span>
     </div>
@@ -187,7 +187,7 @@ function DocUpload({ label, required, fileData, fileName, inputRef, onChange, on
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
             cursor: 'pointer', background: '#fafafa', transition: 'all 0.2s',
           }}
-          onMouseEnter={e => e.currentTarget.style.borderColor = '#76C442'}
+          onMouseEnter={e => e.currentTarget.style.borderColor = '#0de1e8'}
           onMouseLeave={e => e.currentTarget.style.borderColor = '#e2e8f0'}
         >
           <span className="material-icons" style={{ fontSize: 28, color: '#a0aec0' }}>upload_file</span>
@@ -215,7 +215,7 @@ function CredentialCard({ label, value, mono }) {
         <div style={{ fontSize: 11, color: '#a0aec0', fontWeight: 600, marginBottom: 2 }}>{label}</div>
         <div style={{ fontSize: 14, fontWeight: 700, color: '#2d3748', fontFamily: mono ? 'monospace' : 'inherit', wordBreak: 'break-all' }}>{value}</div>
       </div>
-      <button onClick={copy} title="Copy" style={{ border: 'none', background: copied ? '#f0fff4' : '#e2e8f0', borderRadius: 7, padding: '6px 8px', cursor: 'pointer', color: copied ? '#76C442' : '#718096', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, fontFamily: 'Poppins, sans-serif', flexShrink: 0, transition: 'all 0.2s' }}>
+      <button onClick={copy} title="Copy" style={{ border: 'none', background: copied ? '#f0fff4' : '#e2e8f0', borderRadius: 7, padding: '6px 8px', cursor: 'pointer', color: copied ? '#0de1e8' : '#718096', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, fontFamily: 'Poppins, sans-serif', flexShrink: 0, transition: 'all 0.2s' }}>
         <span className="material-icons" style={{ fontSize: 15 }}>{copied ? 'check' : 'content_copy'}</span>
         {copied ? 'Copied' : 'Copy'}
       </button>
@@ -555,7 +555,7 @@ export default function Students() {
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '16px', marginBottom: '24px' }}>
         {[
-          { label: 'Total Students', value: students.length,                                    icon: 'school',       color: '#76C442' },
+          { label: 'Total Students', value: students.length,                                    icon: 'school',       color: '#0de1e8' },
           { label: 'Active',         value: students.filter(s => s.status === 'Active').length,  icon: 'check_circle', color: '#3182ce' },
           { label: 'Inactive',       value: students.filter(s => s.status === 'Inactive').length,icon: 'cancel',       color: '#e53e3e' },
           { label: 'Classes',        value: new Set(students.map(s => s.class)).size,            icon: 'class',        color: '#805ad5' },
@@ -703,7 +703,7 @@ export default function Students() {
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span className="material-icons" style={{ color: '#76C442', fontSize: 20 }}>
+                  <span className="material-icons" style={{ color: '#0de1e8', fontSize: 20 }}>
                     {editStudent ? 'edit' : 'person_add'}
                   </span>
                   {editStudent ? 'Edit Student' : 'Add New Student'}
@@ -978,7 +978,7 @@ export default function Students() {
                   <button
                     type="submit"
                     className="btn btn-primary"
-                    style={{ background: (!editStudent && capacityInfo?.isFull) ? '#a0aec0' : '#76C442', border: 'none', minWidth: 120 }}
+                    style={{ background: (!editStudent && capacityInfo?.isFull) ? '#a0aec0' : '#0de1e8', border: 'none', minWidth: 120 }}
                     disabled={saving || (!editStudent && capacityInfo?.isFull)}
                     title={(!editStudent && capacityInfo?.isFull) ? 'Maximum capacity reached for this class. Cannot add more students.' : undefined}
                   >
@@ -1005,7 +1005,7 @@ export default function Students() {
               <div className="modal-body" style={{ maxHeight: '75vh', overflowY: 'auto' }}>
 
                 {/* Profile header */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 18, background: 'linear-gradient(135deg,#76C442,#5fa832)', borderRadius: 14, padding: '20px 24px', marginBottom: 20 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 18, background: 'linear-gradient(135deg,#0de1e8,#0eb5da)', borderRadius: 14, padding: '20px 24px', marginBottom: 20 }}>
                   {selectedStudent.photo
                     ? <img src={selectedStudent.photo} alt={selectedStudent.name} style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', border: '3px solid rgba(255,255,255,0.4)' }} />
                     : <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, fontWeight: 700, color: '#fff', border: '3px solid rgba(255,255,255,0.4)' }}>{getInitials(selectedStudent.name)}</div>
@@ -1062,7 +1062,7 @@ export default function Students() {
               </div>
               <div className="modal-footer">
                 <button className="btn btn-secondary" onClick={() => setShowViewModal(false)}>Close</button>
-                <button className="btn btn-primary" style={{ background: '#76C442', border: 'none' }}
+                <button className="btn btn-primary" style={{ background: '#0de1e8', border: 'none' }}
                   onClick={() => { setShowViewModal(false); openEditModal(selectedStudent); }}>
                   Edit
                 </button>
@@ -1178,7 +1178,7 @@ export default function Students() {
           <div className="modal-container" style={{ maxWidth: 480 }}>
 
             {/* Header */}
-            <div className="modal-header" style={{ background: 'linear-gradient(135deg,#76C442,#5aa832)', color: '#fff' }}>
+            <div className="modal-header" style={{ background: 'linear-gradient(135deg,#0de1e8,#5aa832)', color: '#fff' }}>
               <span className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span className="material-icons" style={{ fontSize: 18 }}>key</span>
                 Login Credentials Generated
@@ -1242,7 +1242,7 @@ export default function Students() {
 
             <div className="modal-footer">
               <button onClick={() => setShowCred(false)}
-                style={{ padding: '10px 32px', background: '#76C442', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, cursor: 'pointer', fontFamily: 'Poppins, sans-serif' }}>
+                style={{ padding: '10px 32px', background: '#0de1e8', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, cursor: 'pointer', fontFamily: 'Poppins, sans-serif' }}>
                 Done
               </button>
             </div>
@@ -1266,7 +1266,7 @@ function ViewSection({ title, icon, children }) {
   return (
     <div style={{ marginBottom: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10, paddingBottom: 6, borderBottom: '1.5px solid #f0f4f8' }}>
-        <span className="material-icons" style={{ fontSize: 16, color: '#76C442' }}>{icon}</span>
+        <span className="material-icons" style={{ fontSize: 16, color: '#0de1e8' }}>{icon}</span>
         <span style={{ fontWeight: 700, fontSize: 12, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{title}</span>
       </div>
       <table className="table table-sm mb-0">

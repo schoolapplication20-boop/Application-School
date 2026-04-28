@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSchool } from '../context/SchoolContext';
+import { schoolAPI } from '../services/api';
 import '../styles/sidebar.css';
 
 const adminNavItems = [
@@ -74,9 +75,32 @@ const parentNavItems = [
 ];
 
 const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
-  const { user }                      = useAuth();
-  const { school, logoVersion }       = useSchool();
-  const [logoError, setLogoError]     = useState(false);
+  const { user }                            = useAuth();
+  const { school, logoVersion, loadSchool } = useSchool();
+  const [logoError, setLogoError]           = useState(false);
+  const [logoHover, setLogoHover]           = useState(false);
+  const [uploading,  setUploading]          = useState(false);
+  const logoInputRef                        = useRef(null);
+
+  const canChangeLogo = user?.role === 'SUPER_ADMIN' && school?.schoolId != null;
+
+  const handleLogoFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) return;
+    if (file.size > 5 * 1024 * 1024) return;
+    setUploading(true);
+    try {
+      await schoolAPI.updateLogo(school.schoolId, file);
+      setLogoError(false);
+      await loadSchool();
+    } catch {
+      // silent — logo stays unchanged
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
 
   // Reset error flag whenever the logo URL or version changes
   React.useEffect(() => { setLogoError(false); }, [school?.logoUrl, logoVersion]);
@@ -193,10 +217,17 @@ const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
         {/* Logo / Initials avatar */}
         <div
           className="brand-logo"
+          title={canChangeLogo ? 'Click to change school logo' : undefined}
+          onClick={canChangeLogo ? () => logoInputRef.current?.click() : undefined}
+          onMouseEnter={() => canChangeLogo && setLogoHover(true)}
+          onMouseLeave={() => setLogoHover(false)}
           style={{
             background: (logoSrc && !logoError)
               ? 'transparent'
               : `linear-gradient(135deg, ${primary}, ${secondary})`,
+            cursor: canChangeLogo ? 'pointer' : 'default',
+            position: 'relative',
+            overflow: 'hidden',
           }}
         >
           {logoSrc && !logoError ? (
@@ -205,11 +236,34 @@ const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
               alt={school?.name || 'School logo'}
               className="brand-logo-img"
               onError={() => setLogoError(true)}
+              style={{ opacity: (logoHover || uploading) ? 0.55 : 1, transition: 'opacity 0.2s' }}
             />
           ) : (
             <span className="brand-logo-initials">{schoolInitials}</span>
           )}
+          {/* Camera overlay for SUPER_ADMIN on hover or while uploading */}
+          {canChangeLogo && (logoHover || uploading) && (
+            <div style={{
+              position: 'absolute', inset: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(0,0,0,0.28)', borderRadius: 'inherit',
+            }}>
+              <span className="material-icons" style={{ fontSize: 18, color: '#fff' }}>
+                {uploading ? 'hourglass_top' : 'photo_camera'}
+              </span>
+            </div>
+          )}
         </div>
+        {/* Hidden file input for logo upload */}
+        {canChangeLogo && (
+          <input
+            ref={logoInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={handleLogoFileChange}
+          />
+        )}
 
         {/* School name + tagline */}
         <div className="brand-text">

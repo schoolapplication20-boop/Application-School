@@ -143,7 +143,7 @@ export default function TeacherMessages() {
                   style={{
                     padding: '14px 20px', cursor: 'pointer', borderBottom: '1px solid #f7fafc',
                     background: isActive ? '#f0fff4' : '#fff',
-                    borderLeft: isActive ? '3px solid #76C442' : '3px solid transparent',
+                    borderLeft: isActive ? '3px solid #0de1e8' : '3px solid transparent',
                     transition: 'background 0.2s',
                   }}
                 >
@@ -307,7 +307,7 @@ export default function TeacherMessages() {
                 <button
                   onClick={handleSend}
                   disabled={sending || classOptions.length === 0}
-                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 24px', border: 'none', borderRadius: 8, background: '#76C442', color: '#fff', fontSize: 14, fontWeight: 600, cursor: (sending || classOptions.length === 0) ? 'not-allowed' : 'pointer', opacity: (sending || classOptions.length === 0) ? 0.5 : 1 }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 24px', border: 'none', borderRadius: 8, background: '#0de1e8', color: '#fff', fontSize: 14, fontWeight: 600, cursor: (sending || classOptions.length === 0) ? 'not-allowed' : 'pointer', opacity: (sending || classOptions.length === 0) ? 0.5 : 1 }}
                 >
                   <span className="material-icons" style={{ fontSize: 16 }}>send</span>
                   {sending ? 'Sending…' : 'Send Message'}

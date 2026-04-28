@@ -3,10 +3,10 @@
    ============================================ */
 
 :root {
-  --primary: #76C442;
-  --primary-green: #76C442;
-  --primary-green-dark: #5fa832;
-  --primary-green-light: #e8f5e0;
+  --primary: #1A56DB;
+  --primary-green: #1A56DB;
+  --primary-green-dark: #1E429F;
+  --primary-green-light: #EBF5FF;
   --sidebar-bg: #1e2a3a;
   --secondary-color: #2c3e50;
   --text-primary: #2d3748;
@@ -70,7 +70,7 @@ a {
   border-color: var(--primary-green-dark);
   color: #fff;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(118, 196, 66, 0.4);
+  box-shadow: 0 4px 12px rgba(26, 86, 219, 0.4);
 }
 
 .btn-outline-green {
@@ -258,7 +258,7 @@ a {
 .form-input:focus {
   outline: none;
   border-color: var(--primary-green);
-  box-shadow: 0 0 0 3px rgba(118, 196, 66, 0.15);
+  box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.15);
 }
 
 /* Avatar */

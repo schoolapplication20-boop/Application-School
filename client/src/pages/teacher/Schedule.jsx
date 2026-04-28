@@ -20,7 +20,7 @@ const SUBJECT_COLOR = {
   Accountancy:   { bg: '#f0fff4', border: '#48bb78', text: '#276749' },
   Economics:     { bg: '#fff0f9', border: '#ed64a6', text: '#97266d' },
   Commerce:      { bg: '#fffaf0', border: '#f6ad55', text: '#c05621' },
-  'Physical Education': { bg: '#f0fff4', border: '#76C442', text: '#276749' },
+  'Physical Education': { bg: '#f0fff4', border: '#0de1e8', text: '#276749' },
   Art:           { bg: '#fff8f0', border: '#dd6b20', text: '#c05621' },
 };
 
@@ -29,7 +29,7 @@ const getColor = (subject) =>
 
 const DAY_BG = {
   Monday: '#4361ee', Tuesday: '#38b2ac', Wednesday: '#805ad5',
-  Thursday: '#ed8936', Friday: '#e53e3e', Saturday: '#76C442',
+  Thursday: '#ed8936', Friday: '#e53e3e', Saturday: '#0de1e8',
 };
 
 const todayName = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][new Date().getDay()];
@@ -150,7 +150,7 @@ export default function Schedule() {
       <div className="row g-3 mb-4">
         {[
           { label: "Today's Classes",    value: todayEntries.length, icon: 'class',      color: '#4361ee' },
-          { label: 'Total Weekly Periods', value: totalWeekly,       icon: 'event_note', color: '#76C442' },
+          { label: 'Total Weekly Periods', value: totalWeekly,       icon: 'event_note', color: '#0de1e8' },
           { label: 'Classes Assigned',   value: uniqueClasses,       icon: 'groups',     color: '#805ad5' },
           { label: 'Subjects',           value: uniqueSubjects,      icon: 'menu_book',  color: '#ed8936' },
         ].map((stat, i) => (
@@ -304,7 +304,7 @@ export default function Schedule() {
             <h6 style={{ margin: 0, fontWeight: 700 }}>
               {selectedDay}'s Schedule
               {selectedDay === todayInWeek && (
-                <span style={{ marginLeft: 8, fontSize: 11, background: '#76C44220', color: '#276749', padding: '2px 8px', borderRadius: 10 }}>Today</span>
+                <span style={{ marginLeft: 8, fontSize: 11, background: '#0de1e820', color: '#276749', padding: '2px 8px', borderRadius: 10 }}>Today</span>
               )}
             </h6>
             <span style={{ fontSize: 12, color: '#a0aec0' }}>

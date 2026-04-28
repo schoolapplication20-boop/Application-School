@@ -11,7 +11,7 @@ const MONTHS = [
 ];
 
 const STATUS_CONFIG = {
-  PRESENT: { label: 'Present', color: '#76C442', light: '#f0fff4', text: '#276749', icon: 'check_circle'  },
+  PRESENT: { label: 'Present', color: '#0de1e8', light: '#f0fff4', text: '#276749', icon: 'check_circle'  },
   ABSENT:  { label: 'Absent',  color: '#e53e3e', light: '#fff5f5', text: '#c53030', icon: 'cancel'        },
   LEAVE:   { label: 'Leave',   color: '#ed8936', light: '#fffaf0', text: '#c05621', icon: 'event_busy'    },
   LATE:    { label: 'Late',    color: '#f6ad55', light: '#fffaf0', text: '#c05621', icon: 'schedule'      },
@@ -125,7 +125,7 @@ export default function StudentAttendance() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
         {[
           { label: 'Overall %',     value: `${overallPct}%`,   icon: 'percent',      color: pctColor(overallPct) },
-          { label: 'Total Present', value: overallPresent,      icon: 'check_circle', color: '#76C442'            },
+          { label: 'Total Present', value: overallPresent,      icon: 'check_circle', color: '#0de1e8'            },
           { label: 'Total Absent',  value: records.filter(r => r.status === 'ABSENT').length, icon: 'cancel', color: '#e53e3e' },
           { label: 'Working Days',  value: overallWorking,      icon: 'today',        color: '#3182ce'            },
         ].map(s => (
@@ -146,7 +146,7 @@ export default function StudentAttendance() {
         borderRadius: 12, padding: '14px 20px', marginBottom: 24,
         display: 'flex', alignItems: 'center', gap: 12,
       }}>
-        <span className="material-icons" style={{ color: overallPct >= 75 ? '#76C442' : '#e53e3e', fontSize: 26 }}>
+        <span className="material-icons" style={{ color: overallPct >= 75 ? '#0de1e8' : '#e53e3e', fontSize: 26 }}>
           {overallPct >= 75 ? 'verified' : 'warning'}
         </span>
         <div>
@@ -167,7 +167,7 @@ export default function StudentAttendance() {
           <div style={{ height: 8, background: '#e2e8f0', borderRadius: 6, overflow: 'hidden', position: 'relative' }}>
             {/* 75% threshold marker */}
             <div style={{ position: 'absolute', left: '75%', top: 0, bottom: 0, width: 2, background: '#718096', zIndex: 1 }} />
-            <div style={{ height: '100%', width: `${overallPct}%`, background: overallPct >= 75 ? '#76C442' : '#e53e3e', borderRadius: 6, transition: 'width 0.6s ease' }} />
+            <div style={{ height: '100%', width: `${overallPct}%`, background: overallPct >= 75 ? '#0de1e8' : '#e53e3e', borderRadius: 6, transition: 'width 0.6s ease' }} />
           </div>
         </div>
       </div>
@@ -178,7 +178,7 @@ export default function StudentAttendance() {
           <button key={t.key} onClick={() => setActiveTab(t.key)} style={{
             display: 'flex', alignItems: 'center', gap: 6, padding: '9px 20px',
             border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13,
-            background: activeTab === t.key ? '#76C442' : 'transparent',
+            background: activeTab === t.key ? '#0de1e8' : 'transparent',
             color:      activeTab === t.key ? '#fff'    : '#718096',
             transition: 'all 0.2s',
           }}>
@@ -198,14 +198,14 @@ export default function StudentAttendance() {
                 <div className="chart-card-title">Monthly Attendance Trend</div>
                 <div className="chart-card-subtitle">Attendance % per month this academic year</div>
               </div>
-              <span style={{ padding: '4px 12px', background: '#76C44220', color: '#76C442', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
+              <span style={{ padding: '4px 12px', background: '#0de1e820', color: '#0de1e8', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
                 {overallPct}% Overall
               </span>
             </div>
             {trendData.length > 0 ? (
               <LineChartComponent
                 data={trendData}
-                lines={[{ key: 'Attendance %', name: 'Attendance %', color: '#76C442' }]}
+                lines={[{ key: 'Attendance %', name: 'Attendance %', color: '#0de1e8' }]}
                 height={220}
               />
             ) : (
@@ -266,7 +266,7 @@ export default function StudentAttendance() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
                 {[
                   { label: 'Working Days', value: workingDays, color: '#3182ce', icon: 'today'        },
-                  { label: 'Present',      value: presentDays, color: '#76C442', icon: 'check_circle' },
+                  { label: 'Present',      value: presentDays, color: '#0de1e8', icon: 'check_circle' },
                   { label: 'Absent',       value: absentDays,  color: '#e53e3e', icon: 'cancel'       },
                   { label: 'Leave/Others', value: leaveDays,   color: '#ed8936', icon: 'event_busy'   },
                 ].map(s => (

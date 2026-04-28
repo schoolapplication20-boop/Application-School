@@ -3,7 +3,7 @@ import Layout from '../../components/Layout';
 import Toast from '../../components/Toast';
 import { diaryAPI, adminAPI } from '../../services/api';
 
-const STATUS_COLOR  = { PENDING: '#ed8936', APPROVED: '#76C442', REJECTED: '#e53e3e' };
+const STATUS_COLOR  = { PENDING: '#ed8936', APPROVED: '#0de1e8', REJECTED: '#e53e3e' };
 const STATUS_BG     = { PENDING: '#fff7ed', APPROVED: '#f0fff4', REJECTED: '#fff5f5' };
 
 export default function DiaryMonitoring() {
@@ -122,7 +122,7 @@ export default function DiaryMonitoring() {
         {[
           { label: 'Total Entries', value: statCounts.total,    color: '#3182ce', icon: 'photo_library' },
           { label: 'Pending',       value: statCounts.pending,  color: '#ed8936', icon: 'hourglass_empty' },
-          { label: 'Approved',      value: statCounts.approved, color: '#76C442', icon: 'check_circle' },
+          { label: 'Approved',      value: statCounts.approved, color: '#0de1e8', icon: 'check_circle' },
           { label: 'Rejected',      value: statCounts.rejected, color: '#e53e3e', icon: 'cancel' },
         ].map(c => (
           <div key={c.label} className="stat-card">
@@ -355,7 +355,7 @@ export default function DiaryMonitoring() {
               <div className="modal-footer">
                 <button type="button" className="btn btn-secondary" onClick={() => setReviewing(null)}>Cancel</button>
                 <button type="button" className="btn btn-primary" onClick={handleReviewSave} disabled={reviewSaving}
-                  style={{ background: '#76C442', border: 'none' }}>
+                  style={{ background: '#0de1e8', border: 'none' }}>
                   {reviewSaving ? 'Saving...' : 'Save Review'}
                 </button>
               </div>

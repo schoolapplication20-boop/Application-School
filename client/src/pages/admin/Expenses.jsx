@@ -45,7 +45,7 @@ function StatusBadge({ status }) {
       padding: '3px 11px', borderRadius: '20px', fontSize: '11px', fontWeight: 700,
       background: paid ? '#f0fff4' : '#fff5e6',
       color:      paid ? '#276749' : '#b7600a',
-      border:     `1px solid ${paid ? '#76C44240' : '#ed893640'}`,
+      border:     `1px solid ${paid ? '#0de1e840' : '#ed893640'}`,
     }}>
       {paid ? 'Paid' : 'Unpaid'}
     </span>
@@ -237,7 +237,7 @@ function ExpenseModal({ initial, addedBy, addedById, onClose, onSaved, onError }
           </button>
           <button
             onClick={submit} disabled={saving}
-            style={{ padding: '10px 28px', background: saving ? '#a0aec0' : '#76C442',
+            style={{ padding: '10px 28px', background: saving ? '#a0aec0' : '#0de1e8',
               border: 'none', borderRadius: '8px', color: '#fff', fontWeight: 700,
               fontSize: '13px', cursor: saving ? 'not-allowed' : 'pointer' }}>
             {saving ? 'Saving…' : isEdit ? 'Update Expense' : 'Add Expense'}
@@ -358,7 +358,7 @@ export default function Expenses() {
 
   const SortIcon = ({ col }) => {
     if (sortBy !== col) return <span className="material-icons" style={{ fontSize: '14px', color: '#cbd5e0', verticalAlign: 'middle', marginLeft: '3px' }}>unfold_more</span>;
-    return <span className="material-icons" style={{ fontSize: '14px', color: '#76C442', verticalAlign: 'middle', marginLeft: '3px' }}>
+    return <span className="material-icons" style={{ fontSize: '14px', color: '#0de1e8', verticalAlign: 'middle', marginLeft: '3px' }}>
       {sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward'}
     </span>;
   };
@@ -388,7 +388,7 @@ export default function Expenses() {
           sub={summary ? `${summary.currentMonth} ${summary.currentYear}` : ''}
         />
         <Card
-          icon="check_circle" color="#76C442"
+          icon="check_circle" color="#0de1e8"
           label="Paid This Month"
           value={fmt(summary?.totalPaid || 0)}
         />
@@ -492,7 +492,7 @@ export default function Expenses() {
               <p style={{ margin: '0 0 16px', fontSize: '15px' }}>No expenses found.</p>
               <button
                 onClick={() => { setEditTarget(null); setFormOpen(true); }}
-                style={{ padding: '10px 26px', background: '#76C442', border: 'none',
+                style={{ padding: '10px 26px', background: '#0de1e8', border: 'none',
                   borderRadius: '8px', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
                 Add First Expense
               </button>

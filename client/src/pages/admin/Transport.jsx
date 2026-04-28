@@ -64,7 +64,7 @@ export default function Transport() {
 
   // Summary stats
   const stats = [
-    { label: 'Total Buses',   value: buses.length,                                        icon: 'directions_bus', color: '#76C442' },
+    { label: 'Total Buses',   value: buses.length,                                        icon: 'directions_bus', color: '#0de1e8' },
     { label: 'Active Routes', value: routes.filter(r => r.status === 'Active').length,    icon: 'route',          color: '#3182ce' },
     { label: 'Drivers',       value: drivers.length,                                       icon: 'badge',          color: '#805ad5' },
     { label: 'Students',      value: students.filter(s => s.status === 'Active').length,  icon: 'people',         color: '#e67e22' },
@@ -107,7 +107,7 @@ export default function Transport() {
             display: 'flex', alignItems: 'center', gap: '6px',
             padding: '8px 18px', border: 'none', borderRadius: '8px', cursor: 'pointer',
             fontWeight: 600, fontSize: '13px', whiteSpace: 'nowrap', transition: 'all 0.2s',
-            background: activeTab === t.key ? '#76C442' : 'transparent',
+            background: activeTab === t.key ? '#0de1e8' : 'transparent',
             color: activeTab === t.key ? '#fff' : '#718096',
           }}>
             <span className="material-icons" style={{ fontSize: '16px' }}>{t.icon}</span>
@@ -540,7 +540,7 @@ function RoutesPanel({ routes, setRoutes, buses, drivers, showToast }) {
               <tr key={r.id}>
                 <td>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#76C442,#5fa832)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#0de1e8,#0eb5da)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       <span className="material-icons" style={{ color: '#fff', fontSize: 16 }}>route</span>
                     </div>
                     <div>

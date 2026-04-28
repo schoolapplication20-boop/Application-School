@@ -104,7 +104,7 @@ export default function LeaveManagement() {
 
   const getStatusBadge = (rawStatus) => {
     const status = normalizeStatus(rawStatus);
-    const map = { Pending: '#ed8936', Approved: '#76C442', Rejected: '#e53e3e' };
+    const map = { Pending: '#ed8936', Approved: '#0de1e8', Rejected: '#e53e3e' };
     const bg  = { Pending: '#fffaf0', Approved: '#f0fff4', Rejected: '#fff5f5' };
     return (
       <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: 700,
@@ -129,7 +129,7 @@ export default function LeaveManagement() {
           { label: 'Teacher Leaves',  value: teacherLeaves.length,  color: '#805ad5', icon: 'person' },
           { label: 'Teacher Pending', value: teacherPending,         color: '#ed8936', icon: 'pending_actions' },
           ...(!isSuperAdmin ? [
-            { label: 'Student Leaves',  value: studentLeaves.length,  color: '#76C442', icon: 'school' },
+            { label: 'Student Leaves',  value: studentLeaves.length,  color: '#0de1e8', icon: 'school' },
             { label: 'Student Pending', value: studentPending,         color: '#3182ce', icon: 'pending_actions' },
           ] : []),
         ].map(c => (
@@ -153,7 +153,7 @@ export default function LeaveManagement() {
             style={{
               padding: '10px 20px', borderRadius: '10px', border: 'none', cursor: 'pointer',
               fontWeight: 600, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px',
-              background: tab === t.key ? '#76C442' : '#f7fafc',
+              background: tab === t.key ? '#0de1e8' : '#f7fafc',
               color:      tab === t.key ? '#fff'    : '#718096',
               boxShadow:  tab === t.key ? '0 2px 8px rgba(118,196,66,0.3)' : 'none',
               transition: 'all 0.2s',
@@ -215,7 +215,7 @@ export default function LeaveManagement() {
                     <td>
                       <div className="action-btns">
                         {(l.status || '').toUpperCase() === 'PENDING' && (
-                          <button className="action-btn" style={{ background: '#f0fff4', color: '#76C442' }}
+                          <button className="action-btn" style={{ background: '#f0fff4', color: '#0de1e8' }}
                             title="Review" onClick={() => { setSelectedTeacherLeave(l); setComment(''); }}>
                             <span className="material-icons">how_to_reg</span>
                           </button>
@@ -270,7 +270,7 @@ export default function LeaveManagement() {
                       <div style={{ fontSize: '11px', color: '#a0aec0' }}>{l.classSection}</div>
                     </td>
                     <td><span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '11px',
-                      fontWeight: 600, background: '#76C44215', color: '#5fa832' }}>{l.leaveType || '—'}</span></td>
+                      fontWeight: 600, background: '#0de1e815', color: '#0eb5da' }}>{l.leaveType || '—'}</span></td>
                     <td style={{ fontSize: '12px', color: '#718096' }}>{l.fromDate} → {l.toDate}</td>
                     <td style={{ fontSize: '12px', color: '#718096', maxWidth: '140px' }}>{l.reason}</td>
                     <td style={{ fontSize: '12px', color: '#a0aec0' }}>{fmt(l.createdAt)}</td>

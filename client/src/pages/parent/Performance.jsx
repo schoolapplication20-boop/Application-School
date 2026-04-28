@@ -92,7 +92,7 @@ export default function Performance() {
 
       <div className="stats-grid" style={{ marginBottom: '24px' }}>
         {[
-          { label: 'Overall Score', value: marks.length > 0 ? `${overallPct}%` : '—', color: '#76C442', icon: 'grade' },
+          { label: 'Overall Score', value: marks.length > 0 ? `${overallPct}%` : '—', color: '#0de1e8', icon: 'grade' },
           { label: 'Overall Grade', value: marks.length > 0 ? overallGrade : '—',       color: '#3182ce', icon: 'star' },
           { label: 'Total Exams',   value: marks.length,                                 color: '#805ad5', icon: 'leaderboard' },
           { label: 'Best Subject',  value: bestSubject,                                  color: '#ed8936', icon: 'book' },
@@ -124,7 +124,7 @@ export default function Performance() {
               </div>
               <BarChartComponent
                 data={subjectMarks.map(s => ({ name: s.name, marks: s.max > 0 ? Math.round((s.marks / s.max) * 100) : 0 }))}
-                bars={[{ key: 'marks', name: 'Score %', color: '#76C442' }]}
+                bars={[{ key: 'marks', name: 'Score %', color: '#0de1e8' }]}
                 height={250}
               />
             </div>
@@ -134,7 +134,7 @@ export default function Performance() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 {subjectMarks.map(s => {
                   const pct = s.max > 0 ? Math.round((s.marks / s.max) * 100) : 0;
-                  const color = pct >= 90 ? '#76C442' : pct >= 75 ? '#3182ce' : pct >= 60 ? '#ed8936' : '#e53e3e';
+                  const color = pct >= 90 ? '#0de1e8' : pct >= 75 ? '#3182ce' : pct >= 60 ? '#ed8936' : '#e53e3e';
                   return (
                     <div key={s.name}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>

@@ -16,8 +16,8 @@ import { generateRandomPassword } from '../../utils/passwordGenerator';
 
 // Derive a stable colour from any string so subject chips look distinct
 function subjectColor(str) {
-  if (!str) return '#76C442';
-  const palette = ['#76C442','#3182ce','#805ad5','#e53e3e','#ed8936','#38b2ac',
+  if (!str) return '#0de1e8';
+  const palette = ['#0de1e8','#3182ce','#805ad5','#e53e3e','#ed8936','#38b2ac',
                    '#d69e2e','#e91e63','#667eea','#48bb78','#ed64a6','#f6ad55'];
   let h = 0;
   for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) & 0xffffffff;
@@ -69,7 +69,7 @@ function ClassPicker({ classList = [], value = '', onChange, label = 'Select cla
           {[...selected].map(lbl => (
             <span key={lbl} style={{
               display: 'inline-flex', alignItems: 'center', gap: 4,
-              background: '#76C44220', color: '#276749', border: '1px solid #76C44260',
+              background: '#0de1e820', color: '#276749', border: '1px solid #0de1e860',
               borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 600,
             }}>
               {lbl}
@@ -106,7 +106,7 @@ function ClassPicker({ classList = [], value = '', onChange, label = 'Select cla
                   type="checkbox"
                   checked={checked}
                   onChange={() => toggle(lbl)}
-                  style={{ accentColor: '#76C442', width: 14, height: 14, cursor: 'pointer' }}
+                  style={{ accentColor: '#0de1e8', width: 14, height: 14, cursor: 'pointer' }}
                 />
                 <span style={{ fontSize: 13, color: '#2d3748' }}>{lbl}</span>
               </label>
@@ -217,8 +217,8 @@ const Field = ({ label, required, optional, error, children }) => (
 // ─── Section divider ──────────────────────────────────────────────────────────
 const Section = ({ icon, label }) => (
   <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '20px 0 12px', paddingBottom: 8, borderBottom: '1.5px solid #f0f4f8' }}>
-    <div style={{ width: 28, height: 28, borderRadius: 7, background: '#76C44218', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <span className="material-icons" style={{ fontSize: 15, color: '#76C442' }}>{icon}</span>
+    <div style={{ width: 28, height: 28, borderRadius: 7, background: '#0de1e818', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <span className="material-icons" style={{ fontSize: 15, color: '#0de1e8' }}>{icon}</span>
     </div>
     <span style={{ fontWeight: 700, fontSize: 12, color: '#2d3748', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</span>
   </div>
@@ -239,7 +239,7 @@ function CredentialCard({ label, value, mono }) {
         <div style={{ fontSize: 11, color: '#a0aec0', fontWeight: 600, marginBottom: 2 }}>{label}</div>
         <div style={{ fontSize: 14, fontWeight: 700, color: '#2d3748', fontFamily: mono ? 'monospace' : 'inherit', wordBreak: 'break-all' }}>{value}</div>
       </div>
-      <button onClick={copy} title="Copy" style={{ border: 'none', background: copied ? '#f0fff4' : '#e2e8f0', borderRadius: 7, padding: '6px 8px', cursor: 'pointer', color: copied ? '#76C442' : '#718096', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, fontFamily: 'Poppins, sans-serif', flexShrink: 0, transition: 'all 0.2s' }}>
+      <button onClick={copy} title="Copy" style={{ border: 'none', background: copied ? '#f0fff4' : '#e2e8f0', borderRadius: 7, padding: '6px 8px', cursor: 'pointer', color: copied ? '#0de1e8' : '#718096', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, fontFamily: 'Poppins, sans-serif', flexShrink: 0, transition: 'all 0.2s' }}>
         <span className="material-icons" style={{ fontSize: 15 }}>{copied ? 'check' : 'content_copy'}</span>
         {copied ? 'Copied' : 'Copy'}
       </button>
@@ -510,7 +510,7 @@ export default function Teachers() {
 
   // ── Stats ─────────────────────────────────────────────────────────────────
   const stats = [
-    { label: 'Total Teachers', value: teachers.length,                                        icon: 'people',      color: '#76C442' },
+    { label: 'Total Teachers', value: teachers.length,                                        icon: 'people',      color: '#0de1e8' },
     { label: 'Active',         value: teachers.filter(t => t.status === 'Active').length,     icon: 'check_circle',color: '#3182ce' },
     { label: 'On Leave',       value: teachers.filter(t => t.status === 'On Leave').length,   icon: 'event_busy',  color: '#ed8936' },
     { label: 'Subjects',       value: [...new Set(teachers.map(t => t.subject).filter(Boolean))].length, icon: 'book', color: '#805ad5' },
@@ -623,7 +623,7 @@ export default function Teachers() {
                     <td>
                       <span style={{
                         display: 'inline-block', padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 700,
-                        background: t.teacherType === 'CLASS_TEACHER' ? '#76C44218' : t.teacherType === 'BOTH' ? '#3182ce18' : '#e2e8f0',
+                        background: t.teacherType === 'CLASS_TEACHER' ? '#0de1e818' : t.teacherType === 'BOTH' ? '#3182ce18' : '#e2e8f0',
                         color: t.teacherType === 'CLASS_TEACHER' ? '#276749' : t.teacherType === 'BOTH' ? '#2b6cb0' : '#718096',
                       }}>
                         {t.teacherType === 'CLASS_TEACHER' ? 'Class Teacher' : t.teacherType === 'BOTH' ? 'Class Teacher + Subject Teacher' : 'Subject Teacher'}
@@ -725,7 +725,7 @@ export default function Teachers() {
                         <button type="button"
                           onClick={() => { const p = generateRandomPassword(); setForm(f => ({ ...f, password: p })); }}
                           title="Generate a secure password"
-                          style={{ flexShrink: 0, padding: '8px 12px', background: '#76C44215', border: '1.5px solid #76C44240', borderRadius: 8, cursor: 'pointer', color: '#276749', fontSize: 12, fontWeight: 600, fontFamily: 'Poppins, sans-serif', display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
+                          style={{ flexShrink: 0, padding: '8px 12px', background: '#0de1e815', border: '1.5px solid #0de1e840', borderRadius: 8, cursor: 'pointer', color: '#276749', fontSize: 12, fontWeight: 600, fontFamily: 'Poppins, sans-serif', display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
                           <span className="material-icons" style={{ fontSize: 15 }}>autorenew</span>
                           Generate
                         </button>
@@ -871,7 +871,7 @@ export default function Teachers() {
                         border: '1.5px dashed #e2e8f0', borderRadius: 8, padding: '9px 12px',
                         background: form.idProof ? '#f0fff4' : '#fafafa', transition: 'all 0.2s',
                       }}>
-                        <span className="material-icons" style={{ fontSize: 18, color: form.idProof ? '#76C442' : '#a0aec0' }}>
+                        <span className="material-icons" style={{ fontSize: 18, color: form.idProof ? '#0de1e8' : '#a0aec0' }}>
                           {form.idProof ? 'check_circle' : 'upload_file'}
                         </span>
                         <span style={{ fontSize: 13, color: form.idProof ? '#276749' : '#a0aec0', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -901,7 +901,7 @@ export default function Teachers() {
                         border: '1.5px dashed #e2e8f0', borderRadius: 8, padding: '9px 12px',
                         background: form.otherDoc ? '#f0fff4' : '#fafafa', transition: 'all 0.2s',
                       }}>
-                        <span className="material-icons" style={{ fontSize: 18, color: form.otherDoc ? '#76C442' : '#a0aec0' }}>
+                        <span className="material-icons" style={{ fontSize: 18, color: form.otherDoc ? '#0de1e8' : '#a0aec0' }}>
                           {form.otherDoc ? 'check_circle' : 'upload_file'}
                         </span>
                         <span style={{ fontSize: 13, color: form.otherDoc ? '#276749' : '#a0aec0', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -934,7 +934,7 @@ export default function Teachers() {
                   Cancel
                 </button>
                 <button type="submit"
-                  style={{ padding: '10px 24px', background: '#76C442', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, cursor: 'pointer', fontFamily: 'Poppins, sans-serif', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  style={{ padding: '10px 24px', background: '#0de1e8', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, cursor: 'pointer', fontFamily: 'Poppins, sans-serif', display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span className="material-icons" style={{ fontSize: 16 }}>{editTeacher ? 'save' : 'person_add'}</span>
                   {editTeacher ? 'Update Teacher' : 'Add Teacher & Generate Credentials'}
                 </button>
@@ -992,7 +992,7 @@ export default function Teachers() {
             </div>
             <div className="modal-footer">
               <button onClick={() => setShowCred(false)}
-                style={{ padding: '10px 28px', background: '#76C442', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, cursor: 'pointer', fontFamily: 'Poppins, sans-serif' }}>
+                style={{ padding: '10px 28px', background: '#0de1e8', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, cursor: 'pointer', fontFamily: 'Poppins, sans-serif' }}>
                 Done
               </button>
             </div>
@@ -1018,7 +1018,7 @@ export default function Teachers() {
             <div className="modal-body" style={{ padding: '20px 24px' }}>
               {/* Teacher info */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: '#f7fafc', borderRadius: 10, marginBottom: 20 }}>
-                <div style={{ width: 44, height: 44, borderRadius: '50%', background: `linear-gradient(135deg, ${subjectColor((viewCredTarget.subject || '').split(',')[0].trim())}, #5fa832)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 15, fontWeight: 700, flexShrink: 0 }}>
+                <div style={{ width: 44, height: 44, borderRadius: '50%', background: `linear-gradient(135deg, ${subjectColor((viewCredTarget.subject || '').split(',')[0].trim())}, #0eb5da)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 15, fontWeight: 700, flexShrink: 0 }}>
                   {getInitials(viewCredTarget.name)}
                 </div>
                 <div>
@@ -1118,7 +1118,7 @@ export default function Teachers() {
             <div className="modal-body" style={{ padding: '24px' }}>
               {/* Avatar */}
               <div style={{ textAlign: 'center', marginBottom: 20 }}>
-                <div style={{ width: 72, height: 72, borderRadius: '50%', background: `linear-gradient(135deg, ${subjectColor((viewTeacher.subject || '').split(',')[0].trim())}, #5fa832)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 26, fontWeight: 700, margin: '0 auto 10px' }}>
+                <div style={{ width: 72, height: 72, borderRadius: '50%', background: `linear-gradient(135deg, ${subjectColor((viewTeacher.subject || '').split(',')[0].trim())}, #0eb5da)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 26, fontWeight: 700, margin: '0 auto 10px' }}>
                   {getInitials(viewTeacher.name)}
                 </div>
                 <h3 style={{ margin: '0 0 4px', fontWeight: 800, fontSize: 18, color: '#2d3748' }}>{viewTeacher.name}</h3>
@@ -1165,7 +1165,7 @@ export default function Teachers() {
               <button onClick={() => setShowView(false)}
                 style={{ padding: '10px 20px', border: '1.5px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: 'pointer', fontWeight: 600, fontFamily: 'Poppins, sans-serif' }}>Close</button>
               <button onClick={() => { setShowView(false); openEdit(viewTeacher); }}
-                style={{ padding: '10px 20px', background: '#76C442', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, cursor: 'pointer', fontFamily: 'Poppins, sans-serif', display: 'flex', alignItems: 'center', gap: 6 }}>
+                style={{ padding: '10px 20px', background: '#0de1e8', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, cursor: 'pointer', fontFamily: 'Poppins, sans-serif', display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span className="material-icons" style={{ fontSize: 16 }}>edit</span>
                 Edit
               </button>
@@ -1199,7 +1199,7 @@ export default function Teachers() {
                   return (
                     <button key={c.id} type="button"
                       onClick={() => setAssignClasses(prev => active ? prev.filter(x => x !== label) : [...prev, label])}
-                      style={{ padding: '6px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: `1.5px solid ${active ? '#76C442' : '#e2e8f0'}`, background: active ? '#76C442' : '#fff', color: active ? '#fff' : '#718096', transition: 'all 0.15s' }}>
+                      style={{ padding: '6px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: `1.5px solid ${active ? '#0de1e8' : '#e2e8f0'}`, background: active ? '#0de1e8' : '#fff', color: active ? '#fff' : '#718096', transition: 'all 0.15s' }}>
                       {label}
                     </button>
                   );
@@ -1215,7 +1215,7 @@ export default function Teachers() {
               <button onClick={() => setShowAssign(false)}
                 style={{ padding: '10px 20px', border: '1.5px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: 'pointer', fontWeight: 600, fontFamily: 'Poppins, sans-serif' }}>Cancel</button>
               <button onClick={handleSaveAssign}
-                style={{ padding: '10px 20px', background: '#76C442', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, cursor: 'pointer', fontFamily: 'Poppins, sans-serif' }}>Save</button>
+                style={{ padding: '10px 20px', background: '#0de1e8', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, cursor: 'pointer', fontFamily: 'Poppins, sans-serif' }}>Save</button>
             </div>
           </div>
         </div>
