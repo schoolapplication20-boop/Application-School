@@ -29,7 +29,6 @@ const superAdminOnlyItems = [
   { path: '/superadmin/admins',            icon: 'manage_accounts',  label: 'Admin Management',     permKey: null },
   // Setup School is only shown while needsSchoolSetup === true (filtered below)
   { path: '/superadmin/setup-school',      icon: 'add_business',     label: 'Setup School',         permKey: null },
-  { path: '/superadmin/student-transport', icon: 'directions_bus',   label: 'Student Transport',    permKey: null },
   { path: '/superadmin/exam-schedule',     icon: 'event_note',       label: 'Exam Schedule',        permKey: null },
 ];
 

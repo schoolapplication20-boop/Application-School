@@ -4,6 +4,7 @@ import Toast from '../../components/Toast';
 import HallTicketDocument from '../../components/HallTicketDocument';
 import { examinationAPI } from '../../services/api';
 import { adminAPI } from '../../services/api';
+import { useSchool } from '../../context/SchoolContext';
 import '../../styles/examination.css';
 
 const EXAM_TYPES   = ['ANNUAL', 'HALFYEARLY', 'QUARTERLY', 'MIDTERM', 'UNIT_TEST'];
@@ -20,8 +21,10 @@ const today   = () => new Date().toISOString().split('T')[0];
 // HallTicketPrint is now the shared HallTicketDocument component (imported above)
 
 // ─── Certificate Print Preview ───────────────────────────────────────────────
-function CertificatePrint({ cert }) {
+function CertificatePrint({ cert, school }) {
   const type = cert.certificateType;
+  const schoolName  = school?.name  || 'School';
+  const schoolBoard = school?.board || '';
 
   const body = {
     BONAFIDE: <>This is to certify that <strong>{cert.studentName}</strong> (Roll No: {cert.rollNumber}) is a bonafide student of Class <strong>{cert.className}{cert.section ? ' – ' + cert.section : ''}</strong> for the academic year <strong>{cert.academicYear || '—'}</strong>. This certificate is issued for the purpose of <strong>{cert.purpose || 'official use'}</strong>.</>,
@@ -34,8 +37,8 @@ function CertificatePrint({ cert }) {
     <div className="cert-preview">
       <div className="cert-header">
         <div className="cert-logo">🏆</div>
-        <div className="cert-school-name">Schoolers Institution</div>
-        <div className="cert-school-sub">Affiliated • CBSE • Est. 2005</div>
+        <div className="cert-school-name">{schoolName}</div>
+        <div className="cert-school-sub">{schoolBoard ? `${schoolBoard} Affiliated` : 'Affiliated'}</div>
       </div>
       <div className="cert-type-banner">{certLabel[type] || type}</div>
       <div className="cert-body">
@@ -68,6 +71,7 @@ function CertificatePrint({ cert }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function Examination() {
+  const { school } = useSchool();
   const [activeTab,  setActiveTab]  = useState('schedules');
   const [schedules,  setSchedules]  = useState([]);
   const [hallTickets, setHallTickets] = useState([]);
@@ -757,10 +761,13 @@ export default function Examination() {
                       <div key={row._id} style={{ display: 'grid', gridTemplateColumns: '1.8fr 1.3fr 90px 90px 1.1fr 74px 32px', gap: 0, padding: '8px 10px', borderBottom: idx < subjectRows.length - 1 ? '1px solid #f0f4f8' : 'none', background: idx % 2 === 0 ? '#fff' : '#fafbff', alignItems: 'start' }}>
                         {/* Subject */}
                         <div style={{ paddingRight: 6 }}>
-                          <select value={row.subject} onChange={e => setSubjectRows(rows => rows.map(r => r._id === row._id ? { ...r, subject: e.target.value } : r))} style={cs(re.subject)}>
-                            <option value="">— Select —</option>
-                            {['Mathematics','Science','English','Hindi','Social Studies','Physics','Chemistry','Biology','History','Geography','Computer Science','Physical Education','Art','Music','Sanskrit','Economics','Accountancy','Business Studies'].map(s => <option key={s} value={s}>{s}</option>)}
-                          </select>
+                          <input
+                            type="text"
+                            placeholder="e.g. Mathematics"
+                            value={row.subject}
+                            onChange={e => setSubjectRows(rows => rows.map(r => r._id === row._id ? { ...r, subject: e.target.value } : r))}
+                            style={cs(re.subject)}
+                          />
                           {re.subject && <div style={{ color: '#c53030', fontSize: 10, marginTop: 2 }}>{re.subject}</div>}
                         </div>
                         {/* Date */}
@@ -1019,7 +1026,7 @@ export default function Examination() {
             <div className="exam-modal-body" style={{ padding: previewType === 'hallticket' ? '16px' : '20px 24px' }}>
               {previewType === 'hallticket'
                 ? <HallTicketDocument ticket={previewItem} schedules={schedules} />
-                : <CertificatePrint cert={previewItem} />
+                : <CertificatePrint cert={previewItem} school={school} />
               }
             </div>
           </div>

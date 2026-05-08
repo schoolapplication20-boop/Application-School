@@ -4,7 +4,7 @@
 
 .auth-wrapper {
   min-height: 100vh;
-  background-color: #0de1e8;
+  background-color: #F97316;
   display: flex;
   align-items: stretch;
 }
@@ -12,7 +12,7 @@
 /* Left Panel - Green Side */
 .auth-left {
   flex: 1;
-  background-color: #0de1e8;
+  background-color: #F97316;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -190,7 +190,7 @@
 }
 
 .login-toggle-btn.active {
-  background-color: #0de1e8;
+  background-color: #F97316;
   color: #ffffff;
   box-shadow: 0 2px 8px rgba(13, 225, 232, 0.4);
 }
@@ -229,7 +229,7 @@
 }
 
 .input-wrapper .form-control:focus {
-  border-color: #0de1e8;
+  border-color: #F97316;
   box-shadow: 0 0 0 3px rgba(13, 225, 232, 0.15);
   background-color: #ffffff;
   outline: none;
@@ -252,7 +252,7 @@
 }
 
 .input-wrapper .input-icon:hover {
-  color: #0de1e8;
+  color: #F97316;
 }
 
 .input-wrapper .input-icon-left {
@@ -279,7 +279,7 @@
 /* Forgot Password Link */
 .forgot-password-link {
   font-size: 13px;
-  color: #0de1e8;
+  color: #F97316;
   font-weight: 600;
   text-decoration: none;
   float: right;
@@ -288,7 +288,7 @@
 }
 
 .forgot-password-link:hover {
-  color: #0eb5da;
+  color: #EA6C0A;
   text-decoration: underline;
 }
 
@@ -296,7 +296,7 @@
 .btn-auth-submit {
   width: 100%;
   padding: 14px;
-  background-color: #0de1e8;
+  background-color: #F97316;
   border: none;
   border-radius: 10px;
   color: #ffffff;
@@ -311,7 +311,7 @@
 }
 
 .btn-auth-submit:hover {
-  background-color: #0eb5da;
+  background-color: #EA6C0A;
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(13, 225, 232, 0.45);
 }
@@ -344,7 +344,7 @@
 }
 
 .btn-back:hover {
-  color: #0de1e8;
+  color: #F97316;
 }
 
 .btn-back .material-icons {
@@ -374,13 +374,13 @@
 }
 
 .otp-input:focus {
-  border-color: #0de1e8;
+  border-color: #F97316;
   box-shadow: 0 0 0 3px rgba(13, 225, 232, 0.2);
   background-color: #fff;
 }
 
 .otp-input.filled {
-  border-color: #0de1e8;
+  border-color: #F97316;
   background-color: rgba(13, 225, 232, 0.08);
 }
 
@@ -396,7 +396,7 @@
 }
 
 .otp-resend a {
-  color: #0de1e8;
+  color: #F97316;
   font-weight: 600;
   cursor: pointer;
   text-decoration: none;
@@ -438,7 +438,7 @@
 
 .auth-icon-box .material-icons {
   font-size: 40px;
-  color: #0de1e8;
+  color: #F97316;
 }
 
 /* Alert Messages */

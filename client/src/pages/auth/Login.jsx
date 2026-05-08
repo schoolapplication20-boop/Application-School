@@ -10,8 +10,8 @@ const Login = () => {
   const { login, refreshPermissions, isAuthenticated, getDashboardPath } = useAuth();
   const { school } = useSchool();
 
-  const primary   = school?.primaryColor   || '#76C442';
-  const secondary = school?.secondaryColor || '#5fa832';
+  const primary   = school?.primaryColor   || '#F97316';
+  const secondary = school?.secondaryColor || '#EA6C0A';
 
   const [emailForm, setEmailForm]       = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);

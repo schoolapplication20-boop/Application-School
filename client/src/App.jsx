@@ -41,7 +41,6 @@ import TeacherLeaveRequest from './pages/teacher/TeacherLeaveRequest';
 // Super Admin Pages
 import SuperAdminDashboard from './pages/superadmin/SuperAdminDashboard';
 import AdminManagement from './pages/superadmin/AdminManagement';
-import StudentTransportPage from './pages/superadmin/StudentTransportPage';
 import ExamSchedulePage from './pages/superadmin/ExamSchedulePage';
 import SetupSchool from './pages/superadmin/SetupSchool';
 import Timetable from './pages/admin/Timetable';
@@ -126,7 +125,6 @@ function App() {
                 APPLICATION_OWNER is blocked here by ProtectedRoute — they manage
                 schools via the platform dashboard, not these school-level pages. */}
             <Route path="/superadmin/admins"            element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']}><AdminManagement /></ProtectedRoute>} />
-            <Route path="/superadmin/student-transport" element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']}><StudentTransportPage /></ProtectedRoute>} />
             <Route path="/superadmin/exam-schedule"     element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']}><ExamSchedulePage /></ProtectedRoute>} />
             <Route path="/superadmin/setup-school"      element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']}><SetupSchool /></ProtectedRoute>} />
 

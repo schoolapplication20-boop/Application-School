@@ -4,8 +4,8 @@ import { useAuth } from './AuthContext';
 
 const SchoolContext = createContext(null);
 
-const DEFAULT_PRIMARY   = '#76C442';
-const DEFAULT_SECONDARY = '#5fa832';
+const DEFAULT_PRIMARY   = '#F97316';
+const DEFAULT_SECONDARY = '#EA6C0A';
 
 export const useSchool = () => {
   const ctx = useContext(SchoolContext);
@@ -41,9 +41,11 @@ const applyTheme = (primaryColor, secondaryColor) => {
   const root = document.documentElement;
   root.style.setProperty('--school-primary',   primaryColor   || DEFAULT_PRIMARY);
   root.style.setProperty('--school-secondary', secondaryColor || DEFAULT_SECONDARY);
-  // Keep backwards-compat aliases used elsewhere in the stylesheet
   root.style.setProperty('--primary-color',    primaryColor   || DEFAULT_PRIMARY);
   root.style.setProperty('--secondary-color',  secondaryColor || DEFAULT_SECONDARY);
+  root.style.setProperty('--primary',          primaryColor   || DEFAULT_PRIMARY);
+  root.style.setProperty('--primary-green',    primaryColor   || DEFAULT_PRIMARY);
+  root.style.setProperty('--primary-green-dark', secondaryColor || DEFAULT_SECONDARY);
 };
 
 export const SchoolProvider = ({ children }) => {

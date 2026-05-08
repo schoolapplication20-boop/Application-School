@@ -11,6 +11,7 @@
  *               enrich the exam table when ticket.examSubjects is empty)
  */
 import React, { useMemo } from 'react';
+import { useSchool } from '../context/SchoolContext';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -360,6 +361,32 @@ const S = {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function HallTicketDocument({ ticket, schedules = [] }) {
+  const { school, logoVersion } = useSchool();
+
+  // Build school display values from dynamic school data
+  const schoolName    = school?.name    || 'School';
+  const schoolBoard   = school?.board   || '';
+  const schoolCode    = school?.schoolCode || school?.code || '';
+  const schoolPhone   = school?.phone   || '';
+  const schoolEmail   = school?.email   || '';
+  const schoolWebsite = school?.website || '';
+  const schoolLogoUrl = school?.logoUrl ? `${school.logoUrl}?v=${logoVersion}` : null;
+
+  const schoolInitials = schoolName.split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2);
+
+  const schoolAddress = [
+    school?.address,
+    school?.city,
+    school?.state,
+    school?.pincode,
+  ].filter(Boolean).join(', ') || '';
+
+  const contactLine = [
+    schoolPhone  && `☎ ${schoolPhone}`,
+    schoolEmail  && `✉ ${schoolEmail}`,
+    schoolWebsite && `🌐 ${schoolWebsite}`,
+  ].filter(Boolean).join('  |  ');
+
   // Parse embedded exam subjects (JSON stored in HallTicket.examSubjects)
   const embeddedSubjects = useMemo(() => {
     try { return JSON.parse(ticket.examSubjects || '[]'); } catch { return []; }
@@ -404,8 +431,6 @@ export default function HallTicketDocument({ ticket, schedules = [] }) {
   const dob        = ticket.dateOfBirth   || extra.dateOfBirth   || '—';
   const gender     = ticket.gender        || extra.gender        || '—';
   const regNo      = ticket.registrationNumber || extra.registrationNumber || ticket.rollNumber || '—';
-  const examCenter = ticket.examCenter    || extra.examCenter    || 'Main Campus';
-  const examCenterAddr = ticket.examCenterAddress || extra.examCenterAddress || 'Schoolers Institution, Main Road';
 
   return (
     <div id="hall-ticket-print-root" style={S.page}>
@@ -414,20 +439,28 @@ export default function HallTicketDocument({ ticket, schedules = [] }) {
 
       {/* ── SCHOOL HEADER ──────────────────────────────────────────── */}
       <div style={S.header}>
-        <div style={S.logoBox}>🏆</div>
+        <div style={S.logoBox}>
+          {schoolLogoUrl
+            ? <img src={schoolLogoUrl} alt={schoolName} style={{ width: '56px', height: '56px', objectFit: 'cover', borderRadius: '50%' }} />
+            : <span style={{ fontSize: '22px', fontWeight: 900, color: '#fff', letterSpacing: '1px' }}>{schoolInitials}</span>
+          }
+        </div>
         <div style={{ flex: 1 }}>
-          <div style={S.schoolName}>Schoolers Institution</div>
-          <div style={S.schoolAddr}>
-            123, Knowledge Park, Education Nagar, Hyderabad – 500 001, Telangana, India
-          </div>
-          <div style={S.schoolContact}>
-            ☎ +91-40-1234-5678 &nbsp;|&nbsp; ✉ info@schoolers.edu &nbsp;|&nbsp; 🌐 www.schoolers.edu
-          </div>
+          <div style={S.schoolName}>{schoolName}</div>
+          {schoolAddress && (
+            <div style={S.schoolAddr}>{schoolAddress}</div>
+          )}
+          {contactLine && (
+            <div style={S.schoolContact}>{contactLine}</div>
+          )}
         </div>
         <div style={S.headerRight}>
-          <div style={S.affiliationBadge}>CBSE Affiliated</div>
-          <div style={{ fontSize: '10px', opacity: 0.75 }}>Affil. No: 1234567</div>
-          <div style={{ fontSize: '10px', opacity: 0.75 }}>School Code: 56789</div>
+          {schoolBoard && (
+            <div style={S.affiliationBadge}>{schoolBoard} Affiliated</div>
+          )}
+          {schoolCode && (
+            <div style={{ fontSize: '10px', opacity: 0.75 }}>School Code: {schoolCode}</div>
+          )}
         </div>
       </div>
 
@@ -455,12 +488,8 @@ export default function HallTicketDocument({ ticket, schedules = [] }) {
           <span style={S.metaValue}>{ticket.examName || '—'}</span>
         </div>
         <div style={S.metaItem}>
-          <span style={S.metaLabel}>Exam Center</span>
-          <span style={S.metaValue}>{examCenter}</span>
-        </div>
-        <div style={S.metaItem}>
-          <span style={S.metaLabel}>Center Address</span>
-          <span style={{ ...S.metaValue, fontSize: '10px', fontWeight: '600' }}>{examCenterAddr}</span>
+          <span style={S.metaLabel}>Exam Center Address</span>
+          <span style={{ ...S.metaValue, fontSize: '10px', fontWeight: '600' }}>{schoolAddress || schoolName}</span>
         </div>
         <div style={{ ...S.metaItem, marginLeft: 'auto' }}>
           <span style={S.metaLabel}>Issue Date</span>
@@ -637,7 +666,7 @@ export default function HallTicketDocument({ ticket, schedules = [] }) {
         <div style={S.sigBlock}>
           <div style={{ ...S.sigLine, maxWidth: '140px' }} />
           <div style={S.sigLabel}>Principal</div>
-          <div style={S.sigSub}>Schoolers Institution</div>
+          <div style={S.sigSub}>{schoolName}</div>
         </div>
 
         {/* Exam Controller */}
@@ -650,7 +679,9 @@ export default function HallTicketDocument({ ticket, schedules = [] }) {
 
       {/* Bottom bar */}
       <div style={S.bottomNote}>
-        This is a computer-generated Hall Ticket. &nbsp;|&nbsp; Verify authenticity at schoolers.edu/verify &nbsp;|&nbsp; Hall Ticket No: {ticket.ticketNumber}
+        This is a computer-generated Hall Ticket. &nbsp;|&nbsp;
+        {schoolWebsite ? ` Verify at ${schoolWebsite} ` : ` ${schoolName} `}
+        &nbsp;|&nbsp; Hall Ticket No: {ticket.ticketNumber}
       </div>
       <div style={S.bottomBar} />
     </div>
