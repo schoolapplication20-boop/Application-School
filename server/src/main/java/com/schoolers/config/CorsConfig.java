@@ -22,7 +22,10 @@ public class CorsConfig {
             "http://localhost:3001",
             "http://localhost:5173",
             "http://127.0.0.1:3000",
-            "http://127.0.0.1:5173"
+            "http://127.0.0.1:5173",
+            "https://application-school.vercel.app",
+            "https://*.vercel.app",
+            "https://*.onrender.com"
         ));
 
         // Allow all HTTP methods
