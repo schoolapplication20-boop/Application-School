@@ -97,7 +97,7 @@ const Login = () => {
           ) : (
             <span className="brand-icon">🏆</span>
           )}
-          <span className="brand-name">{school?.name || 'Schoolers'}</span>
+          <span className="brand-name">{school?.name || 'my-skoolz'}</span>
         </div>
         <div className="auth-tagline">
           <h2>Speed Up Your Work Flow With Our Web App</h2>
@@ -138,7 +138,7 @@ const Login = () => {
                 <span style={{ fontSize: '28px' }}>🏆</span>
               )}
               <span style={{ fontSize: '22px', fontWeight: 800, color: primary, fontFamily: 'Poppins, sans-serif' }}>
-                {school?.name || 'Schoolers'}
+                {school?.name || 'my-skoolz'}
               </span>
             </div>
             <h1>Welcome Back!</h1>

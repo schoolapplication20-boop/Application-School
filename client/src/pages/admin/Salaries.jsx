@@ -741,7 +741,7 @@ export default function Salaries() {
               </div>
               <div className="modal-body" id="salary-slip">
                 <div className="text-center border-bottom pb-3 mb-3">
-                  <h4 className="fw-bold mb-0" style={{ color: '#0de1e8' }}>Schoolers Management System</h4>
+                  <h4 className="fw-bold mb-0" style={{ color: '#0de1e8' }}>my-skoolz Management System</h4>
                   <p className="text-muted mb-1 small">School Campus, Education City</p>
                   <h6 className="fw-bold mt-2 mb-0">SALARY SLIP</h6>
                   <p className="text-muted small mb-0">For the month of {slipModal.month} {slipModal.year}</p>

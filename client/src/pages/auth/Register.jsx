@@ -97,7 +97,7 @@ const Register = () => {
       <div className="auth-left" style={{ background: `linear-gradient(135deg, ${primary} 0%, ${secondary} 100%)` }}>
         <div className="auth-brand">
           <span className="brand-icon">🏆</span>
-          <span className="brand-name">Schoolers</span>
+          <span className="brand-name">my-skoolz</span>
         </div>
         <div className="auth-tagline">
           <h2>Start Managing Your School Today</h2>
@@ -125,7 +125,7 @@ const Register = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
               <span style={{ fontSize: 28 }}>🏆</span>
               <span style={{ fontSize: 22, fontWeight: 800, color: primary, fontFamily: 'Poppins, sans-serif' }}>
-                Schoolers
+                my-skoolz
               </span>
             </div>
             <h1 style={{ fontSize: 22 }}>Register Your School</h1>
