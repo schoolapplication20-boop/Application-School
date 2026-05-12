@@ -6,14 +6,14 @@ import '../../styles/auth.css';
 const SetNewPassword = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const mobile = location.state?.mobile || sessionStorage.getItem('reset_mobile');
+  const identifier = location.state?.identifier || sessionStorage.getItem('reset_identifier');
 
-  // Persist mobile to sessionStorage so it survives a page refresh
+  // Persist identifier to sessionStorage so it survives a page refresh
   useEffect(() => {
-    if (location.state?.mobile) {
-      sessionStorage.setItem('reset_mobile', location.state.mobile);
+    if (location.state?.identifier) {
+      sessionStorage.setItem('reset_identifier', location.state.identifier);
     }
-  }, [location.state?.mobile]);
+  }, [location.state?.identifier]);
 
   const [formData, setFormData] = useState({ newPassword: '', confirmPassword: '' });
   const [showNew, setShowNew] = useState(false);
@@ -60,7 +60,7 @@ const SetNewPassword = () => {
       setError('Passwords do not match.');
       return;
     }
-    if (!mobile) {
+    if (!identifier) {
       setError('Session expired. Please restart the forgot password process.');
       return;
     }
@@ -68,9 +68,9 @@ const SetNewPassword = () => {
     setError('');
 
     try {
-      await authAPI.resetPassword({ mobile, newPassword: formData.newPassword });
+      await authAPI.resetPassword({ identifier, newPassword: formData.newPassword });
       setSuccess('Password changed successfully! Redirecting to login...');
-      sessionStorage.removeItem('reset_mobile');
+      sessionStorage.removeItem('reset_identifier');
       setTimeout(() => navigate('/login'), 2000);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to reset password. Please try again.');

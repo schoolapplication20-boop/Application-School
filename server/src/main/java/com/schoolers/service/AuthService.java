@@ -32,6 +32,7 @@ public class AuthService {
     @Autowired private TeacherRepository teacherRepository;
     @Autowired private JwtUtil           jwtUtil;
     @Autowired private PasswordEncoder   passwordEncoder;
+    @Autowired private EmailService      emailService;
 
     // All OTP data is persisted directly on the User record in the database.
     // No in-memory caches — restarts and multi-instance deployments are safe.
@@ -244,29 +245,53 @@ public class AuthService {
     }
 
     // ── Forgot Password ───────────────────────────────────────────────────────
-    // OTP is generated and saved directly to the database. No in-memory cache.
+    // identifier = email (APPLICATION_OWNER) or mobile (all other roles).
+    // OTP is persisted to the database; no in-memory cache.
 
-    public ApiResponse<String> forgotPassword(String mobile) {
-        User user = userRepository.findByMobile(mobile).orElse(null);
-        if (user == null) return ApiResponse.error("Mobile number not registered.");
+    public ApiResponse<String> forgotPassword(String identifier) {
+        boolean isEmail = identifier != null && identifier.contains("@");
+        User user;
 
-        String otp    = String.format("%04d", new SecureRandom().nextInt(10000));
+        if (isEmail) {
+            String email = identifier.trim().toLowerCase();
+            user = userRepository.findByEmailIgnoreCase(email).orElse(null);
+            if (user == null) return ApiResponse.error("Email not registered.");
+            if (user.getRole() != User.Role.APPLICATION_OWNER)
+                return ApiResponse.error("Email-based reset is only for Application Owner. Please use your mobile number.");
+        } else {
+            user = userRepository.findByMobile(identifier).orElse(null);
+            if (user == null) return ApiResponse.error("Mobile number not registered.");
+        }
+
+        String otp = String.format("%04d", new SecureRandom().nextInt(10000));
         LocalDateTime expiry = LocalDateTime.now(ZoneOffset.UTC).plusMinutes(5);
-
         user.setResetOtp(otp);
         user.setOtpExpiry(expiry);
         userRepository.save(user);
 
-        log.info("[DEV] OTP for " + mobile + ": " + otp);
-        return ApiResponse.success("OTP sent successfully to " + mobile, otp);
+        if (isEmail) {
+            emailService.sendOtpEmail(identifier.trim().toLowerCase(), otp);
+            return ApiResponse.success("OTP sent to your registered email address", null);
+        } else {
+            log.info("[DEV] OTP for " + identifier + ": " + otp);
+            return ApiResponse.success("OTP sent successfully to " + identifier, otp);
+        }
     }
 
     // ── Verify OTP ────────────────────────────────────────────────────────────
-    // Reads OTP and expiry directly from the database — no in-memory lookup.
+    // identifier = email or mobile, matching what was used in forgotPassword.
 
-    public ApiResponse<String> verifyOTP(String mobile, String otp) {
-        User user = userRepository.findByMobile(mobile).orElse(null);
-        if (user == null) return ApiResponse.error("Mobile number not registered.");
+    public ApiResponse<String> verifyOTP(String identifier, String otp) {
+        boolean isEmail = identifier != null && identifier.contains("@");
+        User user;
+
+        if (isEmail) {
+            user = userRepository.findByEmailIgnoreCase(identifier.trim().toLowerCase()).orElse(null);
+            if (user == null) return ApiResponse.error("Email not registered.");
+        } else {
+            user = userRepository.findByMobile(identifier).orElse(null);
+            if (user == null) return ApiResponse.error("Mobile number not registered.");
+        }
 
         String dbOtp = user.getResetOtp();
         if (dbOtp == null || !dbOtp.trim().equals(otp.trim()))
@@ -276,7 +301,6 @@ public class AuthService {
         if (expiry != null && LocalDateTime.now(ZoneOffset.UTC).isAfter(expiry))
             return ApiResponse.error("OTP has expired. Please request a new one.");
 
-        // Clear OTP from DB after successful verification
         user.setResetOtp(null);
         user.setOtpExpiry(null);
         userRepository.save(user);
@@ -285,11 +309,20 @@ public class AuthService {
     }
 
     // ── Reset Password ────────────────────────────────────────────────────────
-    // Reads and writes entirely from the database.
+    // identifier = email or mobile, matching what was used in forgotPassword.
 
-    public ApiResponse<String> resetPassword(String mobile, String newPassword) {
-        User user = userRepository.findByMobile(mobile).orElse(null);
-        if (user == null) return ApiResponse.error("Mobile number not registered.");
+    public ApiResponse<String> resetPassword(String identifier, String newPassword) {
+        boolean isEmail = identifier != null && identifier.contains("@");
+        User user;
+
+        if (isEmail) {
+            user = userRepository.findByEmailIgnoreCase(identifier.trim().toLowerCase()).orElse(null);
+            if (user == null) return ApiResponse.error("Email not registered.");
+        } else {
+            user = userRepository.findByMobile(identifier).orElse(null);
+            if (user == null) return ApiResponse.error("Mobile number not registered.");
+        }
+
         user.setPassword(passwordEncoder.encode(newPassword));
         user.setResetOtp(null);
         user.setOtpExpiry(null);

@@ -5,7 +5,7 @@ import '../../styles/auth.css';
 
 const ForgotPassword = () => {
   const navigate = useNavigate();
-  const [mobile, setMobile] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -33,28 +33,38 @@ const ForgotPassword = () => {
     return `${m}:${(s % 60).toString().padStart(2, '0')}`;
   };
 
-  const maskMobile = (num) => {
-    if (num.length < 4) return num;
-    return num.slice(0, 2) + '****' + num.slice(-2);
+  const isEmail = (val) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+  const isMobile = (val) => /^\d{10}$/.test(val);
+
+  const maskIdentifier = (val) => {
+    if (isEmail(val)) {
+      const [local, domain] = val.split('@');
+      return local.slice(0, 2) + '****@' + domain;
+    }
+    if (val.length < 4) return val;
+    return val.slice(0, 2) + '****' + val.slice(-2);
   };
 
   const sendOtp = async () => {
     try {
-      const res = await authAPI.forgotPassword({ mobile });
+      const res = await authAPI.forgotPassword({ identifier });
       if (res.data?.data) setDevOtp(res.data.data);
     } catch (err) {
       throw new Error(
         err.response?.data?.message ||
         err.response?.data?.error ||
-        'Mobile number not registered. Please contact admin.'
+        'Not registered. Please contact admin.'
       );
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!mobile.trim()) { setError('Please enter your mobile number.'); return; }
-    if (!/^\d{10}$/.test(mobile)) { setError('Please enter a valid 10-digit mobile number.'); return; }
+    if (!identifier.trim()) { setError('Please enter your mobile number or email address.'); return; }
+    if (!isMobile(identifier) && !isEmail(identifier)) {
+      setError('Please enter a valid 10-digit mobile number or email address.');
+      return;
+    }
     setIsLoading(true);
     setError('');
     try {
@@ -124,9 +134,9 @@ const ForgotPassword = () => {
     setOtpLoading(true);
     setOtpError('');
     try {
-      await authAPI.verifyOTP({ mobile, otp: otpString });
+      await authAPI.verifyOTP({ identifier, otp: otpString });
       setShowOtpPopup(false);
-      navigate('/set-new-password', { state: { mobile } });
+      navigate('/set-new-password', { state: { identifier } });
     } catch (err) {
       setOtpError(
         err.response?.data?.message ||
@@ -149,7 +159,7 @@ const ForgotPassword = () => {
         <div className="auth-tagline">
           <h2>Reset Your Password Securely</h2>
           <p>
-            Don't worry! It happens to the best of us. Enter your mobile number
+            Don't worry! Enter your mobile number (or email if you are the Application Owner)
             and we'll send you an OTP to reset your password.
           </p>
         </div>
@@ -175,7 +185,7 @@ const ForgotPassword = () => {
 
           <div className="auth-form-header" style={{ textAlign: 'center' }}>
             <h1>Verify Identity</h1>
-            <p>Enter your registered mobile number to receive an OTP</p>
+            <p>Enter your mobile number or email address to receive an OTP</p>
           </div>
 
           {error && (
@@ -187,17 +197,17 @@ const ForgotPassword = () => {
 
           <form onSubmit={handleSubmit}>
             <div className="form-group">
-              <label className="form-label">Mobile Number</label>
+              <label className="form-label">Mobile Number or Email Address</label>
               <div className="input-wrapper">
-                <span className="material-icons input-icon-left">smartphone</span>
+                <span className="material-icons input-icon-left">
+                  {isEmail(identifier) ? 'email' : 'smartphone'}
+                </span>
                 <input
-                  type="tel"
+                  type="text"
                   className="form-control has-left-icon"
-                  placeholder="Enter your 10-digit mobile number"
-                  value={mobile}
-                  onChange={(e) => { setMobile(e.target.value); setError(''); }}
-                  maxLength={10}
-                  pattern="[0-9]{10}"
+                  placeholder="Enter mobile number or email address"
+                  value={identifier}
+                  onChange={(e) => { setIdentifier(e.target.value); setError(''); }}
                   autoFocus
                 />
               </div>
@@ -257,7 +267,7 @@ const ForgotPassword = () => {
               </div>
               <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#2d3748', margin: '0 0 6px' }}>Enter OTP</h2>
               <p style={{ fontSize: '13px', color: '#718096', margin: 0 }}>
-                OTP sent to <span style={{ fontWeight: 600, color: '#0de1e8' }}>{maskMobile(mobile)}</span>
+                OTP sent to <span style={{ fontWeight: 600, color: '#0de1e8' }}>{maskIdentifier(identifier)}</span>
               </p>
             </div>
 

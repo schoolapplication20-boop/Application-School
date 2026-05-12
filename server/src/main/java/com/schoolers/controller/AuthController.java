@@ -32,39 +32,44 @@ public class AuthController {
 
     @PostMapping("/forgot-password")
     public ResponseEntity<ApiResponse<String>> forgotPassword(@RequestBody Map<String, String> body) {
-        String mobile = body.get("mobile");
-        if (mobile == null || mobile.isBlank()) {
-            return ResponseEntity.badRequest().body(ApiResponse.error("Mobile number is required"));
+        // Accept "identifier" (email or mobile), fall back to "mobile" or "email" for compatibility
+        String identifier = body.get("identifier");
+        if (identifier == null || identifier.isBlank()) identifier = body.get("mobile");
+        if (identifier == null || identifier.isBlank()) identifier = body.get("email");
+        if (identifier == null || identifier.isBlank()) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Mobile number or email is required"));
         }
-        ApiResponse<String> response = authService.forgotPassword(mobile);
-        if (response.isSuccess()) {
-            return ResponseEntity.ok(response);
-        }
-        return ResponseEntity.status(400).body(response);
+        ApiResponse<String> response = authService.forgotPassword(identifier);
+        return response.isSuccess()
+            ? ResponseEntity.ok(response)
+            : ResponseEntity.status(400).body(response);
     }
 
     @PostMapping("/verify-otp")
     public ResponseEntity<ApiResponse<String>> verifyOTP(@RequestBody Map<String, String> body) {
-        String mobile = body.get("mobile");
+        String identifier = body.get("identifier");
+        if (identifier == null || identifier.isBlank()) identifier = body.get("mobile");
+        if (identifier == null || identifier.isBlank()) identifier = body.get("email");
         String otp = body.get("otp");
-        if (mobile == null || otp == null) {
-            return ResponseEntity.badRequest().body(ApiResponse.error("Mobile and OTP are required"));
+        if (identifier == null || otp == null) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Identifier and OTP are required"));
         }
-        ApiResponse<String> response = authService.verifyOTP(mobile, otp);
-        if (response.isSuccess()) {
-            return ResponseEntity.ok(response);
-        }
-        return ResponseEntity.status(400).body(response);
+        ApiResponse<String> response = authService.verifyOTP(identifier, otp);
+        return response.isSuccess()
+            ? ResponseEntity.ok(response)
+            : ResponseEntity.status(400).body(response);
     }
 
     @PostMapping("/reset-password")
     public ResponseEntity<ApiResponse<String>> resetPassword(@RequestBody Map<String, String> body) {
-        String mobile = body.get("mobile");
+        String identifier = body.get("identifier");
+        if (identifier == null || identifier.isBlank()) identifier = body.get("mobile");
+        if (identifier == null || identifier.isBlank()) identifier = body.get("email");
         String newPassword = body.get("newPassword");
-        if (mobile == null || newPassword == null || newPassword.isBlank()) {
-            return ResponseEntity.badRequest().body(ApiResponse.error("Mobile and new password are required"));
+        if (identifier == null || newPassword == null || newPassword.isBlank()) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Identifier and new password are required"));
         }
-        ApiResponse<String> response = authService.resetPassword(mobile, newPassword);
+        ApiResponse<String> response = authService.resetPassword(identifier, newPassword);
         return response.isSuccess()
             ? ResponseEntity.ok(response)
             : ResponseEntity.badRequest().body(response);
