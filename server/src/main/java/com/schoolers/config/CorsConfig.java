@@ -25,7 +25,9 @@ public class CorsConfig {
             "http://127.0.0.1:5173",
             "https://application-school.vercel.app",
             "https://*.vercel.app",
-            "https://*.onrender.com"
+            "https://*.onrender.com",
+            "https://my-skoolz.com",
+            "https://www.my-skoolz.com"
         ));
 
         // Allow all HTTP methods
