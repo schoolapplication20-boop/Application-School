@@ -5,6 +5,14 @@ import { useSchool } from '../../context/SchoolContext';
 import { loginWithEmail as apiLoginWithEmail } from '../../services/authService';
 import '../../styles/auth.css';
 
+const ROLES = [
+  { key: 'APPLICATION_OWNER', label: 'App Owner',   icon: 'admin_panel_settings' },
+  { key: 'SUPER_ADMIN',       label: 'Super Admin', icon: 'manage_accounts'      },
+  { key: 'ADMIN',             label: 'Admin',       icon: 'badge'                },
+  { key: 'TEACHER',           label: 'Teacher',     icon: 'school'               },
+  { key: 'STUDENT',           label: 'Student',     icon: 'person'               },
+];
+
 const Login = () => {
   const navigate = useNavigate();
   const { login, refreshPermissions, isAuthenticated, getDashboardPath } = useAuth();
@@ -13,6 +21,7 @@ const Login = () => {
   const primary   = school?.primaryColor   || '#F97316';
   const secondary = school?.secondaryColor || '#EA6C0A';
 
+  const [selectedRole, setSelectedRole] = useState('');
   const [emailForm, setEmailForm]       = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading]       = useState(false);
@@ -22,50 +31,53 @@ const Login = () => {
     if (isAuthenticated) navigate(getDashboardPath(), { replace: true });
   }, [isAuthenticated, navigate, getDashboardPath]);
 
+  const isStudentRole = selectedRole === 'STUDENT';
+  const inputLabel    = isStudentRole ? 'Admission Number' : 'Email';
+  const inputPlaceholder = isStudentRole ? 'Enter your admission number' : 'Enter your email';
+
   const rolePathMap = {
     APPLICATION_OWNER: '/superadmin/dashboard',
-    SUPER_ADMIN: '/superadmin/dashboard',
-    ADMIN:       '/admin/dashboard',
-    TEACHER:     '/teacher/dashboard',
-    STUDENT:     '/student/dashboard',
+    SUPER_ADMIN:       '/superadmin/dashboard',
+    ADMIN:             '/admin/dashboard',
+    TEACHER:           '/teacher/dashboard',
+    STUDENT:           '/student/dashboard',
   };
 
   const navigateByRole = (registeredUser) => {
-    // APPLICATION_OWNER never needs a password reset on first login
     if (registeredUser?.role === 'APPLICATION_OWNER') {
       navigate('/superadmin/dashboard', { replace: true });
       return;
     }
-
-    // Non-SUPER_ADMIN first-login → must set a new password first
     if (registeredUser?.firstLogin && registeredUser?.role !== 'SUPER_ADMIN') {
       navigate('/reset-password', { replace: true });
       return;
     }
-
-    // SUPER_ADMIN with no school set up yet → go to Setup School wizard
     if (registeredUser?.role === 'SUPER_ADMIN' && registeredUser?.needsSchoolSetup) {
       navigate('/superadmin/setup-school', { replace: true });
       return;
     }
-
     navigate(rolePathMap[registeredUser.role] || '/login', { replace: true });
+  };
+
+  const handleRoleSelect = (roleKey) => {
+    setSelectedRole(roleKey);
+    setEmailForm({ email: '', password: '' });
+    setError('');
   };
 
   const handleEmailLogin = async (e) => {
     e.preventDefault();
-    if (!emailForm.email.trim()) { setError('Please enter your email or username.'); return; }
-    if (!emailForm.password)    { setError('Please enter your password.'); return; }
+    if (!selectedRole) { setError('Please select your role first.'); return; }
+    if (!emailForm.email.trim()) {
+      setError(isStudentRole ? 'Please enter your admission number.' : 'Please enter your email.');
+      return;
+    }
+    if (!emailForm.password) { setError('Please enter your password.'); return; }
     setIsLoading(true);
     setError('');
-
-    // If the user typed a plain username (no @), treat as student username
-    const rawInput = emailForm.email.trim();
-    const loginEmail = rawInput.includes('@') ? rawInput.toLowerCase() : rawInput.toLowerCase();
-
     try {
       const { user: loggedInUser, token } = await apiLoginWithEmail(
-        loginEmail,
+        emailForm.email.trim().toLowerCase(),
         emailForm.password,
       );
       login(loggedInUser, token);
@@ -87,12 +99,9 @@ const Login = () => {
       <div className="auth-left" style={{ background: `linear-gradient(135deg, ${primary} 0%, ${secondary} 100%)` }}>
         <div className="auth-brand">
           {school?.logoUrl ? (
-            <img
-              src={`${school.logoUrl}`}
-              alt={school.name}
+            <img src={`${school.logoUrl}`} alt={school.name}
               style={{ width: 40, height: 40, objectFit: 'contain', borderRadius: 8, background: 'rgba(255,255,255,0.2)', padding: 4 }}
-              onError={e => { e.target.style.display='none'; }}
-            />
+              onError={e => { e.target.style.display = 'none'; }} />
           ) : (
             <span className="brand-icon">🏆</span>
           )}
@@ -112,8 +121,7 @@ const Login = () => {
             {school?.logoUrl ? (
               <img src={`${school.logoUrl}`} alt={school.name}
                 style={{ width: 100, height: 100, objectFit: 'contain', marginBottom: 8, borderRadius: 12, background: 'rgba(255,255,255,0.15)', padding: 8 }}
-                onError={e => { e.target.replaceWith(Object.assign(document.createElement('span'), { style: 'font-size:80px', textContent: '🎓' })); }}
-              />
+                onError={e => { e.target.replaceWith(Object.assign(document.createElement('span'), { style: 'font-size:80px', textContent: '🎓' })); }} />
             ) : (
               <span style={{ fontSize: '80px' }}>🎓</span>
             )}
@@ -127,6 +135,7 @@ const Login = () => {
       {/* Right Panel */}
       <div className="auth-right">
         <div className="auth-right-inner">
+          {/* Brand header */}
           <div className="auth-form-header">
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
               {school?.logoUrl ? (
@@ -141,7 +150,56 @@ const Login = () => {
               </span>
             </div>
             <h1>Welcome Back!</h1>
-            <p>Sign in to your account to continue</p>
+            <p>Select your role to sign in</p>
+          </div>
+
+          {/* Role Selector */}
+          <div style={{ marginBottom: '24px' }}>
+            <label style={{ fontSize: '13px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '10px' }}>
+              Select Role for Login
+            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
+              {ROLES.map(role => {
+                const isSelected = selectedRole === role.key;
+                return (
+                  <button
+                    key={role.key}
+                    type="button"
+                    onClick={() => handleRoleSelect(role.key)}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '5px',
+                      padding: '10px 4px',
+                      borderRadius: '10px',
+                      border: isSelected ? `2px solid ${primary}` : '2px solid #e2e8f0',
+                      background: isSelected ? `${primary}15` : '#fff',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      outline: 'none',
+                    }}
+                  >
+                    <span className="material-icons" style={{
+                      fontSize: '22px',
+                      color: isSelected ? primary : '#a0aec0',
+                    }}>
+                      {role.icon}
+                    </span>
+                    <span style={{
+                      fontSize: '10px',
+                      fontWeight: isSelected ? 700 : 500,
+                      color: isSelected ? primary : '#718096',
+                      textAlign: 'center',
+                      lineHeight: 1.2,
+                    }}>
+                      {role.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {error && (
@@ -151,44 +209,61 @@ const Login = () => {
             </div>
           )}
 
-          <form onSubmit={handleEmailLogin}>
-            <div className="form-group">
-              <label className="form-label">Email / Admission No.</label>
-              <div className="input-wrapper">
-                <span className="material-icons input-icon-left">person</span>
-                <input type="text" name="email" className="form-control has-left-icon"
-                  placeholder="Enter your email or admission number" value={emailForm.email}
-                  onChange={e => { setEmailForm({ ...emailForm, email: e.target.value }); setError(''); }}
-                  autoComplete="username" autoFocus />
+          {/* Login Form — shown after role is selected */}
+          {selectedRole && (
+            <form onSubmit={handleEmailLogin}>
+              <div className="form-group">
+                <label className="form-label">{inputLabel}</label>
+                <div className="input-wrapper">
+                  <span className="material-icons input-icon-left">
+                    {isStudentRole ? 'badge' : 'email'}
+                  </span>
+                  <input
+                    type="text"
+                    name="email"
+                    className="form-control has-left-icon"
+                    placeholder={inputPlaceholder}
+                    value={emailForm.email}
+                    onChange={e => { setEmailForm({ ...emailForm, email: e.target.value }); setError(''); }}
+                    autoComplete="username"
+                    autoFocus
+                  />
+                </div>
               </div>
-            </div>
-            <div className="form-group">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <label className="form-label" style={{ margin: 0 }}>Password</label>
-                <Link to="/forgot-password" className="forgot-password-link" style={{ float: 'none' }}>Forgot Password?</Link>
+
+              <div className="form-group">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <label className="form-label" style={{ margin: 0 }}>Password</label>
+                  <Link to="/forgot-password" className="forgot-password-link" style={{ float: 'none' }}>Forgot Password?</Link>
+                </div>
+                <div className="input-wrapper">
+                  <span className="material-icons input-icon-left">lock</span>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    className="form-control has-left-icon has-icon"
+                    placeholder="Enter your password"
+                    value={emailForm.password}
+                    onChange={e => { setEmailForm({ ...emailForm, password: e.target.value }); setError(''); }}
+                    autoComplete="current-password"
+                  />
+                  <span className="material-icons input-icon" onClick={() => setShowPassword(!showPassword)} style={{ cursor: 'pointer' }}>
+                    {showPassword ? 'visibility_off' : 'visibility'}
+                  </span>
+                </div>
               </div>
-              <div className="input-wrapper">
-                <span className="material-icons input-icon-left">lock</span>
-                <input type={showPassword ? 'text' : 'password'} name="password"
-                  className="form-control has-left-icon has-icon"
-                  placeholder="Enter your password" value={emailForm.password}
-                  onChange={e => { setEmailForm({ ...emailForm, password: e.target.value }); setError(''); }}
-                  autoComplete="current-password" />
-                <span className="material-icons input-icon" onClick={() => setShowPassword(!showPassword)} style={{ cursor: 'pointer' }}>
-                  {showPassword ? 'visibility_off' : 'visibility'}
-                </span>
-              </div>
-            </div>
-            <button type="submit" className="btn-auth-submit" disabled={isLoading}
-              style={{ background: `linear-gradient(135deg, ${primary}, ${secondary})` }}>
-              {isLoading ? (
-                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                  <span style={{ width: '16px', height: '16px', border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />
-                  Signing In...
-                </span>
-              ) : 'LOGIN'}
-            </button>
-          </form>
+
+              <button type="submit" className="btn-auth-submit" disabled={isLoading}
+                style={{ background: `linear-gradient(135deg, ${primary}, ${secondary})` }}>
+                {isLoading ? (
+                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                    <span style={{ width: '16px', height: '16px', border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />
+                    Signing In...
+                  </span>
+                ) : 'LOGIN'}
+              </button>
+            </form>
+          )}
 
           <div className="auth-footer">
             &copy; {new Date().getFullYear()} Digital It &amp; Media Solutions Pvt Ltd
