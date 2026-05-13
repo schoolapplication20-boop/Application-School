@@ -5,13 +5,16 @@ import { useSchool } from '../../context/SchoolContext';
 import { loginWithEmail as apiLoginWithEmail } from '../../services/authService';
 import '../../styles/auth.css';
 
-const ROLES = [
+const ALL_ROLES = [
   { key: 'APPLICATION_OWNER', label: 'App Owner',   icon: 'admin_panel_settings' },
   { key: 'SUPER_ADMIN',       label: 'Super Admin', icon: 'manage_accounts'      },
   { key: 'ADMIN',             label: 'Admin',       icon: 'badge'                },
   { key: 'TEACHER',           label: 'Teacher',     icon: 'school'               },
   { key: 'STUDENT',           label: 'Student',     icon: 'person'               },
 ];
+
+// School-level roles only — shown when a school tenant context is detected
+const SCHOOL_ROLES = ALL_ROLES.filter(r => r.key !== 'APPLICATION_OWNER');
 
 const Login = () => {
   const navigate = useNavigate();
@@ -20,6 +23,13 @@ const Login = () => {
 
   const primary   = school?.primaryColor   || '#F97316';
   const secondary = school?.secondaryColor || '#EA6C0A';
+
+  // Detect school tenant context:
+  // 1. SchoolContext has a school loaded (returning school user session), OR
+  // 2. localStorage flag set when a school user previously logged in
+  const isSchoolPortal = !!(school?.id || localStorage.getItem('ms_school_tenant'));
+
+  const ROLES = isSchoolPortal ? SCHOOL_ROLES : ALL_ROLES;
 
   const [selectedRole, setSelectedRole] = useState('');
   const [emailForm, setEmailForm]       = useState({ email: '', password: '' });
@@ -31,8 +41,15 @@ const Login = () => {
     if (isAuthenticated) navigate(getDashboardPath(), { replace: true });
   }, [isAuthenticated, navigate, getDashboardPath]);
 
-  const isStudentRole = selectedRole === 'STUDENT';
-  const inputLabel    = isStudentRole ? 'Admission Number' : 'Email';
+  // Reset form when role changes
+  const handleRoleSelect = (roleKey) => {
+    setSelectedRole(roleKey);
+    setEmailForm({ email: '', password: '' });
+    setError('');
+  };
+
+  const isStudentRole  = selectedRole === 'STUDENT';
+  const inputLabel     = isStudentRole ? 'Admission Number' : 'Email';
   const inputPlaceholder = isStudentRole ? 'Enter your admission number' : 'Enter your email';
 
   const rolePathMap = {
@@ -59,13 +76,7 @@ const Login = () => {
     navigate(rolePathMap[registeredUser.role] || '/login', { replace: true });
   };
 
-  const handleRoleSelect = (roleKey) => {
-    setSelectedRole(roleKey);
-    setEmailForm({ email: '', password: '' });
-    setError('');
-  };
-
-  const handleEmailLogin = async (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     if (!selectedRole) { setError('Please select your role first.'); return; }
     if (!emailForm.email.trim()) {
@@ -73,18 +84,36 @@ const Login = () => {
       return;
     }
     if (!emailForm.password) { setError('Please enter your password.'); return; }
+
     setIsLoading(true);
     setError('');
+
     try {
       const { user: loggedInUser, token } = await apiLoginWithEmail(
         emailForm.email.trim().toLowerCase(),
         emailForm.password,
+        selectedRole,  // sent to backend for server-side role validation
       );
+
+      // Frontend guard — ensure backend confirmed the correct role
+      if (loggedInUser.role !== selectedRole) {
+        setError('Access denied. You do not have permission for the selected role.');
+        return;
+      }
+
+      // School portal guard — school users must not access App Owner dashboard
+      if (isSchoolPortal && loggedInUser.role === 'APPLICATION_OWNER') {
+        setError('App Owner access is not available on this portal.');
+        return;
+      }
+
       login(loggedInUser, token);
+
       if (loggedInUser.role === 'ADMIN') {
         const hasPermsInResponse = loggedInUser.permissions != null;
         if (!hasPermsInResponse) await refreshPermissions();
       }
+
       navigateByRole(loggedInUser);
     } catch (err) {
       setError(err.message || 'Login failed. Please try again.');
@@ -135,6 +164,7 @@ const Login = () => {
       {/* Right Panel */}
       <div className="auth-right">
         <div className="auth-right-inner">
+
           {/* Brand header */}
           <div className="auth-form-header">
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
@@ -158,7 +188,11 @@ const Login = () => {
             <label style={{ fontSize: '13px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '10px' }}>
               Select Role for Login
             </label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: `repeat(${ROLES.length}, 1fr)`,
+              gap: '8px',
+            }}>
               {ROLES.map(role => {
                 const isSelected = selectedRole === role.key;
                 return (
@@ -181,10 +215,7 @@ const Login = () => {
                       outline: 'none',
                     }}
                   >
-                    <span className="material-icons" style={{
-                      fontSize: '22px',
-                      color: isSelected ? primary : '#a0aec0',
-                    }}>
+                    <span className="material-icons" style={{ fontSize: '22px', color: isSelected ? primary : '#a0aec0' }}>
                       {role.icon}
                     </span>
                     <span style={{
@@ -209,9 +240,9 @@ const Login = () => {
             </div>
           )}
 
-          {/* Login Form — shown after role is selected */}
+          {/* Login Form — shown only after role is selected */}
           {selectedRole && (
-            <form onSubmit={handleEmailLogin}>
+            <form onSubmit={handleLogin}>
               <div className="form-group">
                 <label className="form-label">{inputLabel}</label>
                 <div className="input-wrapper">

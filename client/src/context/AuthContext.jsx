@@ -83,6 +83,14 @@ export const AuthProvider = ({ children }) => {
     if (userData?.role !== 'APPLICATION_OWNER' && schoolLoaderRef.current) {
       schoolLoaderRef.current();
     }
+
+    // Track whether the current browser has a school user session.
+    // Used by the login page to hide the App Owner role card.
+    if (userData?.role === 'APPLICATION_OWNER') {
+      localStorage.removeItem('ms_school_tenant');
+    } else if (userData?.schoolId) {
+      localStorage.setItem('ms_school_tenant', String(userData.schoolId));
+    }
   }, []);
 
   const logout = useCallback(() => {
@@ -90,6 +98,7 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
     clearAuthToken();
     sessionStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem('ms_school_tenant');
     window.dispatchEvent(new Event('auth:logout'));
   }, []);
 

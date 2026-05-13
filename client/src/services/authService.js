@@ -8,9 +8,9 @@ import { authAPI } from './api';
 /**
  * Login with email + password.
  */
-export const loginWithEmail = async (email, password) => {
+export const loginWithEmail = async (email, password, selectedRole) => {
   try {
-    const res  = await authAPI.login({ email, password });
+    const res  = await authAPI.login({ email, password, selectedRole });
     const body  = res.data?.data ?? res.data;
     const token = body?.token ?? body?.accessToken ?? body?.jwt;
     const user  = body?.user  ?? (body?.role || body?.email ? body : null);

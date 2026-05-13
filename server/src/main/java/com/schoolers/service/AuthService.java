@@ -74,6 +74,27 @@ public class AuthService {
             if (!passwordEncoder.matches(request.getPassword(), user.getPassword()))
                 return ApiResponse.error("Incorrect password. Please check your password and try again.");
 
+            // ── Step 3b: Role validation — selectedRole must match actual DB role ──
+            // This blocks cross-role access even if the frontend is tampered with.
+            if (request.getSelectedRole() != null && !request.getSelectedRole().isBlank()) {
+                String claimed = request.getSelectedRole().trim().toUpperCase();
+                if (!user.getRole().name().equals(claimed)) {
+                    log.warning("[login] Role mismatch for " + username
+                            + ": claimed=" + claimed + " actual=" + user.getRole().name());
+                    return ApiResponse.error("Access denied. You do not have the selected role.");
+                }
+            }
+
+            // ── Step 3c: Tenant isolation ──────────────────────────────────
+            // APPLICATION_OWNER must have no school — they are platform-level only.
+            // All school users must belong to a school.
+            if (user.getRole() == User.Role.APPLICATION_OWNER && user.getSchoolId() != null) {
+                return ApiResponse.error("Account configuration error. Please contact support.");
+            }
+            if (user.getRole() != User.Role.APPLICATION_OWNER && user.getSchoolId() == null) {
+                return ApiResponse.error("Your account is not linked to any school. Please contact admin.");
+            }
+
             // ── Step 4: Build JWT claims (include schoolId for tenant isolation) ──
             Map<String, Object> claims = new HashMap<>();
             claims.put("role",     user.getRole().name());
