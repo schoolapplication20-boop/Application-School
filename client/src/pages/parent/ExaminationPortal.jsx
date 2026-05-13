@@ -13,7 +13,7 @@ const MOCK_HALL_TICKETS = [
     className: '10', section: 'A', examName: 'Annual Exam 2024', examType: 'ANNUAL',
     academicYear: '2023-2024', createdAt: '2024-03-01T10:00:00',
     dateOfBirth: '2010-01-15', gender: 'Male', registrationNumber: 'REG2024001',
-    examCenter: 'Main Campus', examCenterAddress: 'my-skoolz, Knowledge Park, Hyderabad',
+    examCenter: 'Main Campus', examCenterAddress: 'My-Skoolz, Knowledge Park, Hyderabad',
     examSubjects: JSON.stringify([
       { subject: 'Mathematics',   date: '2024-03-15', startTime: '09:00', endTime: '12:00', hall: 'H-101', maxMarks: 100 },
       { subject: 'Science',       date: '2024-03-17', startTime: '09:00', endTime: '12:00', hall: 'H-102', maxMarks: 100 },
@@ -49,7 +49,7 @@ function CertificateCard({ cert }) {
     <div className="cert-preview" style={{ marginBottom: '24px' }}>
       <div className="cert-header">
         <div className="cert-logo">🏆</div>
-        <div className="cert-school-name">my-skoolz</div>
+        <div className="cert-school-name">My-Skoolz</div>
         <div className="cert-school-sub">Affiliated • CBSE • Est. 2005</div>
       </div>
       <div className="cert-type-banner">{certLabel[cert.certificateType] || cert.certificateType}</div>

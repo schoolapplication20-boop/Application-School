@@ -395,7 +395,7 @@ export default function PayFees() {
                 {/* Printable area */}
                 <div ref={receiptRef}>
                   <div className="receipt-header" style={{ textAlign: 'center', borderBottom: '2px solid #0de1e8', paddingBottom: 16, marginBottom: 20 }}>
-                    <div style={{ fontSize: '22px', fontWeight: 800, color: '#2d3748' }}>🏆 my-skoolz</div>
+                    <div style={{ fontSize: '22px', fontWeight: 800, color: '#2d3748' }}>🏆 My-Skoolz</div>
                     <div style={{ fontSize: '13px', color: '#718096' }}>Management System</div>
                   </div>
                   <div style={{ textAlign: 'center', fontWeight: 700, fontSize: '17px', color: '#0de1e8', marginBottom: '16px' }}>

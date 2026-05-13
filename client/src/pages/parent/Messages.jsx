@@ -38,7 +38,7 @@ export default function Messages() {
 
   // Fallback demo messages when no real messages exist
   const displayMessages = allMessages.length > 0 ? allMessages : [
-    { id: -1, fromName: 'Priya Sharma', subject: 'Welcome to my-skoolz', text: 'Your child has been enrolled. Please check assignments regularly.', sentAt: '17 Mar 2026', seen: false, _demo: true },
+    { id: -1, fromName: 'Priya Sharma', subject: 'Welcome to My-Skoolz', text: 'Your child has been enrolled. Please check assignments regularly.', sentAt: '17 Mar 2026', seen: false, _demo: true },
   ];
 
   return (

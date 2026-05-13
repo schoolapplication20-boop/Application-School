@@ -23,13 +23,13 @@ public class EmailService {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(fromEmail);
         message.setTo(toEmail);
-        message.setSubject("my-skoolz Password Reset OTP");
+        message.setSubject("My-Skoolz Password Reset OTP");
         message.setText(
             "Dear User,\n\n" +
             "Your OTP for password reset is: " + otp + "\n\n" +
             "This OTP is valid for 5 minutes. Do not share it with anyone.\n\n" +
             "If you did not request a password reset, please ignore this email.\n\n" +
-            "Regards,\nmy-skoolz Team"
+            "Regards,\nMy-Skoolz Team"
         );
         mailSender.send(message);
         log.info("[EmailService] OTP email sent to: " + toEmail);

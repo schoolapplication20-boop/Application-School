@@ -203,7 +203,7 @@ export default function AttendanceReport() {
       <h1>Attendance Report</h1>
       <p class="sub">Date: ${fmtDate(filterDate)} | Class: ${filterClass ? classes.find(c => String(c.id) === filterClass)?.name || 'Selected' : 'All'}</p>
       <table><thead><tr><th>Class</th><th>Teacher</th><th>Present</th><th>Absent</th><th>Leave</th><th>Total</th><th>%</th></tr></thead><tbody>${tableRows}</tbody></table>`;
-    exportPrintReport('Attendance Report – my-skoolz', html);
+    exportPrintReport('Attendance Report – My-Skoolz', html);
     showToast('PDF report opened for printing');
   };
 

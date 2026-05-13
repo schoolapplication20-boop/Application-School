@@ -154,7 +154,7 @@ const ForgotPassword = () => {
       <div className="auth-left">
         <div className="auth-brand">
           <span className="brand-icon">🏆</span>
-          <span className="brand-name">my-skoolz</span>
+          <span className="brand-name">My-Skoolz</span>
         </div>
         <div className="auth-tagline">
           <h2>Reset Your Password Securely</h2>
