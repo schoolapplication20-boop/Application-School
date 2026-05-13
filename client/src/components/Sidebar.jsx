@@ -61,17 +61,6 @@ const studentNavItems = [
   { path: '/student/exams',       icon: 'calendar_view_week', label: 'Schedule & Exams' },
 ];
 
-const parentNavItems = [
-  { path: '/parent/dashboard',    icon: 'dashboard',      label: 'Dashboard' },
-  { path: '/parent/performance',  icon: 'bar_chart',      label: 'My Child' },
-  { path: '/parent/attendance',   icon: 'fact_check',     label: 'Attendance' },
-  { path: '/parent/assignments',  icon: 'assignment',     label: 'Assignments' },
-  { path: '/parent/diary',        icon: 'photo_library',  label: "Class Diary" },
-  { path: '/parent/pay-fees',     icon: 'payments',       label: 'Pay Fees' },
-  { path: '/parent/leave',        icon: 'event_busy',     label: 'Leave Request' },
-  { path: '/parent/messages',     icon: 'chat',           label: 'Messages', badge: 2 },
-  { path: '/parent/examination',  icon: 'verified',       label: 'Hall Ticket & Certs' },
-];
 
 const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
   const { user }                            = useAuth();
@@ -182,9 +171,6 @@ const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
       case 'TEACHER':
         return [{ label: 'Navigation', items: teacherNavItems }];
 
-      case 'PARENT':
-        return [{ label: 'Navigation', items: parentNavItems }];
-
       case 'STUDENT':
         return [{ label: 'Navigation', items: studentNavItems }];
 
@@ -203,7 +189,6 @@ const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
     SUPER_ADMIN:       { bg: '#7c3aed20', text: '#7c3aed' },
     ADMIN:             { bg: '#76C44220', text: '#276749' },
     TEACHER:           { bg: '#3182ce20', text: '#2c5282' },
-    PARENT:            { bg: '#ed893620', text: '#9c4221' },
   };
   const roleColors = roleBadgeColor[user?.role] || { bg: '#f0f4f8', text: '#4a5568' };
 

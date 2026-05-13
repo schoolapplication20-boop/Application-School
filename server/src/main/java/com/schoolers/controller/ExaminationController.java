@@ -44,7 +44,7 @@ public class ExaminationController {
     // ============================================================
 
     @GetMapping("/schedules")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER', 'PARENT', 'STUDENT')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER', 'STUDENT')")
     public ResponseEntity<ApiResponse<List<ExamSchedule>>> getSchedules(
             @RequestParam(required = false) String className,
             @RequestParam(required = false) String examType,
@@ -86,7 +86,7 @@ public class ExaminationController {
     }
 
     @GetMapping("/hall-tickets/student/{studentId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER', 'PARENT')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER')")
     public ResponseEntity<ApiResponse<List<HallTicket>>> getHallTicketsByStudent(
             @PathVariable Long studentId, Authentication auth) {
         return ResponseEntity.ok(examinationService.getHallTicketsByStudent(studentId, getCurrentSchoolId(auth)));
@@ -124,14 +124,14 @@ public class ExaminationController {
     }
 
     @GetMapping("/certificates/student/{studentId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER', 'PARENT')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER')")
     public ResponseEntity<ApiResponse<List<Certificate>>> getCertificatesByStudent(
             @PathVariable Long studentId, Authentication auth) {
         return ResponseEntity.ok(examinationService.getCertificatesByStudent(studentId, getCurrentSchoolId(auth)));
     }
 
     @GetMapping("/certificates/verify/{certId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER', 'PARENT')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER')")
     public ResponseEntity<ApiResponse<Certificate>> findByCertId(@PathVariable String certId) {
         return ResponseEntity.ok(examinationService.findByCertificateId(certId));
     }

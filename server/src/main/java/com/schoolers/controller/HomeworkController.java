@@ -32,7 +32,7 @@ public class HomeworkController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER', 'PARENT', 'STUDENT')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER', 'STUDENT')")
     public ResponseEntity<ApiResponse<List<Homework>>> getAll(
             @RequestParam(required = false) Long teacherId,
             @RequestParam(required = false) String classSection,

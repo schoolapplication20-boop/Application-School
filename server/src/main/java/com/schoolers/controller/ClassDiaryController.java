@@ -147,7 +147,7 @@ public class ClassDiaryController {
 
     /** Get diary for a specific class (parent / admin use) */
     @GetMapping("/class/{className}")
-    @PreAuthorize("hasAnyRole('PARENT', 'TEACHER', 'ADMIN', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<List<ClassDiary>>> getByClass(@PathVariable String className, Authentication auth) {
         return ResponseEntity.ok(diaryService.getByClass(className, getCurrentSchoolId(auth)));
     }

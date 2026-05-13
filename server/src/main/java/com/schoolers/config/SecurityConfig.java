@@ -65,7 +65,7 @@ public class SecurityConfig {
             //   APPLICATION_OWNER  – platform-level, schoolId = NULL, manages all schools
             //   SUPER_ADMIN        – school-level owner, schoolId = NOT NULL, one per school
             //   ADMIN              – school module admin, created by SUPER_ADMIN
-            //   TEACHER / PARENT / STUDENT – end users
+            //   TEACHER / STUDENT – end users
             //
             // Fine-grained endpoint access is enforced via @PreAuthorize in controllers.
             // These rules are the coarse-grained security gate.
@@ -92,9 +92,6 @@ public class SecurityConfig {
 
                 // ── Teacher-facing routes ─────────────────────────────────────
                 .requestMatchers("/api/teacher/**").hasAnyRole("TEACHER", "ADMIN", "SUPER_ADMIN", "APPLICATION_OWNER")
-
-                // ── Parent-facing routes ──────────────────────────────────────
-                .requestMatchers("/api/parent/**").hasAnyRole("PARENT", "ADMIN", "SUPER_ADMIN", "APPLICATION_OWNER")
 
                 // ── User profile ──────────────────────────────────────────────
                 .requestMatchers("/api/user/**").authenticated()

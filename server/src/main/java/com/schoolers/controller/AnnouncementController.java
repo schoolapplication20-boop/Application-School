@@ -32,7 +32,7 @@ public class AnnouncementController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER', 'PARENT', 'STUDENT')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER', 'STUDENT')")
     public ResponseEntity<ApiResponse<List<Announcement>>> getAll(
             @RequestParam(required = false) String role, Authentication auth) {
         Long schoolId = getCurrentSchoolId(auth);

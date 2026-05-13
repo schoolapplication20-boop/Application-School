@@ -118,6 +118,6 @@ public class User {
     public enum Role {
         /** Platform-level owner — full access, no schoolId. Legacy alias for SUPER_ADMIN. */
         APPLICATION_OWNER,
-        SUPER_ADMIN, ADMIN, TEACHER, PARENT, STUDENT
+        SUPER_ADMIN, ADMIN, TEACHER, STUDENT
     }
 }

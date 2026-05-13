@@ -78,12 +78,6 @@ const Navbar = ({ onMenuToggle }) => {
         else if (q.includes('assignment')) navigate('/teacher/assignments');
         else if (q.includes('leave')) navigate('/teacher/leave-approval');
         else navigate('/teacher/assignments');
-      } else {
-        if (q.includes('fee')) navigate('/parent/pay-fees');
-        else if (q.includes('attendance')) navigate('/parent/attendance');
-        else if (q.includes('assignment')) navigate('/parent/assignments');
-        else if (q.includes('leave')) navigate('/parent/leave');
-        else navigate('/parent/dashboard');
       }
       setSearchQuery('');
     }

@@ -27,7 +27,6 @@ const Login = () => {
     SUPER_ADMIN: '/superadmin/dashboard',
     ADMIN:       '/admin/dashboard',
     TEACHER:     '/teacher/dashboard',
-    PARENT:      '/parent/dashboard',
     STUDENT:     '/student/dashboard',
   };
 

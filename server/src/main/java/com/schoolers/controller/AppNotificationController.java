@@ -34,7 +34,7 @@ public class AppNotificationController {
 
     /** Fetch all notifications for a user (newest first). */
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER', 'PARENT')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER')")
     public ResponseEntity<ApiResponse<List<AppNotification>>> getForUser(@RequestParam Long userId) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (!isOwnerOrAdmin(userId, auth)) {
@@ -45,14 +45,14 @@ public class AppNotificationController {
 
     /** Unread count badge. */
     @GetMapping("/unread-count")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER', 'PARENT')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER')")
     public ResponseEntity<Map<String, Long>> getUnreadCount(@RequestParam Long userId) {
         return ResponseEntity.ok(Map.of("count", notificationService.getUnreadCount(userId)));
     }
 
     /** Mark a single notification as read. */
     @PatchMapping("/{id}/read")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER', 'PARENT')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER')")
     public ResponseEntity<?> markRead(@PathVariable Long id) {
         var result = notificationService.markRead(id);
         return result.isSuccess() ? ResponseEntity.ok(result) : ResponseEntity.badRequest().body(result);
@@ -60,7 +60,7 @@ public class AppNotificationController {
 
     /** Mark all notifications for a user as read. */
     @PatchMapping("/read-all")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER', 'PARENT')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER')")
     public ResponseEntity<ApiResponse<String>> markAllRead(@RequestParam Long userId) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (!isOwnerOrAdmin(userId, auth)) {
@@ -71,7 +71,7 @@ public class AppNotificationController {
 
     /** Delete a single notification. */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER', 'PARENT')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER')")
     public ResponseEntity<?> delete(@PathVariable Long id) {
         var result = notificationService.delete(id);
         return result.isSuccess() ? ResponseEntity.ok(result) : ResponseEntity.notFound().build();

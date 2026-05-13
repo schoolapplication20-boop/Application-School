@@ -85,7 +85,7 @@ public class LeaveController {
 
     // ── Teacher: own leave history (school-scoped) ─────────────────────────
     @GetMapping("/my/{requesterId}")
-    @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN', 'SUPER_ADMIN', 'PARENT')")
+    @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<List<LeaveRequest>>> getMyLeaves(
             @PathVariable Long requesterId,
             @RequestParam(defaultValue = "STUDENT") String type,
@@ -96,7 +96,7 @@ public class LeaveController {
 
     // ── Legacy: generic create (teacher / parent self-leave) ───────────────
     @PostMapping
-    @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN', 'SUPER_ADMIN', 'PARENT')")
+    @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<?> createLeave(@RequestBody Map<String, Object> body, Authentication auth) {
         var response = leaveService.createLeave(body, auth);
         return response.isSuccess()

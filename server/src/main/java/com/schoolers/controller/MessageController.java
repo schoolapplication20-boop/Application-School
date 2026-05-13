@@ -34,7 +34,7 @@ public class MessageController {
     // ── Existing 1-to-1 endpoints ─────────────────────────────────────────────
 
     @GetMapping("/{userId}")
-    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','TEACHER','PARENT','STUDENT')")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','TEACHER',,'STUDENT')")
     public ResponseEntity<ApiResponse<List<Message>>> getMessages(@PathVariable Long userId) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (!isOwnerOrAdmin(userId, auth))
@@ -43,14 +43,14 @@ public class MessageController {
     }
 
     @GetMapping("/conversation")
-    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','TEACHER','PARENT')")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','TEACHER',)")
     public ResponseEntity<ApiResponse<List<Message>>> getConversation(
             @RequestParam Long u1, @RequestParam Long u2) {
         return ResponseEntity.ok(messageService.getConversation(u1, u2));
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','TEACHER','PARENT')")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','TEACHER',)")
     public ResponseEntity<?> sendMessage(@RequestBody Map<String, Object> body) {
         var response = messageService.sendMessage(body);
         return response.isSuccess()
@@ -59,14 +59,14 @@ public class MessageController {
     }
 
     @PatchMapping("/{id}/read")
-    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','TEACHER','PARENT')")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','TEACHER',)")
     public ResponseEntity<?> markAsRead(@PathVariable Long id) {
         var response = messageService.markAsRead(id);
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
     }
 
     @GetMapping("/unread/{userId}")
-    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','TEACHER','PARENT','STUDENT')")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','TEACHER',,'STUDENT')")
     public ResponseEntity<ApiResponse<Long>> getUnreadCount(@PathVariable Long userId) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (!isOwnerOrAdmin(userId, auth))

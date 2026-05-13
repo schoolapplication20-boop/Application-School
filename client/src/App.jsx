@@ -48,7 +48,6 @@ import Timetable from './pages/admin/Timetable';
 // Examination & Certificates Pages
 import Examination from './pages/admin/Examination';
 import ExaminationView from './pages/teacher/ExaminationView';
-import ExaminationPortal from './pages/parent/ExaminationPortal';
 
 // Student Pages
 import StudentDashboard      from './pages/student/StudentDashboard';
@@ -62,15 +61,6 @@ import StudentExams          from './pages/student/StudentExams';
 // Admin Messages
 import AdminMessages         from './pages/admin/AdminMessages';
 
-// Parent Pages
-import DiaryView from './pages/parent/DiaryView';
-import ParentDashboard from './pages/parent/ParentDashboard';
-import Performance from './pages/parent/Performance';
-import AttendanceView from './pages/parent/AttendanceView';
-import AssignmentsView from './pages/parent/AssignmentsView';
-import PayFees from './pages/parent/PayFees';
-import Messages from './pages/parent/Messages';
-import LeaveRequest from './pages/parent/LeaveRequest';
 
 function App() {
   return (
@@ -89,7 +79,7 @@ function App() {
             <Route path="/enter-otp" element={<EnterOTP />} />
             <Route path="/set-new-password" element={<SetNewPassword />} />
             <Route path="/reset-password" element={
-              <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'ADMIN', 'TEACHER', 'PARENT', 'STUDENT']}>
+              <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'ADMIN', 'TEACHER', 'STUDENT']}>
                 <ResetPassword />
               </ProtectedRoute>
             } />
@@ -138,18 +128,6 @@ function App() {
             <Route path="/teacher/messages" element={<ProtectedRoute allowedRoles={['TEACHER']}><TeacherMessages /></ProtectedRoute>} />
             <Route path="/teacher/leave-request" element={<ProtectedRoute allowedRoles={['TEACHER']}><TeacherLeaveRequest /></ProtectedRoute>} />
             <Route path="/teacher/examination"   element={<ProtectedRoute allowedRoles={['TEACHER']}><ExaminationView /></ProtectedRoute>} />
-
-            {/* Parent Routes */}
-            <Route path="/parent/dashboard" element={<ProtectedRoute allowedRoles={['PARENT']}><ParentDashboard /></ProtectedRoute>} />
-            <Route path="/parent/performance" element={<ProtectedRoute allowedRoles={['PARENT']}><Performance /></ProtectedRoute>} />
-            <Route path="/parent/attendance" element={<ProtectedRoute allowedRoles={['PARENT']}><AttendanceView /></ProtectedRoute>} />
-            <Route path="/parent/assignments" element={<ProtectedRoute allowedRoles={['PARENT']}><AssignmentsView /></ProtectedRoute>} />
-            <Route path="/parent/pay-fees" element={<ProtectedRoute allowedRoles={['PARENT']}><PayFees /></ProtectedRoute>} />
-            <Route path="/parent/fees" element={<ProtectedRoute allowedRoles={['PARENT']}><PayFees /></ProtectedRoute>} />
-            <Route path="/parent/messages" element={<ProtectedRoute allowedRoles={['PARENT']}><Messages /></ProtectedRoute>} />
-            <Route path="/parent/leave"        element={<ProtectedRoute allowedRoles={['PARENT']}><LeaveRequest /></ProtectedRoute>} />
-            <Route path="/parent/examination"  element={<ProtectedRoute allowedRoles={['PARENT']}><ExaminationPortal /></ProtectedRoute>} />
-            <Route path="/parent/diary"        element={<ProtectedRoute allowedRoles={['PARENT']}><DiaryView /></ProtectedRoute>} />
 
             {/* Student Routes */}
             <Route path="/student/dashboard"  element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentDashboard /></ProtectedRoute>} />

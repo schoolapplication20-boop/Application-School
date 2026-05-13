@@ -32,7 +32,7 @@ public class TimetableController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER', 'STUDENT', 'PARENT')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER', 'STUDENT')")
     public ResponseEntity<ApiResponse<List<Timetable>>> getAll(
             @RequestParam(required = false) Long teacherId,
             @RequestParam(required = false) String classSection,
