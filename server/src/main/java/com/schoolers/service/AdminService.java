@@ -115,22 +115,20 @@ public class AdminService {
     }
 
     /**
-     * Derives a deterministic username:
-     * firstName + lastName + last4OfAdmissionNumber (all lowercase, letters/digits only).
-     * Falls back to rollNumber suffix if admission number is absent.
+     * Username = admission number (lowercase, alphanumeric only).
+     * Falls back to roll number, then a random suffix if neither is available.
      */
     private String buildStudentUsername(String fullName, String admissionNumber, String rollNumber) {
-        String[] parts = (fullName == null ? "student" : fullName.trim()).split("\\s+");
-        String first = parts[0].toLowerCase().replaceAll("[^a-z0-9]", "");
-        String last  = parts.length > 1 ? parts[parts.length - 1].toLowerCase().replaceAll("[^a-z0-9]", "") : "";
-        String suffix;
-        String src = (admissionNumber != null && !admissionNumber.isBlank()) ? admissionNumber.trim() : rollNumber;
-        if (src != null && src.length() >= 4) {
-            suffix = src.substring(src.length() - 4).toLowerCase().replaceAll("[^a-z0-9]", "");
-        } else {
-            suffix = src != null ? src.toLowerCase().replaceAll("[^a-z0-9]", "") : String.valueOf(RANDOM.nextInt(9000) + 1000);
+        String src = (admissionNumber != null && !admissionNumber.isBlank())
+                ? admissionNumber.trim()
+                : (rollNumber != null && !rollNumber.isBlank() ? rollNumber.trim() : null);
+        if (src != null) {
+            return src.toLowerCase().replaceAll("[^a-z0-9]", "");
         }
-        return first + last + suffix;
+        // Last resort: name-based fallback
+        String[] parts = (fullName == null ? "student" : fullName.trim()).split("\\s+");
+        String base = parts[0].toLowerCase().replaceAll("[^a-z0-9]", "");
+        return base + String.valueOf(RANDOM.nextInt(9000) + 1000);
     }
 
     /** Result wrapper for student user creation. loginEmail is what the student uses to log in. */

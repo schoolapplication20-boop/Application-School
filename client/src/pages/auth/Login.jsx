@@ -153,11 +153,11 @@ const Login = () => {
 
           <form onSubmit={handleEmailLogin}>
             <div className="form-group">
-              <label className="form-label">Email</label>
+              <label className="form-label">Email / Admission No.</label>
               <div className="input-wrapper">
                 <span className="material-icons input-icon-left">person</span>
                 <input type="text" name="email" className="form-control has-left-icon"
-                  placeholder="Enter your email" value={emailForm.email}
+                  placeholder="Enter your email or admission number" value={emailForm.email}
                   onChange={e => { setEmailForm({ ...emailForm, email: e.target.value }); setError(''); }}
                   autoComplete="username" autoFocus />
               </div>
