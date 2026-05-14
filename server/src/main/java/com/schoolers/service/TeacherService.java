@@ -280,11 +280,7 @@ public class TeacherService {
     }
 
     private Long resolveParentUserId(String mobile) {
-        if (mobile == null || mobile.isBlank()) return null;
-        return userRepository.findByMobile(mobile.trim())
-                .filter(user -> user.getRole() == User.Role.PARENT)
-                .map(User::getId)
-                .orElse(null);
+        return null; // Parent role removed
     }
 
     @Transactional

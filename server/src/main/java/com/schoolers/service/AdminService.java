@@ -348,14 +348,7 @@ public class AdminService {
                 .build();
 
         try {
-            // Step 1: Link to existing parent user by mobile — do NOT auto-create a parent account
-            String parentMobile = student.getParentMobile();
-            if (parentMobile != null && !parentMobile.isBlank()) {
-                userRepository.findByMobile(parentMobile.trim())
-                        .filter(u -> u.getRole() == User.Role.PARENT)
-                        .ifPresent(u -> student.setParentId(u.getId()));
-            }
-            // Step 2: Save the student record to obtain its generated ID
+            // Step 1: Save the student record to obtain its generated ID
             Student saved = studentRepository.save(student);
             ensureClassExists(saved.getClassName(), saved.getSection(), schoolId);
 
@@ -472,12 +465,7 @@ public class AdminService {
                         String newMobile = str(body, "parentMobile", str(body, "fatherPhone", student.getParentMobile()));
                         student.setParentMobile(newMobile);
                         if (newMobile != null && !newMobile.isBlank()) {
-                            // Link to existing PARENT user only — do NOT auto-create one
-                            Long parentId = userRepository.findByMobile(newMobile.trim())
-                                    .filter(u -> u.getRole() == User.Role.PARENT)
-                                    .map(User::getId)
-                                    .orElse(null);
-                            student.setParentId(parentId);
+                            student.setParentId(null); // Parent role removed
                         }
                     }
                     if (body.containsKey("motherName"))
@@ -1990,72 +1978,17 @@ public class AdminService {
     }
 
     public ApiResponse<List<Map<String, Object>>> getParents(Long schoolId) {
-        List<User> parentUsers = (schoolId != null)
-                ? userRepository.findByRoleAndSchoolId(User.Role.PARENT, schoolId)
-                : userRepository.findByRole(User.Role.PARENT);
-        List<Map<String, Object>> result = parentUsers.stream()
-                .map(u -> {
-                    ParentProfile profile = parentProfileRepository.findByUser(u).orElse(null);
-                    return parentToMap(u, profile);
-                }).toList();
-        return ApiResponse.success(result);
+        return ApiResponse.success(java.util.Collections.emptyList());
     }
 
     @Transactional
     public ApiResponse<Map<String, Object>> createParent(Map<String, Object> body) {
-        String name   = str(body, "name",   "").trim();
-        String email  = str(body, "email",  "").trim().toLowerCase();
-        String mobile = str(body, "mobile", null);
-
-        if (name.isBlank())  return ApiResponse.error("Parent name is required");
-        if (email.isBlank() || !EMAIL_PATTERN.matcher(email).matches())
-            return ApiResponse.error("Valid email is required");
-        // Case-insensitive check so Admin@x.com and admin@x.com are treated as the same
-        if (userRepository.existsByEmailIgnoreCase(email))
-            return ApiResponse.error("Email already registered: " + email);
-        if (mobile != null && !mobile.isBlank() && userRepository.existsByMobile(mobile))
-            return ApiResponse.error("Mobile number already registered");
-
-        String rawPassword = (str(body, "password", "").isBlank())
-                ? generatePassword() : str(body, "password", "");
-
-        try {
-            User user = userRepository.save(User.builder()
-                    .name(name)
-                    .email(email)
-                    .mobile(mobile != null && !mobile.isBlank() ? mobile : null)
-                    .password(passwordEncoder.encode(rawPassword))
-                    .tempPassword(rawPassword)
-                    .role(User.Role.PARENT)
-                    .isActive(true)
-                    .firstLogin(true)
-                    .build());
-
-            ParentProfile profile = parentProfileRepository.save(ParentProfile.builder()
-                    .user(user)
-                    .name(name)
-                    .relation(str(body, "relation", null))
-                    .occupation(str(body, "occupation", null))
-                    .address(str(body, "address", null))
-                    .alternateMobile(str(body, "alternateMobile", null))
-                    .isActive(true)
-                    .build());
-
-            log.info("[createParent] Saved parent userId=" + user.getId() + " email=" + email);
-
-            Map<String, Object> result = parentToMap(user, profile);
-            result.put("generatedPassword", rawPassword);
-            return ApiResponse.success("Parent created successfully", result);
-        } catch (Exception e) {
-            // no-op: transaction rollback not available without JPA
-            log.severe("[createParent] error: " + e.getMessage());
-            return ApiResponse.error("Failed to create parent: " + e.getMessage());
-        }
+        return ApiResponse.error("Parent role has been removed from this application.");
     }
 
     public ApiResponse<Map<String, Object>> updateParent(Long id, Map<String, Object> body) {
         return userRepository.findById(id)
-                .filter(u -> u.getRole() == User.Role.PARENT)
+                .filter(u -> false)
                 .map(user -> {
                     String name   = str(body, "name",   null);
                     String mobile = str(body, "mobile", null);
@@ -2088,7 +2021,7 @@ public class AdminService {
     @Transactional
     public ApiResponse<String> deleteParent(Long id) {
         return userRepository.findById(id)
-                .filter(u -> u.getRole() == User.Role.PARENT)
+                .filter(u -> false)
                 .map(user -> {
                     // Unlink any students who reference this parent
                     studentRepository.findByParentId(id).forEach(s -> {
@@ -2105,7 +2038,7 @@ public class AdminService {
 
     public ApiResponse<String> resetParentPassword(Long id, String newPassword) {
         return userRepository.findById(id)
-                .filter(u -> u.getRole() == User.Role.PARENT)
+                .filter(u -> false)
                 .map(user -> {
                     user.setPassword(passwordEncoder.encode(newPassword));
                     user.setTempPassword(null);
