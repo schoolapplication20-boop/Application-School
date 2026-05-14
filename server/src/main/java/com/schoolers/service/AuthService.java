@@ -270,32 +270,42 @@ public class AuthService {
     // OTP is persisted to the database; no in-memory cache.
 
     public ApiResponse<String> forgotPassword(String identifier) {
-        boolean isEmail = identifier != null && identifier.contains("@");
-        User user;
+        try {
+            boolean isEmail = identifier != null && identifier.contains("@");
+            User user;
 
-        if (isEmail) {
-            String email = identifier.trim().toLowerCase();
-            user = userRepository.findByEmailIgnoreCase(email).orElse(null);
-            if (user == null) return ApiResponse.error("Email not registered.");
-            if (user.getRole() != User.Role.APPLICATION_OWNER)
-                return ApiResponse.error("Email-based reset is only for Application Owner. Please use your mobile number.");
-        } else {
-            user = userRepository.findByMobile(identifier).orElse(null);
-            if (user == null) return ApiResponse.error("Mobile number not registered.");
-        }
+            if (isEmail) {
+                String email = identifier.trim().toLowerCase();
+                user = userRepository.findByEmailIgnoreCase(email).orElse(null);
+                if (user == null) return ApiResponse.error("Not registered. Please contact admin.");
+                if (user.getRole() != User.Role.APPLICATION_OWNER)
+                    return ApiResponse.error("Email-based reset is only for Application Owner. Please use your mobile number.");
+            } else {
+                user = userRepository.findByMobile(identifier).orElse(null);
+                if (user == null) return ApiResponse.error("Not registered. Please contact admin.");
+            }
 
-        String otp = String.format("%04d", new SecureRandom().nextInt(10000));
-        LocalDateTime expiry = LocalDateTime.now(ZoneOffset.UTC).plusMinutes(5);
-        user.setResetOtp(otp);
-        user.setOtpExpiry(expiry);
-        userRepository.save(user);
+            String otp = String.format("%04d", new SecureRandom().nextInt(10000));
+            LocalDateTime expiry = LocalDateTime.now(ZoneOffset.UTC).plusMinutes(5);
+            user.setResetOtp(otp);
+            user.setOtpExpiry(expiry);
+            userRepository.save(user);
 
-        if (isEmail) {
-            emailService.sendOtpEmail(identifier.trim().toLowerCase(), otp);
-            return ApiResponse.success("OTP sent to your registered email address", null);
-        } else {
-            log.info("[DEV] OTP for " + identifier + ": " + otp);
-            return ApiResponse.success("OTP sent successfully to " + identifier, otp);
+            if (isEmail) {
+                try {
+                    emailService.sendOtpEmail(identifier.trim().toLowerCase(), otp);
+                    return ApiResponse.success("OTP sent to your registered email address", null);
+                } catch (Exception mailEx) {
+                    log.severe("[forgotPassword] Failed to send OTP email: " + mailEx.getMessage());
+                    return ApiResponse.error("Failed to send OTP email. Please check your email configuration.");
+                }
+            } else {
+                log.info("[DEV] OTP for " + identifier + ": " + otp);
+                return ApiResponse.success("OTP sent successfully to " + identifier, otp);
+            }
+        } catch (Exception e) {
+            log.severe("[forgotPassword] Unexpected error: " + e.getMessage());
+            return ApiResponse.error("An error occurred. Please try again.");
         }
     }
 
