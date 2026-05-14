@@ -273,10 +273,18 @@ public class AuthService {
         try {
             boolean isEmail = identifier != null && identifier.contains("@");
             User user;
+            log.info("[forgotPassword] identifier='" + identifier + "' isEmail=" + isEmail);
 
             if (isEmail) {
                 String email = identifier.trim().toLowerCase();
+                log.info("[forgotPassword] searching by email='" + email + "'");
                 user = userRepository.findByEmailIgnoreCase(email).orElse(null);
+                log.info("[forgotPassword] findByEmailIgnoreCase result: " + (user != null ? "FOUND id=" + user.getId() + " role=" + user.getRole() : "NULL"));
+                // Fallback: try findByEmail (exact match)
+                if (user == null) {
+                    user = userRepository.findByEmail(email).orElse(null);
+                    log.info("[forgotPassword] findByEmail fallback result: " + (user != null ? "FOUND id=" + user.getId() : "NULL"));
+                }
                 if (user == null) return ApiResponse.error("Not registered. Please contact admin.");
                 if (user.getRole() != User.Role.APPLICATION_OWNER)
                     return ApiResponse.error("Email-based reset is only for Application Owner. Please use your mobile number.");
