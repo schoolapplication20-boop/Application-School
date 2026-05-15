@@ -72,7 +72,8 @@ function App() {
             <Route path="/" element={<Navigate to="/login" replace />} />
 
             {/* Auth Routes */}
-            <Route path="/login"    element={<Login />} />
+            <Route path="/login"       element={<Login />} />
+            <Route path="/owner-login" element={<Login ownerPortal />} />
             <Route path="/register" element={<Navigate to="/login" replace />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/verify-identity" element={<VerifyIdentity />} />
