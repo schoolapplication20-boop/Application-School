@@ -105,7 +105,11 @@ function App() {
               </MarketingLayout>
             } />
             
-            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="/" element={
+              <MarketingLayout>
+                <HomePage />
+              </MarketingLayout>
+            } />
 
             {/* Auth Routes */}
             <Route path="/login"       element={<Login />} />
