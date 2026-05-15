@@ -484,14 +484,51 @@
   .main-content.sidebar-collapsed {
     margin-left: 0;
   }
+
+  /* Hide the desktop collapse toggle on mobile — the hamburger in navbar handles it */
+  .sidebar-toggle {
+    display: none;
+  }
 }
 
 @media (max-width: 768px) {
   .page-content {
-    padding: 16px;
+    padding: 14px;
   }
 
   .top-navbar {
-    padding: 0 16px;
+    padding: 0 14px;
+    height: 60px;
+  }
+
+  /* Hide search bar on mobile — sidebar nav is the primary navigation */
+  .navbar-search {
+    display: none !important;
+  }
+
+  /* Hide user name/role text in navbar, keep avatar */
+  .navbar-user-info {
+    display: none !important;
+  }
+
+  /* Tighten navbar right side */
+  .navbar-right {
+    gap: 8px;
+  }
+
+  /* Welcome text compact */
+  .navbar-left {
+    gap: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-content {
+    padding: 10px;
+  }
+
+  .top-navbar {
+    padding: 0 10px;
+    height: 56px;
   }
 }

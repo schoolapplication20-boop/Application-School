@@ -228,7 +228,7 @@ const Login = () => {
             <label style={{ fontSize: '13px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '10px' }}>
               Select Role for Login
             </label>
-            <div style={{
+            <div className="auth-role-grid-4" style={{
               display: 'grid',
               gridTemplateColumns: `repeat(${ROLES.length}, 1fr)`,
               gap: '10px',

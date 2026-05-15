@@ -18,9 +18,16 @@ const orgSchema = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
   name: 'My-Skoolz',
+  alternateName: ['My Skoolz', 'MySkoolz', 'My-Skools'],
   url: 'https://my-skoolz.com',
-  logo: 'https://my-skoolz.com/logo.png',
-  description: 'My-Skoolz is India\'s modern cloud-based school management platform.',
+  logo: {
+    '@type': 'ImageObject',
+    url: 'https://my-skoolz.com/logo.svg',
+    width: 200,
+    height: 200,
+  },
+  image: 'https://my-skoolz.com/logo.svg',
+  description: 'My-Skoolz is India\'s modern cloud-based school management platform — students, fees, attendance, exams and more.',
   contactPoint: {
     '@type': 'ContactPoint',
     contactType: 'customer support',

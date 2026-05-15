@@ -109,7 +109,7 @@ const Navbar = ({ onMenuToggle }) => {
 
       <div className="navbar-right">
         {/* Search */}
-        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+        <div className="navbar-search" style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
           <span className="material-icons" style={{ position: 'absolute', left: '10px', color: '#a0aec0', fontSize: '18px', pointerEvents: 'none' }}>search</span>
           <input
             type="text"
@@ -239,7 +239,7 @@ const Navbar = ({ onMenuToggle }) => {
             }}>
               {getInitials(user?.name)}
             </div>
-            <div style={{ lineHeight: 1.3 }}>
+            <div className="navbar-user-info" style={{ lineHeight: 1.3 }}>
               <div style={{ fontSize: '13px', fontWeight: 600, color: '#2d3748' }}>{user?.name}</div>
               <div style={{ fontSize: '11px', color: '#a0aec0' }}>{user?.role}</div>
             </div>

@@ -792,3 +792,105 @@
   font-size: 14px;
   color: #cbd5e0;
 }
+
+/* ══════════════════════════════════════
+   Mobile Responsive — Dashboard Pages
+══════════════════════════════════════ */
+
+/* Table horizontal scrolling on all screens */
+.data-table-card {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Make tables honour a minimum width so cells don't squeeze */
+.data-table {
+  min-width: 520px;
+}
+
+/* Ensure charts don't overflow their containers */
+.chart-card {
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  /* Stat cards */
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  /* Charts go single-column earlier */
+  .charts-section {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .tables-section {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  /* Chart & table card padding */
+  .chart-card,
+  .data-table-card {
+    padding: 16px;
+  }
+
+  /* Slightly smaller table text on mobile */
+  .data-table th { font-size: 10px; padding: 8px 10px; }
+  .data-table td { font-size: 12px; padding: 10px 10px; }
+
+  /* Search/filter bar — stack vertically */
+  .search-filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-input-wrapper { min-width: unset; }
+  .filter-select { min-width: unset; }
+
+  /* Add button — full width on mobile */
+  .btn-add { justify-content: center; }
+
+  /* Modal — nearly full screen */
+  .modal-container {
+    max-width: calc(100vw - 24px);
+    max-height: 88vh;
+    margin: 0 12px;
+  }
+
+  /* Modal padding */
+  .modal-header { padding: 18px 18px 0; }
+  .modal-body   { padding: 0 18px 18px; }
+  .modal-footer { padding: 14px 18px 18px; }
+
+  /* Pagination — compact */
+  .pagination-bar { flex-direction: column; gap: 10px; align-items: center; }
+
+  /* Child info card — stack on mobile */
+  .child-info-card { flex-direction: column; text-align: center; }
+  .child-details .child-tags { justify-content: center; }
+
+  /* Fee summary card text */
+  .fee-summary .amount { font-size: 26px; }
+
+  /* Schedule items */
+  .schedule-item { gap: 10px; }
+  .schedule-time { min-width: 60px; font-size: 11px; }
+
+  /* Action buttons — stack vertically in tight cells */
+  .action-btns { flex-wrap: wrap; gap: 4px; }
+}
+
+@media (max-width: 480px) {
+  /* Full-width stat cards on very small phones */
+  .stats-grid { grid-template-columns: 1fr; gap: 10px; }
+
+  /* Page-level section headings */
+  .data-table-title { font-size: 14px; }
+
+  /* Filter select full-width */
+  .filter-select,
+  .search-input { font-size: 13px; }
+}

@@ -3,7 +3,7 @@ import { Helmet } from 'react-helmet-async';
 
 const SITE_NAME = 'My-Skoolz';
 const BASE_URL  = 'https://my-skoolz.com';
-const DEFAULT_IMG = `${BASE_URL}/og-image.png`;
+const DEFAULT_IMG = `${BASE_URL}/logo.svg`;
 
 const SEOMeta = ({
   title,

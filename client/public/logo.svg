@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="200" height="200" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="My-Skoolz">
+  <!-- Background rounded square -->
+  <rect width="40" height="40" rx="10" fill="url(#ms_bg)"/>
+  <!-- Top sheen -->
+  <rect width="40" height="20" rx="10" fill="url(#ms_sheen)" opacity="0.14"/>
+  <!-- Shoulders -->
+  <path d="M8 39 Q14 33 20 33 Q26 33 32 39" fill="white" fill-opacity="0.58"/>
+  <!-- Head (circle) -->
+  <circle cx="20" cy="26" r="9" fill="white" fill-opacity="0.92"/>
+  <!-- Graduation cap board (mortarboard diamond) -->
+  <path d="M7 17 L20 11 L33 17 L20 23 Z" fill="white"/>
+  <!-- Tassel string -->
+  <line x1="33" y1="17" x2="33" y2="25" stroke="white" stroke-width="2" stroke-linecap="round" opacity="0.72"/>
+  <!-- Tassel end -->
+  <circle cx="33" cy="26.5" r="2" fill="white" opacity="0.72"/>
+  <defs>
+    <linearGradient id="ms_bg" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2563EB"/>
+      <stop offset="1" stop-color="#7C3AED"/>
+    </linearGradient>
+    <linearGradient id="ms_sheen" x1="0" y1="0" x2="0" y2="20" gradientUnits="userSpaceOnUse">
+      <stop stop-color="white" stop-opacity="1"/>
+      <stop offset="1" stop-color="white" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+</svg>
