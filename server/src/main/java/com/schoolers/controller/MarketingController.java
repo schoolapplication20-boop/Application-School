@@ -1,66 +1,46 @@
 package com.schoolers.controller;
 
+import com.schoolers.dto.ApiResponse;
+import com.schoolers.dto.DemoBookingRequest;
+import com.schoolers.dto.JobApplicationRequest;
 import com.schoolers.service.EmailService;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.logging.Logger;
 
-@Slf4j
 @RestController
 @RequestMapping("/api/marketing")
-@RequiredArgsConstructor
-@CrossOrigin(origins = {"http://localhost:5173", "https://my-skoolz.com", "https://www.my-skoolz.com"})
 public class MarketingController {
 
-    private final EmailService emailService;
+    private static final Logger log = Logger.getLogger(MarketingController.class.getName());
+
+    @Autowired
+    private EmailService emailService;
 
     @PostMapping("/book-demo")
-    public ResponseEntity<?> bookDemo(@RequestBody Map<String, String> demoDetails) {
+    public ResponseEntity<ApiResponse<Void>> bookDemo(@Valid @RequestBody DemoBookingRequest request) {
         try {
-            log.info("Demo booking request received for school: {}", demoDetails.get("schoolName"));
-
-            // Validate required fields
-            if (!isValidDemoDetails(demoDetails)) {
-                return ResponseEntity.badRequest().body(Map.of(
-                    "success", false,
-                    "message", "Missing required fields"
-                ));
-            }
-
-            // Send email notification
-            emailService.sendDemoBookingEmail(demoDetails.get("email"), demoDetails);
-
-            log.info("Demo booking email sent successfully for: {}", demoDetails.get("schoolName"));
-
-            return ResponseEntity.ok(Map.of(
-                "success", true,
-                "message", "Demo booking submitted successfully. We'll contact you soon!"
-            ));
-
+            emailService.sendDemoBookingNotification(request);
+            return ResponseEntity.ok(ApiResponse.success("Demo booking submitted! We'll contact you within 24 hours.", null));
         } catch (Exception e) {
-            log.error("Error processing demo booking request", e);
-            return ResponseEntity.status(500).body(Map.of(
-                "success", false,
-                "message", "An error occurred while processing your request. Please try again later."
-            ));
+            log.severe("[MarketingController] bookDemo failed: " + e.getMessage());
+            return ResponseEntity.status(500)
+                .body(ApiResponse.error("Failed to submit demo booking. Please try again or email us directly."));
         }
     }
 
-    private boolean isValidDemoDetails(Map<String, String> details) {
-        return details.containsKey("schoolName") && !details.get("schoolName").isBlank() &&
-               details.containsKey("contactPerson") && !details.get("contactPerson").isBlank() &&
-               details.containsKey("email") && !details.get("email").isBlank() &&
-               details.containsKey("phone") && !details.get("phone").isBlank() &&
-               details.containsKey("schoolType") && !details.get("schoolType").isBlank() &&
-               details.containsKey("studentCount") && !details.get("studentCount").isBlank();
-    }
-
-    @GetMapping("/health")
-    public ResponseEntity<?> health() {
-        return ResponseEntity.ok(Map.of("status", "ok"));
+    @PostMapping("/apply-job")
+    public ResponseEntity<ApiResponse<Void>> applyJob(@Valid @RequestBody JobApplicationRequest request) {
+        try {
+            emailService.sendJobApplicationNotification(request);
+            return ResponseEntity.ok(ApiResponse.success("Application submitted! We'll review and get back to you.", null));
+        } catch (Exception e) {
+            log.severe("[MarketingController] applyJob failed: " + e.getMessage());
+            return ResponseEntity.status(500)
+                .body(ApiResponse.error("Failed to submit application. Please try again or email us directly."));
+        }
     }
 }
