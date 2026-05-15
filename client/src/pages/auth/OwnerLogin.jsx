@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { loginWithEmail as apiLoginWithEmail } from '../../services/authService';
 import '../../styles/auth.css';
@@ -119,7 +119,12 @@ const OwnerLogin = () => {
             </div>
 
             <div className="form-group" style={{ marginBottom: 24 }}>
-              <label className="form-label" style={{ fontWeight: 600, fontSize: 13 }}>Password</label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                <label className="form-label" style={{ fontWeight: 600, fontSize: 13, margin: 0 }}>Password</label>
+                <Link to="/forgot-password" style={{ fontSize: 12, color: '#1e293b', fontWeight: 600, textDecoration: 'none' }}>
+                  Forgot Password?
+                </Link>
+              </div>
               <div style={{ position: 'relative' }}>
                 <span className="material-icons" style={{
                   position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
