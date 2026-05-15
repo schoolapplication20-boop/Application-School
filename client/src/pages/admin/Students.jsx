@@ -125,7 +125,7 @@ const mockStudents = [
 ];
 
 const EMPTY_FORM = {
-  name: '', admissionNumber: '', class: '', section: '', dob: '', status: 'Active', photo: null,
+  name: '', rollNo: '', admissionNumber: '', class: '', section: '', dob: '', status: 'Active', photo: null,
   fatherName: '', fatherPhone: '',
   motherName: '', motherPhone: '',
   guardianName: '', guardianPhone: '',
@@ -306,6 +306,13 @@ export default function Students() {
       .finally(() => setCapacityChecking(false));
   }, [formData.class, formData.section, showModal, editStudent]);
 
+  // Auto-populate roll number for new student when capacity info loads
+  useEffect(() => {
+    if (!editStudent && showModal && capacityInfo && !capacityInfo.isFull) {
+      setFormData(fd => ({ ...fd, rollNo: String((capacityInfo.enrolled ?? 0) + 1) }));
+    }
+  }, [capacityInfo]);
+
   const photoRef    = useRef(null);
   const idProofRef  = useRef(null);
   const tcRef       = useRef(null);
@@ -341,6 +348,15 @@ export default function Students() {
   const validate = () => {
     const e = {};
     if (!formData.name.trim())            e.name        = 'Student name is required';
+    if (!formData.rollNo.toString().trim()) {
+      e.rollNo = 'Roll number is required';
+    } else if (!/^\d+$/.test(formData.rollNo.toString().trim())) {
+      e.rollNo = 'Roll number must be a number';
+    } else if (capacityInfo?.capacity) {
+      const rn = parseInt(formData.rollNo);
+      if (rn < 1 || rn > capacityInfo.capacity)
+        e.rollNo = `Roll number must be between 1 and ${capacityInfo.capacity}`;
+    }
     if (!formData.class.trim())           e.class       = 'Class is required';
     if (!formData.fatherName.trim())      e.fatherName  = "Father's name is required";
     if (!formData.motherName.trim())      e.motherName  = "Mother's name is required";
@@ -427,6 +443,7 @@ export default function Students() {
     setSaving(true);
     const payload = {
       name:             formData.name,
+      rollNo:           formData.rollNo,
       admissionNumber:  formData.admissionNumber,
       class:            formData.class,
       section:          formData.section,
@@ -739,6 +756,19 @@ export default function Students() {
                       {errors.name && <div className="invalid-feedback">{errors.name}</div>}
                     </div>
                     <div className="col-md-4">
+                      <label className="form-label fw-medium small">
+                        Roll Number *
+                        {capacityInfo?.capacity && <span style={{ color: '#a0aec0', fontWeight: 400, marginLeft: 4 }}>(1–{capacityInfo.capacity})</span>}
+                      </label>
+                      <input type="number" className={`form-control form-control-sm ${errors.rollNo ? 'is-invalid' : ''}`}
+                        placeholder={capacityInfo?.capacity ? `1 to ${capacityInfo.capacity}` : 'e.g., 1'}
+                        value={formData.rollNo}
+                        min="1"
+                        max={capacityInfo?.capacity || undefined}
+                        onChange={set('rollNo')} />
+                      {errors.rollNo && <div className="invalid-feedback">{errors.rollNo}</div>}
+                    </div>
+                    <div className="col-md-4">
                       <label className="form-label fw-medium small">Admission Number</label>
                       <input type="text" className="form-control form-control-sm"
                         placeholder="e.g., ADM2024001" value={formData.admissionNumber}
@@ -749,7 +779,7 @@ export default function Students() {
                       <select
                         className={`form-select form-select-sm ${errors.class ? 'is-invalid' : ''}`}
                         value={formData.class}
-                        onChange={e => setFormData(fd => ({ ...fd, class: e.target.value, section: '' }))}
+                        onChange={e => setFormData(fd => ({ ...fd, class: e.target.value, section: '', rollNo: '' }))}
                       >
                         <option value="">Select Class</option>
                         {classNames.length === 0

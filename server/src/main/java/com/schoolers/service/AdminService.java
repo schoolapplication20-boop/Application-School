@@ -115,27 +115,6 @@ public class AdminService {
     }
 
     /**
-     * Auto-assigns the next sequential roll number for a class/section.
-     * Finds the highest existing numeric roll number and returns max+1.
-     * Starts from 1 if no students exist in the class.
-     */
-    private String autoAssignRollNumber(Long schoolId, String className, String section) {
-        List<Student> classStudents = schoolId != null
-                ? studentRepository.findBySchoolIdAndClassNameIgnoreCaseAndSectionIgnoreCase(
-                        schoolId, className, section != null ? section : "")
-                : studentRepository.findByClassNameIgnoreCaseAndSectionIgnoreCase(
-                        className, section != null ? section : "");
-        int maxRoll = 0;
-        for (Student s : classStudents) {
-            try {
-                int roll = Integer.parseInt(s.getRollNumber().trim());
-                if (roll > maxRoll) maxRoll = roll;
-            } catch (NumberFormatException | NullPointerException ignored) {}
-        }
-        return String.valueOf(maxRoll + 1);
-    }
-
-    /**
      * Username = admission number (lowercase, alphanumeric only).
      * Falls back to roll number, then a random suffix if neither is available.
      */
@@ -276,6 +255,12 @@ public class AdminService {
 
     @Transactional
     public ApiResponse<Map<String, Object>> createStudent(Map<String, Object> body) {
+        // Accept both camelCase frontend fields and snake_case backend fields
+        String rollNumber = str(body, "rollNumber", str(body, "rollNo", null));
+        if (rollNumber == null || rollNumber.isBlank())
+            return ApiResponse.error("Roll number is required");
+        rollNumber = rollNumber.trim();
+
         String name = str(body, "name", null);
         if (name == null || name.isBlank()) return ApiResponse.<Map<String, Object>>error("Student name is required");
 
@@ -286,15 +271,32 @@ public class AdminService {
         String className = resolveClassName(str(body, "className", str(body, "class", "")));
         String section   = normalizeSection(str(body, "section", ""));
 
-        // Auto-assign roll number as next sequential number for this class/section
-        String rollNumber = autoAssignRollNumber(schoolId, className, section);
+        // Roll-number uniqueness is scoped to (school, class, section) only.
+        // Without a schoolId there is no meaningful scope — skip the check.
+        if (schoolId != null &&
+                studentRepository.findDuplicateInClassAndSchool(schoolId, rollNumber, className, section).isPresent())
+            return ApiResponse.<Map<String, Object>>error(
+                "Roll number " + rollNumber + " already exists in " +
+                (className.isBlank() ? "this class" : className) +
+                (section.isBlank() ? "" : " – " + section) +
+                " for this school.");
 
-        // Capacity check: reject if the class is already full
+        // Validate roll number range and capacity
         if (schoolId != null && !className.isBlank()) {
             ClassRoom targetRoom = classRoomRepository
                     .findBySchoolIdAndNameIgnoreCaseAndSectionIgnoreCase(schoolId, className, section != null ? section : "")
                     .orElse(null);
             if (targetRoom != null && targetRoom.getCapacity() != null && targetRoom.getCapacity() > 0) {
+                // Roll number must be within 1 to capacity
+                try {
+                    int rollInt = Integer.parseInt(rollNumber);
+                    if (rollInt < 1 || rollInt > targetRoom.getCapacity()) {
+                        return ApiResponse.<Map<String, Object>>error(
+                            "Roll number must be between 1 and " + targetRoom.getCapacity()
+                            + " (class capacity is " + targetRoom.getCapacity() + ").");
+                    }
+                } catch (NumberFormatException ignored) {}
+                // Reject if class is already full
                 long enrolled = studentRepository.countEnrolledForCapacity(
                         schoolId, className, section != null ? section : "");
                 if (enrolled >= targetRoom.getCapacity()) {
@@ -370,7 +372,8 @@ public class AdminService {
             String lowerDetail = detail.toLowerCase();
             String msg;
             if (lowerDetail.contains("roll_number") || lowerDetail.contains("uq_roll_class_section")) {
-                msg = "A roll number conflict occurred. Please try again.";
+                msg = "Roll number " + rollNumber + " already exists in " + className
+                        + (section.isBlank() ? "" : " – " + section) + " for this school.";
             } else if (lowerDetail.contains("uk_users_email") || lowerDetail.contains("(email)")) {
                 msg = "A duplicate email was detected. Please try again.";
             } else if (lowerDetail.contains("uk_users_mobile") || lowerDetail.contains("(mobile)")) {
