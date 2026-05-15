@@ -288,7 +288,7 @@ public class AuthService {
                 if (user == null) return ApiResponse.error("Not registered. Please contact admin.");
             }
 
-            String otp = String.format("%04d", new SecureRandom().nextInt(10000));
+            String otp = String.format("%06d", 100000 + new SecureRandom().nextInt(900000));
             LocalDateTime expiry = LocalDateTime.now(ZoneOffset.UTC).plusMinutes(5);
             user.setResetOtp(otp);
             user.setOtpExpiry(expiry);
@@ -335,7 +335,8 @@ public class AuthService {
         if (expiry != null && LocalDateTime.now(ZoneOffset.UTC).isAfter(expiry))
             return ApiResponse.error("OTP has expired. Please request a new one.");
 
-        user.setResetOtp(null);
+        // Mark OTP as verified — resetPassword() checks for this sentinel before allowing reset
+        user.setResetOtp("VERIFIED");
         user.setOtpExpiry(null);
         userRepository.save(user);
 
@@ -356,6 +357,9 @@ public class AuthService {
             user = userRepository.findByMobile(identifier).orElse(null);
             if (user == null) return ApiResponse.error("Mobile number not registered.");
         }
+
+        if (!"VERIFIED".equals(user.getResetOtp()))
+            return ApiResponse.error("OTP verification required before resetting password.");
 
         user.setPassword(passwordEncoder.encode(newPassword));
         user.setResetOtp(null);

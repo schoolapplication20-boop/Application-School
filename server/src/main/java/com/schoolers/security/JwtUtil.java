@@ -22,7 +22,10 @@ public class JwtUtil {
     private long expirationMs;
 
     private SecretKey getSigningKey() {
-        return Keys.hmacShaKeyFor(secret.getBytes());
+        byte[] keyBytes = secret.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        if (keyBytes.length < 32)
+            throw new IllegalStateException("JWT secret must be at least 32 bytes (256 bits). Configure a stronger secret via jwt.secret property.");
+        return Keys.hmacShaKeyFor(keyBytes);
     }
 
     public String generateToken(UserDetails userDetails) {
@@ -87,7 +90,8 @@ public class JwtUtil {
     }
 
     private boolean isTokenExpired(String token) {
-        return extractExpiration(token).before(new Date());
+        Date expiry = extractExpiration(token);
+        return expiry == null || expiry.before(new Date());
     }
 
     public boolean validateToken(String token, UserDetails userDetails) {

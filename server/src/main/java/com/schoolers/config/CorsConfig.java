@@ -16,7 +16,9 @@ public class CorsConfig {
     public CorsFilter corsFilter() {
         CorsConfiguration corsConfiguration = new CorsConfiguration();
 
-        // Allow React dev server and production origins
+        // Allow React dev server and production origins.
+        // Do NOT use wildcard subdomains (*.vercel.app, *.onrender.com) — they allow any
+        // tenant on those platforms to make credentialed requests to this backend.
         corsConfiguration.setAllowedOriginPatterns(List.of(
             "http://localhost:3000",
             "http://localhost:3001",
@@ -24,10 +26,10 @@ public class CorsConfig {
             "http://127.0.0.1:3000",
             "http://127.0.0.1:5173",
             "https://application-school.vercel.app",
-            "https://*.vercel.app",
-            "https://*.onrender.com",
             "https://my-skoolz.com",
             "https://www.my-skoolz.com"
+            // Add your specific Render backend preview URL here if needed:
+            // "https://my-skoolz-backend.onrender.com"
         ));
 
         // Allow all HTTP methods

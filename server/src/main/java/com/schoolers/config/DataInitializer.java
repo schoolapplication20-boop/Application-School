@@ -2,6 +2,7 @@ package com.schoolers.config;
 
 import com.schoolers.model.*;
 import com.schoolers.repository.*;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -12,6 +13,15 @@ import java.util.List;
 
 @Configuration
 public class DataInitializer {
+
+    @Value("${app.owner.email:superadmin@schoolers.com}")
+    private String ownerEmail;
+
+    @Value("${app.owner.password:SuperAdmin@123}")
+    private String ownerPassword;
+
+    @Value("${app.owner.mobile:9000000000}")
+    private String ownerMobile;
 
     @Bean
     @Order(2)
@@ -35,7 +45,7 @@ public class DataInitializer {
             // DataInitializer ONLY seeds APPLICATION_OWNER.
             // SUPER_ADMINs are created at runtime by APPLICATION_OWNER via the platform dashboard.
             // ──────────────────────────────────────────────────────────────────────
-            userRepo.findByEmailIgnoreCase("superadmin@schoolers.com").ifPresentOrElse(
+            userRepo.findByEmailIgnoreCase(ownerEmail).ifPresentOrElse(
                 existing -> {
                     boolean changed = false;
                     if (!Boolean.TRUE.equals(existing.getIsActive())) {
@@ -68,15 +78,15 @@ public class DataInitializer {
                 () -> {
                     userRepo.save(User.builder()
                             .name("Application Owner")
-                            .email("superadmin@schoolers.com")
-                            .mobile("9000000000")
-                            .password(passwordEncoder.encode("SuperAdmin@123"))
+                            .email(ownerEmail)
+                            .mobile(ownerMobile)
+                            .password(passwordEncoder.encode(ownerPassword))
                             .role(User.Role.APPLICATION_OWNER)
-                            .schoolId(null)   // platform-level — no school affiliation
+                            .schoolId(null)
                             .isActive(true)
                             .firstLogin(false)
                             .build());
-                    System.out.println("  [DataInitializer] APPLICATION_OWNER created -> superadmin@schoolers.com / SuperAdmin@123");
+                    System.out.println("  [DataInitializer] APPLICATION_OWNER created -> " + ownerEmail);
                 }
             );
 
