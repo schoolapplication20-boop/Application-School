@@ -13,9 +13,9 @@ const values = [
 
 const timeline = [
   { year: '2022', title: 'The Idea', desc: 'Frustrated by outdated school software, our founders set out to build something modern, affordable, and actually useful.' },
-  { year: '2023', title: 'First Schools Onboarded', desc: 'After 12 months of building, we launched with our first 10 pilot schools. The feedback was overwhelming.' },
-  { year: '2024', title: 'Rapid Growth', desc: 'Word spread fast. We crossed 100+ schools and added key modules — transport, examinations, and parent communication.' },
-  { year: '2025', title: 'Scale & Impact', desc: 'Today, My-Skoolz serves 500+ schools and over 1 lakh students across India. We\'re just getting started.' },
+  { year: '2023', title: 'Building the Foundation', desc: 'After 12 months of research and development, we launched our platform and began working with our first pilot schools.' },
+  { year: '2024', title: 'Growing the Platform', desc: 'We added core modules — transport tracking, examinations, parent communication — based on direct feedback from school administrators.' },
+  { year: '2025', title: 'Expanding Across India', desc: 'My-Skoolz is actively onboarding schools across India. We\'re building fast and improving with every school we serve.' },
 ];
 
 const team = [
@@ -74,30 +74,6 @@ const AboutUsPage = () => {
         </div>
       </section>
 
-      {/* ── Stats ── */}
-      <section className="mkt-about-stats">
-        <div className="mkt-container">
-          <div className="mkt-stats__grid">
-            <div className="mkt-stats__item">
-              <div className="mkt-stats__value" style={{ color: 'white' }}>500+</div>
-              <div className="mkt-stats__label" style={{ color: 'rgba(255,255,255,.7)' }}>Schools Across India</div>
-            </div>
-            <div className="mkt-stats__item">
-              <div className="mkt-stats__value" style={{ color: 'white' }}>1 Lakh+</div>
-              <div className="mkt-stats__label" style={{ color: 'rgba(255,255,255,.7)' }}>Students Managed Daily</div>
-            </div>
-            <div className="mkt-stats__item">
-              <div className="mkt-stats__value" style={{ color: 'white' }}>98%</div>
-              <div className="mkt-stats__label" style={{ color: 'rgba(255,255,255,.7)' }}>Customer Satisfaction</div>
-            </div>
-            <div className="mkt-stats__item">
-              <div className="mkt-stats__value" style={{ color: 'white' }}>3 Years</div>
-              <div className="mkt-stats__label" style={{ color: 'rgba(255,255,255,.7)' }}>Building & Improving</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* ── Values ── */}
       <section style={{ padding: '80px 0', background: 'var(--bg)' }}>
         <div className="mkt-container">
@@ -123,7 +99,7 @@ const AboutUsPage = () => {
         <div className="mkt-container">
           <div className="mkt-section-header">
             <span className="mkt-section-tag">Our Journey</span>
-            <h2>From Idea to 500+ Schools</h2>
+            <h2>Our Journey So Far</h2>
           </div>
           <div className="mkt-timeline">
             {timeline.map((t, i) => (

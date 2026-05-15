@@ -52,11 +52,6 @@ const steps = [
   { step: '03', icon: '🚀', title: 'Go Live & Grow', desc: 'Start managing smarter from day one, with dedicated support from our customer success team.' },
 ];
 
-const testimonials = [
-  { quote: 'My-Skoolz has completely changed how we manage day-to-day operations. The fee collection alone saved us hours every week.', name: 'Priya Sharma', role: 'Principal, Sunrise Public School', avatar: 'PS', color: '#2563EB' },
-  { quote: 'The parent communication and attendance tracking features are outstanding. Parents love the transparency it brings to school life.', name: 'Ravi Menon', role: 'Administrator, Greenwood Academy', avatar: 'RM', color: '#7C3AED' },
-  { quote: 'Implementation was smooth and the support team is always available. Best investment we made for our school this year.', name: 'Anita Joshi', role: 'Director, St. Mary\'s School', avatar: 'AJ', color: '#059669' },
-];
 
 const HomePage = () => (
   <div className="mkt-page">
@@ -290,33 +285,6 @@ const HomePage = () => (
               <div className="mkt-how__step-icon">{s.icon}</div>
               <h3>{s.title}</h3>
               <p>{s.desc}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-
-    {/* ══ TESTIMONIALS ══ */}
-    <section className="mkt-section mkt-section--white">
-      <div className="mkt-container">
-        <div className="mkt-section-header">
-          <span className="mkt-section-tag">Testimonials</span>
-          <h2>What School Leaders Say</h2>
-          <p>Real feedback from administrators, principals, and educators who use My-Skoolz every day.</p>
-        </div>
-        <div className="mkt-testimonials__grid">
-          {testimonials.map((t) => (
-            <div key={t.name} className="mkt-testimonial-card">
-              <div className="mkt-testimonial-card__top-accent" style={{ background: t.color }} />
-              <div className="mkt-testimonial-card__stars">★★★★★</div>
-              <p className="mkt-testimonial-card__quote">"{t.quote}"</p>
-              <div className="mkt-testimonial-card__author">
-                <div className="mkt-testimonial-card__avatar" style={{ background: t.color }}>{t.avatar}</div>
-                <div>
-                  <div className="mkt-testimonial-card__name">{t.name}</div>
-                  <div className="mkt-testimonial-card__role">{t.role}</div>
-                </div>
-              </div>
             </div>
           ))}
         </div>

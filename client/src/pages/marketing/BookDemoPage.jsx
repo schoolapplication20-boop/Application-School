@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import api from '../../services/api';
+import axios from 'axios';
 import './marketing.css';
+
+const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 const BookDemoPage = () => {
   const [formData, setFormData] = useState({
@@ -32,27 +34,29 @@ const BookDemoPage = () => {
     setSuccess(false);
 
     try {
-      // Send demo booking request to backend
-      const response = await api.post('/api/marketing/book-demo', formData);
-      
-      if (response.status === 200) {
-        setSuccess(true);
-        setFormData({
-          schoolName: '',
-          contactPerson: '',
-          email: '',
-          phone: '',
-          schoolType: 'primary',
-          studentCount: '',
-          message: ''
-        });
-        
-        // Reset success message after 5 seconds
-        setTimeout(() => setSuccess(false), 5000);
-      }
+      await axios.post(`${BACKEND_URL}/api/marketing/book-demo`, formData, {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 90000,
+      });
+      setSuccess(true);
+      setFormData({
+        schoolName: '',
+        contactPerson: '',
+        email: '',
+        phone: '',
+        schoolType: 'primary',
+        studentCount: '',
+        message: ''
+      });
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to book demo. Please try again.');
-      console.error('Demo booking error:', err);
+      const msg = err.response?.data?.message || err.response?.data?.error;
+      if (msg) {
+        setError(msg);
+      } else if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
+        setError('The server is starting up — please wait a moment and try again.');
+      } else {
+        setError('Unable to reach the server. Please email us directly at navaneeswar1861@gmail.com to book your demo.');
+      }
     } finally {
       setLoading(false);
     }
@@ -104,15 +108,15 @@ const BookDemoPage = () => {
           <div className="demo-form-wrapper">
             <h2>Get Started</h2>
             <form onSubmit={handleSubmit} className="demo-form">
-              {success && (
-                <div className="success-message">
-                  ✓ Demo booking submitted successfully! We'll contact you soon.
-                </div>
-              )}
-
               {error && (
                 <div className="error-message">
                   ✗ {error}
+                </div>
+              )}
+
+              {success && (
+                <div className="success-message">
+                  ✓ Demo booking submitted successfully! We'll contact you within 24 hours.
                 </div>
               )}
 
