@@ -4,6 +4,7 @@ import com.schoolers.dto.ApiResponse;
 import com.schoolers.dto.DemoBookingRequest;
 import com.schoolers.dto.JobApplicationRequest;
 import com.schoolers.service.EmailService;
+import com.schoolers.service.WhatsAppService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -17,13 +18,14 @@ public class MarketingController {
 
     private static final Logger log = Logger.getLogger(MarketingController.class.getName());
 
-    @Autowired
-    private EmailService emailService;
+    @Autowired private EmailService    emailService;
+    @Autowired private WhatsAppService whatsAppService;
 
     @PostMapping("/book-demo")
     public ResponseEntity<ApiResponse<Void>> bookDemo(@Valid @RequestBody DemoBookingRequest request) {
         try {
             emailService.sendDemoBookingNotification(request);
+            whatsAppService.sendDemoBookingAlert(request);
             return ResponseEntity.ok(ApiResponse.success("Demo booking submitted! We'll contact you within 24 hours.", null));
         } catch (Exception e) {
             log.severe("[MarketingController] bookDemo failed: " + e.getMessage());
@@ -36,6 +38,7 @@ public class MarketingController {
     public ResponseEntity<ApiResponse<Void>> applyJob(@Valid @RequestBody JobApplicationRequest request) {
         try {
             emailService.sendJobApplicationNotification(request);
+            whatsAppService.sendJobApplicationAlert(request);
             return ResponseEntity.ok(ApiResponse.success("Application submitted! We'll review and get back to you.", null));
         } catch (Exception e) {
             log.severe("[MarketingController] applyJob failed: " + e.getMessage());
