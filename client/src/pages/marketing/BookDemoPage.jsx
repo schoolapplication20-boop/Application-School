@@ -1,0 +1,235 @@
+import React, { useState } from 'react';
+import api from '../../services/api';
+import './marketing.css';
+
+const BookDemoPage = () => {
+  const [formData, setFormData] = useState({
+    schoolName: '',
+    contactPerson: '',
+    email: '',
+    phone: '',
+    schoolType: 'primary',
+    studentCount: '',
+    message: ''
+  });
+
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setSuccess(false);
+
+    try {
+      // Send demo booking request to backend
+      const response = await api.post('/api/marketing/book-demo', formData);
+      
+      if (response.status === 200) {
+        setSuccess(true);
+        setFormData({
+          schoolName: '',
+          contactPerson: '',
+          email: '',
+          phone: '',
+          schoolType: 'primary',
+          studentCount: '',
+          message: ''
+        });
+        
+        // Reset success message after 5 seconds
+        setTimeout(() => setSuccess(false), 5000);
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to book demo. Please try again.');
+      console.error('Demo booking error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="marketing-page">
+      <section className="demo-hero">
+        <h1>Book Your Free Demo</h1>
+        <p>Experience My-Skoolz with your school data</p>
+      </section>
+
+      <section className="demo-section">
+        <div className="demo-container">
+          <div className="demo-info">
+            <h2>Why Book a Demo?</h2>
+            <div className="demo-benefits">
+              <div className="benefit">
+                <span className="benefit-icon">✓</span>
+                <div>
+                  <h3>Personalized Walkthrough</h3>
+                  <p>See how My-Skoolz works for your specific school</p>
+                </div>
+              </div>
+              <div className="benefit">
+                <span className="benefit-icon">✓</span>
+                <div>
+                  <h3>No Credit Card Required</h3>
+                  <p>Completely free with no commitment</p>
+                </div>
+              </div>
+              <div className="benefit">
+                <span className="benefit-icon">✓</span>
+                <div>
+                  <h3>Expert Guidance</h3>
+                  <p>Our team will help you understand all features</p>
+                </div>
+              </div>
+              <div className="benefit">
+                <span className="benefit-icon">✓</span>
+                <div>
+                  <h3>Quick Setup</h3>
+                  <p>Start using My-Skoolz immediately after demo</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="demo-form-wrapper">
+            <h2>Get Started</h2>
+            <form onSubmit={handleSubmit} className="demo-form">
+              {success && (
+                <div className="success-message">
+                  ✓ Demo booking submitted successfully! We'll contact you soon.
+                </div>
+              )}
+
+              {error && (
+                <div className="error-message">
+                  ✗ {error}
+                </div>
+              )}
+
+              <div className="form-group">
+                <label htmlFor="schoolName">School Name *</label>
+                <input
+                  type="text"
+                  id="schoolName"
+                  name="schoolName"
+                  value={formData.schoolName}
+                  onChange={handleChange}
+                  required
+                  placeholder="Enter your school name"
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="contactPerson">Contact Person *</label>
+                <input
+                  type="text"
+                  id="contactPerson"
+                  name="contactPerson"
+                  value={formData.contactPerson}
+                  onChange={handleChange}
+                  required
+                  placeholder="Your full name"
+                />
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="email">Email *</label>
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    required
+                    placeholder="your@email.com"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="phone">Phone Number *</label>
+                  <input
+                    type="tel"
+                    id="phone"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    required
+                    placeholder="+91 XXXXXXXXXX"
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="schoolType">School Type *</label>
+                  <select
+                    id="schoolType"
+                    name="schoolType"
+                    value={formData.schoolType}
+                    onChange={handleChange}
+                    required
+                  >
+                    <option value="primary">Primary</option>
+                    <option value="secondary">Secondary</option>
+                    <option value="senior">Senior Secondary</option>
+                    <option value="college">College</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="studentCount">Number of Students *</label>
+                  <input
+                    type="number"
+                    id="studentCount"
+                    name="studentCount"
+                    value={formData.studentCount}
+                    onChange={handleChange}
+                    required
+                    placeholder="e.g., 500"
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="message">Tell us about your school (Optional)</label>
+                <textarea
+                  id="message"
+                  name="message"
+                  value={formData.message}
+                  onChange={handleChange}
+                  rows="4"
+                  placeholder="Any specific features or concerns you'd like to discuss?"
+                ></textarea>
+              </div>
+
+              <button 
+                type="submit" 
+                className="submit-button"
+                disabled={loading}
+              >
+                {loading ? 'Booking Demo...' : 'Book My Free Demo'}
+              </button>
+
+              <p className="form-note">
+                We'll send you a personalized demo link via email within 24 hours.
+              </p>
+            </form>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+};
+
+export default BookDemoPage;

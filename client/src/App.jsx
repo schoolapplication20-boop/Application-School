@@ -4,6 +4,14 @@ import { AuthProvider } from './context/AuthContext';
 import { SchoolProvider } from './context/SchoolContext';
 import { NotificationProvider } from './context/NotificationContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import MarketingLayout from './components/MarketingLayout';
+
+// Marketing Pages
+import HomePage from './pages/marketing/HomePage';
+import SolutionsPage from './pages/marketing/SolutionsPage';
+import ContactUsPage from './pages/marketing/ContactUsPage';
+import CareersPage from './pages/marketing/CareersPage';
+import BookDemoPage from './pages/marketing/BookDemoPage';
 
 // Auth Pages
 import Login from './pages/auth/Login';
@@ -70,6 +78,33 @@ function App() {
       <NotificationProvider>
         <Router>
           <Routes>
+            {/* Marketing Routes - Public */}
+            <Route path="/marketing/home" element={
+              <MarketingLayout>
+                <HomePage />
+              </MarketingLayout>
+            } />
+            <Route path="/marketing/solutions" element={
+              <MarketingLayout>
+                <SolutionsPage />
+              </MarketingLayout>
+            } />
+            <Route path="/marketing/contact" element={
+              <MarketingLayout>
+                <ContactUsPage />
+              </MarketingLayout>
+            } />
+            <Route path="/marketing/careers" element={
+              <MarketingLayout>
+                <CareersPage />
+              </MarketingLayout>
+            } />
+            <Route path="/marketing/demo" element={
+              <MarketingLayout>
+                <BookDemoPage />
+              </MarketingLayout>
+            } />
+            
             <Route path="/" element={<Navigate to="/login" replace />} />
 
             {/* Auth Routes */}
