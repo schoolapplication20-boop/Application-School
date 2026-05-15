@@ -22,6 +22,7 @@ const adminNavItems = [
   { path: '/admin/timetable',          icon: 'schedule',                label: 'Timetable',          permKey: 'timetable' },
   { path: '/admin/examination',        icon: 'verified',                label: 'Exam & Certificates', permKey: 'examination' },
   { path: '/admin/messages',            icon: 'campaign',                label: 'Messages',            permKey: null },
+  { path: '/admin/settings',            icon: 'settings',                label: 'School Settings',      permKey: null },
 ];
 
 // SUPER_ADMIN-only items (school management tools)
@@ -70,7 +71,7 @@ const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
   const [uploading,  setUploading]          = useState(false);
   const logoInputRef                        = useRef(null);
 
-  const canChangeLogo = user?.role === 'SUPER_ADMIN' && school?.schoolId != null;
+  const canChangeLogo = (user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN') && school?.schoolId != null;
 
   const handleLogoFileChange = async (e) => {
     const file = e.target.files?.[0];

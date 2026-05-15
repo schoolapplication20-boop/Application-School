@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { loginWithEmail as apiLoginWithEmail } from '../../services/authService';
+import Logo from '../../components/Logo';
 import '../../styles/auth.css';
 
 const OwnerLogin = () => {
@@ -52,7 +53,7 @@ const OwnerLogin = () => {
       {/* Left Panel */}
       <div className="auth-left" style={{ background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)' }}>
         <div className="auth-brand">
-          <span className="brand-icon" style={{ fontSize: 28 }}>⚙️</span>
+          <Logo size={40} />
           <span className="brand-name">My-Skoolz</span>
         </div>
         <div className="auth-tagline">
@@ -66,8 +67,8 @@ const OwnerLogin = () => {
         </div>
         <div className="auth-illustration">
           <div className="auth-illustration-placeholder">
-            <span style={{ fontSize: '80px' }}>🔐</span>
-            <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '15px', textAlign: 'center', marginTop: '8px' }}>
+            <Logo size={90} />
+            <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '15px', textAlign: 'center', marginTop: '14px' }}>
               Restricted — Authorized Personnel Only
             </p>
           </div>
@@ -81,7 +82,7 @@ const OwnerLogin = () => {
           {/* Header */}
           <div className="auth-form-header">
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-              <span style={{ fontSize: '28px' }}>⚙️</span>
+              <Logo size={36} />
               <span style={{ fontSize: '22px', fontWeight: 800, color: '#1e293b', fontFamily: 'Poppins, sans-serif' }}>
                 My-Skoolz
               </span>

@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useSchool } from '../../context/SchoolContext';
 import { loginWithEmail as apiLoginWithEmail } from '../../services/authService';
+import Logo from '../../components/Logo';
 import '../../styles/auth.css';
 
 const ALL_ROLES = [
@@ -114,11 +115,11 @@ const Login = () => {
       <div className="auth-left" style={{ background: `linear-gradient(135deg, ${primary} 0%, ${secondary} 100%)` }}>
         <div className="auth-brand">
           {school?.logoUrl ? (
-            <img src={`${school.logoUrl}`} alt={school.name}
+            <img src={school.logoUrl} alt={school.name}
               style={{ width: 40, height: 40, objectFit: 'contain', borderRadius: 8, background: 'rgba(255,255,255,0.2)', padding: 4 }}
               onError={e => { e.target.style.display = 'none'; }} />
           ) : (
-            <span className="brand-icon">🏆</span>
+            <Logo size={40} />
           )}
           <span className="brand-name">{school?.name || 'My-Skoolz'}</span>
         </div>
@@ -134,13 +135,13 @@ const Login = () => {
         <div className="auth-illustration">
           <div className="auth-illustration-placeholder">
             {school?.logoUrl ? (
-              <img src={`${school.logoUrl}`} alt={school.name}
-                style={{ width: 100, height: 100, objectFit: 'contain', marginBottom: 8, borderRadius: 12, background: 'rgba(255,255,255,0.15)', padding: 8 }}
-                onError={e => { e.target.replaceWith(Object.assign(document.createElement('span'), { style: 'font-size:80px', textContent: '🎓' })); }} />
+              <img src={school.logoUrl} alt={school.name}
+                style={{ width: 100, height: 100, objectFit: 'contain', marginBottom: 8, borderRadius: 16, background: 'rgba(255,255,255,0.15)', padding: 10 }}
+                onError={e => { e.target.style.display = 'none'; }} />
             ) : (
-              <span style={{ fontSize: '80px' }}>🎓</span>
+              <Logo size={90} />
             )}
-            <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '15px', textAlign: 'center', marginTop: '8px' }}>
+            <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '15px', textAlign: 'center', marginTop: '14px' }}>
               {school?.name ? `${school.name} Portal` : 'Smart School Management'}
             </p>
           </div>
@@ -155,11 +156,11 @@ const Login = () => {
           <div className="auth-form-header">
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
               {school?.logoUrl ? (
-                <img src={`${school.logoUrl}`} alt={school.name}
+                <img src={school.logoUrl} alt={school.name}
                   style={{ width: 36, height: 36, objectFit: 'contain', borderRadius: 8 }}
-                  onError={e => e.target.style.display = 'none'} />
+                  onError={e => { e.target.style.display = 'none'; }} />
               ) : (
-                <span style={{ fontSize: '28px' }}>🏆</span>
+                <Logo size={36} />
               )}
               <span style={{ fontSize: '22px', fontWeight: 800, color: primary, fontFamily: 'Poppins, sans-serif' }}>
                 {school?.name || 'My-Skoolz'}

@@ -71,6 +71,9 @@ import StudentExams          from './pages/student/StudentExams';
 // Admin Messages
 import AdminMessages         from './pages/admin/AdminMessages';
 
+// School Settings
+import SchoolSettings        from './pages/admin/SchoolSettings';
+
 
 function App() {
   return (
@@ -187,6 +190,9 @@ function App() {
 
             {/* Admin Messages */}
             <Route path="/admin/messages"     element={<ProtectedRoute allowedRoles={['ADMIN','SUPER_ADMIN']}><AdminMessages /></ProtectedRoute>} />
+
+            {/* School Settings */}
+            <Route path="/admin/settings"     element={<ProtectedRoute allowedRoles={['ADMIN','SUPER_ADMIN']}><SchoolSettings /></ProtectedRoute>} />
 
             {/* 404 */}
             <Route path="*" element={
