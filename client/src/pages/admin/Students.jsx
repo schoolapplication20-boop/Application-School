@@ -125,7 +125,7 @@ const mockStudents = [
 ];
 
 const EMPTY_FORM = {
-  name: '', rollNo: '', admissionNumber: '', class: '', section: '', dob: '', status: 'Active', photo: null,
+  name: '', admissionNumber: '', class: '', section: '', dob: '', status: 'Active', photo: null,
   fatherName: '', fatherPhone: '',
   motherName: '', motherPhone: '',
   guardianName: '', guardianPhone: '',
@@ -341,7 +341,6 @@ export default function Students() {
   const validate = () => {
     const e = {};
     if (!formData.name.trim())            e.name        = 'Student name is required';
-    if (!formData.rollNo.trim())          e.rollNo      = 'Roll number is required';
     if (!formData.class.trim())           e.class       = 'Class is required';
     if (!formData.fatherName.trim())      e.fatherName  = "Father's name is required";
     if (!formData.motherName.trim())      e.motherName  = "Mother's name is required";
@@ -428,7 +427,6 @@ export default function Students() {
     setSaving(true);
     const payload = {
       name:             formData.name,
-      rollNo:           formData.rollNo,
       admissionNumber:  formData.admissionNumber,
       class:            formData.class,
       section:          formData.section,
@@ -739,13 +737,6 @@ export default function Students() {
                         placeholder="Enter student's full name" value={formData.name}
                         onChange={set('name')} />
                       {errors.name && <div className="invalid-feedback">{errors.name}</div>}
-                    </div>
-                    <div className="col-md-4">
-                      <label className="form-label fw-medium small">Roll Number *</label>
-                      <input type="text" className={`form-control form-control-sm ${errors.rollNo ? 'is-invalid' : ''}`}
-                        placeholder="e.g., S001" value={formData.rollNo}
-                        onChange={set('rollNo')} />
-                      {errors.rollNo && <div className="invalid-feedback">{errors.rollNo}</div>}
                     </div>
                     <div className="col-md-4">
                       <label className="form-label fw-medium small">Admission Number</label>
