@@ -1,135 +1,134 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import '../pages/marketing/marketing.css';
 
 const MarketingLayout = ({ children }) => {
-  const [showSolutionsDropdown, setShowSolutionsDropdown] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
 
-  const solutions = [
-    { name: 'Teacher Management', path: '/marketing/solutions#teachers' },
-    { name: 'Leave Management', path: '/marketing/solutions#leaves' },
-    { name: 'Time Table', path: '/marketing/solutions#timetable' },
-    { name: 'Transportation', path: '/marketing/solutions#transport' },
-    { name: 'Fee Management', path: '/marketing/solutions#fees' },
-    { name: 'Expense Management', path: '/marketing/solutions#expenses' }
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', onScroll);
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location]);
+
+  const navLinks = [
+    { label: 'Home', path: '/marketing/home' },
+    { label: 'Solutions', path: '/marketing/solutions' },
+    { label: 'Contact', path: '/marketing/contact' },
+    { label: 'Careers', path: '/marketing/careers' },
   ];
 
   return (
-    <div className="marketing-layout">
-      <nav className="marketing-navbar">
-        <div className="navbar-container">
-          <Link to="/marketing/home" className="navbar-brand">
-            <span className="brand-icon">🏆</span>
-            <span className="brand-name">My-Skoolz</span>
+    <div className="mkt-layout">
+      <nav className={`mkt-nav ${scrolled ? 'mkt-nav--scrolled' : ''}`}>
+        <div className="mkt-nav__inner">
+          <Link to="/" className="mkt-nav__logo">
+            <div className="mkt-nav__logo-icon">M</div>
+            <span className="mkt-nav__logo-text">My-Skoolz</span>
           </Link>
 
-          <ul className="navbar-menu">
-            <li className="nav-item">
-              <Link 
-                to="/marketing/home"
-                className={`nav-link ${location.pathname === '/marketing/home' ? 'active' : ''}`}
-              >
-                Home
-              </Link>
-            </li>
-
-            <li className="nav-item dropdown">
-              <button 
-                className={`nav-link dropdown-toggle ${location.pathname === '/marketing/solutions' ? 'active' : ''}`}
-                onMouseEnter={() => setShowSolutionsDropdown(true)}
-                onMouseLeave={() => setShowSolutionsDropdown(false)}
-              >
-                Solutions ▼
-              </button>
-              {showSolutionsDropdown && (
-                <div 
-                  className="dropdown-menu"
-                  onMouseEnter={() => setShowSolutionsDropdown(true)}
-                  onMouseLeave={() => setShowSolutionsDropdown(false)}
+          <ul className="mkt-nav__links">
+            {navLinks.map(({ label, path }) => (
+              <li key={path}>
+                <Link
+                  to={path}
+                  className={`mkt-nav__link ${location.pathname === path ? 'mkt-nav__link--active' : ''}`}
                 >
-                  {solutions.map((solution, idx) => (
-                    <Link 
-                      key={idx}
-                      to={solution.path}
-                      className="dropdown-item"
-                    >
-                      {solution.name}
-                    </Link>
-                  ))}
-                  <Link to="/marketing/solutions" className="dropdown-item view-all">
-                    View All Solutions →
-                  </Link>
-                </div>
-              )}
-            </li>
-
-            <li className="nav-item">
-              <Link 
-                to="/marketing/contact"
-                className={`nav-link ${location.pathname === '/marketing/contact' ? 'active' : ''}`}
-              >
-                Contact Us
-              </Link>
-            </li>
-
-            <li className="nav-item">
-              <Link 
-                to="/marketing/careers"
-                className={`nav-link ${location.pathname === '/marketing/careers' ? 'active' : ''}`}
-              >
-                Careers
-              </Link>
-            </li>
-
-            <li className="nav-item">
-              <Link to="/marketing/demo" className="nav-button cta-primary">
-                Book a Free Demo
-              </Link>
-            </li>
+                  {label}
+                </Link>
+              </li>
+            ))}
           </ul>
+
+          <div className="mkt-nav__actions">
+            <Link to="/login" className="mkt-btn mkt-btn--ghost">
+              Login
+            </Link>
+            <Link to="/marketing/demo" className="mkt-btn mkt-btn--primary">
+              Book Free Demo
+            </Link>
+          </div>
+
+          <button
+            className="mkt-nav__hamburger"
+            onClick={() => setMobileOpen(!mobileOpen)}
+            aria-label="Toggle menu"
+          >
+            <span className={`hamburger-line ${mobileOpen ? 'open' : ''}`} />
+            <span className={`hamburger-line ${mobileOpen ? 'open' : ''}`} />
+            <span className={`hamburger-line ${mobileOpen ? 'open' : ''}`} />
+          </button>
         </div>
+
+        {mobileOpen && (
+          <div className="mkt-nav__mobile">
+            {navLinks.map(({ label, path }) => (
+              <Link
+                key={path}
+                to={path}
+                className={`mkt-nav__mobile-link ${location.pathname === path ? 'mkt-nav__link--active' : ''}`}
+              >
+                {label}
+              </Link>
+            ))}
+            <div className="mkt-nav__mobile-actions">
+              <Link to="/login" className="mkt-btn mkt-btn--ghost mkt-btn--full">Login</Link>
+              <Link to="/marketing/demo" className="mkt-btn mkt-btn--primary mkt-btn--full">Book Free Demo</Link>
+            </div>
+          </div>
+        )}
       </nav>
 
-      <main className="marketing-content">
-        {children}
-      </main>
+      <main className="mkt-main">{children}</main>
 
-      <footer className="marketing-footer">
-        <div className="footer-container">
-          <div className="footer-section">
-            <h4>My-Skoolz</h4>
-            <p>Transforming school management with modern technology</p>
+      <footer className="mkt-footer">
+        <div className="mkt-footer__inner">
+          <div className="mkt-footer__brand">
+            <div className="mkt-footer__logo">
+              <div className="mkt-nav__logo-icon">M</div>
+              <span>My-Skoolz</span>
+            </div>
+            <p>Transforming school management with modern technology. Trusted by hundreds of schools worldwide.</p>
+            <div className="mkt-footer__socials">
+              <a href="#linkedin" aria-label="LinkedIn">in</a>
+              <a href="#twitter" aria-label="Twitter">𝕏</a>
+              <a href="#facebook" aria-label="Facebook">f</a>
+            </div>
           </div>
 
-          <div className="footer-section">
-            <h4>Quick Links</h4>
-            <ul>
-              <li><Link to="/marketing/home">Home</Link></li>
-              <li><Link to="/marketing/solutions">Solutions</Link></li>
-              <li><Link to="/marketing/contact">Contact</Link></li>
-              <li><Link to="/marketing/careers">Careers</Link></li>
-            </ul>
+          <div className="mkt-footer__col">
+            <h5>Product</h5>
+            <Link to="/marketing/solutions">Features</Link>
+            <Link to="/marketing/demo">Book a Demo</Link>
+            <a href="#pricing">Pricing</a>
           </div>
 
-          <div className="footer-section">
-            <h4>Contact</h4>
-            <p>Email: <a href="mailto:navaneeswar1861@gmail.com">navaneeswar1861@gmail.com</a></p>
-            <p>Follow us on social media</p>
+          <div className="mkt-footer__col">
+            <h5>Company</h5>
+            <Link to="/marketing/home">About Us</Link>
+            <Link to="/marketing/careers">Careers</Link>
+            <Link to="/marketing/contact">Contact</Link>
           </div>
 
-          <div className="footer-section">
-            <h4>Legal</h4>
-            <ul>
-              <li><a href="#privacy">Privacy Policy</a></li>
-              <li><a href="#terms">Terms of Service</a></li>
-              <li><a href="#cookies">Cookie Policy</a></li>
-            </ul>
+          <div className="mkt-footer__col">
+            <h5>Legal</h5>
+            <a href="#privacy">Privacy Policy</a>
+            <a href="#terms">Terms of Service</a>
+            <a href="#cookies">Cookie Policy</a>
           </div>
         </div>
 
-        <div className="footer-bottom">
-          <p>&copy; 2024 My-Skoolz. All rights reserved.</p>
+        <div className="mkt-footer__bottom">
+          <p>&copy; 2025 My-Skoolz. All rights reserved.</p>
+          <p>
+            <a href="mailto:navaneeswar1861@gmail.com">navaneeswar1861@gmail.com</a>
+          </p>
         </div>
       </footer>
     </div>
