@@ -2642,3 +2642,68 @@
 .dropdown-item:last-child { border-bottom: none; }
 .dropdown-item:hover { background: var(--primary-light); color: var(--primary); padding-left: 20px; }
 .dropdown-item.view-all { font-weight: 600; color: var(--primary); background: var(--bg); }
+
+/* ── Floating WhatsApp button ─────────────────────────────────────── */
+.mkt-wa-fab {
+  position: fixed;
+  bottom: 96px;
+  right: 28px;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 18px;
+  height: 50px;
+  background: #25D366;
+  color: #fff;
+  border-radius: 25px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 4px 20px rgba(37, 211, 102, 0.45);
+  transition: transform 0.2s, box-shadow 0.2s;
+  white-space: nowrap;
+}
+
+.mkt-wa-fab:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 28px rgba(37, 211, 102, 0.55);
+  color: #fff;
+  text-decoration: none;
+}
+
+.mkt-wa-fab svg { flex-shrink: 0; }
+
+/* WhatsApp link in contact page */
+.mkt-wa-link {
+  color: #25D366 !important;
+  font-weight: 600;
+}
+.mkt-wa-link:hover { color: #128C7E !important; }
+
+/* Footer WhatsApp social icon */
+.mkt-footer__social-wa {
+  background: #25D366 !important;
+  color: #fff !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+}
+.mkt-footer__social-wa:hover { background: #128C7E !important; }
+
+/* Contact info grid fix */
+.contact-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+  .mkt-wa-fab { right: 16px; bottom: 80px; }
+  .contact-container { grid-template-columns: 1fr; gap: 32px; }
+}

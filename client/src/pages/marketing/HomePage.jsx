@@ -1,6 +1,19 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import SEOMeta from '../../components/SEOMeta';
 import './marketing.css';
+
+const homeSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'My-Skoolz',
+  applicationCategory: 'BusinessApplication',
+  operatingSystem: 'Web',
+  description: 'My-Skoolz is an all-in-one school management system for Indian schools. Manage students, fees, teachers, attendance, timetables, and more from any device.',
+  url: 'https://my-skoolz.com',
+  offers: { '@type': 'Offer', price: '0', priceCurrency: 'INR', description: 'Free demo available' },
+  provider: { '@type': 'Organization', name: 'My-Skoolz', url: 'https://my-skoolz.com' },
+};
 
 const features = [
   { icon: '🎓', title: 'Student Management',  color: '#2563EB', desc: 'Complete student lifecycle — admissions, profiles, attendance, grades, and progress reports in one place.' },
@@ -55,6 +68,13 @@ const steps = [
 
 const HomePage = () => (
   <div className="mkt-page">
+    <SEOMeta
+      title="School Management System & Software for Indian Schools"
+      description="My-Skoolz is an all-in-one school management system built for Indian schools. Manage students, fees, teachers, attendance, timetables, and reports from any device. Book a free demo."
+      keywords="school management system, school software India, school ERP software, school application, student management system, fee management software, school administration software, school management app"
+      path="/"
+      schema={homeSchema}
+    />
 
     {/* ══ HERO ══ */}
     <section className="mkt-hero">

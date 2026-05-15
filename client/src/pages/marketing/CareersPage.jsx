@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
+import SEOMeta from '../../components/SEOMeta';
 import './marketing.css';
 
 const openPositions = [
   { id: 1, title: 'Full Stack Developer', location: 'Remote (India)', type: 'Full Time', dept: 'Engineering', desc: 'Build and scale our React + Spring Boot platform. You\'ll own entire features from DB to UI.' },
-  { id: 2, title: 'UI/UX Designer', location: 'Remote (India)', type: 'Full Time', dept: 'Product', desc: 'Design intuitive interfaces for 500+ schools. You care deeply about user research and pixel-perfect execution.' },
+  { id: 2, title: 'UI/UX Designer', location: 'Remote (India)', type: 'Full Time', dept: 'Product', desc: 'Design intuitive interfaces for schools across India. You care deeply about user research and pixel-perfect execution.' },
   { id: 3, title: 'Product Manager', location: 'Hyderabad / Remote', type: 'Full Time', dept: 'Product', desc: 'Lead the evolution of our platform. You will work directly with schools to define, prioritize, and ship.' },
   { id: 4, title: 'Customer Success Executive', location: 'Remote (India)', type: 'Full Time', dept: 'Success', desc: 'Be the champion for our school customers. You will onboard, train, and support schools to get maximum value from My-Skoolz.' },
   { id: 5, title: 'Business Development Executive', location: 'Remote (India)', type: 'Full Time', dept: 'Sales', desc: 'Identify and onboard new schools. You have a passion for education and a talent for consultative sales.' },
@@ -64,6 +65,12 @@ const CareersPage = () => {
 
   return (
     <div className="mkt-page">
+      <SEOMeta
+        title="Careers — Join the My-Skoolz Team"
+        description="Join My-Skoolz and help build India's most trusted school management platform. We're hiring for engineering, design, product, and sales roles. Remote-friendly."
+        keywords="careers my-skoolz, EdTech jobs India, school software jobs, remote tech jobs India"
+        path="/careers"
+      />
 
       {/* ── Hero ── */}
       <section className="mkt-solutions-hero">
@@ -77,11 +84,6 @@ const CareersPage = () => {
       {/* ── Culture image ── */}
       <section className="mkt-careers-culture">
         <img src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1400&q=80" alt="Team collaborating" />
-        <div className="mkt-careers-culture__overlay">
-          <div className="mkt-careers-culture__stat"><span>500+</span> Schools Impacted</div>
-          <div className="mkt-careers-culture__stat"><span>1 Lakh+</span> Students Served</div>
-          <div className="mkt-careers-culture__stat"><span>25+</span> Team Members</div>
-        </div>
       </section>
 
       {/* ── Benefits ── */}

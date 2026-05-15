@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import SEOMeta from '../../components/SEOMeta';
 import './marketing.css';
 
 const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
@@ -63,10 +64,19 @@ const BookDemoPage = () => {
   };
 
   return (
-    <div className="marketing-page">
-      <section className="demo-hero">
-        <h1>Book Your Free Demo</h1>
-        <p>Experience My-Skoolz with your school data</p>
+    <div className="mkt-page">
+      <SEOMeta
+        title="Book a Free Demo — School Management Software"
+        description="Book a free personalized demo of My-Skoolz school management system. See exactly how it works for your school — no credit card required, no commitment."
+        keywords="school management demo, free school software demo, school ERP demo, my-skoolz demo"
+        path="/demo"
+      />
+      <section className="mkt-solutions-hero">
+        <div className="mkt-container">
+          <span className="mkt-section-tag" style={{ background: 'rgba(255,255,255,.15)', color: 'white' }}>Free Demo</span>
+          <h1>Book Your Free Demo</h1>
+          <p>Experience My-Skoolz with your school data — personalized, no commitment</p>
+        </div>
       </section>
 
       <section className="demo-section">

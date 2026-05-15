@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import SEOMeta from '../../components/SEOMeta';
 import './marketing.css';
 
 const solutions = [
@@ -52,6 +53,12 @@ const SolutionsPage = () => {
 
   return (
     <div className="mkt-page">
+      <SEOMeta
+        title="Features & Solutions — School Management Software"
+        description="Explore all features of My-Skoolz school management software: student management, fee collection, teacher management, attendance tracking, timetables, transport, and more."
+        keywords="school management features, student management system, fee management software, school attendance software, school timetable software, teacher management system"
+        path="/solutions"
+      />
       {/* Hero */}
       <section className="mkt-solutions-hero">
         <div className="mkt-container">

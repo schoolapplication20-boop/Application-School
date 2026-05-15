@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import SEOMeta from '../../components/SEOMeta';
 import './marketing.css';
 
 const values = [
@@ -28,6 +29,12 @@ const team = [
 const AboutUsPage = () => {
   return (
     <div className="mkt-page">
+      <SEOMeta
+        title="About Us — Our Story & Mission"
+        description="Learn about My-Skoolz — our story, mission, and the team building India's modern school management platform. We make quality school software accessible to every school."
+        keywords="about my-skoolz, school management company India, school software company, EdTech India"
+        path="/about"
+      />
 
       {/* ── Hero ── */}
       <section className="mkt-about-hero">
