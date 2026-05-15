@@ -42,7 +42,7 @@ const VerifyIdentity = () => {
       <div className="auth-left">
         <div className="auth-brand">
           <span className="brand-icon">🏆</span>
-          <span className="brand-name">My-Skools</span>
+          <span className="brand-name">My-Skoolz</span>
         </div>
         <div className="auth-tagline">
           <h2>Verify Your Identity</h2>

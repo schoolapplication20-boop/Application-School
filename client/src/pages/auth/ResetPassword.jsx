@@ -75,10 +75,10 @@ const ResetPassword = () => {
       <div className="auth-left">
         <div className="auth-brand">
           <span className="brand-icon">🏆</span>
-          <span className="brand-name">My-Skools</span>
+          <span className="brand-name">My-Skoolz</span>
         </div>
         <div className="auth-tagline">
-          <h2>{isFirstLogin ? 'Welcome to My-Skools' : 'Keep Your Account Secure'}</h2>
+          <h2>{isFirstLogin ? 'Welcome to My-Skoolz' : 'Keep Your Account Secure'}</h2>
           <p>{isFirstLogin
             ? 'Set a strong password to secure your new account and get started.'
             : 'Regularly updating your password helps protect your account from unauthorized access.'}</p>

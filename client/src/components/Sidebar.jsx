@@ -252,7 +252,7 @@ const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
         {/* School name + tagline */}
         <div className="brand-text">
           <div className="brand-name" style={{ color: primary }}>
-            {school?.name || 'My-Skools'}
+            {school?.name || 'My-Skoolz'}
           </div>
           <div className="brand-tagline">Management System</div>
         </div>
