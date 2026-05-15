@@ -7,6 +7,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 
 // Auth Pages
 import Login from './pages/auth/Login';
+import OwnerLogin from './pages/auth/OwnerLogin';
 import ForgotPassword from './pages/auth/ForgotPassword';
 import VerifyIdentity from './pages/auth/VerifyIdentity';
 import EnterOTP from './pages/auth/EnterOTP';
@@ -73,7 +74,7 @@ function App() {
 
             {/* Auth Routes */}
             <Route path="/login"       element={<Login />} />
-            <Route path="/owner-login" element={<Login ownerPortal />} />
+            <Route path="/owner-login" element={<OwnerLogin />} />
             <Route path="/register" element={<Navigate to="/login" replace />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/verify-identity" element={<VerifyIdentity />} />

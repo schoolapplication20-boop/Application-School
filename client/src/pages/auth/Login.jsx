@@ -6,31 +6,21 @@ import { loginWithEmail as apiLoginWithEmail } from '../../services/authService'
 import '../../styles/auth.css';
 
 const ALL_ROLES = [
-  { key: 'APPLICATION_OWNER', label: 'App Owner',   icon: 'admin_panel_settings' },
-  { key: 'SUPER_ADMIN',       label: 'Super Admin', icon: 'manage_accounts'      },
-  { key: 'ADMIN',             label: 'Admin',       icon: 'badge'                },
-  { key: 'TEACHER',           label: 'Teacher',     icon: 'school'               },
-  { key: 'STUDENT',           label: 'Student',     icon: 'person'               },
+  { key: 'SUPER_ADMIN', label: 'Super Admin', icon: 'manage_accounts' },
+  { key: 'ADMIN',       label: 'Admin',       icon: 'badge'           },
+  { key: 'TEACHER',     label: 'Teacher',     icon: 'school'          },
+  { key: 'STUDENT',     label: 'Student',     icon: 'person'          },
 ];
 
-// School-level roles only — shown when a school tenant context is detected
-const SCHOOL_ROLES = ALL_ROLES.filter(r => r.key !== 'APPLICATION_OWNER');
-
-const Login = ({ ownerPortal = false }) => {
+const Login = () => {
   const navigate = useNavigate();
   const { login, refreshPermissions, isAuthenticated, getDashboardPath } = useAuth();
   const { school } = useSchool();
 
-  const primary   = ownerPortal ? '#1e293b' : (school?.primaryColor   || '#F97316');
-  const secondary = ownerPortal ? '#0f172a' : (school?.secondaryColor || '#EA6C0A');
+  const primary   = school?.primaryColor   || '#F97316';
+  const secondary = school?.secondaryColor || '#EA6C0A';
 
-  // Detect school tenant context:
-  // 1. SchoolContext has a school loaded (returning school user session), OR
-  // 2. localStorage flag set when a school user previously logged in
-  const isSchoolPortal = !!(school?.id || localStorage.getItem('ms_school_tenant'));
-
-  // ownerPortal bypasses school context — always shows all roles including App Owner
-  const ROLES = (isSchoolPortal && !ownerPortal) ? SCHOOL_ROLES : ALL_ROLES;
+  const ROLES = ALL_ROLES;
 
   const [selectedRole, setSelectedRole] = useState('');
   const [emailForm, setEmailForm]       = useState({ email: '', password: '' });
@@ -102,11 +92,6 @@ const Login = ({ ownerPortal = false }) => {
         return;
       }
 
-      // School portal guard — school users must not access App Owner dashboard
-      if (!ownerPortal && isSchoolPortal && loggedInUser.role === 'APPLICATION_OWNER') {
-        setError('App Owner access is not available on this portal.');
-        return;
-      }
 
       login(loggedInUser, token);
 
@@ -180,8 +165,8 @@ const Login = ({ ownerPortal = false }) => {
                 {school?.name || 'My-Skoolz'}
               </span>
             </div>
-            <h1>{ownerPortal ? 'Platform Owner Login' : 'Welcome Back!'}</h1>
-            <p>{ownerPortal ? 'Restricted access — authorized personnel only' : 'Select your role to sign in'}</p>
+            <h1>Welcome Back!</h1>
+            <p>Select your role to sign in</p>
           </div>
 
           {/* Role Selector */}
