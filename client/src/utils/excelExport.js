@@ -77,7 +77,7 @@ export const exportStudentsToExcel = (students, opts = {}) => {
 
   // ── Meta sheet ──────────────────────────────────────────────────────────────
   const metaRows = [
-    ['My-Skoolz - Student Data Export'],
+    ['My-Skools - Student Data Export'],
     ['Generated On',  new Date().toLocaleString('en-IN')],
     ['Academic Year', academicYear],
     ['Class Filter',  className],

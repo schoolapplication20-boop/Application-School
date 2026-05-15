@@ -35,7 +35,7 @@ public class EmailService {
         Map<String, Object> body = new HashMap<>();
         body.put("from", fromEmail);
         body.put("to", new String[]{toEmail});
-        body.put("subject", "My-Skoolz Password Reset OTP");
+        body.put("subject", "My-Skools Password Reset OTP");
         body.put("html", buildEmailHtml(otp));
 
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
@@ -45,7 +45,8 @@ public class EmailService {
 
     private String buildEmailHtml(String otp) {
         return "<div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;'>" +
-               "<h2 style='color: #F97316;'>My-Skoolz Password Reset</h2>" +
+               "<h2 style='color: #F97316;'>My-Skools Password Reset</h2> +
+             "<p>Dear User,</p>" +
                "<p>Dear User,</p>" +
                "<p>Your OTP for password reset is:</p>" +
                "<div style='font-size: 36px; font-weight: bold; color: #F97316; letter-spacing: 8px; " +
@@ -53,7 +54,8 @@ public class EmailService {
                otp + "</div>" +
                "<p>This OTP is valid for <strong>5 minutes</strong>.</p>" +
                "<p>If you did not request a password reset, please ignore this email.</p>" +
-               "<br><p>Regards,<br><strong>My-Skoolz Team</strong></p>" +
+               "<br><p>Regards,<br><strong>My-Skools Team</strong></p> +
+
                "</div>";
     }
 }

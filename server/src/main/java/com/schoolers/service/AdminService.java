@@ -167,10 +167,10 @@ public class AdminService {
             email = studentEmail.trim().toLowerCase();
         } else {
             // Auto-generate email from admission/roll number
-            email = username + "@my-skoolz.com";
+            email = username + "@my-skools.com";
             while (userRepository.existsByEmailIgnoreCase(email)) {
                 username = username + "_s";
-                email = username + "@my-skoolz.com";
+                email = username + "@my-skools.com";
             }
         }
 
