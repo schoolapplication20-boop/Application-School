@@ -3,8 +3,8 @@ package com.schoolers.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.filter.CorsFilter;
 
 import java.util.Arrays;
 import java.util.List;
@@ -12,14 +12,20 @@ import java.util.List;
 @Configuration
 public class CorsConfig {
 
+    /**
+     * Exposes a CorsConfigurationSource bean so Spring Security's
+     * .cors(Customizer.withDefaults()) can find it and handle CORS
+     * pre-flight OPTIONS requests BEFORE the authorization rules run.
+     * Using CorsFilter instead would require explicit ordering to beat
+     * Spring Security's filter chain, which this approach avoids.
+     */
     @Bean
-    public CorsFilter corsFilter() {
-        CorsConfiguration corsConfiguration = new CorsConfiguration();
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
 
-        // Allow React dev server and production origins.
-        // Do NOT use wildcard subdomains (*.vercel.app, *.onrender.com) — they allow any
-        // tenant on those platforms to make credentialed requests to this backend.
-        corsConfiguration.setAllowedOriginPatterns(List.of(
+        // Do NOT use wildcard subdomains (*.vercel.app, *.onrender.com) — they allow
+        // any tenant on those platforms to make credentialed requests to this backend.
+        config.setAllowedOriginPatterns(List.of(
             "http://localhost:3000",
             "http://localhost:3001",
             "http://localhost:5173",
@@ -28,17 +34,13 @@ public class CorsConfig {
             "https://application-school.vercel.app",
             "https://my-skoolz.com",
             "https://www.my-skoolz.com"
-            // Add your specific Render backend preview URL here if needed:
-            // "https://my-skoolz-backend.onrender.com"
         ));
 
-        // Allow all HTTP methods
-        corsConfiguration.setAllowedMethods(Arrays.asList(
+        config.setAllowedMethods(Arrays.asList(
             "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"
         ));
 
-        // Allow all headers
-        corsConfiguration.setAllowedHeaders(Arrays.asList(
+        config.setAllowedHeaders(Arrays.asList(
             "Authorization",
             "Content-Type",
             "Accept",
@@ -48,18 +50,12 @@ public class CorsConfig {
             "Access-Control-Request-Headers"
         ));
 
-        // Expose Authorization header to client
-        corsConfiguration.setExposedHeaders(List.of("Authorization"));
-
-        // Allow credentials (cookies, auth headers)
-        corsConfiguration.setAllowCredentials(true);
-
-        // Cache preflight for 1 hour
-        corsConfiguration.setMaxAge(3600L);
+        config.setExposedHeaders(List.of("Authorization"));
+        config.setAllowCredentials(true);
+        config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", corsConfiguration);
-
-        return new CorsFilter(source);
+        source.registerCorsConfiguration("/**", config);
+        return source;
     }
 }
