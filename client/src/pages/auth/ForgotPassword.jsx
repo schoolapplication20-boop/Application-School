@@ -13,12 +13,11 @@ const ForgotPassword = () => {
 
   // OTP popup state
   const [showOtpPopup, setShowOtpPopup] = useState(false);
-  const [otp, setOtp] = useState(['', '', '', '']);
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpError, setOtpError] = useState('');
   const [timer, setTimer] = useState(OTP_EXPIRY_SECONDS);
   const [canResend, setCanResend] = useState(false);
-  const [devOtp, setDevOtp] = useState('');
   const inputRefs = useRef([]);
 
   useEffect(() => {
@@ -47,8 +46,7 @@ const ForgotPassword = () => {
 
   const sendOtp = async () => {
     try {
-      const res = await authAPI.forgotPassword({ identifier });
-      if (res.data?.data) setDevOtp(res.data.data);
+      await authAPI.forgotPassword({ identifier });
     } catch (err) {
       throw new Error(
         err.response?.data?.message ||
@@ -71,7 +69,7 @@ const ForgotPassword = () => {
       await sendOtp();
       setTimer(OTP_EXPIRY_SECONDS);
       setCanResend(false);
-      setOtp(['', '', '', '']);
+      setOtp(['', '', '', '', '', '']);
       setOtpError('');
       setShowOtpPopup(true);
       setTimeout(() => inputRefs.current[0]?.focus(), 100);
@@ -88,7 +86,7 @@ const ForgotPassword = () => {
     newOtp[index] = value.slice(-1);
     setOtp(newOtp);
     setOtpError('');
-    if (value && index < 3) inputRefs.current[index + 1]?.focus();
+    if (value && index < 5) inputRefs.current[index + 1]?.focus();
   };
 
   const handleOtpKeyDown = (index, e) => {
@@ -99,24 +97,23 @@ const ForgotPassword = () => {
       setOtp(newOtp);
     }
     if (e.key === 'ArrowLeft' && index > 0) inputRefs.current[index - 1]?.focus();
-    if (e.key === 'ArrowRight' && index < 3) inputRefs.current[index + 1]?.focus();
+    if (e.key === 'ArrowRight' && index < 5) inputRefs.current[index + 1]?.focus();
   };
 
   const handleOtpPaste = (e) => {
     e.preventDefault();
-    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 4);
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
     if (pasted.length > 0) {
-      const newOtp = ['', '', '', ''];
-      pasted.split('').forEach((char, i) => { if (i < 4) newOtp[i] = char; });
+      const newOtp = ['', '', '', '', '', ''];
+      pasted.split('').forEach((char, i) => { if (i < 6) newOtp[i] = char; });
       setOtp(newOtp);
-      inputRefs.current[Math.min(pasted.length, 3)]?.focus();
+      inputRefs.current[Math.min(pasted.length, 5)]?.focus();
     }
   };
 
   const handleResend = async () => {
     setOtpError('');
-    setOtp(['', '', '', '']);
-    setDevOtp('');
+    setOtp(['', '', '', '', '', '']);
     try {
       await sendOtp();
       setTimer(OTP_EXPIRY_SECONDS);
@@ -130,7 +127,7 @@ const ForgotPassword = () => {
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
     const otpString = otp.join('');
-    if (otpString.length < 4) { setOtpError('Please enter the complete 4-digit OTP.'); return; }
+    if (otpString.length < 6) { setOtpError('Please enter the complete 6-digit OTP.'); return; }
     setOtpLoading(true);
     setOtpError('');
     try {
@@ -271,22 +268,6 @@ const ForgotPassword = () => {
               </p>
             </div>
 
-            {/* OTP info — dev mode: show OTP directly */}
-            {devOtp && (
-              <div style={{
-                background: '#e0fafa', border: '1px solid #0de1e8', borderRadius: '8px',
-                padding: '10px 14px', marginBottom: '16px', textAlign: 'center',
-              }}>
-                <div style={{ fontSize: '12px', color: '#0eb5da', marginBottom: '4px' }}>
-                  <span className="material-icons" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: '4px' }}>info</span>
-                  Your OTP (dev mode)
-                </div>
-                <div style={{ fontSize: '28px', fontWeight: 800, letterSpacing: '8px', color: '#0de1e8' }}>
-                  {devOtp}
-                </div>
-              </div>
-            )}
-
             {otpError && (
               <div className="alert-error" style={{ marginBottom: '14px' }}>
                 <span className="material-icons" style={{ fontSize: '16px' }}>error_outline</span>
@@ -332,7 +313,7 @@ const ForgotPassword = () => {
               <button
                 type="submit"
                 className="btn-auth-submit"
-                disabled={otpLoading || otp.join('').length < 4}
+                disabled={otpLoading || otp.join('').length < 6}
               >
                 {otpLoading ? (
                   <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
