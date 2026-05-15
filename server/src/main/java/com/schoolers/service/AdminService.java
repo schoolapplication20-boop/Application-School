@@ -166,11 +166,11 @@ public class AdminService {
             // Use the real email provided by admin (teacher-style login)
             email = studentEmail.trim().toLowerCase();
         } else {
-            // Fallback: generate internal email from username
-            email = username + "@student.schoolers.local";
+            // Auto-generate email from admission/roll number
+            email = username + "@my-skoolz.com";
             while (userRepository.existsByEmailIgnoreCase(email)) {
                 username = username + "_s";
-                email = username + "@student.schoolers.local";
+                email = username + "@my-skoolz.com";
             }
         }
 
@@ -264,31 +264,6 @@ public class AdminService {
         String name = str(body, "name", null);
         if (name == null || name.isBlank()) return ApiResponse.<Map<String, Object>>error("Student name is required");
 
-        // Student login email (required, real email — same flow as teacher)
-        String studentEmail = str(body, "studentEmail", null);
-        if (studentEmail == null || studentEmail.isBlank())
-            return ApiResponse.<Map<String, Object>>error("Student login email is required");
-        studentEmail = studentEmail.trim().toLowerCase();
-        if (!EMAIL_PATTERN.matcher(studentEmail).matches())
-            return ApiResponse.<Map<String, Object>>error("Please enter a valid email address for student login");
-
-        // If email already exists, check if it belongs to an orphaned student account
-        // (student record was deleted but the user account was left behind). If so, clean it up.
-        final String finalStudentEmail = studentEmail;
-        userRepository.findByEmailIgnoreCase(studentEmail).ifPresent(existingUser -> {
-            if (existingUser.getRole() != null && existingUser.getRole().name().equals("STUDENT")) {
-                boolean hasLinkedStudent = studentRepository.findByStudentUserId(existingUser.getId()).isPresent();
-                if (!hasLinkedStudent) {
-                    log.info("[createStudent] Cleaning up orphaned student user id=" + existingUser.getId() + " email=" + finalStudentEmail);
-                    userRepository.deleteById(existingUser.getId());
-                    userRepository.flush();
-                }
-            }
-        });
-
-        if (userRepository.existsByEmailIgnoreCase(studentEmail))
-            return ApiResponse.<Map<String, Object>>error("Email '" + studentEmail + "' is already registered. Use a different email.");
-
         // Extract schoolId injected by AdminController from authenticated user
         Long schoolId = body.get("schoolId") != null
                 ? Long.parseLong(body.get("schoolId").toString()) : null;
@@ -354,7 +329,7 @@ public class AdminService {
 
             // Step 3: Create the student User account (pass schoolId for multi-tenant isolation)
             StudentUserResult studentUserResult = createStudentUser(
-                    name, saved.getAdmissionNumber(), rollNumber, saved.getId(), studentEmail, schoolId);
+                    name, saved.getAdmissionNumber(), rollNumber, saved.getId(), null, schoolId);
 
             // Step 4: Back-patch the student row with the user ID
             if (studentUserResult != null) {
@@ -372,6 +347,7 @@ public class AdminService {
             // Student credentials
             if (studentUserResult != null) {
                 responseData.put("studentEmail", studentUserResult.loginEmail());
+                responseData.put("studentUsername", studentUserResult.user().getUsername());
                 responseData.put("studentTempPassword", studentUserResult.rawPassword());
             }
 
@@ -389,7 +365,7 @@ public class AdminService {
                 msg = "Roll number " + rollNumber + " already exists in " + className
                         + (section.isBlank() ? "" : " – " + section) + " for this school.";
             } else if (lowerDetail.contains("uk_users_email") || lowerDetail.contains("(email)")) {
-                msg = "Email '" + studentEmail + "' is already registered. Please use a different email.";
+                msg = "A duplicate email was detected. Please try again.";
             } else if (lowerDetail.contains("uk_users_mobile") || lowerDetail.contains("(mobile)")) {
                 msg = "A phone number entered is already registered. Please check parent details.";
             } else if (lowerDetail.contains("duplicate") || lowerDetail.contains("unique")) {

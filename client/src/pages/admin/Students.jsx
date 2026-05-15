@@ -126,7 +126,6 @@ const mockStudents = [
 
 const EMPTY_FORM = {
   name: '', rollNo: '', admissionNumber: '', class: '', section: '', dob: '', status: 'Active', photo: null,
-  studentEmail: '',
   fatherName: '', fatherPhone: '',
   motherName: '', motherPhone: '',
   guardianName: '', guardianPhone: '',
@@ -344,11 +343,6 @@ export default function Students() {
     if (!formData.name.trim())            e.name        = 'Student name is required';
     if (!formData.rollNo.trim())          e.rollNo      = 'Roll number is required';
     if (!formData.class.trim())           e.class       = 'Class is required';
-    if (!editStudent) {
-      if (!formData.studentEmail.trim())  e.studentEmail = 'Student login email is required';
-      else if (!/^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(formData.studentEmail.trim()))
-        e.studentEmail = 'Enter a valid email address';
-    }
     if (!formData.fatherName.trim())      e.fatherName  = "Father's name is required";
     if (!formData.motherName.trim())      e.motherName  = "Mother's name is required";
     if (!formData.fatherPhone.trim())     e.fatherPhone = "Father's phone is required";
@@ -441,7 +435,6 @@ export default function Students() {
       dob:              formData.dob,
       status:           formData.status,
       photo:            formData.photo,
-      studentEmail:     formData.studentEmail,
       fatherName:       formData.fatherName,
       fatherPhone:      formData.fatherPhone,
       motherName:       formData.motherName,
@@ -474,6 +467,7 @@ export default function Students() {
         const d = result.data || {};
         setNewCredential({
           studentName:     formData.name,
+          studentUsername: d.studentUsername || formData.admissionNumber || null,
           studentEmail:    d.studentEmail || null,
           studentPassword: d.studentTempPassword || null,
           // parent (only if newly created)
@@ -759,16 +753,6 @@ export default function Students() {
                         placeholder="e.g., ADM2024001" value={formData.admissionNumber}
                         onChange={set('admissionNumber')} />
                     </div>
-                    {!editStudent && (
-                      <div className="col-md-8">
-                        <label className="form-label fw-medium small">Student Login Email *</label>
-                        <input type="email" className={`form-control form-control-sm ${errors.studentEmail ? 'is-invalid' : ''}`}
-                          placeholder="e.g., student@gmail.com (used to log in)"
-                          value={formData.studentEmail}
-                          onChange={set('studentEmail')} />
-                        {errors.studentEmail && <div className="invalid-feedback">{errors.studentEmail}</div>}
-                      </div>
-                    )}
                     <div className="col-md-3">
                       <label className="form-label fw-medium small">Class *</label>
                       <select
@@ -1138,7 +1122,7 @@ export default function Students() {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
-                <CredentialCard label="Login Email" value={viewCredTarget.email} />
+                <CredentialCard label="Admission Number (Login ID)" value={viewCredTarget.email?.split('@')[0]} mono />
                 {viewCredTarget.firstLogin && viewCredTarget.tempPassword ? (
                   <CredentialCard label="Temporary Password" value={viewCredTarget.tempPassword} mono />
                 ) : (
@@ -1204,7 +1188,7 @@ export default function Students() {
               </div>
 
               {/* ── Student Credentials ── */}
-              {newCredential.studentEmail && (
+              {newCredential.studentPassword && (
                 <div style={{ marginBottom: 18 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                     <div style={{ width: 28, height: 28, borderRadius: 7, background: '#ebf8ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1213,7 +1197,7 @@ export default function Students() {
                     <span style={{ fontWeight: 700, fontSize: 13, color: '#2d3748', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Student Login</span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <CredentialCard label="Login Email" value={newCredential.studentEmail} />
+                    <CredentialCard label="Admission Number (Login ID)" value={newCredential.studentUsername} mono />
                     <CredentialCard label="Password" value={newCredential.studentPassword} mono />
                   </div>
                 </div>
@@ -1222,7 +1206,7 @@ export default function Students() {
               {/* Copy All */}
               <button
                 onClick={() => {
-                  const text = `Student Login\nEmail: ${newCredential.studentEmail}\nPassword: ${newCredential.studentPassword}`;
+                  const text = `Student Login\nAdmission Number: ${newCredential.studentUsername}\nPassword: ${newCredential.studentPassword}`;
                   navigator.clipboard.writeText(text);
                   showToast('Credentials copied to clipboard');
                 }}
