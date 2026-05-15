@@ -20,7 +20,7 @@ const timeline = [
 ];
 
 const team = [
-  { name: 'Navaneeswar', role: 'Co-Founder & CEO', initials: 'N', bg: '#2563EB' },
+  { name: 'Chandrakanth', role: 'Co-Founder & CEO', initials: 'C', bg: '#2563EB' },
   { name: 'Engineering Team', role: 'Platform & Infrastructure', initials: 'E', bg: '#7C3AED' },
   { name: 'Product Team', role: 'Design & Experience', initials: 'P', bg: '#059669' },
   { name: 'Customer Success', role: 'School Partnerships', initials: 'C', bg: '#F59E0B' },

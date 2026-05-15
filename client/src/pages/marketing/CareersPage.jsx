@@ -57,7 +57,7 @@ const CareersPage = () => {
       setSuccess(true);
       setFormData(DEFAULT_FORM);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to submit. Please email us directly at navaneeswar1861@gmail.com');
+      setError(err.response?.data?.message || 'Failed to submit. Please try again or contact us via WhatsApp.');
     } finally {
       setLoading(false);
     }
@@ -144,7 +144,7 @@ const CareersPage = () => {
               <p>We're always looking for talented people who believe in our mission. Send us your resume and tell us how you can contribute.</p>
             </div>
             <div className="mkt-cta-banner__actions">
-              <a href="mailto:navaneeswar1861@gmail.com?subject=My-Skoolz Open Application" className="mkt-btn mkt-btn--white mkt-btn--lg">
+              <a href="mailto:contact@my-skoolz.com?subject=My-Skoolz Open Application" className="mkt-btn mkt-btn--white mkt-btn--lg">
                 Send Your Resume →
               </a>
             </div>

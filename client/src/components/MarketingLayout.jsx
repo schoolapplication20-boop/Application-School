@@ -127,7 +127,7 @@ const MarketingLayout = ({ children }) => {
 
           <div className="mkt-footer__col">
             <h5>Contact</h5>
-            <a href="mailto:navaneeswar1861@gmail.com">Email Us</a>
+            <a href="mailto:contact@my-skoolz.com">Email Us</a>
             <a href="https://wa.me/12604670199" target="_blank" rel="noopener noreferrer">WhatsApp Us</a>
             <a href="#privacy">Privacy Policy</a>
             <a href="#terms">Terms of Service</a>
@@ -136,7 +136,7 @@ const MarketingLayout = ({ children }) => {
 
         <div className="mkt-footer__bottom">
           <p>&copy; 2025 My-Skoolz. All rights reserved.</p>
-          <a href="mailto:navaneeswar1861@gmail.com">navaneeswar1861@gmail.com</a>
+          <a href="/marketing/contact">Contact Us</a>
         </div>
       </footer>
 

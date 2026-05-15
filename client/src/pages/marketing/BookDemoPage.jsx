@@ -56,7 +56,7 @@ const BookDemoPage = () => {
       } else if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
         setError('The server is starting up — please wait a moment and try again.');
       } else {
-        setError('Unable to reach the server. Please email us directly at navaneeswar1861@gmail.com to book your demo.');
+        setError('Unable to reach the server. Please WhatsApp or contact us directly to book your demo.');
       }
     } finally {
       setLoading(false);
