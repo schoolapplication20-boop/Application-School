@@ -3,7 +3,32 @@ import { Link } from 'react-router-dom';
 import SEOMeta from '../../components/SEOMeta';
 import './marketing.css';
 
-const homeSchema = {
+/* ── Structured data for Google ──────────────────────────────────────────── */
+
+const websiteSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: 'My-Skoolz',
+  alternateName: ['My Skoolz', 'MySkoolz', 'My-Skools'],
+  url: 'https://my-skoolz.com',
+  description: 'All-in-one school management system for Indian schools — students, fees, teachers, attendance, timetables and more.',
+};
+
+const orgSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'My-Skoolz',
+  url: 'https://my-skoolz.com',
+  logo: 'https://my-skoolz.com/logo.png',
+  description: 'My-Skoolz is India\'s modern cloud-based school management platform.',
+  contactPoint: {
+    '@type': 'ContactPoint',
+    contactType: 'customer support',
+    availableLanguage: ['English', 'Hindi'],
+  },
+};
+
+const softwareSchema = {
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
   name: 'My-Skoolz',
@@ -14,6 +39,8 @@ const homeSchema = {
   offers: { '@type': 'Offer', price: '0', priceCurrency: 'INR', description: 'Free demo available' },
   provider: { '@type': 'Organization', name: 'My-Skoolz', url: 'https://my-skoolz.com' },
 };
+
+const homeSchema = [websiteSchema, orgSchema, softwareSchema];
 
 const features = [
   { icon: '🎓', title: 'Student Management',  color: '#2563EB', desc: 'Complete student lifecycle — admissions, profiles, attendance, grades, and progress reports in one place.' },
@@ -63,6 +90,21 @@ const steps = [
   { step: '01', icon: '📅', title: 'Book a Free Demo', desc: 'Schedule a personalized walkthrough tailored to your school\'s specific needs and size.' },
   { step: '02', icon: '⚙️', title: 'Onboard Your School', desc: 'Our team sets up your school profile, imports data, and configures everything in days — not months.' },
   { step: '03', icon: '🚀', title: 'Go Live & Grow', desc: 'Start managing smarter from day one, with dedicated support from our customer success team.' },
+];
+
+const lifecycle = [
+  [
+    { icon: '📝', title: 'Admissions',    color: '#2563EB', bg: '#eff6ff', desc: 'Accept applications online, review documents, and confirm new students in a few clicks.' },
+    { icon: '👨‍🎓', title: 'Enrollment',    color: '#7C3AED', bg: '#f5f3ff', desc: 'Create student profiles, assign roll numbers, sections, and issue ID cards instantly.' },
+    { icon: '📅', title: 'Attendance',     color: '#059669', bg: '#ecfdf5', desc: 'Mark daily attendance from any device and trigger instant parent SMS/email alerts.' },
+    { icon: '📋', title: 'Timetable',      color: '#0EA5E9', bg: '#f0f9ff', desc: 'Build class schedules, manage teacher periods, and publish timetables digitally.' },
+  ],
+  [
+    { icon: '✏️', title: 'Exams & Marks',  color: '#F59E0B', bg: '#fffbeb', desc: 'Schedule assessments, upload marks digitally, and auto-generate report cards.' },
+    { icon: '💰', title: 'Fee Collection', color: '#EF4444', bg: '#fff1f2', desc: 'Collect fees online or offline, print receipts, and send automated due reminders.' },
+    { icon: '📊', title: 'Reports',        color: '#8B5CF6', bg: '#faf5ff', desc: 'Access real-time dashboards, analytics, and export reports for admin decisions.' },
+    { icon: '🎓', title: 'Graduation',     color: '#10B981', bg: '#ecfdf5', desc: 'Celebrate completions, manage alumni records, and maintain a lifelong school bond.' },
+  ],
 ];
 
 
@@ -311,6 +353,42 @@ const HomePage = () => (
       </div>
     </section>
 
+    {/* ══ SCHOOL MANAGEMENT LIFECYCLE ══ */}
+    <section className="mkt-section mkt-lifecycle">
+      <div className="mkt-container">
+        <div className="mkt-section-header">
+          <span className="mkt-section-tag">School Lifecycle</span>
+          <h2>The Complete School Management Journey</h2>
+          <p>From the moment a student applies to the day they graduate — My-Skoolz handles every stage of school life in one connected platform.</p>
+        </div>
+
+        {lifecycle.map((row, ri) => (
+          <div key={ri}>
+            <div className="mkt-lifecycle__row">
+              {row.map((stage, si) => (
+                <>
+                  <div key={stage.title} className="mkt-lifecycle__stage">
+                    <div className="mkt-lifecycle__num">STEP {String(ri * 4 + si + 1).padStart(2, '0')}</div>
+                    <div className="mkt-lifecycle__icon" style={{ background: stage.bg, color: stage.color }}>
+                      {stage.icon}
+                    </div>
+                    <h4>{stage.title}</h4>
+                    <p>{stage.desc}</p>
+                  </div>
+                  {si < row.length - 1 && (
+                    <div className="mkt-lifecycle__arrow">→</div>
+                  )}
+                </>
+              ))}
+            </div>
+            {ri === 0 && (
+              <div className="mkt-lifecycle__row-break">↓</div>
+            )}
+          </div>
+        ))}
+      </div>
+    </section>
+
     {/* ══ CTA BANNER ══ */}
     <section className="mkt-cta-banner">
       <div className="mkt-cta-banner__bg-shape" />
@@ -329,6 +407,44 @@ const HomePage = () => (
             </Link>
           </div>
         </div>
+      </div>
+    </section>
+
+    {/*
+      ══ QUICK ACCESS ══
+      These links tell Google exactly which pages to surface as sitelinks
+      when someone searches "my skoolz". Each anchor uses the label text
+      that should appear in the Google result.
+    */}
+    <section className="mkt-quickaccess">
+      <div className="mkt-container">
+        <p className="mkt-quickaccess__label">Quick Access</p>
+        <nav className="mkt-quickaccess__links" aria-label="Quick access links">
+          <a href="/login?role=ADMIN"   className="mkt-quickaccess__link">
+            <span className="material-icons">manage_accounts</span>
+            Admin Login
+          </a>
+          <a href="/login?role=TEACHER" className="mkt-quickaccess__link">
+            <span className="material-icons">school</span>
+            Teacher Login
+          </a>
+          <a href="/login?role=STUDENT" className="mkt-quickaccess__link">
+            <span className="material-icons">person</span>
+            Student Login
+          </a>
+          <Link to="/marketing/demo"    className="mkt-quickaccess__link">
+            <span className="material-icons">calendar_today</span>
+            Book a Free Demo
+          </Link>
+          <Link to="/marketing/contact" className="mkt-quickaccess__link">
+            <span className="material-icons">mail_outline</span>
+            Contact Us
+          </Link>
+          <Link to="/marketing/solutions" className="mkt-quickaccess__link">
+            <span className="material-icons">grid_view</span>
+            Features
+          </Link>
+        </nav>
       </div>
     </section>
 

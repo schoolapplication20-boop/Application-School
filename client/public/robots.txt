@@ -1,10 +1,20 @@
 User-agent: *
 Allow: /
 Allow: /marketing/
-Disallow: /dashboard/
+Allow: /login
+Allow: /login/
+
+# Block private dashboard and API routes
 Disallow: /admin/
-Disallow: /login
-Disallow: /register
+Disallow: /superadmin/
+Disallow: /teacher/
+Disallow: /student/
 Disallow: /api/
+Disallow: /uploads/
+Disallow: /reset-password
+Disallow: /forgot-password
+Disallow: /enter-otp
+Disallow: /set-new-password
+Disallow: /verify-identity
 
 Sitemap: https://my-skoolz.com/sitemap.xml

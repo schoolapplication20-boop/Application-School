@@ -956,6 +956,180 @@
 }
 
 /* ══════════════════════
+   Quick Access (sitelinks)
+══════════════════════ */
+.mkt-quickaccess {
+  padding: 28px 0 32px;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+}
+
+.mkt-quickaccess__label {
+  text-align: center;
+  font-size: .72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  color: var(--text-light);
+  margin-bottom: 14px;
+}
+
+.mkt-quickaccess__links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.mkt-quickaccess__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border-radius: var(--radius-sm);
+  background: var(--white);
+  border: 1px solid var(--border);
+  color: var(--text-mid);
+  text-decoration: none;
+  font-size: .88rem;
+  font-weight: 500;
+  transition: var(--transition);
+}
+
+.mkt-quickaccess__link .material-icons {
+  font-size: 15px;
+  color: var(--primary);
+}
+
+.mkt-quickaccess__link:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-light);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ══════════════════════
+   School Lifecycle
+══════════════════════ */
+.mkt-lifecycle {
+  background: linear-gradient(180deg, #f8fafc 0%, #eff6ff 100%);
+}
+
+.mkt-lifecycle__flow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px;
+  position: relative;
+}
+
+.mkt-lifecycle__stage {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 28px 20px;
+  text-align: center;
+  position: relative;
+  transition: var(--transition);
+}
+
+.mkt-lifecycle__stage:hover {
+  border-color: var(--primary);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+
+.mkt-lifecycle__stage:hover .mkt-lifecycle__icon {
+  transform: scale(1.1);
+}
+
+.mkt-lifecycle__num {
+  font-size: .7rem;
+  font-weight: 800;
+  letter-spacing: .1em;
+  color: var(--primary);
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
+.mkt-lifecycle__icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 14px;
+  transition: transform .3s ease;
+}
+
+.mkt-lifecycle__stage h4 {
+  font-size: .95rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 7px;
+  line-height: 1.3;
+}
+
+.mkt-lifecycle__stage p {
+  font-size: .82rem;
+  color: var(--text-mid);
+  line-height: 1.6;
+}
+
+.mkt-lifecycle__arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+  font-size: 1.4rem;
+  font-weight: 300;
+  opacity: .35;
+  align-self: center;
+}
+
+.mkt-lifecycle__row {
+  display: grid;
+  grid-template-columns: 1fr 24px 1fr 24px 1fr 24px 1fr;
+  gap: 8px;
+  align-items: stretch;
+  margin-bottom: 16px;
+}
+
+.mkt-lifecycle__row:last-child { margin-bottom: 0; }
+
+.mkt-lifecycle__row-break {
+  display: flex;
+  justify-content: center;
+  margin: 4px 0 16px;
+  color: var(--primary);
+  font-size: 1.2rem;
+  opacity: .3;
+}
+
+@media (max-width: 1024px) {
+  .mkt-lifecycle__row {
+    grid-template-columns: 1fr 20px 1fr 20px 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .mkt-lifecycle__row {
+    grid-template-columns: 1fr 18px 1fr;
+  }
+  .mkt-lifecycle__row-break { display: none; }
+}
+
+@media (max-width: 480px) {
+  .mkt-lifecycle__row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .mkt-lifecycle__arrow { display: none; }
+}
+
+/* ══════════════════════
    Solutions Page
 ══════════════════════ */
 .mkt-solutions-hero {

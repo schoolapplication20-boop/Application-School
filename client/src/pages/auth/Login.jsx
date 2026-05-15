@@ -1,10 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useSchool } from '../../context/SchoolContext';
 import { loginWithEmail as apiLoginWithEmail } from '../../services/authService';
 import Logo from '../../components/Logo';
+import SEOMeta from '../../components/SEOMeta';
 import '../../styles/auth.css';
+
+const ROLE_SEO = {
+  ADMIN:       { title: 'Admin Login',   desc: 'Admin login for My-Skoolz school management system. School administrators sign in here to manage students, fees, teachers, and attendance.' },
+  SUPER_ADMIN: { title: 'Admin Login',   desc: 'Admin login for My-Skoolz school management system.' },
+  TEACHER:     { title: 'Teacher Login', desc: 'Teacher login for My-Skoolz. Sign in to mark attendance, upload marks, manage homework, and communicate with parents.' },
+  STUDENT:     { title: 'Student Login', desc: 'Student login for My-Skoolz. Access your attendance, timetable, fee receipts, exam results, and homework.' },
+};
 
 const ALL_ROLES = [
   { key: 'SUPER_ADMIN', label: 'Super Admin', icon: 'manage_accounts' },
@@ -15,6 +23,7 @@ const ALL_ROLES = [
 
 const Login = () => {
   const navigate = useNavigate();
+  const [searchParams]  = useSearchParams();
   const { login, refreshPermissions, isAuthenticated, getDashboardPath } = useAuth();
   const { school } = useSchool();
 
@@ -23,11 +32,21 @@ const Login = () => {
 
   const ROLES = ALL_ROLES;
 
-  const [selectedRole, setSelectedRole] = useState('');
+  // Pre-select role from ?role= query param (used by homepage sitelink buttons)
+  const paramRole = searchParams.get('role')?.toUpperCase();
+  const validRoles = ALL_ROLES.map(r => r.key);
+  const initialRole = validRoles.includes(paramRole) ? paramRole : '';
+
+  const [selectedRole, setSelectedRole] = useState(initialRole);
   const [emailForm, setEmailForm]       = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading]       = useState(false);
   const [error, setError]               = useState('');
+
+  const seo = ROLE_SEO[selectedRole] || {
+    title: 'School Login',
+    desc:  'Login to My-Skoolz school management system. Select your role — admin, teacher, or student — to access your portal.',
+  };
 
   useEffect(() => {
     if (isAuthenticated) navigate(getDashboardPath(), { replace: true });
@@ -110,41 +129,75 @@ const Login = () => {
   };
 
   return (
+    <>
+    <SEOMeta
+      title={seo.title}
+      description={seo.desc}
+      keywords="my-skoolz login, school management login, admin login, student login, teacher login, school portal"
+      path={selectedRole ? `/login?role=${selectedRole}` : '/login'}
+    />
     <div className="auth-wrapper">
       {/* Left Panel */}
-      <div className="auth-left" style={{ background: `linear-gradient(135deg, ${primary} 0%, ${secondary} 100%)` }}>
-        <div className="auth-brand">
+      <div className="auth-left" style={{ background: `linear-gradient(160deg, #0f172a 0%, ${primary}e0 55%, ${secondary}cc 100%)` }}>
+        <div className="auth-left__grid" />
+
+        {/* Brand */}
+        <div className="auth-brand" style={{ marginBottom: 24 }}>
           {school?.logoUrl ? (
             <img src={school.logoUrl} alt={school.name}
-              style={{ width: 40, height: 40, objectFit: 'contain', borderRadius: 8, background: 'rgba(255,255,255,0.2)', padding: 4 }}
+              style={{ width: 42, height: 42, objectFit: 'contain', borderRadius: 10, background: 'rgba(255,255,255,0.2)', padding: 4 }}
               onError={e => { e.target.style.display = 'none'; }} />
           ) : (
-            <Logo size={40} />
+            <Logo size={42} />
           )}
           <span className="brand-name">{school?.name || 'My-Skoolz'}</span>
         </div>
-        <div className="auth-tagline">
-          <h2>Speed Up Your Work Flow With Our Web App</h2>
-          <p>Manage students, teachers, attendance, fees and more — all from one powerful dashboard.</p>
-          <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            {['Students', 'Teachers', 'Attendance', 'Fees', 'Exams'].map(tag => (
-              <span key={tag} style={{ background: 'rgba(255,255,255,0.2)', padding: '5px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: 500, color: '#fff' }}>{tag}</span>
-            ))}
-          </div>
+
+        {/* Tagline */}
+        <div className="auth-tagline" style={{ marginBottom: 0 }}>
+          <h2 style={{ fontSize: '24px', lineHeight: 1.35 }}>
+            Smart School Management,<br />
+            <span style={{ opacity: .8, fontWeight: 600, fontSize: '20px' }}>Built for Modern India</span>
+          </h2>
+          <p style={{ fontSize: '14px', opacity: .82, marginBottom: 0 }}>
+            One platform to manage students, fees, attendance, exams, and communication — accessible from any device.
+          </p>
         </div>
-        <div className="auth-illustration">
-          <div className="auth-illustration-placeholder">
-            {school?.logoUrl ? (
-              <img src={school.logoUrl} alt={school.name}
-                style={{ width: 100, height: 100, objectFit: 'contain', marginBottom: 8, borderRadius: 16, background: 'rgba(255,255,255,0.15)', padding: 10 }}
-                onError={e => { e.target.style.display = 'none'; }} />
-            ) : (
-              <Logo size={90} />
-            )}
-            <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '15px', textAlign: 'center', marginTop: '14px' }}>
-              {school?.name ? `${school.name} Portal` : 'Smart School Management'}
-            </p>
-          </div>
+
+        {/* School lifecycle mini-flow */}
+        <div className="auth-lifecycle">
+          {[
+            { icon: '📝', label: 'Admissions' },
+            { icon: '📅', label: 'Attendance' },
+            { icon: '✏️', label: 'Exams' },
+            { icon: '💰', label: 'Fees' },
+            { icon: '🎓', label: 'Graduation' },
+          ].map((s, i) => (
+            <React.Fragment key={s.label}>
+              <div className="auth-lifecycle__stage">
+                <div className="auth-lifecycle__dot">{s.icon}</div>
+                <span>{s.label}</span>
+              </div>
+              {i < 4 && <span className="auth-lifecycle__arrow">›</span>}
+            </React.Fragment>
+          ))}
+        </div>
+
+        {/* Feature stat cards */}
+        <div className="auth-stats-row">
+          {[
+            { icon: 'people',          title: 'Student Management',  sub: 'Complete profiles & records' },
+            { icon: 'event_available', title: 'Attendance Tracking', sub: 'One-click daily mark' },
+            { icon: 'payments',        title: 'Fee Collection',      sub: 'Automated receipts & dues' },
+          ].map(s => (
+            <div key={s.title} className="auth-stat-card">
+              <span className="material-icons">{s.icon}</span>
+              <div className="auth-stat-card__text">
+                <strong>{s.title}</strong>
+                <span>{s.sub}</span>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -154,20 +207,20 @@ const Login = () => {
 
           {/* Brand header */}
           <div className="auth-form-header">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '22px' }}>
               {school?.logoUrl ? (
                 <img src={school.logoUrl} alt={school.name}
-                  style={{ width: 36, height: 36, objectFit: 'contain', borderRadius: 8 }}
+                  style={{ width: 38, height: 38, objectFit: 'contain', borderRadius: 10 }}
                   onError={e => { e.target.style.display = 'none'; }} />
               ) : (
-                <Logo size={36} />
+                <Logo size={38} />
               )}
-              <span style={{ fontSize: '22px', fontWeight: 800, color: primary, fontFamily: 'Poppins, sans-serif' }}>
+              <span style={{ fontSize: '22px', fontWeight: 800, color: primary, fontFamily: 'Poppins, sans-serif', letterSpacing: '-.3px' }}>
                 {school?.name || 'My-Skoolz'}
               </span>
             </div>
-            <h1>Welcome Back!</h1>
-            <p>Select your role to sign in</p>
+            <h1 style={{ fontSize: '26px', fontWeight: 800, marginBottom: '6px', color: '#0f172a' }}>Welcome Back!</h1>
+            <p style={{ fontSize: '14px', color: '#64748b' }}>Choose your role below to access your portal</p>
           </div>
 
           {/* Role Selector */}
@@ -178,7 +231,7 @@ const Login = () => {
             <div style={{
               display: 'grid',
               gridTemplateColumns: `repeat(${ROLES.length}, 1fr)`,
-              gap: '8px',
+              gap: '10px',
             }}>
               {ROLES.map(role => {
                 const isSelected = selectedRole === role.key;
@@ -192,28 +245,50 @@ const Login = () => {
                       flexDirection: 'column',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      gap: '5px',
-                      padding: '10px 4px',
-                      borderRadius: '10px',
-                      border: isSelected ? `2px solid ${primary}` : '2px solid #e2e8f0',
-                      background: isSelected ? `${primary}15` : '#fff',
+                      gap: '7px',
+                      padding: '14px 6px 12px',
+                      borderRadius: '12px',
+                      border: isSelected ? `2px solid ${primary}` : '2px solid #e8edf4',
+                      background: isSelected
+                        ? `linear-gradient(145deg, ${primary}18, ${primary}08)`
+                        : '#fafbfc',
                       cursor: 'pointer',
-                      transition: 'all 0.2s',
+                      transition: 'all 0.2s ease',
                       outline: 'none',
+                      boxShadow: isSelected
+                        ? `0 4px 14px ${primary}30`
+                        : '0 1px 3px rgba(0,0,0,.06)',
+                      transform: isSelected ? 'translateY(-2px)' : 'none',
                     }}
                   >
-                    <span className="material-icons" style={{ fontSize: '22px', color: isSelected ? primary : '#a0aec0' }}>
+                    <span className="material-icons" style={{
+                      fontSize: '24px',
+                      color: isSelected ? primary : '#94a3b8',
+                      transition: 'color 0.2s',
+                    }}>
                       {role.icon}
                     </span>
                     <span style={{
-                      fontSize: '10px',
+                      fontSize: '11px',
                       fontWeight: isSelected ? 700 : 500,
-                      color: isSelected ? primary : '#718096',
+                      color: isSelected ? primary : '#64748b',
                       textAlign: 'center',
                       lineHeight: 1.2,
+                      letterSpacing: isSelected ? '0.02em' : '0',
                     }}>
                       {role.label}
                     </span>
+                    {isSelected && (
+                      <span style={{
+                        width: '18px', height: '18px',
+                        borderRadius: '50%',
+                        background: primary,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        marginTop: '2px',
+                      }}>
+                        <span className="material-icons" style={{ fontSize: '12px', color: '#fff' }}>check</span>
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -289,6 +364,7 @@ const Login = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 
