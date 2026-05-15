@@ -9,6 +9,7 @@ import MarketingLayout from './components/MarketingLayout';
 // Marketing Pages
 import HomePage from './pages/marketing/HomePage';
 import SolutionsPage from './pages/marketing/SolutionsPage';
+import AboutUsPage from './pages/marketing/AboutUsPage';
 import ContactUsPage from './pages/marketing/ContactUsPage';
 import CareersPage from './pages/marketing/CareersPage';
 import BookDemoPage from './pages/marketing/BookDemoPage';
@@ -92,6 +93,11 @@ function App() {
             <Route path="/marketing/contact" element={
               <MarketingLayout>
                 <ContactUsPage />
+              </MarketingLayout>
+            } />
+            <Route path="/marketing/about" element={
+              <MarketingLayout>
+                <AboutUsPage />
               </MarketingLayout>
             } />
             <Route path="/marketing/careers" element={

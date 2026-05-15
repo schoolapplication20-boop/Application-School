@@ -1631,6 +1631,679 @@
 .demo-benefits { display: flex; flex-direction: column; gap: 16px; }
 .demo-form { display: flex; flex-direction: column; gap: 12px; }
 
+/* ══════════════════════
+   About Us Page
+══════════════════════ */
+.mkt-about-hero {
+  position: relative;
+  background: linear-gradient(160deg, #0f172a 0%, #1e3a8a 100%);
+  color: var(--white);
+  padding: 80px 24px;
+  text-align: center;
+  overflow: hidden;
+  min-height: 380px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.mkt-about-hero h1 {
+  font-size: clamp(1.75rem, 4vw, 2.75rem);
+  font-weight: 900;
+  margin: 16px 0;
+  line-height: 1.2;
+}
+
+.mkt-about-hero p {
+  color: rgba(255,255,255,.75);
+  font-size: 1.1rem;
+  max-width: 600px;
+  line-height: 1.7;
+}
+
+.mkt-about-hero__image {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.mkt-about-hero__image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: .15;
+}
+
+.mkt-about-hero__image-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(160deg, rgba(15,23,42,.9) 0%, rgba(30,58,138,.85) 100%);
+}
+
+.mkt-about-hero .mkt-container {
+  position: relative;
+  z-index: 1;
+}
+
+.mkt-about-mission {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 64px;
+  align-items: center;
+}
+
+.mkt-about-mission__text h2 {
+  font-size: clamp(1.6rem, 3vw, 2.25rem);
+  font-weight: 800;
+  color: var(--text-dark);
+  margin: 16px 0 20px;
+  line-height: 1.2;
+}
+
+.mkt-about-mission__text p {
+  color: var(--text-mid);
+  font-size: 1rem;
+  line-height: 1.8;
+  margin-bottom: 16px;
+}
+
+.mkt-about-mission__image {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+}
+
+.mkt-about-mission__image img {
+  width: 100%;
+  height: 420px;
+  object-fit: cover;
+  display: block;
+}
+
+.mkt-about-stats {
+  background: linear-gradient(135deg, var(--primary-dark) 0%, var(--secondary) 100%);
+  padding: 48px 24px;
+}
+
+.mkt-about-stats .mkt-stats__item {
+  border-color: rgba(255,255,255,.15);
+}
+
+.mkt-about-values {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.mkt-about-value-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  transition: var(--transition);
+}
+
+.mkt-about-value-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+
+.mkt-about-value-card__icon {
+  font-size: 2rem;
+  margin-bottom: 14px;
+}
+
+.mkt-about-value-card h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 8px;
+}
+
+.mkt-about-value-card p {
+  font-size: .88rem;
+  color: var(--text-mid);
+  line-height: 1.7;
+}
+
+/* Timeline */
+.mkt-timeline {
+  max-width: 800px;
+  margin: 0 auto;
+  position: relative;
+}
+
+.mkt-timeline::before {
+  content: '';
+  position: absolute;
+  left: 80px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--border);
+}
+
+.mkt-timeline__item {
+  display: flex;
+  gap: 32px;
+  align-items: flex-start;
+  margin-bottom: 48px;
+  position: relative;
+}
+
+.mkt-timeline__year {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--primary);
+  min-width: 60px;
+  text-align: right;
+  padding-top: 4px;
+}
+
+.mkt-timeline__connector {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--primary);
+  flex-shrink: 0;
+  margin-top: 6px;
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 0 0 4px var(--primary-light);
+}
+
+.mkt-timeline__content {
+  flex: 1;
+}
+
+.mkt-timeline__content h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 6px;
+}
+
+.mkt-timeline__content p {
+  font-size: .9rem;
+  color: var(--text-mid);
+  line-height: 1.7;
+}
+
+/* Team grid */
+.mkt-team-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+}
+
+.mkt-team-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 32px 24px;
+  text-align: center;
+  transition: var(--transition);
+}
+
+.mkt-team-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+
+.mkt-team-card__avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  color: var(--white);
+  font-size: 1.4rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+}
+
+.mkt-team-card h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 6px;
+}
+
+.mkt-team-card p {
+  font-size: .85rem;
+  color: var(--text-mid);
+}
+
+/* Photo strip */
+.mkt-photo-strip {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  height: 220px;
+  overflow: hidden;
+}
+
+.mkt-photo-strip img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform .4s ease;
+}
+
+.mkt-photo-strip img:hover { transform: scale(1.05); }
+
+/* ══════════════════════
+   HomePage extras
+══════════════════════ */
+/* What is My-Skoolz section */
+.mkt-what-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 64px;
+  align-items: center;
+}
+
+.mkt-what__image {
+  position: relative;
+  border-radius: var(--radius-lg);
+  overflow: visible;
+}
+
+.mkt-what__image img {
+  width: 100%;
+  height: 420px;
+  object-fit: cover;
+  border-radius: var(--radius-lg);
+  display: block;
+  box-shadow: var(--shadow-lg);
+}
+
+.mkt-what__image-badge {
+  position: absolute;
+  bottom: -16px;
+  right: -16px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  box-shadow: var(--shadow-md);
+  text-align: center;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mkt-what__image-badge strong {
+  font-size: 1.75rem;
+  font-weight: 900;
+  color: var(--primary);
+  line-height: 1;
+  display: block;
+}
+
+.mkt-what__image-badge span {
+  font-size: .82rem;
+  color: var(--text-mid);
+  line-height: 1.4;
+  display: block;
+}
+
+.mkt-what__text h2 {
+  font-size: clamp(1.6rem, 3vw, 2.25rem);
+  font-weight: 800;
+  color: var(--text-dark);
+  margin: 16px 0 20px;
+  line-height: 1.2;
+}
+
+.mkt-what__text p {
+  color: var(--text-mid);
+  font-size: 1rem;
+  line-height: 1.8;
+  margin-bottom: 16px;
+}
+
+.mkt-what__checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.mkt-what__check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: .92rem;
+  color: var(--text-dark);
+}
+
+.mkt-what__check span {
+  color: var(--success);
+  font-weight: 700;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+/* Role sections */
+.mkt-roles {
+  display: flex;
+  flex-direction: column;
+  gap: 64px;
+}
+
+.mkt-role {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 64px;
+  align-items: center;
+}
+
+.mkt-role--reverse {
+  direction: rtl;
+}
+
+.mkt-role--reverse > * {
+  direction: ltr;
+}
+
+.mkt-role__image {
+  position: relative;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+}
+
+.mkt-role__image img {
+  width: 100%;
+  height: 360px;
+  object-fit: cover;
+  display: block;
+  transition: transform .4s ease;
+}
+
+.mkt-role__image:hover img { transform: scale(1.03); }
+
+.mkt-role__role-tag {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  color: white;
+  font-size: .8rem;
+  font-weight: 700;
+  padding: 5px 14px;
+  border-radius: 99px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.mkt-role__content h3 {
+  font-size: clamp(1.4rem, 2.5vw, 1.9rem);
+  font-weight: 800;
+  color: var(--text-dark);
+  margin-bottom: 14px;
+  line-height: 1.2;
+}
+
+.mkt-role__content p {
+  color: var(--text-mid);
+  font-size: .98rem;
+  line-height: 1.8;
+  margin-bottom: 20px;
+}
+
+.mkt-role__list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mkt-role__list li {
+  font-size: .92rem;
+  color: var(--text-dark);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 500;
+}
+
+.mkt-role__list li span {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+/* ══════════════════════
+   Careers extras
+══════════════════════ */
+.mkt-careers-culture {
+  position: relative;
+  height: 320px;
+  overflow: hidden;
+}
+
+.mkt-careers-culture img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(.45);
+}
+
+.mkt-careers-culture__overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 80px;
+}
+
+.mkt-careers-culture__stat {
+  text-align: center;
+  color: white;
+}
+
+.mkt-careers-culture__stat span {
+  display: block;
+  font-size: 2.5rem;
+  font-weight: 900;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.mkt-positions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.mkt-position-item {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 24px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  transition: var(--transition);
+}
+
+.mkt-position-item:hover {
+  border-color: var(--primary);
+  box-shadow: var(--shadow-sm);
+  transform: translateX(4px);
+}
+
+.mkt-position-item__info { flex: 1; }
+
+.mkt-position-item__dept {
+  font-size: .75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--primary);
+  background: var(--primary-light);
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 99px;
+  margin-bottom: 8px;
+}
+
+.mkt-position-item__info h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 6px;
+}
+
+.mkt-position-item__info p {
+  font-size: .88rem;
+  color: var(--text-mid);
+  line-height: 1.6;
+  margin-bottom: 10px;
+}
+
+.mkt-position-item__meta {
+  display: flex;
+  gap: 20px;
+  font-size: .82rem;
+  color: var(--text-light);
+}
+
+/* Modal */
+.mkt-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.mkt-modal {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  padding: 36px;
+  max-width: 600px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: var(--shadow-lg);
+}
+
+.mkt-modal__close {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  color: var(--text-light);
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: var(--transition);
+}
+
+.mkt-modal__close:hover { background: var(--bg); color: var(--text-dark); }
+
+.mkt-modal__header {
+  margin-bottom: 24px;
+}
+
+.mkt-modal__header h2 {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--text-dark);
+  margin-bottom: 6px;
+}
+
+.mkt-modal__header p {
+  font-size: .9rem;
+  color: var(--text-mid);
+}
+
+.mkt-modal__form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mkt-modal__success {
+  text-align: center;
+  padding: 32px 0;
+}
+
+.mkt-modal__success-icon {
+  width: 64px;
+  height: 64px;
+  background: #d1fae5;
+  color: #059669;
+  font-size: 1.75rem;
+  font-weight: 700;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+}
+
+.mkt-modal__success h2 {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--text-dark);
+  margin-bottom: 12px;
+}
+
+.mkt-modal__success p {
+  color: var(--text-mid);
+  font-size: .95rem;
+  line-height: 1.7;
+}
+
+/* Responsive additions */
+@media (max-width: 1024px) {
+  .mkt-about-values { grid-template-columns: repeat(2, 1fr); }
+  .mkt-team-grid { grid-template-columns: repeat(2, 1fr); }
+  .mkt-what-grid, .mkt-about-mission { grid-template-columns: 1fr; gap: 40px; }
+  .mkt-role { grid-template-columns: 1fr; gap: 32px; }
+  .mkt-role--reverse { direction: ltr; }
+  .mkt-photo-strip { grid-template-columns: repeat(3, 1fr); }
+  .mkt-photo-strip img:nth-child(n+4) { display: none; }
+}
+
+@media (max-width: 768px) {
+  .mkt-about-values { grid-template-columns: 1fr; }
+  .mkt-team-grid { grid-template-columns: repeat(2, 1fr); }
+  .mkt-careers-culture { height: 220px; }
+  .mkt-careers-culture__overlay { gap: 32px; }
+  .mkt-careers-culture__stat span { font-size: 1.75rem; }
+  .mkt-position-item { flex-direction: column; align-items: flex-start; }
+  .mkt-photo-strip { grid-template-columns: repeat(2, 1fr); height: 160px; }
+  .mkt-photo-strip img:nth-child(n+3) { display: none; }
+  .mkt-timeline::before { left: 60px; }
+  .mkt-modal { padding: 24px; }
+  .mkt-form-row { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+  .mkt-team-grid { grid-template-columns: 1fr; }
+  .mkt-what__image-badge { bottom: 0; right: 0; }
+}
+
 /* Dropdown legacy — kept minimal to avoid conflicts */
 .dropdown-menu {
   position: absolute;

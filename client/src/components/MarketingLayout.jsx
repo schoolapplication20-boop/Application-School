@@ -20,6 +20,7 @@ const MarketingLayout = ({ children }) => {
   const navLinks = [
     { label: 'Home', path: '/marketing/home' },
     { label: 'Solutions', path: '/marketing/solutions' },
+    { label: 'About Us', path: '/marketing/about' },
     { label: 'Contact', path: '/marketing/contact' },
     { label: 'Careers', path: '/marketing/careers' },
   ];
