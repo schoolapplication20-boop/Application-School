@@ -1,12 +1,19 @@
 import React, { useState } from 'react';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
+import AiChat from './AiChat';
+import { useAuth } from '../context/AuthContext';
 import '../styles/sidebar.css';
 import '../styles/dashboard.css';
+
+const AI_ROLES = ['ADMIN', 'SUPER_ADMIN', 'APPLICATION_OWNER'];
 
 const Layout = ({ children, pageTitle }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const { user } = useAuth();
+
+  const showAi = user && AI_ROLES.includes(user.role);
 
   return (
     <div className="app-layout">
@@ -33,6 +40,8 @@ const Layout = ({ children, pageTitle }) => {
           {children}
         </div>
       </div>
+
+      {showAi && <AiChat />}
     </div>
   );
 };
