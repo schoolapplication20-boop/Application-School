@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import Logo from './Logo';
 import '../pages/marketing/marketing.css';
 
 const MarketingLayout = ({ children }) => {
@@ -18,28 +19,31 @@ const MarketingLayout = ({ children }) => {
   }, [location]);
 
   const navLinks = [
-    { label: 'Home', path: '/marketing/home' },
+    { label: 'Home',      path: '/marketing/home' },
     { label: 'Solutions', path: '/marketing/solutions' },
-    { label: 'About Us', path: '/marketing/about' },
-    { label: 'Contact', path: '/marketing/contact' },
-    { label: 'Careers', path: '/marketing/careers' },
+    { label: 'About Us',  path: '/marketing/about' },
+    { label: 'Contact',   path: '/marketing/contact' },
+    { label: 'Careers',   path: '/marketing/careers' },
   ];
 
   return (
     <div className="mkt-layout">
       <nav className={`mkt-nav ${scrolled ? 'mkt-nav--scrolled' : ''}`}>
         <div className="mkt-nav__inner">
+
+          {/* ── Logo ── */}
           <Link to="/" className="mkt-nav__logo">
-            <div className="mkt-nav__logo-icon">M</div>
+            <Logo size={36} />
             <span className="mkt-nav__logo-text">My-Skoolz</span>
           </Link>
 
+          {/* ── Links ── */}
           <ul className="mkt-nav__links">
             {navLinks.map(({ label, path }) => (
               <li key={path}>
                 <Link
                   to={path}
-                  className={`mkt-nav__link ${location.pathname === path ? 'mkt-nav__link--active' : ''}`}
+                  className={`mkt-nav__link ${location.pathname === path || (path === '/marketing/home' && location.pathname === '/') ? 'mkt-nav__link--active' : ''}`}
                 >
                   {label}
                 </Link>
@@ -47,15 +51,13 @@ const MarketingLayout = ({ children }) => {
             ))}
           </ul>
 
+          {/* ── Actions ── */}
           <div className="mkt-nav__actions">
-            <Link to="/login" className="mkt-btn mkt-btn--ghost">
-              Login
-            </Link>
-            <Link to="/marketing/demo" className="mkt-btn mkt-btn--primary">
-              Book Free Demo
-            </Link>
+            <Link to="/login" className="mkt-btn mkt-btn--ghost">Login</Link>
+            <Link to="/marketing/demo" className="mkt-btn mkt-btn--primary">Book Free Demo</Link>
           </div>
 
+          {/* ── Hamburger ── */}
           <button
             className="mkt-nav__hamburger"
             onClick={() => setMobileOpen(!mobileOpen)}
@@ -67,6 +69,7 @@ const MarketingLayout = ({ children }) => {
           </button>
         </div>
 
+        {/* ── Mobile menu ── */}
         {mobileOpen && (
           <div className="mkt-nav__mobile">
             {navLinks.map(({ label, path }) => (
@@ -79,7 +82,7 @@ const MarketingLayout = ({ children }) => {
               </Link>
             ))}
             <div className="mkt-nav__mobile-actions">
-              <Link to="/login" className="mkt-btn mkt-btn--ghost mkt-btn--full">Login</Link>
+              <Link to="/login"         className="mkt-btn mkt-btn--ghost   mkt-btn--full">Login</Link>
               <Link to="/marketing/demo" className="mkt-btn mkt-btn--primary mkt-btn--full">Book Free Demo</Link>
             </div>
           </div>
@@ -88,17 +91,19 @@ const MarketingLayout = ({ children }) => {
 
       <main className="mkt-main">{children}</main>
 
+      {/* ── Footer ── */}
       <footer className="mkt-footer">
         <div className="mkt-footer__inner">
+
           <div className="mkt-footer__brand">
-            <div className="mkt-footer__logo">
-              <div className="mkt-nav__logo-icon">M</div>
-              <span>My-Skoolz</span>
-            </div>
-            <p>Transforming school management with modern technology. Trusted by hundreds of schools worldwide.</p>
+            <Link to="/" className="mkt-footer__logo-link">
+              <Logo size={32} />
+              <span className="mkt-footer__logo-name">My-Skoolz</span>
+            </Link>
+            <p>A modern, all-in-one school management platform built to simplify operations and improve outcomes for every school.</p>
             <div className="mkt-footer__socials">
               <a href="#linkedin" aria-label="LinkedIn">in</a>
-              <a href="#twitter" aria-label="Twitter">𝕏</a>
+              <a href="#twitter"  aria-label="Twitter">𝕏</a>
               <a href="#facebook" aria-label="Facebook">f</a>
             </div>
           </div>
@@ -107,14 +112,14 @@ const MarketingLayout = ({ children }) => {
             <h5>Product</h5>
             <Link to="/marketing/solutions">Features</Link>
             <Link to="/marketing/demo">Book a Demo</Link>
-            <a href="#pricing">Pricing</a>
+            <Link to="/marketing/about">About Us</Link>
           </div>
 
           <div className="mkt-footer__col">
             <h5>Company</h5>
-            <Link to="/marketing/home">About Us</Link>
+            <Link to="/marketing/about">Our Story</Link>
             <Link to="/marketing/careers">Careers</Link>
-            <Link to="/marketing/contact">Contact</Link>
+            <Link to="/marketing/contact">Contact Us</Link>
           </div>
 
           <div className="mkt-footer__col">
@@ -127,9 +132,7 @@ const MarketingLayout = ({ children }) => {
 
         <div className="mkt-footer__bottom">
           <p>&copy; 2025 My-Skoolz. All rights reserved.</p>
-          <p>
-            <a href="mailto:navaneeswar1861@gmail.com">navaneeswar1861@gmail.com</a>
-          </p>
+          <a href="mailto:navaneeswar1861@gmail.com">navaneeswar1861@gmail.com</a>
         </div>
       </footer>
     </div>
