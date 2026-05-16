@@ -1,0 +1,105 @@
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { useAuth } from '../../context/AuthContext';
+import api from '../../services/api';
+
+const tiles = [
+  { label: 'Attendance', icon: '📋', screen: 'TeacherAttendance', color: '#3b82f6' },
+  { label: 'Diary', icon: '📓', screen: 'TeacherDiary', color: '#8b5cf6' },
+  { label: 'Assignments', icon: '📝', screen: 'TeacherAssignments', color: '#f59e0b' },
+  { label: 'Marks', icon: '📊', screen: 'TeacherMarks', color: '#10b981' },
+  { label: 'Schedule', icon: '🗓️', screen: 'TeacherSchedule', color: '#6366f1' },
+  { label: 'Messages', icon: '💬', screen: 'TeacherMessages', color: '#ec4899' },
+  { label: 'Leave', icon: '🏖️', screen: 'TeacherLeave', color: '#f97316' },
+  { label: 'Exams', icon: '🎯', screen: 'TeacherExams', color: '#14b8a6' },
+  { label: 'Approve Leave', icon: '✅', screen: 'TeacherLeaveApproval', color: '#84cc16' },
+];
+
+export default function TeacherDashboard({ navigation }) {
+  const { user, logout } = useAuth();
+  const [profile, setProfile] = useState(null);
+  const [classInfo, setClassInfo] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      api.get('/api/teacher/profile'),
+      api.get('/api/teacher/class-teacher-assignment'),
+    ]).then(([pRes, cRes]) => {
+      setProfile(pRes.data.data);
+      setClassInfo(cRes.data.data);
+    }).catch(() => {}).finally(() => setLoading(false));
+  }, []);
+
+  const today = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
+
+  return (
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <View style={styles.header}>
+        <View style={styles.headerTop}>
+          <View>
+            <Text style={styles.greeting}>Good Morning 👋</Text>
+            <Text style={styles.name}>{user?.name || 'Teacher'}</Text>
+            <Text style={styles.date}>{today}</Text>
+          </View>
+          <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
+            <Text style={styles.logoutText}>Logout</Text>
+          </TouchableOpacity>
+        </View>
+
+        {loading ? (
+          <ActivityIndicator color="#fff" style={{ marginTop: 16 }} />
+        ) : (
+          <View style={styles.infoRow}>
+            <View style={styles.infoCard}>
+              <Text style={styles.infoVal}>{profile?.subject || '—'}</Text>
+              <Text style={styles.infoLabel}>Subject</Text>
+            </View>
+            <View style={styles.infoCard}>
+              <Text style={styles.infoVal}>{classInfo?.label || '—'}</Text>
+              <Text style={styles.infoLabel}>Class</Text>
+            </View>
+            <View style={styles.infoCard}>
+              <Text style={styles.infoVal}>{profile?.teacherType === 'CLASS_TEACHER' || profile?.teacherType === 'BOTH' ? 'Yes' : 'No'}</Text>
+              <Text style={styles.infoLabel}>Class Teacher</Text>
+            </View>
+          </View>
+        )}
+      </View>
+
+      <Text style={styles.sectionTitle}>Modules</Text>
+      <View style={styles.grid}>
+        {tiles.map(tile => (
+          <TouchableOpacity
+            key={tile.screen}
+            style={[styles.tile, { borderTopColor: tile.color }]}
+            onPress={() => navigation.navigate(tile.screen)}
+          >
+            <Text style={styles.tileIcon}>{tile.icon}</Text>
+            <Text style={styles.tileLabel}>{tile.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#f1f5f9' },
+  header: { backgroundColor: '#059669', padding: 20, paddingTop: 52, paddingBottom: 24 },
+  headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  greeting: { color: '#a7f3d0', fontSize: 13 },
+  name: { color: '#fff', fontSize: 22, fontWeight: '800', marginTop: 2 },
+  date: { color: '#a7f3d0', fontSize: 12, marginTop: 2 },
+  logoutBtn: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
+  logoutText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  infoRow: { flexDirection: 'row', gap: 10, marginTop: 16 },
+  infoCard: { flex: 1, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 12, padding: 12, alignItems: 'center' },
+  infoVal: { color: '#fff', fontSize: 14, fontWeight: '700' },
+  infoLabel: { color: '#a7f3d0', fontSize: 11, marginTop: 2 },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#1e293b', marginHorizontal: 16, marginTop: 20, marginBottom: 12 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 10, paddingBottom: 24 },
+  tile: { width: '29%', backgroundColor: '#fff', margin: '2%', borderRadius: 14, padding: 16, alignItems: 'center', elevation: 2, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, borderTopWidth: 3 },
+  tileIcon: { fontSize: 28, marginBottom: 8 },
+  tileLabel: { fontSize: 12, fontWeight: '600', color: '#374151', textAlign: 'center' },
+});

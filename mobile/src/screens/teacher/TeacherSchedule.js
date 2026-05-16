@@ -1,0 +1,73 @@
+import React, { useEffect, useState } from 'react';
+import { View, Text, FlatList, StyleSheet, ActivityIndicator, Alert, ScrollView } from 'react-native';
+import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
+
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+export default function TeacherSchedule() {
+  const { user } = useAuth();
+  const [timetable, setTimetable] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeDay, setActiveDay] = useState(DAYS[new Date().getDay() - 1] || 'Monday');
+
+  useEffect(() => {
+    api.get(`/api/timetable?teacherId=${user?.id}`)
+      .then(res => setTimetable(res.data.data || []))
+      .catch(() => Alert.alert('Error', 'Failed to load schedule.'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <ActivityIndicator style={{ flex: 1 }} size="large" color="#6366f1" />;
+
+  const filtered = timetable.filter(t => t.day === activeDay || t.dayOfWeek === activeDay);
+
+  return (
+    <View style={styles.container}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dayRow}>
+        {DAYS.map(d => (
+          <Text key={d} onPress={() => setActiveDay(d)} style={[styles.dayChip, activeDay === d && styles.dayChipActive]}>
+            {d.slice(0, 3)}
+          </Text>
+        ))}
+      </ScrollView>
+
+      <FlatList
+        data={filtered}
+        keyExtractor={(_, i) => i.toString()}
+        contentContainerStyle={{ padding: 12 }}
+        renderItem={({ item }) => (
+          <View style={styles.card}>
+            <View style={styles.timeCol}>
+              <Text style={styles.time}>{item.startTime}</Text>
+              <View style={styles.timeDot} />
+              <Text style={styles.time}>{item.endTime}</Text>
+            </View>
+            <View style={styles.info}>
+              <Text style={styles.subject}>{item.subject || item.subjectName}</Text>
+              <Text style={styles.classSection}>{item.classSection || item.className}</Text>
+              {item.room && <Text style={styles.room}>🏫 Room {item.room}</Text>}
+            </View>
+          </View>
+        )}
+        ListEmptyComponent={<Text style={styles.empty}>No classes on {activeDay}.</Text>}
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#f1f5f9' },
+  dayRow: { backgroundColor: '#fff', paddingHorizontal: 12, paddingVertical: 10, maxHeight: 56 },
+  dayChip: { paddingHorizontal: 18, paddingVertical: 7, marginRight: 8, borderRadius: 20, fontSize: 13, color: '#64748b', fontWeight: '600', backgroundColor: '#f1f5f9' },
+  dayChipActive: { backgroundColor: '#6366f1', color: '#fff' },
+  card: { flexDirection: 'row', backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 10, elevation: 1 },
+  timeCol: { alignItems: 'center', marginRight: 16, minWidth: 60 },
+  time: { fontSize: 12, fontWeight: '700', color: '#6366f1' },
+  timeDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#6366f1', marginVertical: 4 },
+  info: { flex: 1 },
+  subject: { fontSize: 16, fontWeight: '700', color: '#1e293b', marginBottom: 4 },
+  classSection: { fontSize: 13, color: '#6366f1', fontWeight: '600', marginBottom: 4 },
+  room: { fontSize: 12, color: '#64748b' },
+  empty: { textAlign: 'center', color: '#94a3b8', marginTop: 40, fontSize: 14 },
+});
