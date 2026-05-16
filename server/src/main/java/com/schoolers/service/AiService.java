@@ -87,35 +87,47 @@ public class AiService {
         }
     }
 
+    private static final java.util.Set<String> ADMIN_ROLES = java.util.Set.of(
+        "ADMIN", "SUPER_ADMIN", "APPLICATION_OWNER"
+    );
+
     private String buildSystemPrompt(Long schoolId, String role) {
+        boolean isAdmin = role != null && ADMIN_ROLES.contains(role);
+
         StringBuilder sb = new StringBuilder();
         sb.append("You are an AI assistant built into My-Skoolz, a school management platform used by schools in India.\n");
         sb.append("You are helping a ").append(formatRole(role)).append(".\n\n");
 
         try {
             if (schoolId != null) {
-                // School-scoped data
                 String schoolName = schoolRepository.findById(schoolId)
                     .map(s -> s.getName()).orElse("this school");
 
-                long students    = studentRepository.countBySchoolId(schoolId);
-                long active      = studentRepository.countBySchoolIdAndIsActive(schoolId, true);
-                long teachers    = teacherRepository.countBySchoolId(schoolId);
-                long classes     = classRoomRepository.countBySchoolId(schoolId);
-                BigDecimal paid  = nullSafe(feeRepository.sumPaidFeesBySchool(schoolId));
-                BigDecimal pending = nullSafe(feeRepository.sumPendingFeesBySchool(schoolId));
+                long students = studentRepository.countBySchoolId(schoolId);
+                long active   = studentRepository.countBySchoolIdAndIsActive(schoolId, true);
+                long teachers = teacherRepository.countBySchoolId(schoolId);
+                long classes  = classRoomRepository.countBySchoolId(schoolId);
 
                 sb.append("LIVE SCHOOL DATA for ").append(schoolName).append(":\n");
                 sb.append("- Total students: ").append(students)
                   .append(" (").append(active).append(" active)\n");
-                sb.append("- Total teachers: ").append(teachers).append("\n");
-                sb.append("- Total classes: ").append(classes).append("\n");
-                sb.append("- Fees collected: ₹").append(paid.toPlainString()).append("\n");
-                sb.append("- Fees pending: ₹").append(pending.toPlainString()).append("\n");
-            } else {
-                // APPLICATION_OWNER — platform-wide stats
-                long totalSchools   = schoolRepository.count();
-                BigDecimal allPaid  = nullSafe(feeRepository.sumPaidFees());
+
+                if (isAdmin) {
+                    // Financial data is visible only to admin roles
+                    BigDecimal paid    = nullSafe(feeRepository.sumPaidFeesBySchool(schoolId));
+                    BigDecimal pending = nullSafe(feeRepository.sumPendingFeesBySchool(schoolId));
+                    sb.append("- Total teachers: ").append(teachers).append("\n");
+                    sb.append("- Total classes: ").append(classes).append("\n");
+                    sb.append("- Fees collected: ₹").append(paid.toPlainString()).append("\n");
+                    sb.append("- Fees pending: ₹").append(pending.toPlainString()).append("\n");
+                } else {
+                    sb.append("- Total teachers: ").append(teachers).append("\n");
+                    sb.append("- Total classes: ").append(classes).append("\n");
+                }
+            } else if (isAdmin) {
+                // APPLICATION_OWNER — platform-wide stats (admin only)
+                long totalSchools    = schoolRepository.count();
+                BigDecimal allPaid   = nullSafe(feeRepository.sumPaidFees());
                 BigDecimal allPending = nullSafe(feeRepository.sumPendingFees());
 
                 sb.append("PLATFORM-WIDE DATA:\n");
@@ -128,15 +140,25 @@ public class AiService {
         }
 
         sb.append("\nYou can help with:\n");
-        sb.append("- Answering questions about the above live data\n");
-        sb.append("- School management advice and best practices\n");
-        sb.append("- Drafting announcements, notices, or parent communications\n");
-        sb.append("- Explaining fee structures, attendance policies, exam schedules\n");
-        sb.append("- General guidance on school administration\n\n");
+        if (isAdmin) {
+            sb.append("- Answering questions about the above live data\n");
+            sb.append("- School management advice and best practices\n");
+            sb.append("- Drafting announcements, notices, or parent communications\n");
+            sb.append("- Explaining fee structures, attendance policies, exam schedules\n");
+            sb.append("- General guidance on school administration\n\n");
+        } else {
+            sb.append("- School-related questions (attendance, homework, timetable, exams)\n");
+            sb.append("- General academic guidance and advice\n");
+            sb.append("- Drafting messages or communications\n\n");
+        }
         sb.append("Rules:\n");
         sb.append("- Be concise and clear. Use bullet points for lists.\n");
         sb.append("- Use ₹ for Indian currency. Use Indian school context.\n");
         sb.append("- Only state data that is in the live data above — never invent numbers.\n");
+        if (!isAdmin) {
+            sb.append("- Do NOT discuss or reveal any fee amounts, financial data, or payment information.\n");
+            sb.append("- If asked about fees or financial data, say: 'Please contact your school admin for fee details.'\n");
+        }
         sb.append("- If the user asks something outside your data, say so honestly and offer general advice.\n");
         sb.append("- Reply in the same language the user writes in.\n");
 
@@ -158,9 +180,11 @@ public class AiService {
         if (role == null) return "administrator";
         return switch (role) {
             case "APPLICATION_OWNER" -> "platform owner";
-            case "SUPER_ADMIN" -> "school owner (Super Admin)";
-            case "ADMIN" -> "school administrator";
-            default -> "administrator";
+            case "SUPER_ADMIN"       -> "school owner (Super Admin)";
+            case "ADMIN"             -> "school administrator";
+            case "TEACHER"           -> "teacher";
+            case "STUDENT"           -> "student";
+            default                  -> "user";
         };
     }
 }

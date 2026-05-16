@@ -45,7 +45,7 @@ public class UnifiedChatController {
         }
 
         // 2. Escalate to Gemini for admin users when FAQ has no match
-        if (auth != null && auth.isAuthenticated() && isAdminUser(auth)) {
+        if (auth != null && auth.isAuthenticated() && canUseGemini(auth)) {
             try {
                 User user = userRepository.findByEmailIgnoreCase(auth.getName()).orElse(null);
                 Long schoolId = user != null ? user.getSchoolId() : null;
@@ -65,12 +65,14 @@ public class UnifiedChatController {
             new UnifiedChatResponse(FALLBACK, "fallback")));
     }
 
-    private boolean isAdminUser(Authentication auth) {
+    private boolean canUseGemini(Authentication auth) {
         return auth.getAuthorities().stream().anyMatch(a -> {
             String authority = a.getAuthority();
             return "ROLE_ADMIN".equals(authority)
                 || "ROLE_SUPER_ADMIN".equals(authority)
-                || "ROLE_APPLICATION_OWNER".equals(authority);
+                || "ROLE_APPLICATION_OWNER".equals(authority)
+                || "ROLE_TEACHER".equals(authority)
+                || "ROLE_STUDENT".equals(authority);
         });
     }
 }
