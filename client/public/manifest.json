@@ -1,0 +1,65 @@
+{
+  "name": "My-Skoolz — School Management",
+  "short_name": "My-Skoolz",
+  "description": "All-in-one school management platform. Manage students, fees, attendance, exams and more from your phone.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0f172a",
+  "theme_color": "#2563EB",
+  "lang": "en-IN",
+  "categories": ["education", "productivity", "business"],
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Admin Login",
+      "short_name": "Admin",
+      "description": "Sign in as School Administrator",
+      "url": "/login?role=ADMIN",
+      "icons": [{ "src": "/logo.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Teacher Login",
+      "short_name": "Teacher",
+      "description": "Sign in as Teacher",
+      "url": "/login?role=TEACHER",
+      "icons": [{ "src": "/logo.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Student Login",
+      "short_name": "Student",
+      "description": "Sign in as Student",
+      "url": "/login?role=STUDENT",
+      "icons": [{ "src": "/logo.svg", "sizes": "any" }]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/logo.svg",
+      "sizes": "540x720",
+      "type": "image/svg+xml",
+      "form_factor": "narrow",
+      "label": "My-Skoolz Dashboard"
+    }
+  ]
+}

@@ -5,6 +5,7 @@ import { SchoolProvider } from './context/SchoolContext';
 import { NotificationProvider } from './context/NotificationContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import MarketingLayout from './components/MarketingLayout';
+import InstallPrompt from './components/InstallPrompt';
 
 // Marketing Pages
 import HomePage from './pages/marketing/HomePage';
@@ -81,6 +82,7 @@ function App() {
       <SchoolProvider>
       <NotificationProvider>
         <Router>
+          <InstallPrompt />
           <Routes>
             {/* Marketing Routes - Public */}
             <Route path="/marketing/home" element={
