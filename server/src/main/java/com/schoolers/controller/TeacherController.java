@@ -167,6 +167,18 @@ public class TeacherController {
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
+    @PutMapping("/students/{studentId}/reset-password")
+    public ResponseEntity<ApiResponse<String>> resetStudentPassword(
+            @PathVariable Long studentId,
+            @RequestBody Map<String, String> body) {
+        String newPassword = body.get("password");
+        if (newPassword == null || newPassword.isBlank())
+            return ResponseEntity.badRequest().body(ApiResponse.error("New password is required"));
+        Long teacherId = resolveTeacherId(null);
+        ApiResponse<String> response = teacherService.resetStudentPassword(teacherId, studentId, newPassword);
+        return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
+    }
+
     @DeleteMapping("/class/{classId}/students/{studentId}")
     public ResponseEntity<ApiResponse<String>> deleteClassStudent(
             @PathVariable Long classId,

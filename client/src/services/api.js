@@ -168,6 +168,7 @@ export const teacherAPI = {
 
   // Students in a class
   getClassStudents: (classId) => api.get(`/api/teacher/class/${classId}/students`),
+  resetStudentPassword: (studentId, password) => api.put(`/api/teacher/students/${studentId}/reset-password`, { password }),
 
   // Attendance
   markAttendance: (data) => api.post('/api/teacher/attendance', data),

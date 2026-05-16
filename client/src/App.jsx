@@ -42,6 +42,7 @@ import Parents from './pages/admin/Parents';
 
 // Teacher Pages
 import TeacherDashboard from './pages/teacher/TeacherDashboard';
+import MyStudents from './pages/teacher/MyStudents';
 import Schedule from './pages/teacher/Schedule';
 import Attendance from './pages/teacher/Attendance';
 import Marks from './pages/teacher/Marks';
@@ -180,6 +181,7 @@ function App() {
 
             {/* Teacher Routes */}
             <Route path="/teacher/dashboard" element={<ProtectedRoute allowedRoles={['TEACHER']}><TeacherDashboard /></ProtectedRoute>} />
+            <Route path="/teacher/my-students" element={<ProtectedRoute allowedRoles={['TEACHER']}><MyStudents /></ProtectedRoute>} />
             <Route path="/teacher/schedule" element={<ProtectedRoute allowedRoles={['TEACHER']}><Schedule /></ProtectedRoute>} />
             <Route path="/teacher/attendance" element={<ProtectedRoute allowedRoles={['TEACHER']}><Attendance /></ProtectedRoute>} />
             <Route path="/teacher/marks" element={<ProtectedRoute allowedRoles={['TEACHER']}><Marks /></ProtectedRoute>} />

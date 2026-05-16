@@ -4,6 +4,7 @@ import com.schoolers.dto.ApiResponse;
 import com.schoolers.model.*;
 import com.schoolers.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +34,9 @@ public class TeacherService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     // ── Classes ────────────────────────────────────────────────────────────────
 
@@ -617,6 +621,42 @@ public class TeacherService {
         }
         assignmentRepository.deleteById(id);
         return ApiResponse.success("Assignment deleted", "Deleted");
+    }
+
+    // ── Student password reset (class teacher) ────────────────────────────────
+
+    public ApiResponse<String> resetStudentPassword(Long teacherId, Long studentId, String newPassword) {
+        if (teacherId == null) return ApiResponse.error("Teacher not found");
+
+        Teacher teacher = teacherRepository.findById(teacherId).orElse(null);
+        if (teacher == null) return ApiResponse.error("Teacher not found");
+
+        Student student = studentRepository.findById(studentId).orElse(null);
+        if (student == null) return ApiResponse.error("Student not found");
+
+        // School isolation
+        if (teacher.getSchoolId() != null && !teacher.getSchoolId().equals(student.getSchoolId()))
+            return ApiResponse.error("Student does not belong to your school");
+
+        // Verify teacher has access to this student's class
+        ApiResponse<List<ClassRoom>> classesResp = getTeacherClasses(teacherId);
+        List<ClassRoom> classes = classesResp.isSuccess() ? classesResp.getData() : List.of();
+        boolean hasAccess = classes.stream().anyMatch(cls -> belongsToClass(student, cls));
+        if (!hasAccess)
+            return ApiResponse.error("This student is not in any of your assigned classes");
+
+        // Find linked User account
+        if (student.getStudentUserId() == null)
+            return ApiResponse.error("This student does not have a login account yet. Please contact admin.");
+
+        User user = userRepository.findById(student.getStudentUserId()).orElse(null);
+        if (user == null)
+            return ApiResponse.error("This student's login account was not found. Please contact admin.");
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setFirstLogin(true); // forces student to change password on next login
+        userRepository.save(user);
+        return ApiResponse.success("Password reset successfully. Student must change it on next login.", "reset");
     }
 
     // ── Marks ──────────────────────────────────────────────────────────────────

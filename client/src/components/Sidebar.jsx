@@ -42,6 +42,7 @@ const appOwnerNavItems = [
 
 const teacherNavItems = [
   { path: '/teacher/dashboard',       icon: 'dashboard',      label: 'Dashboard' },
+  { path: '/teacher/my-students',     icon: 'group',          label: 'My Students' },
   { path: '/teacher/schedule',        icon: 'calendar_today', label: 'My Schedule' },
   { path: '/teacher/attendance',      icon: 'fact_check',     label: 'Attendance' },
   { path: '/teacher/diary',           icon: 'menu_book',      label: 'Diary' },
