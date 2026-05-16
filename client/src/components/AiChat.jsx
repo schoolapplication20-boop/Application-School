@@ -158,18 +158,19 @@ const AiChat = () => {
                 <div className="ai-panel__subtitle">{t.subtitle}</div>
               </div>
             </div>
-            <div className="ai-lang-selector">
-              {LANG_OPTIONS.map(opt => (
-                <button
-                  key={opt.code}
-                  className={`ai-lang-btn ${lang === opt.code ? 'ai-lang-btn--active' : ''}`}
-                  onClick={() => changeLang(opt.code)}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
             <button className="ai-panel__clear" onClick={clearChat} title="Clear chat">↺</button>
+          </div>
+
+          <div className="ai-lang-bar">
+            {LANG_OPTIONS.map(opt => (
+              <button
+                key={opt.code}
+                className={`ai-lang-tab ${lang === opt.code ? 'ai-lang-tab--active' : ''}`}
+                onClick={() => changeLang(opt.code)}
+              >
+                {opt.label}
+              </button>
+            ))}
           </div>
 
           <div className="ai-panel__messages">
