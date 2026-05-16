@@ -18,12 +18,12 @@ const QUICK_ACTIONS = [
 ];
 
 const AiChat = () => {
-  const [open, setOpen]       = useState(false);
-  const [input, setInput]     = useState('');
-  const [loading, setLoading] = useState(false);
+  const [open, setOpen]         = useState(false);
+  const [input, setInput]       = useState('');
+  const [loading, setLoading]   = useState(false);
   const [showQuick, setShowQuick] = useState(true);
-  const [messages, setMessages]   = useState([
-    { role: 'bot', text: WELCOME }
+  const [messages, setMessages] = useState([
+    { role: 'bot', text: WELCOME, source: 'faq' }
   ]);
 
   const bottomRef = useRef(null);
@@ -36,24 +36,36 @@ const AiChat = () => {
     }
   }, [open, messages]);
 
+  const buildHistory = (msgs) =>
+    msgs
+      .slice(1, -1)  // drop welcome message and the just-added user message (sent separately)
+      .map(m => ({ role: m.role === 'user' ? 'user' : 'model', text: m.text }));
+
   const sendMessage = async (text) => {
     const trimmed = text.trim();
     if (!trimmed || loading) return;
 
-    setMessages(prev => [...prev, { role: 'user', text: trimmed }]);
+    const updatedMsgs = [...messages, { role: 'user', text: trimmed }];
+    setMessages(updatedMsgs);
     setInput('');
     setShowQuick(false);
     setLoading(true);
 
     try {
-      const res = await api.get(`/api/chatbot?message=${encodeURIComponent(trimmed)}`);
-      const reply = res.data?.data || "Sorry, I couldn't get a response. Please try again.";
-      setMessages(prev => [...prev, { role: 'bot', text: reply }]);
+      const res = await api.post('/api/chat', {
+        message: trimmed,
+        history: buildHistory(updatedMsgs),
+      });
+      const payload = res.data?.data;
+      const reply  = payload?.reply  ?? "Sorry, I couldn't get a response. Please try again.";
+      const source = payload?.source ?? 'faq';
+      setMessages(prev => [...prev, { role: 'bot', text: reply, source }]);
     } catch {
       setMessages(prev => [...prev, {
         role: 'bot',
         text: "Something went wrong. Please check your connection and try again.",
-        error: true
+        source: 'error',
+        error: true,
       }]);
     } finally {
       setLoading(false);
@@ -68,7 +80,7 @@ const AiChat = () => {
   };
 
   const clearChat = () => {
-    setMessages([{ role: 'bot', text: WELCOME }]);
+    setMessages([{ role: 'bot', text: WELCOME, source: 'faq' }]);
     setShowQuick(true);
     setInput('');
   };
@@ -101,10 +113,15 @@ const AiChat = () => {
             {messages.map((m, i) => (
               <div key={i} className={`ai-msg ai-msg--${m.role} ${m.error ? 'ai-msg--error' : ''}`}>
                 {m.role === 'bot' && <div className="ai-msg__avatar">🤖</div>}
-                <div className="ai-msg__bubble">
-                  {m.text.split('\n').map((line, j, arr) => (
-                    <span key={j}>{line}{j < arr.length - 1 && <br />}</span>
-                  ))}
+                <div className="ai-msg__bubble-wrap">
+                  <div className="ai-msg__bubble">
+                    {m.text.split('\n').map((line, j, arr) => (
+                      <span key={j}>{line}{j < arr.length - 1 && <br />}</span>
+                    ))}
+                  </div>
+                  {m.role === 'bot' && m.source === 'gemini' && (
+                    <span className="ai-msg__gemini-badge">✦ AI-powered</span>
+                  )}
                 </div>
               </div>
             ))}

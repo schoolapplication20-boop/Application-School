@@ -17,14 +17,19 @@ public class ChatbotService {
         "Sorry, I couldn't understand that. Please choose from the available options or type 'help' to see what I can assist with.";
 
     public String getAnswer(String message) {
-        if (message == null || message.isBlank()) {
-            return "Please type a question or choose from the options above.";
-        }
+        String match = getAnswerOrNull(message);
+        if (match != null) return match;
+        if (message == null || message.isBlank()) return "Please type a question or choose from the options above.";
+        return FALLBACK;
+    }
+
+    // Returns null when no FAQ matches (signals Gemini escalation is possible)
+    public String getAnswerOrNull(String message) {
+        if (message == null || message.isBlank()) return null;
 
         String input = message.toLowerCase().trim();
         List<ChatbotFaq> faqs = chatbotFaqRepository.findAll();
 
-        // Pass 1: question contains input OR input contains question (longest match first)
         ChatbotFaq bestMatch = null;
         int bestLen = 0;
         for (ChatbotFaq faq : faqs) {
@@ -38,7 +43,6 @@ public class ChatbotService {
         }
         if (bestMatch != null) return bestMatch.getAnswer();
 
-        // Pass 2: keyword match — pick the FAQ whose longest keyword matches
         ChatbotFaq kwMatch = null;
         int kwLen = 0;
         for (ChatbotFaq faq : faqs) {
@@ -51,8 +55,6 @@ public class ChatbotService {
                 }
             }
         }
-        if (kwMatch != null) return kwMatch.getAnswer();
-
-        return FALLBACK;
+        return kwMatch != null ? kwMatch.getAnswer() : null;
     }
 }

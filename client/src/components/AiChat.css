@@ -157,13 +157,33 @@
   flex-shrink: 0;
 }
 
-.ai-msg__bubble {
+.ai-msg__bubble-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   max-width: 80%;
+  gap: 3px;
+}
+
+.ai-msg--user .ai-msg__bubble-wrap {
+  align-items: flex-end;
+}
+
+.ai-msg__bubble {
   padding: 10px 14px;
   border-radius: 16px;
   font-size: 13.5px;
   line-height: 1.55;
   word-break: break-word;
+}
+
+.ai-msg__gemini-badge {
+  font-size: 10px;
+  color: #7C3AED;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  opacity: 0.8;
+  padding-left: 2px;
 }
 
 .ai-msg--bot .ai-msg__bubble,
@@ -172,6 +192,7 @@
   color: #1e293b;
   border-bottom-left-radius: 4px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  width: 100%;
 }
 
 .ai-msg--user .ai-msg__bubble {

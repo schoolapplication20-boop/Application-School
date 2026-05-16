@@ -76,6 +76,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/applications").permitAll()   // public admission form
                 .requestMatchers("/api/marketing/**").permitAll()   // public marketing: demo booking, job applications
                 .requestMatchers("/api/chatbot/**").permitAll()     // FAQ chatbot — no sensitive data
+                .requestMatchers("/api/chat/**").authenticated()    // unified chat — FAQ + Gemini (role-gated inside controller)
                 .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/error").permitAll()
                 .requestMatchers("/uploads/**").permitAll()          // logo / document assets
