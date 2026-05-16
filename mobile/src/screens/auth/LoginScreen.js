@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { scale, fontScale } from '../../utils/responsive';
 
 const ROLES = [
   { key: 'STUDENT', label: 'Student', icon: '🎓' },
@@ -58,8 +60,9 @@ export default function LoginScreen({ navigation }) {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+    <SafeAreaView style={styles.container}>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text style={styles.logo}>My-Skoolz</Text>
           <Text style={styles.tagline}>Smart School Management</Text>
@@ -134,32 +137,33 @@ export default function LoginScreen({ navigation }) {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#1e40af' },
-  scroll: { flexGrow: 1, justifyContent: 'center', padding: 20 },
-  header: { alignItems: 'center', marginBottom: 28 },
-  logo: { fontSize: 32, fontWeight: '900', color: '#fff', letterSpacing: 1 },
-  tagline: { fontSize: 13, color: '#bfdbfe', marginTop: 4 },
-  card: { backgroundColor: '#fff', borderRadius: 20, padding: 24, elevation: 8, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 16 },
-  cardTitle: { fontSize: 22, fontWeight: '800', color: '#1e293b', marginBottom: 4 },
-  cardSub: { fontSize: 13, color: '#64748b', marginBottom: 20 },
-  roleRow: { flexDirection: 'row', gap: 12, marginBottom: 20 },
-  roleBtn: { flex: 1, borderWidth: 2, borderColor: '#e2e8f0', borderRadius: 14, paddingVertical: 16, alignItems: 'center', backgroundColor: '#f8fafc' },
+  scroll: { flexGrow: 1, justifyContent: 'center', padding: scale(20) },
+  header: { alignItems: 'center', marginBottom: scale(24) },
+  logo: { fontSize: fontScale(30), fontWeight: '900', color: '#fff', letterSpacing: 1 },
+  tagline: { fontSize: fontScale(13), color: '#bfdbfe', marginTop: 4 },
+  card: { backgroundColor: '#fff', borderRadius: scale(20), padding: scale(22), elevation: 8, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 16 },
+  cardTitle: { fontSize: fontScale(21), fontWeight: '800', color: '#1e293b', marginBottom: 4 },
+  cardSub: { fontSize: fontScale(13), color: '#64748b', marginBottom: scale(18) },
+  roleRow: { flexDirection: 'row', gap: scale(12), marginBottom: scale(18) },
+  roleBtn: { flex: 1, borderWidth: 2, borderColor: '#e2e8f0', borderRadius: scale(14), paddingVertical: scale(14), alignItems: 'center', backgroundColor: '#f8fafc' },
   roleBtnActive: { borderColor: '#2563eb', backgroundColor: '#eff6ff' },
-  roleIcon: { fontSize: 28, marginBottom: 6 },
-  roleLabel: { fontSize: 13, fontWeight: '600', color: '#94a3b8' },
+  roleIcon: { fontSize: fontScale(26), marginBottom: 6 },
+  roleLabel: { fontSize: fontScale(13), fontWeight: '600', color: '#94a3b8' },
   roleLabelActive: { color: '#2563eb' },
-  label: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6 },
-  input: { borderWidth: 1.5, borderColor: '#e2e8f0', borderRadius: 10, padding: 13, fontSize: 14, marginBottom: 14, backgroundColor: '#f8fafc', color: '#1e293b' },
-  passwordRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 14, gap: 8 },
-  eyeBtn: { padding: 13, borderWidth: 1.5, borderColor: '#e2e8f0', borderRadius: 10, backgroundColor: '#f8fafc' },
-  eyeIcon: { fontSize: 16 },
-  button: { backgroundColor: '#2563eb', borderRadius: 12, padding: 15, alignItems: 'center', marginTop: 4 },
+  label: { fontSize: fontScale(13), fontWeight: '600', color: '#374151', marginBottom: 6 },
+  input: { borderWidth: 1.5, borderColor: '#e2e8f0', borderRadius: 10, padding: scale(13), fontSize: fontScale(14), marginBottom: scale(12), backgroundColor: '#f8fafc', color: '#1e293b' },
+  passwordRow: { flexDirection: 'row', alignItems: 'center', marginBottom: scale(12), gap: 8 },
+  eyeBtn: { padding: scale(13), borderWidth: 1.5, borderColor: '#e2e8f0', borderRadius: 10, backgroundColor: '#f8fafc' },
+  eyeIcon: { fontSize: fontScale(16) },
+  button: { backgroundColor: '#2563eb', borderRadius: 12, padding: scale(14), alignItems: 'center', marginTop: 4 },
   buttonDisabled: { opacity: 0.7 },
-  buttonText: { color: '#fff', fontWeight: '700', fontSize: 16 },
-  forgotLink: { alignItems: 'center', marginTop: 14 },
-  forgotText: { fontSize: 13, color: '#2563eb', fontWeight: '600' },
+  buttonText: { color: '#fff', fontWeight: '700', fontSize: fontScale(16) },
+  forgotLink: { alignItems: 'center', marginTop: scale(14) },
+  forgotText: { fontSize: fontScale(13), color: '#2563eb', fontWeight: '600' },
 });

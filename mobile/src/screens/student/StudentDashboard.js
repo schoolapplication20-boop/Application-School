@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { scale, fontScale, tileWidth } from '../../utils/responsive';
 
 const TILES = [
   { label: 'Attendance', icon: '📋', screen: 'StudentAttendance', color: '#eff6ff', accent: '#2563eb' },
@@ -17,6 +19,7 @@ const TILES = [
 
 export default function StudentDashboard({ navigation }) {
   const { user, logout } = useAuth();
+  const insets = useSafeAreaInsets();
   const [profile, setProfile] = useState(null);
   const [stats, setStats] = useState({ attendance: null, pendingFees: 0 });
 
@@ -39,7 +42,7 @@ export default function StudentDashboard({ navigation }) {
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + scale(16) }]}>
         <View style={{ flex: 1 }}>
           <Text style={styles.greeting}>Hello, 👋</Text>
           <Text style={styles.name}>{user?.name || 'Student'}</Text>
@@ -86,19 +89,19 @@ export default function StudentDashboard({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f1f5f9' },
-  header: { backgroundColor: '#2563eb', paddingHorizontal: 20, paddingTop: 52, paddingBottom: 24, flexDirection: 'row', alignItems: 'flex-start' },
-  greeting: { color: '#bfdbfe', fontSize: 13 },
-  name: { color: '#fff', fontSize: 22, fontWeight: '800', marginTop: 2 },
-  classInfo: { color: '#bfdbfe', fontSize: 13, marginTop: 4 },
-  logoutBtn: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, marginTop: 4 },
-  logoutText: { color: '#fff', fontSize: 13, fontWeight: '600' },
-  statsRow: { flexDirection: 'row', margin: 12, gap: 10 },
-  statCard: { flex: 1, backgroundColor: '#fff', borderRadius: 14, padding: 16, alignItems: 'center', elevation: 1 },
-  statValue: { fontSize: 22, fontWeight: '800', color: '#1e293b' },
-  statLabel: { fontSize: 12, color: '#64748b', marginTop: 2 },
-  sectionTitle: { fontSize: 15, fontWeight: '700', color: '#374151', marginHorizontal: 14, marginBottom: 10, marginTop: 4 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 10, paddingBottom: 20 },
-  tile: { width: '29%', margin: '2%', borderRadius: 14, padding: 16, alignItems: 'center', elevation: 1 },
-  tileIcon: { fontSize: 28, marginBottom: 8 },
-  tileLabel: { fontSize: 12, fontWeight: '700', textAlign: 'center' },
+  header: { backgroundColor: '#2563eb', paddingHorizontal: scale(20), paddingBottom: scale(24), flexDirection: 'row', alignItems: 'flex-start' },
+  greeting: { color: '#bfdbfe', fontSize: fontScale(13) },
+  name: { color: '#fff', fontSize: fontScale(21), fontWeight: '800', marginTop: 2 },
+  classInfo: { color: '#bfdbfe', fontSize: fontScale(13), marginTop: 4 },
+  logoutBtn: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: scale(14), paddingVertical: scale(8), borderRadius: 10, marginTop: 4 },
+  logoutText: { color: '#fff', fontSize: fontScale(13), fontWeight: '600' },
+  statsRow: { flexDirection: 'row', margin: scale(12), gap: scale(10) },
+  statCard: { flex: 1, backgroundColor: '#fff', borderRadius: 14, padding: scale(16), alignItems: 'center', elevation: 1 },
+  statValue: { fontSize: fontScale(22), fontWeight: '800', color: '#1e293b' },
+  statLabel: { fontSize: fontScale(12), color: '#64748b', marginTop: 2 },
+  sectionTitle: { fontSize: fontScale(15), fontWeight: '700', color: '#374151', marginHorizontal: scale(14), marginBottom: scale(10), marginTop: 4 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: scale(10), paddingBottom: scale(20) },
+  tile: { width: tileWidth, margin: '2%', borderRadius: scale(14), padding: scale(14), alignItems: 'center', elevation: 1 },
+  tileIcon: { fontSize: fontScale(26), marginBottom: 8 },
+  tileLabel: { fontSize: fontScale(11), fontWeight: '700', textAlign: 'center' },
 });

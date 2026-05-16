@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
+import { scale, fontScale, tileWidth } from '../../utils/responsive';
 
 const tiles = [
   { label: 'Attendance', icon: '📋', screen: 'TeacherAttendance', color: '#3b82f6' },
@@ -17,6 +19,7 @@ const tiles = [
 
 export default function TeacherDashboard({ navigation }) {
   const { user, logout } = useAuth();
+  const insets = useSafeAreaInsets();
   const [profile, setProfile] = useState(null);
   const [classInfo, setClassInfo] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -35,7 +38,7 @@ export default function TeacherDashboard({ navigation }) {
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + scale(16) }]}>
         <View style={styles.headerTop}>
           <View>
             <Text style={styles.greeting}>Good Morning 👋</Text>
@@ -86,20 +89,20 @@ export default function TeacherDashboard({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f1f5f9' },
-  header: { backgroundColor: '#059669', padding: 20, paddingTop: 52, paddingBottom: 24 },
+  header: { backgroundColor: '#059669', paddingHorizontal: scale(20), paddingBottom: scale(24) },
   headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  greeting: { color: '#a7f3d0', fontSize: 13 },
-  name: { color: '#fff', fontSize: 22, fontWeight: '800', marginTop: 2 },
-  date: { color: '#a7f3d0', fontSize: 12, marginTop: 2 },
-  logoutBtn: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
-  logoutText: { color: '#fff', fontSize: 12, fontWeight: '700' },
-  infoRow: { flexDirection: 'row', gap: 10, marginTop: 16 },
-  infoCard: { flex: 1, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 12, padding: 12, alignItems: 'center' },
-  infoVal: { color: '#fff', fontSize: 14, fontWeight: '700' },
-  infoLabel: { color: '#a7f3d0', fontSize: 11, marginTop: 2 },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#1e293b', marginHorizontal: 16, marginTop: 20, marginBottom: 12 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 10, paddingBottom: 24 },
-  tile: { width: '29%', backgroundColor: '#fff', margin: '2%', borderRadius: 14, padding: 16, alignItems: 'center', elevation: 2, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, borderTopWidth: 3 },
-  tileIcon: { fontSize: 28, marginBottom: 8 },
-  tileLabel: { fontSize: 12, fontWeight: '600', color: '#374151', textAlign: 'center' },
+  greeting: { color: '#a7f3d0', fontSize: fontScale(13) },
+  name: { color: '#fff', fontSize: fontScale(21), fontWeight: '800', marginTop: 2 },
+  date: { color: '#a7f3d0', fontSize: fontScale(12), marginTop: 2 },
+  logoutBtn: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: scale(14), paddingVertical: scale(8), borderRadius: 20 },
+  logoutText: { color: '#fff', fontSize: fontScale(12), fontWeight: '700' },
+  infoRow: { flexDirection: 'row', gap: scale(10), marginTop: scale(16) },
+  infoCard: { flex: 1, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 12, padding: scale(12), alignItems: 'center' },
+  infoVal: { color: '#fff', fontSize: fontScale(13), fontWeight: '700' },
+  infoLabel: { color: '#a7f3d0', fontSize: fontScale(11), marginTop: 2 },
+  sectionTitle: { fontSize: fontScale(15), fontWeight: '700', color: '#1e293b', marginHorizontal: scale(16), marginTop: scale(20), marginBottom: scale(12) },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: scale(10), paddingBottom: scale(24) },
+  tile: { width: tileWidth, backgroundColor: '#fff', margin: '2%', borderRadius: scale(14), padding: scale(14), alignItems: 'center', elevation: 2, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, borderTopWidth: 3 },
+  tileIcon: { fontSize: fontScale(26), marginBottom: 8 },
+  tileLabel: { fontSize: fontScale(11), fontWeight: '600', color: '#374151', textAlign: 'center' },
 });

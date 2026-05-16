@@ -3,7 +3,11 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import api from '../../services/api';
+import { scale, fontScale, W } from '../../utils/responsive';
+
+const OTP_BOX_SIZE = Math.floor((W - scale(48) - 5 * scale(8)) / 6);
 
 const STEP = { EMAIL: 'EMAIL', OTP: 'OTP', PASSWORD: 'PASSWORD' };
 const OTP_EXPIRY = 300;
@@ -101,8 +105,9 @@ export default function ForgotPasswordScreen({ navigation }) {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+    <SafeAreaView style={styles.container}>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
         <View style={styles.header}>
           <Text style={styles.logo}>My-Skoolz</Text>
@@ -236,6 +241,7 @@ export default function ForgotPasswordScreen({ navigation }) {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -269,7 +275,7 @@ const styles = StyleSheet.create({
   eyeIcon: { fontSize: 16 },
 
   otpRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 },
-  otpBox: { width: 46, height: 52, borderWidth: 1.5, borderColor: '#e2e8f0', borderRadius: 10, textAlign: 'center', fontSize: 20, fontWeight: '700', color: '#1e293b', backgroundColor: '#f8fafc' },
+  otpBox: { width: OTP_BOX_SIZE, height: OTP_BOX_SIZE + 6, borderWidth: 1.5, borderColor: '#e2e8f0', borderRadius: 10, textAlign: 'center', fontSize: fontScale(20), fontWeight: '700', color: '#1e293b', backgroundColor: '#f8fafc' },
   otpBoxFilled: { borderColor: '#2563eb', backgroundColor: '#eff6ff' },
 
   timerRow: { alignItems: 'center', marginBottom: 16 },
