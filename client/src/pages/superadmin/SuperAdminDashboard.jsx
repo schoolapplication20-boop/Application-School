@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '../../components/Layout';
-import { superAdminAPI, adminAPI, schoolAPI } from '../../services/api';
+import { superAdminAPI, adminAPI, schoolAPI, marketingAPI } from '../../services/api';
 import { getLogs } from '../../services/activityLog';
 import { useAuth } from '../../context/AuthContext';
 import SEOMeta from '../../components/SEOMeta';
@@ -52,6 +52,8 @@ function OwnerDashboard() {
   const [deleteTarget, setDeleteTarget] = useState(null); // sa object pending confirmation
   const [deleting,     setDeleting]     = useState(false);
   const [editTarget,   setEditTarget]   = useState(null); // sa object being edited
+  const [demoBookings, setDemoBookings] = useState([]);
+  const [bookingsLoading, setBookingsLoading] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -62,7 +64,21 @@ function OwnerDashboard() {
     finally  { setLoading(false); }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  const loadBookings = useCallback(async () => {
+    setBookingsLoading(true);
+    try {
+      const res = await marketingAPI.getDemoBookings();
+      setDemoBookings(res.data?.data ?? []);
+    } catch { setDemoBookings([]); }
+    finally  { setBookingsLoading(false); }
+  }, []);
+
+  const markBookingContacted = async (id) => {
+    await marketingAPI.updateBookingStatus(id, 'CONTACTED');
+    setDemoBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'CONTACTED' } : b));
+  };
+
+  useEffect(() => { load(); loadBookings(); }, [load, loadBookings]);
 
   const totalSchools = superAdmins.length;
   const activeCount  = superAdmins.filter(sa => sa.isActive !== false).length;
@@ -320,6 +336,78 @@ function OwnerDashboard() {
                     </React.Fragment>
                   );
                 })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* ── Demo Booking Leads ──────────────────────────────────────────────── */}
+      <div style={{ marginTop: 32 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#1a202c' }}>Demo Booking Leads</h2>
+            <p style={{ margin: '2px 0 0', fontSize: 12, color: '#718096' }}>Schools that submitted the "Book Free Demo" form on the website</p>
+          </div>
+          <span style={{ background: '#ede9fe', color: '#5b21b6', borderRadius: 20, padding: '2px 12px', fontSize: 12, fontWeight: 700 }}>
+            {demoBookings.filter(b => b.status === 'NEW').length} new
+          </span>
+        </div>
+
+        {bookingsLoading ? (
+          <div style={{ textAlign: 'center', padding: '32px 20px', color: '#a0aec0', background: '#fff', borderRadius: 14, border: '1.5px solid #e2e8f0' }}>
+            Loading leads…
+          </div>
+        ) : demoBookings.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px 20px', color: '#a0aec0', background: '#fff', borderRadius: 14, border: '1.5px dashed #e2e8f0' }}>
+            <span className="material-icons" style={{ fontSize: 36, display: 'block', marginBottom: 8 }}>inbox</span>
+            No demo bookings yet. Share the website link to attract leads.
+          </div>
+        ) : (
+          <div style={{ background: '#fff', borderRadius: 14, border: '1.5px solid #e2e8f0', overflow: 'hidden' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #e2e8f0' }}>
+                  {['School', 'Contact Person', 'Email', 'Phone', 'Type', 'Students', 'Date', 'Status', ''].map(h => (
+                    <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 700, color: '#4a5568', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, whiteSpace: 'nowrap' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {demoBookings.map((b, i) => (
+                  <tr key={b.id} style={{ borderBottom: i < demoBookings.length - 1 ? '1px solid #f1f5f9' : 'none', background: b.status === 'NEW' ? '#fefce8' : '#fff' }}>
+                    <td style={{ padding: '10px 14px', fontWeight: 700, color: '#1a202c', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.schoolName}</td>
+                    <td style={{ padding: '10px 14px', color: '#4a5568' }}>{b.contactPerson}</td>
+                    <td style={{ padding: '10px 14px' }}>
+                      <a href={`mailto:${b.email}`} style={{ color: '#2563eb', textDecoration: 'none' }}>{b.email}</a>
+                    </td>
+                    <td style={{ padding: '10px 14px' }}>
+                      <a href={`tel:${b.phone}`} style={{ color: '#2563eb', textDecoration: 'none' }}>{b.phone}</a>
+                    </td>
+                    <td style={{ padding: '10px 14px', color: '#718096', textTransform: 'capitalize' }}>{b.schoolType || '—'}</td>
+                    <td style={{ padding: '10px 14px', color: '#718096', textAlign: 'center' }}>{b.studentCount || '—'}</td>
+                    <td style={{ padding: '10px 14px', color: '#a0aec0', whiteSpace: 'nowrap', fontSize: 11 }}>
+                      {b.createdAt ? new Date(b.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                    </td>
+                    <td style={{ padding: '10px 14px' }}>
+                      <span style={{
+                        padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700,
+                        background: b.status === 'NEW' ? '#fef3c7' : b.status === 'CONTACTED' ? '#dcfce7' : '#f1f5f9',
+                        color: b.status === 'NEW' ? '#92400e' : b.status === 'CONTACTED' ? '#166534' : '#64748b',
+                      }}>{b.status}</span>
+                    </td>
+                    <td style={{ padding: '10px 14px' }}>
+                      {b.status === 'NEW' && (
+                        <button
+                          onClick={() => markBookingContacted(b.id)}
+                          style={{ padding: '4px 10px', border: 'none', borderRadius: 6, background: '#2563eb', color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
+                        >
+                          Mark Contacted
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

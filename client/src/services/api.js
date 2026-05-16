@@ -505,4 +505,13 @@ export const examinationAPI = {
   deleteCertificate:         (id)        => api.delete(`/api/examination/certificates/${id}`),
 };
 
+// ============================================
+// MARKETING APIs (APPLICATION_OWNER only for reads)
+// ============================================
+
+export const marketingAPI = {
+  getDemoBookings:       ()           => api.get('/api/marketing/demo-bookings'),
+  updateBookingStatus:   (id, status) => api.patch(`/api/marketing/demo-bookings/${id}/status`, null, { params: { status } }),
+};
+
 export default api;
