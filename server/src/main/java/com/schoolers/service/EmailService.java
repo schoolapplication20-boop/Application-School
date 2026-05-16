@@ -1,5 +1,6 @@
 package com.schoolers.service;
 
+import com.schoolers.dto.ContactMessageRequest;
 import com.schoolers.dto.DemoBookingRequest;
 import com.schoolers.dto.JobApplicationRequest;
 import org.springframework.beans.factory.annotation.Value;
@@ -52,6 +53,25 @@ public class EmailService {
             log.info("[EmailService] Demo confirmation sent to: " + req.getEmail());
         } catch (Exception e) {
             log.warning("[EmailService] Demo booking email failed for " + req.getSchoolName() + ": " + e.getMessage());
+        }
+    }
+
+    // ── Contact form (fire-and-forget) ───────────────────────────────────────
+
+    public void sendContactMessageNotification(ContactMessageRequest req) {
+        try {
+            requireApiKey();
+            send(notifyEmail,
+                "[My-Skoolz] Contact Form — " + req.getSubject(),
+                buildContactNotificationHtml(req));
+            log.info("[EmailService] Contact message notification sent from: " + req.getEmail());
+
+            send(req.getEmail(),
+                "We received your message — My-Skoolz",
+                buildContactConfirmationHtml(req));
+            log.info("[EmailService] Contact confirmation sent to: " + req.getEmail());
+        } catch (Exception e) {
+            log.warning("[EmailService] Contact message email failed for " + req.getEmail() + ": " + e.getMessage());
         }
     }
 
@@ -161,6 +181,28 @@ public class EmailService {
             "<p>We have received your application and our team will review it carefully. " +
             "If your profile matches our requirements, we will reach out to you at " +
             req.getEmail() + " within 5–7 business days.</p>" +
+            "<p>Warm regards,<br><strong>The My-Skoolz Team</strong><br>" +
+            "<a href='mailto:" + notifyEmail + "'>" + notifyEmail + "</a></p></div>";
+    }
+
+    private String buildContactNotificationHtml(ContactMessageRequest req) {
+        return "<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px'>" +
+            "<h2 style='color:#2563EB'>New Contact Message</h2>" +
+            "<table style='width:100%;border-collapse:collapse'>" +
+            row("Name", req.getName()) +
+            row("Email", req.getEmail()) +
+            row("Subject", req.getSubject()) +
+            row("Message", req.getMessage()) +
+            "</table>" +
+            "<p>— My-Skoolz System</p></div>";
+    }
+
+    private String buildContactConfirmationHtml(ContactMessageRequest req) {
+        return "<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px'>" +
+            "<h2 style='color:#2563EB'>We got your message!</h2>" +
+            "<p>Hi " + req.getName() + ",</p>" +
+            "<p>Thank you for reaching out to My-Skoolz. We have received your message regarding " +
+            "<strong>" + req.getSubject() + "</strong> and will get back to you within 24 hours.</p>" +
             "<p>Warm regards,<br><strong>The My-Skoolz Team</strong><br>" +
             "<a href='mailto:" + notifyEmail + "'>" + notifyEmail + "</a></p></div>";
     }
