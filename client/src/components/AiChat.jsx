@@ -2,14 +2,28 @@ import React, { useState, useRef, useEffect } from 'react';
 import api from '../services/api';
 import './AiChat.css';
 
-const WELCOME = "Hi! I'm your My-Skoolz AI assistant. I can answer questions about your school's students, fees, teachers, and more. How can I help you?";
+const WELCOME = "Hi! 👋 I'm your My-Skoolz AI assistant.\n\nI can help with school-related queries. Click a topic below or type your question!";
+
+const QUICK_ACTIONS = [
+  { label: '📋 Admissions',      message: 'admissions' },
+  { label: '💰 Fees',            message: 'fees' },
+  { label: '📅 Attendance',      message: 'attendance' },
+  { label: '📊 Results',         message: 'results' },
+  { label: '📚 Homework',        message: 'homework' },
+  { label: '🚌 Transport',       message: 'transport' },
+  { label: '🕐 Timetable',       message: 'timetable' },
+  { label: '🏖️ Leave Request',   message: 'leave request' },
+  { label: '📞 Contact Support', message: 'contact support' },
+  { label: '🔐 Login Help',      message: 'login help' },
+];
 
 const AiChat = () => {
   const [open, setOpen]       = useState(false);
   const [input, setInput]     = useState('');
   const [loading, setLoading] = useState(false);
-  const [messages, setMessages] = useState([
-    { role: 'model', text: WELCOME }
+  const [showQuick, setShowQuick] = useState(true);
+  const [messages, setMessages]   = useState([
+    { role: 'bot', text: WELCOME }
   ]);
 
   const bottomRef = useRef(null);
@@ -17,33 +31,30 @@ const AiChat = () => {
 
   useEffect(() => {
     if (open) {
-      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
       inputRef.current?.focus();
     }
   }, [open, messages]);
 
-  const send = async () => {
-    const text = input.trim();
-    if (!text || loading) return;
+  const sendMessage = async (text) => {
+    const trimmed = text.trim();
+    if (!trimmed || loading) return;
 
-    const userMsg = { role: 'user', text };
-    const next = [...messages, userMsg];
-    setMessages(next);
+    setMessages(prev => [...prev, { role: 'user', text: trimmed }]);
     setInput('');
+    setShowQuick(false);
     setLoading(true);
 
-    // Build history (exclude the welcome message for API call)
-    const history = next
-      .slice(1, -1)
-      .map(m => ({ role: m.role, text: m.text }));
-
     try {
-      const res = await api.post('/api/ai/chat', { message: text, history });
-      const reply = res.data?.data || 'Sorry, I could not get a response.';
-      setMessages(prev => [...prev, { role: 'model', text: reply }]);
-    } catch (err) {
-      const errMsg = err.response?.data?.message || 'Something went wrong. Please try again.';
-      setMessages(prev => [...prev, { role: 'model', text: errMsg, error: true }]);
+      const res = await api.get(`/api/chatbot?message=${encodeURIComponent(trimmed)}`);
+      const reply = res.data?.data || "Sorry, I couldn't get a response. Please try again.";
+      setMessages(prev => [...prev, { role: 'bot', text: reply }]);
+    } catch {
+      setMessages(prev => [...prev, {
+        role: 'bot',
+        text: "Something went wrong. Please check your connection and try again.",
+        error: true
+      }]);
     } finally {
       setLoading(false);
     }
@@ -52,59 +63,78 @@ const AiChat = () => {
   const handleKey = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      send();
+      sendMessage(input);
     }
   };
 
-  const clearChat = () => setMessages([{ role: 'model', text: WELCOME }]);
+  const clearChat = () => {
+    setMessages([{ role: 'bot', text: WELCOME }]);
+    setShowQuick(true);
+    setInput('');
+  };
 
   return (
     <>
-      {/* Floating button */}
       <button
         className={`ai-fab ${open ? 'ai-fab--open' : ''}`}
         onClick={() => setOpen(o => !o)}
-        title="AI Assistant"
+        title="My-Skoolz AI Assistant"
       >
-        {open ? '✕' : '✦'}
-        {!open && <span className="ai-fab__label">AI Assistant</span>}
+        {open ? '✕' : '💬'}
+        {!open && <span className="ai-fab__label">My-Skoolz AI</span>}
       </button>
 
-      {/* Chat panel */}
       {open && (
         <div className="ai-panel">
-          {/* Header */}
           <div className="ai-panel__header">
             <div className="ai-panel__header-left">
-              <div className="ai-panel__avatar">✦</div>
+              <div className="ai-panel__avatar">🤖</div>
               <div>
                 <div className="ai-panel__title">My-Skoolz AI</div>
-                <div className="ai-panel__subtitle">Powered by Google Gemini</div>
+                <div className="ai-panel__subtitle">School Assistant • Online</div>
               </div>
             </div>
-            <button className="ai-panel__clear" onClick={clearChat} title="Clear chat">
-              ↺
-            </button>
+            <button className="ai-panel__clear" onClick={clearChat} title="Clear chat">↺</button>
           </div>
 
-          {/* Messages */}
           <div className="ai-panel__messages">
             {messages.map((m, i) => (
               <div key={i} className={`ai-msg ai-msg--${m.role} ${m.error ? 'ai-msg--error' : ''}`}>
-                {m.role === 'model' && (
-                  <div className="ai-msg__avatar">✦</div>
-                )}
+                {m.role === 'bot' && <div className="ai-msg__avatar">🤖</div>}
                 <div className="ai-msg__bubble">
-                  {m.text.split('\n').map((line, j) => (
-                    <span key={j}>{line}{j < m.text.split('\n').length - 1 && <br />}</span>
+                  {m.text.split('\n').map((line, j, arr) => (
+                    <span key={j}>{line}{j < arr.length - 1 && <br />}</span>
                   ))}
                 </div>
               </div>
             ))}
 
+            {showQuick && !loading && (
+              <div className="ai-quick-actions">
+                <p className="ai-quick-label">Choose a topic:</p>
+                <div className="ai-quick-grid">
+                  {QUICK_ACTIONS.map((action, i) => (
+                    <button
+                      key={i}
+                      className="ai-quick-btn"
+                      onClick={() => sendMessage(action.message)}
+                    >
+                      {action.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {!showQuick && !loading && (
+              <button className="ai-topics-btn" onClick={() => setShowQuick(true)}>
+                📂 Browse Topics
+              </button>
+            )}
+
             {loading && (
-              <div className="ai-msg ai-msg--model">
-                <div className="ai-msg__avatar">✦</div>
+              <div className="ai-msg ai-msg--bot">
+                <div className="ai-msg__avatar">🤖</div>
                 <div className="ai-msg__bubble ai-msg__bubble--typing">
                   <span /><span /><span />
                 </div>
@@ -114,7 +144,6 @@ const AiChat = () => {
             <div ref={bottomRef} />
           </div>
 
-          {/* Input */}
           <div className="ai-panel__input-row">
             <textarea
               ref={inputRef}
@@ -122,13 +151,13 @@ const AiChat = () => {
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKey}
-              placeholder="Ask anything about your school..."
+              placeholder="Type your question..."
               rows={1}
               disabled={loading}
             />
             <button
               className="ai-panel__send"
-              onClick={send}
+              onClick={() => sendMessage(input)}
               disabled={loading || !input.trim()}
             >
               ➤

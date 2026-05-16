@@ -75,6 +75,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/applications").permitAll()   // public admission form
                 .requestMatchers("/api/marketing/**").permitAll()   // public marketing: demo booking, job applications
+                .requestMatchers("/api/chatbot/**").permitAll()     // FAQ chatbot — no sensitive data
                 .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/error").permitAll()
                 .requestMatchers("/uploads/**").permitAll()          // logo / document assets
