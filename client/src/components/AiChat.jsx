@@ -2,28 +2,83 @@ import React, { useState, useRef, useEffect } from 'react';
 import api from '../services/api';
 import './AiChat.css';
 
-const WELCOME = "Hi! 👋 I'm your My-Skoolz AI assistant.\n\nI can help with school-related queries. Click a topic below or type your question!";
+const I18N = {
+  en: {
+    welcome: "Hi! 👋 I'm your My-Skoolz AI assistant.\n\nI can help with school-related queries. Click a topic below or type your question!",
+    subtitle: 'School Assistant • Online',
+    chooseTopic: 'Choose a topic:',
+    browseTopics: '📂 Browse Topics',
+    placeholder: 'Type your question...',
+    footer: 'Press Enter to send · Shift+Enter for new line',
+    quickActions: [
+      { label: '📋 Admissions',      message: 'admissions' },
+      { label: '💰 Fees',            message: 'fees' },
+      { label: '📅 Attendance',      message: 'attendance' },
+      { label: '📊 Results',         message: 'results' },
+      { label: '📚 Homework',        message: 'homework' },
+      { label: '🚌 Transport',       message: 'transport' },
+      { label: '🕐 Timetable',       message: 'timetable' },
+      { label: '🏖️ Leave Request',   message: 'leave request' },
+      { label: '📞 Contact Support', message: 'contact support' },
+      { label: '🔐 Login Help',      message: 'login help' },
+    ],
+  },
+  hi: {
+    welcome: "नमस्ते! 👋 मैं आपका My-Skoolz AI सहायक हूँ।\n\nमैं स्कूल संबंधी प्रश्नों में मदद कर सकता हूँ। नीचे एक विषय चुनें या अपना प्रश्न लिखें!",
+    subtitle: 'स्कूल सहायक • ऑनलाइन',
+    chooseTopic: 'एक विषय चुनें:',
+    browseTopics: '📂 विषय देखें',
+    placeholder: 'अपना प्रश्न लिखें...',
+    footer: 'भेजने के लिए Enter दबाएं · नई लाइन के लिए Shift+Enter',
+    quickActions: [
+      { label: '📋 प्रवेश',         message: 'admissions' },
+      { label: '💰 शुल्क',          message: 'fees' },
+      { label: '📅 उपस्थिति',       message: 'attendance' },
+      { label: '📊 परिणाम',         message: 'results' },
+      { label: '📚 गृहकार्य',       message: 'homework' },
+      { label: '🚌 परिवहन',         message: 'transport' },
+      { label: '🕐 समय-सारणी',      message: 'timetable' },
+      { label: '🏖️ छुट्टी अनुरोध', message: 'leave request' },
+      { label: '📞 सहायता संपर्क',  message: 'contact support' },
+      { label: '🔐 लॉगिन सहायता',  message: 'login help' },
+    ],
+  },
+  te: {
+    welcome: "నమస్కారం! 👋 నేను మీ My-Skoolz AI సహాయకుడిని.\n\nపాఠశాల సంబంధిత ప్రశ్నలకు నేను సహాయం చేయగలను. దిగువ విషయాన్ని ఎంచుకోండి లేదా మీ ప్రశ్న టైప్ చేయండి!",
+    subtitle: 'పాఠశాల సహాయకుడు • ఆన్‌లైన్',
+    chooseTopic: 'ఒక విషయాన్ని ఎంచుకోండి:',
+    browseTopics: '📂 విషయాలు చూడండి',
+    placeholder: 'మీ ప్రశ్న టైప్ చేయండి...',
+    footer: 'పంపడానికి Enter నొక్కండి · కొత్త వరుసకు Shift+Enter',
+    quickActions: [
+      { label: '📋 అడ్మిషన్లు',       message: 'admissions' },
+      { label: '💰 ఫీజులు',           message: 'fees' },
+      { label: '📅 హాజరు',            message: 'attendance' },
+      { label: '📊 ఫలితాలు',          message: 'results' },
+      { label: '📚 హోంవర్క్',         message: 'homework' },
+      { label: '🚌 రవాణా',            message: 'transport' },
+      { label: '🕐 సమయపట్టిక',       message: 'timetable' },
+      { label: '🏖️ సెలవు అభ్యర్థన', message: 'leave request' },
+      { label: '📞 సంప్రదింపు',       message: 'contact support' },
+      { label: '🔐 లాగిన్ సహాయం',    message: 'login help' },
+    ],
+  },
+};
 
-const QUICK_ACTIONS = [
-  { label: '📋 Admissions',      message: 'admissions' },
-  { label: '💰 Fees',            message: 'fees' },
-  { label: '📅 Attendance',      message: 'attendance' },
-  { label: '📊 Results',         message: 'results' },
-  { label: '📚 Homework',        message: 'homework' },
-  { label: '🚌 Transport',       message: 'transport' },
-  { label: '🕐 Timetable',       message: 'timetable' },
-  { label: '🏖️ Leave Request',   message: 'leave request' },
-  { label: '📞 Contact Support', message: 'contact support' },
-  { label: '🔐 Login Help',      message: 'login help' },
+const LANG_OPTIONS = [
+  { code: 'en', label: 'EN' },
+  { code: 'hi', label: 'हिंदी' },
+  { code: 'te', label: 'తెలుగు' },
 ];
 
 const AiChat = () => {
-  const [open, setOpen]       = useState(false);
-  const [input, setInput]     = useState('');
-  const [loading, setLoading] = useState(false);
+  const [open, setOpen]         = useState(false);
+  const [input, setInput]       = useState('');
+  const [loading, setLoading]   = useState(false);
   const [showQuick, setShowQuick] = useState(true);
-  const [messages, setMessages]   = useState([
-    { role: 'bot', text: WELCOME }
+  const [lang, setLang]         = useState('en');
+  const [messages, setMessages] = useState([
+    { role: 'bot', text: I18N.en.welcome }
   ]);
 
   const bottomRef = useRef(null);
@@ -36,6 +91,13 @@ const AiChat = () => {
     }
   }, [open, messages]);
 
+  const changeLang = (code) => {
+    setLang(code);
+    setMessages([{ role: 'bot', text: I18N[code].welcome }]);
+    setShowQuick(true);
+    setInput('');
+  };
+
   const sendMessage = async (text) => {
     const trimmed = text.trim();
     if (!trimmed || loading) return;
@@ -46,7 +108,7 @@ const AiChat = () => {
     setLoading(true);
 
     try {
-      const res = await api.get(`/api/chatbot?message=${encodeURIComponent(trimmed)}`);
+      const res = await api.get(`/api/chatbot?message=${encodeURIComponent(trimmed)}&lang=${lang}`);
       const reply = res.data?.data || "Sorry, I couldn't get a response. Please try again.";
       setMessages(prev => [...prev, { role: 'bot', text: reply }]);
     } catch {
@@ -68,10 +130,12 @@ const AiChat = () => {
   };
 
   const clearChat = () => {
-    setMessages([{ role: 'bot', text: WELCOME }]);
+    setMessages([{ role: 'bot', text: I18N[lang].welcome }]);
     setShowQuick(true);
     setInput('');
   };
+
+  const t = I18N[lang];
 
   return (
     <>
@@ -91,8 +155,19 @@ const AiChat = () => {
               <div className="ai-panel__avatar">🤖</div>
               <div>
                 <div className="ai-panel__title">My-Skoolz AI</div>
-                <div className="ai-panel__subtitle">School Assistant • Online</div>
+                <div className="ai-panel__subtitle">{t.subtitle}</div>
               </div>
+            </div>
+            <div className="ai-lang-selector">
+              {LANG_OPTIONS.map(opt => (
+                <button
+                  key={opt.code}
+                  className={`ai-lang-btn ${lang === opt.code ? 'ai-lang-btn--active' : ''}`}
+                  onClick={() => changeLang(opt.code)}
+                >
+                  {opt.label}
+                </button>
+              ))}
             </div>
             <button className="ai-panel__clear" onClick={clearChat} title="Clear chat">↺</button>
           </div>
@@ -111,9 +186,9 @@ const AiChat = () => {
 
             {showQuick && !loading && (
               <div className="ai-quick-actions">
-                <p className="ai-quick-label">Choose a topic:</p>
+                <p className="ai-quick-label">{t.chooseTopic}</p>
                 <div className="ai-quick-grid">
-                  {QUICK_ACTIONS.map((action, i) => (
+                  {t.quickActions.map((action, i) => (
                     <button
                       key={i}
                       className="ai-quick-btn"
@@ -128,7 +203,7 @@ const AiChat = () => {
 
             {!showQuick && !loading && (
               <button className="ai-topics-btn" onClick={() => setShowQuick(true)}>
-                📂 Browse Topics
+                {t.browseTopics}
               </button>
             )}
 
@@ -151,7 +226,7 @@ const AiChat = () => {
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKey}
-              placeholder="Type your question..."
+              placeholder={t.placeholder}
               rows={1}
               disabled={loading}
             />
@@ -163,9 +238,7 @@ const AiChat = () => {
               ➤
             </button>
           </div>
-          <div className="ai-panel__footer">
-            Press Enter to send · Shift+Enter for new line
-          </div>
+          <div className="ai-panel__footer">{t.footer}</div>
         </div>
       )}
     </>

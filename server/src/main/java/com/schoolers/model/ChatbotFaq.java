@@ -26,4 +26,10 @@ public class ChatbotFaq {
 
     @Column(columnDefinition = "TEXT")
     private String keywords; // comma-separated keyword list
+
+    @Column(columnDefinition = "TEXT")
+    private String answerHi; // Hindi
+
+    @Column(columnDefinition = "TEXT")
+    private String answerTe; // Telugu
 }

@@ -14,8 +14,10 @@ public class ChatbotController {
     private ChatbotService chatbotService;
 
     @GetMapping
-    public ResponseEntity<ApiResponse<String>> chat(@RequestParam String message) {
-        String answer = chatbotService.getAnswer(message);
+    public ResponseEntity<ApiResponse<String>> chat(
+            @RequestParam String message,
+            @RequestParam(defaultValue = "en") String lang) {
+        String answer = chatbotService.getAnswer(message, lang);
         return ResponseEntity.ok(ApiResponse.success("OK", answer));
     }
 }

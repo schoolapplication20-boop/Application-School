@@ -101,6 +101,40 @@
   opacity: 0.8;
 }
 
+/* ── Language selector ──────────────────────────────────────────── */
+.ai-lang-selector {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 8px;
+}
+
+.ai-lang-btn {
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.3);
+  color: #fff;
+  border-radius: 12px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.ai-lang-btn:hover {
+  background: rgba(255,255,255,0.28);
+  border-color: rgba(255,255,255,0.6);
+}
+
+.ai-lang-btn--active {
+  background: rgba(255,255,255,0.9);
+  color: #2563EB;
+  border-color: transparent;
+  font-weight: 700;
+}
+
 .ai-panel__clear {
   background: rgba(255,255,255,0.15);
   border: none;
