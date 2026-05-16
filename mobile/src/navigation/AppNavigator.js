@@ -5,6 +5,7 @@ import { ActivityIndicator, View } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 
 import LoginScreen from '../screens/auth/LoginScreen';
+import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 
 import StudentDashboard from '../screens/student/StudentDashboard';
 import StudentAttendance from '../screens/student/StudentAttendance';
@@ -37,6 +38,7 @@ function AuthStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
     </Stack.Navigator>
   );
 }

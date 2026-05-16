@@ -9,7 +9,7 @@ const ROLES = [
   { key: 'TEACHER', label: 'Teacher', icon: '👨‍🏫' },
 ];
 
-export default function LoginScreen() {
+export default function LoginScreen({ navigation }) {
   const { login } = useAuth();
   const [selectedRole, setSelectedRole] = useState('');
   const [identifier, setIdentifier] = useState('');
@@ -120,6 +120,15 @@ export default function LoginScreen() {
                   : <Text style={styles.buttonText}>Sign In</Text>
                 }
               </TouchableOpacity>
+
+              {selectedRole === 'TEACHER' && (
+                <TouchableOpacity
+                  style={styles.forgotLink}
+                  onPress={() => navigation.navigate('ForgotPassword')}
+                >
+                  <Text style={styles.forgotText}>Forgot Password?</Text>
+                </TouchableOpacity>
+              )}
             </>
           )}
         </View>
@@ -151,4 +160,6 @@ const styles = StyleSheet.create({
   button: { backgroundColor: '#2563eb', borderRadius: 12, padding: 15, alignItems: 'center', marginTop: 4 },
   buttonDisabled: { opacity: 0.7 },
   buttonText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  forgotLink: { alignItems: 'center', marginTop: 14 },
+  forgotText: { fontSize: 13, color: '#2563eb', fontWeight: '600' },
 });
