@@ -514,4 +514,13 @@ export const marketingAPI = {
   updateBookingStatus:   (id, status) => api.patch(`/api/marketing/demo-bookings/${id}/status`, null, { params: { status } }),
 };
 
+// ============================================
+// SYSTEM NOTICE APIs
+// ============================================
+export const systemAPI = {
+  getActiveNotice: ()     => api.get('/api/system/notice'),
+  setNotice:       (data) => api.put('/api/system/notice', data),
+  clearNotice:     ()     => api.delete('/api/system/notice'),
+};
+
 export default api;

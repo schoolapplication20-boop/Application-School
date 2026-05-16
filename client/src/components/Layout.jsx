@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
 import AiChat from './AiChat';
+import MaintenanceBanner from './MaintenanceBanner';
 import { useAuth } from '../context/AuthContext';
 import '../styles/sidebar.css';
 import '../styles/dashboard.css';
@@ -35,6 +36,7 @@ const Layout = ({ children, pageTitle }) => {
           }}
         />
         <div className="page-content">
+          <MaintenanceBanner />
           {children}
         </div>
       </div>
