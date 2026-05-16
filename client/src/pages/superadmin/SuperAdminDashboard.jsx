@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '../../components/Layout';
-import { superAdminAPI, adminAPI, schoolAPI, marketingAPI } from '../../services/api';
+import { superAdminAPI, adminAPI, schoolAPI, marketingAPI, systemAPI } from '../../services/api';
 import { getLogs } from '../../services/activityLog';
 import { useAuth } from '../../context/AuthContext';
 import SEOMeta from '../../components/SEOMeta';
@@ -55,6 +55,12 @@ function OwnerDashboard() {
   const [demoBookings, setDemoBookings] = useState([]);
   const [bookingsLoading, setBookingsLoading] = useState(true);
 
+  // ── System notice ────────────────────────────────────────────────────────────
+  const [activeNotice,  setActiveNotice]  = useState(null);
+  const [noticeForm,    setNoticeForm]    = useState({ message: '', severity: 'WARNING', scheduledAt: '', durationMinutes: '' });
+  const [noticeSaving,  setNoticeSaving]  = useState(false);
+  const [noticeClearing, setNoticeClearing] = useState(false);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -78,7 +84,57 @@ function OwnerDashboard() {
     setDemoBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'CONTACTED' } : b));
   };
 
-  useEffect(() => { load(); loadBookings(); }, [load, loadBookings]);
+  const loadNotice = useCallback(async () => {
+    try {
+      const res = await systemAPI.getActiveNotice();
+      const n = res.data?.data;
+      setActiveNotice(n || null);
+      if (n) {
+        setNoticeForm({
+          message: n.message || '',
+          severity: n.severity || 'WARNING',
+          scheduledAt: n.scheduledAt ? n.scheduledAt.slice(0, 16) : '',
+          durationMinutes: n.durationMinutes ?? '',
+        });
+      }
+    } catch { setActiveNotice(null); }
+  }, []);
+
+  const saveNotice = async () => {
+    if (!noticeForm.message.trim()) return;
+    setNoticeSaving(true);
+    try {
+      await systemAPI.setNotice({
+        message: noticeForm.message.trim(),
+        severity: noticeForm.severity,
+        scheduledAt: noticeForm.scheduledAt || null,
+        durationMinutes: noticeForm.durationMinutes ? parseInt(noticeForm.durationMinutes) : null,
+      });
+      await loadNotice();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to save notice.');
+    } finally { setNoticeSaving(false); }
+  };
+
+  const clearNotice = async () => {
+    setNoticeClearing(true);
+    try {
+      await systemAPI.clearNotice();
+      setActiveNotice(null);
+      setNoticeForm({ message: '', severity: 'WARNING', scheduledAt: '', durationMinutes: '' });
+    } catch { } finally { setNoticeClearing(false); }
+  };
+
+  const toggleSchool = async (schoolDbId, currentActive) => {
+    try {
+      await schoolAPI.toggleSchoolActive(schoolDbId, !currentActive);
+      load(); // reload the list to reflect new status
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update school status.');
+    }
+  };
+
+  useEffect(() => { load(); loadBookings(); loadNotice(); }, [load, loadBookings, loadNotice]);
 
   const totalSchools = superAdmins.length;
   const activeCount  = superAdmins.filter(sa => sa.isActive !== false).length;
@@ -264,9 +320,24 @@ function OwnerDashboard() {
                           )}
                         </td>
                         <td>
-                          <span style={{ padding: '3px 10px', background: sa.isActive !== false ? '#f0fff4' : '#fff5f5', color: sa.isActive !== false ? '#276749' : '#e53e3e', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>
-                            {sa.isActive !== false ? 'Active' : 'Inactive'}
-                          </span>
+                          <button
+                            onClick={() => toggleSchool(sa.schoolDbId, sa.schoolActive !== false)}
+                            disabled={!sa.schoolDbId}
+                            title={sa.schoolActive !== false ? 'Click to disable school' : 'Click to enable school'}
+                            style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 5,
+                              padding: '4px 10px', borderRadius: 20, border: 'none', cursor: sa.schoolDbId ? 'pointer' : 'default',
+                              background: sa.schoolActive !== false ? '#f0fff4' : '#fff5f5',
+                              color:      sa.schoolActive !== false ? '#276749' : '#e53e3e',
+                              fontWeight: 700, fontSize: 11,
+                              transition: 'opacity 0.15s',
+                            }}
+                          >
+                            <span className="material-icons" style={{ fontSize: 13 }}>
+                              {sa.schoolActive !== false ? 'toggle_on' : 'toggle_off'}
+                            </span>
+                            {sa.schoolActive !== false ? 'Active' : 'Disabled'}
+                          </button>
                         </td>
                         <td>
                           <button
@@ -412,6 +483,115 @@ function OwnerDashboard() {
             </table>
           </div>
         )}
+      </div>
+
+      {/* ── System Maintenance Notice ──────────────────────────────────────── */}
+      <div className="data-table-card" style={{ marginTop: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+          <span className="material-icons" style={{ color: '#d97706', fontSize: 22 }}>announcement</span>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 15, color: '#2d3748' }}>System Maintenance Notice</div>
+            <div style={{ fontSize: 12, color: '#718096', marginTop: 2 }}>
+              This message will appear as a banner on every user's dashboard
+            </div>
+          </div>
+          {activeNotice && (
+            <span style={{ marginLeft: 'auto', background: '#fef3c7', color: '#92400e', border: '1.5px solid #fcd34d', padding: '3px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>
+              ACTIVE
+            </span>
+          )}
+        </div>
+
+        {/* Current active notice preview */}
+        {activeNotice && (
+          <div style={{
+            background: activeNotice.severity === 'CRITICAL' ? '#fff1f2' : activeNotice.severity === 'INFO' ? '#eff6ff' : '#fffbeb',
+            border: `1.5px solid ${activeNotice.severity === 'CRITICAL' ? '#fca5a5' : activeNotice.severity === 'INFO' ? '#bfdbfe' : '#fcd34d'}`,
+            borderRadius: 10, padding: '12px 14px', marginBottom: 16, display: 'flex', alignItems: 'flex-start', gap: 10
+          }}>
+            <span className="material-icons" style={{ fontSize: 18, color: activeNotice.severity === 'CRITICAL' ? '#dc2626' : activeNotice.severity === 'INFO' ? '#2563eb' : '#d97706', marginTop: 1 }}>
+              {activeNotice.severity === 'CRITICAL' ? 'error' : activeNotice.severity === 'INFO' ? 'info' : 'warning'}
+            </span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#2d3748' }}>{activeNotice.message}</div>
+              {activeNotice.scheduledAt && (
+                <div style={{ fontSize: 11, color: '#718096', marginTop: 4 }}>
+                  Scheduled: {new Date(activeNotice.scheduledAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}
+                  {activeNotice.durationMinutes ? ` · ~${activeNotice.durationMinutes} min` : ''}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Form */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <textarea
+            value={noticeForm.message}
+            onChange={e => setNoticeForm(f => ({ ...f, message: e.target.value }))}
+            placeholder="e.g. We have scheduled a maintenance upgrade on Saturday, 24 May from 2:00 AM – 4:00 AM IST. The platform may be unavailable during this window."
+            rows={3}
+            style={{ width: '100%', border: '1.5px solid #e2e8f0', borderRadius: 8, padding: '10px 12px', fontSize: 13, resize: 'vertical', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
+          />
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
+            <div>
+              <label style={{ fontSize: 11, color: '#718096', fontWeight: 600, display: 'block', marginBottom: 4 }}>Severity</label>
+              <select
+                value={noticeForm.severity}
+                onChange={e => setNoticeForm(f => ({ ...f, severity: e.target.value }))}
+                style={{ width: '100%', border: '1.5px solid #e2e8f0', borderRadius: 8, padding: '8px 10px', fontSize: 13, outline: 'none' }}
+              >
+                <option value="INFO">ℹ️ Info</option>
+                <option value="WARNING">⚠️ Warning</option>
+                <option value="CRITICAL">🔴 Critical</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={{ fontSize: 11, color: '#718096', fontWeight: 600, display: 'block', marginBottom: 4 }}>Scheduled Date &amp; Time</label>
+              <input
+                type="datetime-local"
+                value={noticeForm.scheduledAt}
+                onChange={e => setNoticeForm(f => ({ ...f, scheduledAt: e.target.value }))}
+                style={{ width: '100%', border: '1.5px solid #e2e8f0', borderRadius: 8, padding: '8px 10px', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
+
+            <div>
+              <label style={{ fontSize: 11, color: '#718096', fontWeight: 600, display: 'block', marginBottom: 4 }}>Duration (minutes)</label>
+              <input
+                type="number"
+                min="1"
+                value={noticeForm.durationMinutes}
+                onChange={e => setNoticeForm(f => ({ ...f, durationMinutes: e.target.value }))}
+                placeholder="e.g. 120"
+                style={{ width: '100%', border: '1.5px solid #e2e8f0', borderRadius: 8, padding: '8px 10px', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+            {activeNotice && (
+              <button
+                onClick={clearNotice}
+                disabled={noticeClearing}
+                style={{ padding: '9px 18px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: '#fff', color: '#718096', fontWeight: 600, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+              >
+                <span className="material-icons" style={{ fontSize: 16 }}>clear</span>
+                {noticeClearing ? 'Clearing…' : 'Clear Notice'}
+              </button>
+            )}
+            <button
+              onClick={saveNotice}
+              disabled={noticeSaving || !noticeForm.message.trim()}
+              style={{ padding: '9px 20px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg,#d97706,#b45309)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: noticeSaving ? 'not-allowed' : 'pointer', opacity: noticeSaving || !noticeForm.message.trim() ? 0.6 : 1, display: 'flex', alignItems: 'center', gap: 6 }}
+            >
+              <span className="material-icons" style={{ fontSize: 16 }}>campaign</span>
+              {noticeSaving ? 'Publishing…' : activeNotice ? 'Update Notice' : 'Publish Notice'}
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* ── Create Super Admin Wizard ───────────────────────────────────────── */}

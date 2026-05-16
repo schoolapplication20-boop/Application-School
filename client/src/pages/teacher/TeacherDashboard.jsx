@@ -379,7 +379,7 @@ export default function TeacherDashboard() {
       </div>
 
       {/* Main 2-column grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
+      <div className="grid-1-1" style={{ marginBottom: '24px' }}>
 
         {/* Today's Schedule */}
         <div className="chart-card">

@@ -468,6 +468,12 @@ export const schoolAPI = {
     });
   },
 
+  /** APPLICATION_OWNER: enable or disable a school (id = display number) */
+  toggleSchoolActive: (id, active) => api.patch(`/api/schools/${id}/active`, null, { params: { active } }),
+
+  /** Any authenticated user: check whether their school is currently active */
+  getMyStatus: () => api.get('/api/schools/my-status'),
+
   /** SUPER_ADMIN / ADMIN: replace logo only */
   updateLogo: (id, logoFile) => {
     const formData = new FormData();
@@ -512,6 +518,15 @@ export const examinationAPI = {
 export const marketingAPI = {
   getDemoBookings:       ()           => api.get('/api/marketing/demo-bookings'),
   updateBookingStatus:   (id, status) => api.patch(`/api/marketing/demo-bookings/${id}/status`, null, { params: { status } }),
+};
+
+// ============================================
+// SYSTEM NOTICE APIs
+// ============================================
+export const systemAPI = {
+  getActiveNotice: ()     => api.get('/api/system/notice'),
+  setNotice:       (data) => api.put('/api/system/notice', data),
+  clearNotice:     ()     => api.delete('/api/system/notice'),
 };
 
 export default api;

@@ -356,6 +356,65 @@ a {
   .page-header h1 {
     font-size: 20px;
   }
+
+  /* Tables — scroll horizontally on mobile */
+  .table-responsive-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    min-width: 500px;
+  }
+
+  /* Cards — full width on mobile */
+  .card, .chart-card, .data-table-card {
+    border-radius: 10px;
+  }
+
+  /* Page header stack on mobile */
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .page-header .header-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  /* Forms — full width inputs on mobile */
+  .form-row {
+    flex-direction: column;
+  }
+
+  /* Modal — full screen on mobile */
+  .modal-content {
+    margin: 10px;
+    border-radius: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .stat-card {
+    padding: 14px;
+  }
+
+  .stat-card .stat-value {
+    font-size: 20px;
+  }
+
+  /* Hide non-essential table columns on very small screens */
+  .hide-mobile {
+    display: none !important;
+  }
+
+  /* Buttons — full width on very small screens */
+  .btn-mobile-full {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 /* ============================================

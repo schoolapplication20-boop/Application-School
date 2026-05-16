@@ -134,7 +134,7 @@ export default function StudentDashboard() {
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: '20px', marginBottom: '24px' }}>
+      <div className="grid-3-2">
         {/* Attendance Chart */}
         <div className="chart-card">
           <div className="chart-card-header">
@@ -185,7 +185,7 @@ export default function StudentDashboard() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+      <div className="grid-1-1">
         {/* Recent Marks */}
         <div className="data-table-card">
           <div className="data-table-header">
