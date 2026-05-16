@@ -66,8 +66,8 @@ const AiChat = () => {
         onClick={() => setOpen(o => !o)}
         title="AI Assistant"
       >
-        {open ? '✕' : '✦'}
-        {!open && <span className="ai-fab__label">AI Assistant</span>}
+        {open ? '✕' : <span className="material-icons" style={{ fontSize: 20 }}>smart_toy</span>}
+        {!open && <span className="ai-fab__label">My-Skoolz AI</span>}
       </button>
 
       {/* Chat panel */}
