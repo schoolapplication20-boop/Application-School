@@ -6,7 +6,7 @@ const WHATSAPP_NUMBER = '12604670199';
 const WHATSAPP_MSG = encodeURIComponent("Hi My-Skoolz, I'd like to know more about your school management platform.");
 
 const ContactUsPage = () => {
-  const contactEmail = 'contact@my-skoolz.com';
+  const contactEmail = 'schoolapplication20@gmail.com';
 
   return (
     <div className="mkt-page">
