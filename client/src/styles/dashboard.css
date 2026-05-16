@@ -36,6 +36,27 @@
   }
 }
 
+/* Responsive grid helpers — replaces inline gridTemplateColumns */
+.grid-3-2 {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.grid-1-1 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 900px) {
+  .grid-3-2,
+  .grid-1-1 {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Chart Card */
 .chart-card {
   background: #ffffff;
