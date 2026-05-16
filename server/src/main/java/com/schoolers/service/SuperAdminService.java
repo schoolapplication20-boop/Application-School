@@ -293,6 +293,7 @@ public class SuperAdminService {
                     dto.put("subscriptionPlan",   school.getSubscriptionPlan());
                     dto.put("subscriptionExpiry", school.getSubscriptionExpiry());
                     dto.put("permissions",        sa.getPermissions());
+                    dto.put("schoolActive",       Boolean.TRUE.equals(school.getIsActive()));
                 });
             } else {
                 dto.put("needsSchoolSetup", true);

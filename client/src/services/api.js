@@ -468,6 +468,12 @@ export const schoolAPI = {
     });
   },
 
+  /** APPLICATION_OWNER: enable or disable a school (id = display number) */
+  toggleSchoolActive: (id, active) => api.patch(`/api/schools/${id}/active`, null, { params: { active } }),
+
+  /** Any authenticated user: check whether their school is currently active */
+  getMyStatus: () => api.get('/api/schools/my-status'),
+
   /** SUPER_ADMIN / ADMIN: replace logo only */
   updateLogo: (id, logoFile) => {
     const formData = new FormData();

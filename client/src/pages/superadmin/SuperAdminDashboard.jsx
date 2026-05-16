@@ -125,6 +125,15 @@ function OwnerDashboard() {
     } catch { } finally { setNoticeClearing(false); }
   };
 
+  const toggleSchool = async (schoolDbId, currentActive) => {
+    try {
+      await schoolAPI.toggleSchoolActive(schoolDbId, !currentActive);
+      load(); // reload the list to reflect new status
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update school status.');
+    }
+  };
+
   useEffect(() => { load(); loadBookings(); loadNotice(); }, [load, loadBookings, loadNotice]);
 
   const totalSchools = superAdmins.length;
@@ -311,9 +320,24 @@ function OwnerDashboard() {
                           )}
                         </td>
                         <td>
-                          <span style={{ padding: '3px 10px', background: sa.isActive !== false ? '#f0fff4' : '#fff5f5', color: sa.isActive !== false ? '#276749' : '#e53e3e', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>
-                            {sa.isActive !== false ? 'Active' : 'Inactive'}
-                          </span>
+                          <button
+                            onClick={() => toggleSchool(sa.schoolDbId, sa.schoolActive !== false)}
+                            disabled={!sa.schoolDbId}
+                            title={sa.schoolActive !== false ? 'Click to disable school' : 'Click to enable school'}
+                            style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 5,
+                              padding: '4px 10px', borderRadius: 20, border: 'none', cursor: sa.schoolDbId ? 'pointer' : 'default',
+                              background: sa.schoolActive !== false ? '#f0fff4' : '#fff5f5',
+                              color:      sa.schoolActive !== false ? '#276749' : '#e53e3e',
+                              fontWeight: 700, fontSize: 11,
+                              transition: 'opacity 0.15s',
+                            }}
+                          >
+                            <span className="material-icons" style={{ fontSize: 13 }}>
+                              {sa.schoolActive !== false ? 'toggle_on' : 'toggle_off'}
+                            </span>
+                            {sa.schoolActive !== false ? 'Active' : 'Disabled'}
+                          </button>
                         </td>
                         <td>
                           <button

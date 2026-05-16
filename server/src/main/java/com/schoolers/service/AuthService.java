@@ -68,6 +68,16 @@ public class AuthService {
             if (!Boolean.TRUE.equals(user.getIsActive()))
                 return ApiResponse.error("Your account has been deactivated. Please contact admin.");
 
+            // Check if the school itself is active (skip for APPLICATION_OWNER)
+            if (user.getRole() != User.Role.APPLICATION_OWNER && user.getSchoolId() != null) {
+                java.util.Optional<School> schoolOpt =
+                    schoolRepository.findBySchoolId(user.getSchoolId().intValue());
+                if (schoolOpt.isEmpty()) schoolOpt = schoolRepository.findById(user.getSchoolId());
+                boolean schoolActive = schoolOpt.map(s -> Boolean.TRUE.equals(s.getIsActive())).orElse(true);
+                if (!schoolActive)
+                    return ApiResponse.error("Your school's subscription has ended. Please reach out to the My-Skoolz team to reactivate.");
+            }
+
             // ── Step 3: Password ───────────────────────────────────────────
             if (request.getPassword() == null || request.getPassword().isBlank())
                 return ApiResponse.error("Password is required.");

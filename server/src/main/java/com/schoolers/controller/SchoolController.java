@@ -3,6 +3,10 @@ package com.schoolers.controller;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.schoolers.dto.ApiResponse;
+import com.schoolers.model.School;
+import com.schoolers.model.User;
+import com.schoolers.repository.SchoolRepository;
+import com.schoolers.repository.UserRepository;
 import com.schoolers.service.SchoolService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -19,8 +23,10 @@ import java.util.Map;
 @RequestMapping("/api/schools")
 public class SchoolController {
 
-    @Autowired private SchoolService schoolService;
-    @Autowired private ObjectMapper  objectMapper;
+    @Autowired private SchoolService    schoolService;
+    @Autowired private SchoolRepository schoolRepository;
+    @Autowired private UserRepository   userRepository;
+    @Autowired private ObjectMapper     objectMapper;
 
     // ── POST /api/schools ─────────────────────────────────────────────────────
     // SUPER_ADMIN creates their school.
@@ -131,6 +137,46 @@ public class SchoolController {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("Failed to update school: " + e.getMessage()));
         }
+    }
+
+    // ── PATCH /api/schools/{id}/active ───────────────────────────────────────
+    // APPLICATION_OWNER only — enable or disable a school.
+    // {id} = human-assigned display number (schools.school_id column).
+    @PatchMapping("/{id}/active")
+    @PreAuthorize("hasRole('APPLICATION_OWNER')")
+    public ResponseEntity<ApiResponse<Void>> toggleSchoolActive(
+            @PathVariable Integer id,
+            @RequestParam boolean active) {
+
+        School school = schoolRepository.findBySchoolId(id).orElse(null);
+        if (school == null)
+            return ResponseEntity.status(404).body(ApiResponse.error("School not found."));
+
+        school.setIsActive(active);
+        schoolRepository.save(school);
+        String msg = active ? "School activated successfully." : "School deactivated. Users will see a subscription-ended message.";
+        return ResponseEntity.ok(ApiResponse.success(msg, null));
+    }
+
+    // ── GET /api/schools/my-status ────────────────────────────────────────────
+    // Any authenticated user — check whether their school is currently active.
+    // APPLICATION_OWNER always returns active = true.
+    @GetMapping("/my-status")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getMyStatus(Authentication auth) {
+        if (auth == null)
+            return ResponseEntity.status(401).body(ApiResponse.error("Unauthorized"));
+
+        User user = userRepository.findByEmailIgnoreCase(auth.getName()).orElse(null);
+        if (user == null || user.getRole() == User.Role.APPLICATION_OWNER || user.getSchoolId() == null)
+            return ResponseEntity.ok(ApiResponse.success("OK", Map.of("active", true, "schoolName", "")));
+
+        School school = schoolRepository.findBySchoolId(user.getSchoolId().intValue())
+            .or(() -> schoolRepository.findById(user.getSchoolId()))
+            .orElse(null);
+
+        boolean isActive   = school == null || Boolean.TRUE.equals(school.getIsActive());
+        String  schoolName = school != null ? school.getName() : "";
+        return ResponseEntity.ok(ApiResponse.success("OK", Map.of("active", isActive, "schoolName", schoolName)));
     }
 
     // ── PATCH /api/schools/{id}/logo ──────────────────────────────────────────
