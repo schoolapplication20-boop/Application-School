@@ -1,6 +1,7 @@
 package com.schoolers.controller;
 
 import com.schoolers.dto.ApiResponse;
+import com.schoolers.dto.ContactMessageRequest;
 import com.schoolers.dto.DemoBookingRequest;
 import com.schoolers.dto.JobApplicationRequest;
 import com.schoolers.model.DemoBooking;
@@ -69,6 +70,12 @@ public class MarketingController {
             demoBookingRepository.save(b);
         });
         return ResponseEntity.ok(ApiResponse.success("Status updated", null));
+    }
+
+    @PostMapping("/contact")
+    public ResponseEntity<ApiResponse<Void>> contactUs(@Valid @RequestBody ContactMessageRequest request) {
+        emailService.sendContactMessageNotification(request);
+        return ResponseEntity.ok(ApiResponse.success("Message received! We'll get back to you within 24 hours.", null));
     }
 
     @PostMapping("/apply-job")

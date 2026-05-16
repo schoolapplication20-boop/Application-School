@@ -1,12 +1,33 @@
-import React from 'react';
+import React, { useState } from 'react';
+import axios from 'axios';
 import SEOMeta from '../../components/SEOMeta';
 import './marketing.css';
 
 const WHATSAPP_NUMBER = '12604670199';
 const WHATSAPP_MSG = encodeURIComponent("Hi My-Skoolz, I'd like to know more about your school management platform.");
+const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 const ContactUsPage = () => {
-  const contactEmail = 'contact@my-skoolz.com';
+  const contactEmail = 'schoolapplication20@gmail.com';
+  const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' });
+  const [status, setStatus] = useState(null); // 'loading' | 'success' | 'error'
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setStatus('loading');
+    setErrorMsg('');
+    try {
+      await axios.post(`${BACKEND_URL}/api/marketing/contact`, form);
+      setStatus('success');
+      setForm({ name: '', email: '', subject: '', message: '' });
+    } catch (err) {
+      setStatus('error');
+      setErrorMsg(err?.response?.data?.message || 'Something went wrong. Please try again.');
+    }
+  };
 
   return (
     <div className="mkt-page">
@@ -78,25 +99,42 @@ const ContactUsPage = () => {
 
             <div className="contact-form-wrapper">
               <h2>Send us a Message</h2>
-              <form className="contact-form">
+
+              {status === 'success' && (
+                <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '8px', padding: '16px', marginBottom: '20px', color: '#166534' }}>
+                  Message sent! We'll get back to you within 24 hours.
+                </div>
+              )}
+              {status === 'error' && (
+                <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '8px', padding: '16px', marginBottom: '20px', color: '#991b1b' }}>
+                  {errorMsg}
+                </div>
+              )}
+
+              <form className="contact-form" onSubmit={handleSubmit}>
                 <div className="form-group">
                   <label htmlFor="name">Full Name</label>
-                  <input type="text" id="name" name="name" required placeholder="Your name" />
+                  <input type="text" id="name" name="name" required placeholder="Your name" value={form.name} onChange={handleChange} />
                 </div>
                 <div className="form-group">
                   <label htmlFor="email">Email Address</label>
-                  <input type="email" id="email" name="email" required placeholder="your@email.com" />
+                  <input type="email" id="email" name="email" required placeholder="your@email.com" value={form.email} onChange={handleChange} />
                 </div>
                 <div className="form-group">
                   <label htmlFor="subject">Subject</label>
-                  <input type="text" id="subject" name="subject" required placeholder="How can we help?" />
+                  <input type="text" id="subject" name="subject" required placeholder="How can we help?" value={form.subject} onChange={handleChange} />
                 </div>
                 <div className="form-group">
                   <label htmlFor="message">Message</label>
-                  <textarea id="message" name="message" rows="6" required placeholder="Your message here..." />
+                  <textarea id="message" name="message" rows="6" required placeholder="Your message here..." value={form.message} onChange={handleChange} />
                 </div>
-                <button type="submit" className="mkt-btn mkt-btn--primary" style={{ width: '100%', justifyContent: 'center' }}>
-                  Send Message
+                <button
+                  type="submit"
+                  className="mkt-btn mkt-btn--primary"
+                  style={{ width: '100%', justifyContent: 'center' }}
+                  disabled={status === 'loading'}
+                >
+                  {status === 'loading' ? 'Sending...' : 'Send Message'}
                 </button>
               </form>
             </div>

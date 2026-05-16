@@ -6,14 +6,12 @@ import { useAuth } from '../context/AuthContext';
 import '../styles/sidebar.css';
 import '../styles/dashboard.css';
 
-const AI_ROLES = ['ADMIN', 'SUPER_ADMIN', 'APPLICATION_OWNER'];
-
 const Layout = ({ children, pageTitle }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const { user } = useAuth();
 
-  const showAi = user && AI_ROLES.includes(user.role);
+  const showAi = !!user;
 
   return (
     <div className="app-layout">
