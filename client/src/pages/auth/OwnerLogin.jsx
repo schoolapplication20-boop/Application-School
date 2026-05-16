@@ -139,16 +139,20 @@ const OwnerLogin = () => {
                   onChange={e => setPassword(e.target.value)}
                   style={{ paddingLeft: 40, paddingRight: 40, borderRadius: 10 }}
                 />
-                <span
-                  className="material-icons"
+                <button
+                  type="button"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                   onClick={() => setShowPassword(v => !v)}
                   style={{
                     position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
-                    fontSize: 18, color: '#94a3b8', cursor: 'pointer',
+                    background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center',
                   }}
                 >
-                  {showPassword ? 'visibility_off' : 'visibility'}
-                </span>
+                  <span className="material-icons" style={{ fontSize: 18, color: '#94a3b8' }}>
+                    {showPassword ? 'visibility_off' : 'visibility'}
+                  </span>
+                </button>
               </div>
             </div>
 

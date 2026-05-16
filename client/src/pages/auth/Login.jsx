@@ -340,9 +340,15 @@ const Login = () => {
                     onChange={e => { setEmailForm({ ...emailForm, password: e.target.value }); setError(''); }}
                     autoComplete="current-password"
                   />
-                  <span className="material-icons input-icon" onClick={() => setShowPassword(!showPassword)} style={{ cursor: 'pointer' }}>
-                    {showPassword ? 'visibility_off' : 'visibility'}
-                  </span>
+                  <button
+                    type="button"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="input-icon"
+                    style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                  >
+                    <span className="material-icons">{showPassword ? 'visibility_off' : 'visibility'}</span>
+                  </button>
                 </div>
               </div>
 

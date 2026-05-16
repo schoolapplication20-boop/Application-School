@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="80" fill="#4f46e5"/>
+  <!-- graduation cap -->
+  <polygon points="256,120 420,200 256,280 92,200" fill="#fff"/>
+  <rect x="390" y="200" width="16" height="70" rx="8" fill="#fff"/>
+  <ellipse cx="398" cy="272" rx="18" ry="12" fill="#a5b4fc"/>
+  <!-- building / school -->
+  <rect x="156" y="280" width="200" height="120" rx="8" fill="#fff" opacity="0.95"/>
+  <rect x="220" y="316" width="36" height="84" rx="4" fill="#4f46e5"/>
+  <rect x="176" y="300" width="32" height="32" rx="4" fill="#c7d2fe"/>
+  <rect x="304" y="300" width="32" height="32" rx="4" fill="#c7d2fe"/>
+</svg>

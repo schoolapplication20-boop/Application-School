@@ -3,6 +3,7 @@ import Layout from '../../components/Layout';
 import { superAdminAPI, adminAPI, schoolAPI } from '../../services/api';
 import { getLogs } from '../../services/activityLog';
 import { useAuth } from '../../context/AuthContext';
+import SEOMeta from '../../components/SEOMeta';
 
 // ─── Module definitions (used for permission toggles) ────────────────────────
 const ALL_MODULES = [
@@ -99,6 +100,7 @@ function OwnerDashboard() {
 
   return (
     <Layout pageTitle="Platform Dashboard">
+      <SEOMeta title="Platform Dashboard" description="Application owner overview — manage all schools on the My-Skoolz platform." />
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
@@ -1249,6 +1251,7 @@ function SchoolDashboard() {
 
   return (
     <Layout pageTitle="Super Admin Dashboard">
+      <SEOMeta title="Super Admin Dashboard" description="School-level super admin overview — manage admins, students, teachers and settings." />
       <div className="page-header">
         <h1>Super Admin Dashboard</h1>
         <p>Overview of your school management platform</p>

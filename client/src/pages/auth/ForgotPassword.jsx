@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authAPI } from '../../services/api';
+import SEOMeta from '../../components/SEOMeta';
 import '../../styles/auth.css';
 
 const ForgotPassword = () => {
@@ -147,6 +148,7 @@ const ForgotPassword = () => {
 
   return (
     <div className="auth-wrapper">
+      <SEOMeta title="Forgot Password" description="Reset your My-Skoolz account password securely." />
       {/* Left Panel */}
       <div className="auth-left">
         <div className="auth-brand">

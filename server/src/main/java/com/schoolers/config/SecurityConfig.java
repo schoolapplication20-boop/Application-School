@@ -3,6 +3,7 @@ package com.schoolers.config;
 import com.schoolers.security.JwtFilter;
 import com.schoolers.security.UserDetailsServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -98,6 +99,14 @@ public class SecurityConfig {
                 .requestMatchers("/api/user/**").authenticated()
 
                 .anyRequest().authenticated()
+            )
+
+            // Return 401 for unauthenticated requests, 403 for authenticated-but-unauthorized
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint((request, response, authException) ->
+                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Authentication required"))
+                .accessDeniedHandler((request, response, accessDeniedException) ->
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "Access denied"))
             )
 
             // Authentication provider

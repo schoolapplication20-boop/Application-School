@@ -8,6 +8,7 @@ import Toast from '../../components/Toast';
 import { useAuth } from '../../context/AuthContext';
 import { adminAPI, superAdminAPI, applicationAPI } from '../../services/api';
 import { getLogs } from '../../services/activityLog';
+import SEOMeta from '../../components/SEOMeta';
 
 const revenueData = [
   { name: 'Jan', revenue: 0, expenses: 0 },
@@ -210,6 +211,7 @@ export default function AdminDashboard() {
 
   return (
     <Layout pageTitle="Admin Dashboard">
+      <SEOMeta title="Admin Dashboard" description="School administration overview — students, teachers, fees and attendance at a glance." />
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
       <div className="page-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>

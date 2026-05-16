@@ -8,6 +8,7 @@ import { fetchTeachers } from '../../services/teacherService';
 import { fetchStudents } from '../../services/studentService';
 import { fetchTimetable, getTimetableForTeacher, formatTime } from '../../services/timetableService';
 import { teacherAPI } from '../../services/api';
+import SEOMeta from '../../components/SEOMeta';
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -242,6 +243,7 @@ export default function TeacherDashboard() {
 
   return (
     <Layout pageTitle="Teacher Dashboard">
+      <SEOMeta title="Teacher Dashboard" description="Your daily schedule, class attendance, and student overview." />
       {/* Page Header */}
       <div className="page-header">
       </div>

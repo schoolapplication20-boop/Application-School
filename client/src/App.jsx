@@ -6,6 +6,7 @@ import { NotificationProvider } from './context/NotificationContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import MarketingLayout from './components/MarketingLayout';
 import InstallPrompt from './components/InstallPrompt';
+import SessionTimeoutWarning from './components/SessionTimeoutWarning';
 
 // Marketing Pages
 import HomePage from './pages/marketing/HomePage';
@@ -75,6 +76,9 @@ import AdminMessages         from './pages/admin/AdminMessages';
 // School Settings
 import SchoolSettings        from './pages/admin/SchoolSettings';
 
+// 404
+import NotFound              from './pages/NotFound';
+
 
 function App() {
   return (
@@ -83,6 +87,7 @@ function App() {
       <NotificationProvider>
         <Router>
           <InstallPrompt />
+          <SessionTimeoutWarning />
           <Routes>
             {/* Marketing Routes - Public */}
             <Route path="/marketing/home" element={
@@ -116,10 +121,13 @@ function App() {
               </MarketingLayout>
             } />
             
+            {/* Root: redirect to login when running as installed PWA (standalone),
+                otherwise show the marketing home page for browser visitors */}
             <Route path="/" element={
-              <MarketingLayout>
-                <HomePage />
-              </MarketingLayout>
+              window.matchMedia('(display-mode: standalone)').matches ||
+              window.navigator.standalone === true
+                ? <Navigate to="/login" replace />
+                : <MarketingLayout><HomePage /></MarketingLayout>
             } />
 
             {/* Auth Routes */}
@@ -197,14 +205,7 @@ function App() {
             <Route path="/admin/settings"     element={<ProtectedRoute allowedRoles={['ADMIN','SUPER_ADMIN']}><SchoolSettings /></ProtectedRoute>} />
 
             {/* 404 */}
-            <Route path="*" element={
-              <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f7fafc', gap: '16px' }}>
-                <span className="material-icons" style={{ fontSize: '64px', color: '#e2e8f0' }}>error_outline</span>
-                <h1 style={{ fontSize: '48px', fontWeight: 800, color: '#e2e8f0', margin: 0 }}>404</h1>
-                <p style={{ fontSize: '18px', color: '#a0aec0', marginBottom: '24px' }}>Page not found</p>
-                <a href="/login" style={{ padding: '12px 28px', background: '#0de1e8', color: '#fff', borderRadius: '10px', fontWeight: 600, textDecoration: 'none' }}>Go to Login</a>
-              </div>
-            } />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </Router>
       </NotificationProvider>

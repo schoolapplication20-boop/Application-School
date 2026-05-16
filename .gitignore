@@ -1,1 +1,20 @@
+# Dependencies
 client/node_modules/
+server/target/
+
+# Environment files — never commit real credentials
+client/.env
+client/.env.local
+client/.env.production
+server/src/main/resources/application.properties
+
+# Build output
+client/dist/
+client/coverage/
+
+# IDE / OS
+.DS_Store
+Thumbs.db
+.idea/
+*.iml
+.vscode/settings.json

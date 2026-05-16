@@ -585,12 +585,23 @@ export default function Teachers() {
             <tbody>
               {filtered.length === 0 ? (
                 <tr><td colSpan={9}>
-                  <div className="empty-state">
-                    <span className="material-icons" style={{ fontSize: 48, color: '#e2e8f0', display: 'block', marginBottom: 8 }}>search_off</span>
-                    <h3 style={{ color: '#a0aec0' }}>No teachers found</h3>
-                    <p style={{ color: '#cbd5e0' }}>
-                      {search || filterSubject ? 'Try adjusting your search filters.' : 'Click "Add Teacher" to get started.'}
+                  <div className="empty-state" style={{ padding: '48px 24px', textAlign: 'center' }}>
+                    <span className="material-icons" style={{ fontSize: 56, color: '#c7d2fe', display: 'block', marginBottom: 12 }}>
+                      {teachers.length === 0 ? 'people' : 'search_off'}
+                    </span>
+                    <h3 style={{ color: '#1e293b', fontWeight: 700, margin: '0 0 6px' }}>
+                      {teachers.length === 0 ? 'No teachers yet' : 'No teachers match your search'}
+                    </h3>
+                    <p style={{ color: '#64748b', margin: '0 0 20px', fontSize: 14 }}>
+                      {teachers.length === 0
+                        ? 'Add your first teacher to get started.'
+                        : 'Try adjusting your search or subject filter.'}
                     </p>
+                    {teachers.length === 0 && (
+                      <button onClick={openAdd} className="btn btn-primary" style={{ borderRadius: 8 }}>
+                        + Add First Teacher
+                      </button>
+                    )}
                   </div>
                 </td></tr>
               ) : filtered.map(t => {

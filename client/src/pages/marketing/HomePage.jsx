@@ -417,43 +417,6 @@ const HomePage = () => (
       </div>
     </section>
 
-    {/*
-      ══ QUICK ACCESS ══
-      These links tell Google exactly which pages to surface as sitelinks
-      when someone searches "my skoolz". Each anchor uses the label text
-      that should appear in the Google result.
-    */}
-    <section className="mkt-quickaccess">
-      <div className="mkt-container">
-        <p className="mkt-quickaccess__label">Quick Access</p>
-        <nav className="mkt-quickaccess__links" aria-label="Quick access links">
-          <a href="/login?role=ADMIN"   className="mkt-quickaccess__link">
-            <span className="material-icons">manage_accounts</span>
-            Admin Login
-          </a>
-          <a href="/login?role=TEACHER" className="mkt-quickaccess__link">
-            <span className="material-icons">school</span>
-            Teacher Login
-          </a>
-          <a href="/login?role=STUDENT" className="mkt-quickaccess__link">
-            <span className="material-icons">person</span>
-            Student Login
-          </a>
-          <Link to="/marketing/demo"    className="mkt-quickaccess__link">
-            <span className="material-icons">calendar_today</span>
-            Book a Free Demo
-          </Link>
-          <Link to="/marketing/contact" className="mkt-quickaccess__link">
-            <span className="material-icons">mail_outline</span>
-            Contact Us
-          </Link>
-          <Link to="/marketing/solutions" className="mkt-quickaccess__link">
-            <span className="material-icons">grid_view</span>
-            Features
-          </Link>
-        </nav>
-      </div>
-    </section>
 
   </div>
 );

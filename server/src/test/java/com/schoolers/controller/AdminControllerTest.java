@@ -91,14 +91,10 @@ class AdminControllerTest {
     // ── GET /api/admin/students — Authentication ────────────────────────────
 
     @Test
-    @DisplayName("GET /api/admin/students without auth returns 4xx (403 in JWT stateless config)")
+    @DisplayName("GET /api/admin/students without auth returns 401")
     void getStudents_noAuth_returns401() throws Exception {
-        // SecurityConfig uses SessionCreationPolicy.STATELESS without an explicit
-        // AuthenticationEntryPoint, so Spring Security returns 403 (Http403ForbiddenEntryPoint)
-        // for unauthenticated requests rather than 401. This is a known config gap — a proper
-        // REST API should configure .exceptionHandling().authenticationEntryPoint(...) to return 401.
         mockMvc.perform(get("/api/admin/students"))
-               .andExpect(status().is4xxClientError());
+               .andExpect(status().isUnauthorized());
     }
 
     @Test

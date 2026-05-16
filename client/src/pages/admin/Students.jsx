@@ -635,9 +635,33 @@ export default function Students() {
             </thead>
             <tbody>
               {loadingStudents ? (
-                <tr><td colSpan={8}><div className="empty-state"><span className="material-icons" style={{ animation: 'spin 1s linear infinite' }}>refresh</span><h3>Loading students...</h3></div></td></tr>
+                <tr><td colSpan={8}>
+                  <div className="empty-state">
+                    <span className="material-icons" style={{ animation: 'spin 1s linear infinite', fontSize: 40, color: '#94a3b8' }}>refresh</span>
+                    <h3>Loading students…</h3>
+                  </div>
+                </td></tr>
               ) : paginated.length === 0 ? (
-                <tr><td colSpan={8}><div className="empty-state"><span className="material-icons">search_off</span><h3>No students found</h3></div></td></tr>
+                <tr><td colSpan={8}>
+                  <div className="empty-state" style={{ padding: '48px 24px', textAlign: 'center' }}>
+                    <span className="material-icons" style={{ fontSize: 56, color: '#c7d2fe', display: 'block', marginBottom: 12 }}>
+                      {students.length === 0 ? 'school' : 'search_off'}
+                    </span>
+                    <h3 style={{ color: '#1e293b', fontWeight: 700, margin: '0 0 6px' }}>
+                      {students.length === 0 ? 'No students yet' : 'No students match your search'}
+                    </h3>
+                    <p style={{ color: '#64748b', margin: '0 0 20px', fontSize: 14 }}>
+                      {students.length === 0
+                        ? 'Add your first student to get started.'
+                        : 'Try adjusting your search or filter criteria.'}
+                    </p>
+                    {students.length === 0 && (
+                      <button onClick={() => setShowForm(true)} className="btn btn-primary" style={{ borderRadius: 8 }}>
+                        + Add First Student
+                      </button>
+                    )}
+                  </div>
+                </td></tr>
               ) : paginated.map(s => (
                 <tr key={s.id}>
                   <td>

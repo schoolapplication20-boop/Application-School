@@ -49,12 +49,10 @@ api.interceptors.response.use(
 // ============================================
 
 export const authAPI = {
-  login:            (data) => api.post('/api/auth/login', data),
-  register:         (data) => api.post('/api/auth/register', data),
-  sendLoginOTP: (data) => api.post('/api/auth/forgot-password', data),
-  verifyLoginOTP: (data) => api.post('/api/auth/verify-otp', data),
+  login:          (data) => api.post('/api/auth/login', data),
+  register:       (data) => api.post('/api/auth/register', data),
   forgotPassword: (data) => api.post('/api/auth/forgot-password', data),
-  verifyOTP: (data) => api.post('/api/auth/verify-otp', data),
+  verifyOTP:      (data) => api.post('/api/auth/verify-otp', data),
   resetPassword: (data) => api.post('/api/auth/reset-password', data),
   changePassword: (data) => api.post('/api/auth/change-password', data),
   setFirstPassword: (data) => api.post('/api/auth/set-first-password', data),
