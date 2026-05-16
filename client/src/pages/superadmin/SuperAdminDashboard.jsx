@@ -55,6 +55,23 @@ function OwnerDashboard() {
   const [demoBookings, setDemoBookings] = useState([]);
   const [bookingsLoading, setBookingsLoading] = useState(true);
 
+  // ── School users modal ───────────────────────────────────────────────────────
+  const [usersModal,    setUsersModal]    = useState(null); // { school: sa, users: [] } | null
+  const [usersLoading,  setUsersLoading]  = useState(false);
+
+  const openUsersModal = async (sa) => {
+    setUsersModal({ school: sa, users: [] });
+    setUsersLoading(true);
+    try {
+      const res = await schoolAPI.getSchoolUsers(sa.schoolDbId);
+      setUsersModal({ school: sa, users: res.data?.data ?? [] });
+    } catch {
+      setUsersModal({ school: sa, users: [] });
+    } finally {
+      setUsersLoading(false);
+    }
+  };
+
   // ── System notice ────────────────────────────────────────────────────────────
   const [activeNotice,  setActiveNotice]  = useState(null);
   const [noticeForm,    setNoticeForm]    = useState({ message: '', severity: 'WARNING', scheduledAt: '', durationMinutes: '' });
@@ -256,6 +273,7 @@ function OwnerDashboard() {
                   <th></th>
                   <th></th>
                   <th></th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -341,6 +359,16 @@ function OwnerDashboard() {
                         </td>
                         <td>
                           <button
+                            onClick={() => sa.schoolDbId && openUsersModal(sa)}
+                            disabled={!sa.schoolDbId}
+                            title="View all users"
+                            style={{ border: 'none', background: '#eff6ff', borderRadius: 8, width: 30, height: 30, cursor: sa.schoolDbId ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: sa.schoolDbId ? 1 : 0.4 }}
+                          >
+                            <span className="material-icons" style={{ fontSize: 16, color: '#2563eb' }}>group</span>
+                          </button>
+                        </td>
+                        <td>
+                          <button
                             onClick={() => setExpandedRow(isExpanded ? null : sa.schoolDbId)}
                             title={isExpanded ? 'Collapse' : 'View details'}
                             style={{ border: 'none', background: isExpanded ? '#ede9fe' : '#f8fafc', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -373,7 +401,7 @@ function OwnerDashboard() {
                       {/* ── Expanded detail row ─────────────────────────────── */}
                       {isExpanded && (
                         <tr>
-                          <td colSpan={10} style={{ padding: 0, background: '#fafbff', borderTop: '1px dashed #e2e8f0' }}>
+                          <td colSpan={11} style={{ padding: 0, background: '#fafbff', borderTop: '1px dashed #e2e8f0' }}>
                             <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
                               {/* School info */}
                               <div style={{ background: '#fff', borderRadius: 10, padding: '12px 14px', border: '1.5px solid #e2e8f0' }}>
@@ -593,6 +621,101 @@ function OwnerDashboard() {
           </div>
         </div>
       </div>
+
+      {/* ── School Users Modal ─────────────────────────────────────────────── */}
+      {usersModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 700, maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.25)' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 24px', borderBottom: '1.5px solid #e2e8f0', flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 10, background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <span className="material-icons" style={{ color: '#2563eb', fontSize: 22 }}>group</span>
+                </div>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: 16, color: '#1a202c' }}>{usersModal.school.schoolName || 'School'} — Users</div>
+                  <div style={{ fontSize: 12, color: '#718096' }}>All accounts registered under this school</div>
+                </div>
+              </div>
+              <button
+                onClick={() => setUsersModal(null)}
+                style={{ border: 'none', background: '#f8fafc', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <span className="material-icons" style={{ fontSize: 18, color: '#718096' }}>close</span>
+              </button>
+            </div>
+
+            {/* Body */}
+            <div style={{ overflowY: 'auto', flexGrow: 1 }}>
+              {usersLoading ? (
+                <div style={{ padding: 48, textAlign: 'center', color: '#a0aec0' }}>
+                  <span className="material-icons" style={{ fontSize: 36, display: 'block', marginBottom: 8, animation: 'spin 1s linear infinite' }}>autorenew</span>
+                  Loading users…
+                </div>
+              ) : usersModal.users.length === 0 ? (
+                <div style={{ padding: 48, textAlign: 'center', color: '#a0aec0' }}>
+                  <span className="material-icons" style={{ fontSize: 40, display: 'block', marginBottom: 8, color: '#e2e8f0' }}>person_off</span>
+                  No users found for this school.
+                </div>
+              ) : (
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ background: '#f8fafc', position: 'sticky', top: 0 }}>
+                      {['#', 'Name', 'Login ID (Email)', 'Role', 'Status'].map(h => (
+                        <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 700, color: '#4a5568', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, borderBottom: '1.5px solid #e2e8f0' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {usersModal.users.map((u, idx) => {
+                      const roleColors = {
+                        SUPER_ADMIN: { bg: '#ede9fe', text: '#7c3aed' },
+                        ADMIN:       { bg: '#dcfce7', text: '#166534' },
+                        TEACHER:     { bg: '#dbeafe', text: '#1e40af' },
+                        STUDENT:     { bg: '#fef9c3', text: '#854d0e' },
+                      };
+                      const rc = roleColors[u.role] || { bg: '#f1f5f9', text: '#4a5568' };
+                      return (
+                        <tr key={u.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                          <td style={{ padding: '10px 16px', color: '#a0aec0', fontSize: 12 }}>{idx + 1}</td>
+                          <td style={{ padding: '10px 16px', fontWeight: 600, color: '#1a202c' }}>{u.name || '—'}</td>
+                          <td style={{ padding: '10px 16px' }}>
+                            <span style={{ fontFamily: 'monospace', fontSize: 12, color: '#2563eb' }}>{u.email || u.username || '—'}</span>
+                            {u.mobile && <div style={{ fontSize: 11, color: '#a0aec0', marginTop: 2 }}>{u.mobile}</div>}
+                          </td>
+                          <td style={{ padding: '10px 16px' }}>
+                            <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: rc.bg, color: rc.text }}>
+                              {u.role?.replace('_', ' ')}
+                            </span>
+                          </td>
+                          <td style={{ padding: '10px 16px' }}>
+                            <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: u.isActive !== false ? '#f0fff4' : '#fff5f5', color: u.isActive !== false ? '#276749' : '#e53e3e' }}>
+                              {u.isActive !== false ? 'Active' : 'Inactive'}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            {/* Footer */}
+            {!usersLoading && usersModal.users.length > 0 && (
+              <div style={{ padding: '12px 24px', borderTop: '1.5px solid #e2e8f0', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8fafc', borderRadius: '0 0 16px 16px' }}>
+                <span style={{ fontSize: 12, color: '#718096' }}>{usersModal.users.length} user{usersModal.users.length !== 1 ? 's' : ''} total</span>
+                <button
+                  onClick={() => setUsersModal(null)}
+                  style={{ padding: '7px 18px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: '#fff', color: '#4a5568', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
+                >
+                  Close
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── Create Super Admin Wizard ───────────────────────────────────────── */}
       {showWizard && (

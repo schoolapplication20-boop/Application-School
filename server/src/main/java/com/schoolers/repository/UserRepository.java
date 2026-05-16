@@ -28,4 +28,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     /** Find all school-level super admins (schoolId is not null) */
     List<User> findByRoleAndSchoolIdNotNull(User.Role role);
+
+    /** All users belonging to a specific school */
+    List<User> findBySchoolId(Long schoolId);
 }
