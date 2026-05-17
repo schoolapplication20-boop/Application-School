@@ -5,7 +5,7 @@ import './AiChat.css';
 /* ── i18n ────────────────────────────────────────────────────────── */
 const I18N = {
   en: {
-    welcome: "Hi! 👋 I'm **My-Skoolz AI**, powered by Google Gemini.\n\nAsk me anything — school questions, homework help, general knowledge, or choose a quick topic below.",
+    welcome: "Hi! 👋 I'm **My-Skoolz AI**, powered by ChatGPT.\n\nAsk me anything — school questions, homework help, general knowledge, or choose a quick topic below.",
     subtitle: 'AI Assistant • Online',
     chooseTopic: 'Quick topics:',
     browseTopics: '📂 Browse Topics',
@@ -26,7 +26,7 @@ const I18N = {
     ],
   },
   hi: {
-    welcome: "नमस्ते! 👋 मैं **My-Skoolz AI** हूँ, Google Gemini द्वारा संचालित।\n\nकुछ भी पूछें — स्कूल प्रश्न, होमवर्क सहायता, सामान्य ज्ञान, या नीचे एक त्वरित विषय चुनें।",
+    welcome: "नमस्ते! 👋 मैं **My-Skoolz AI** हूँ, ChatGPT द्वारा संचालित।\n\nकुछ भी पूछें — स्कूल प्रश्न, होमवर्क सहायता, सामान्य ज्ञान, या नीचे एक त्वरित विषय चुनें।",
     subtitle: 'AI सहायक • ऑनलाइन',
     chooseTopic: 'त्वरित विषय:',
     browseTopics: '📂 विषय देखें',
@@ -47,7 +47,7 @@ const I18N = {
     ],
   },
   te: {
-    welcome: "నమస్కారం! 👋 నేను **My-Skoolz AI**, Google Gemini ద్వారా నడుస్తున్నాను.\n\nఏదైనా అడగండి — పాఠశాల ప్రశ్నలు, హోంవర్క్ సహాయం, సాధారణ జ్ఞానం, లేదా దిగువ విషయాన్ని ఎంచుకోండి.",
+    welcome: "నమస్కారం! 👋 నేను **My-Skoolz AI**, ChatGPT ద్వారా నడుస్తున్నాను.\n\nఏదైనా అడగండి — పాఠశాల ప్రశ్నలు, హోంవర్క్ సహాయం, సాధారణ జ్ఞానం, లేదా దిగువ విషయాన్ని ఎంచుకోండి.",
     subtitle: 'AI సహాయకుడు • ఆన్‌లైన్',
     chooseTopic: 'త్వరిత విషయాలు:',
     browseTopics: '📂 విషయాలు చూడండి',
@@ -361,7 +361,7 @@ const AiChat = () => {
               </div>
             </div>
             <div className="ai-header-right">
-              <span className="ai-powered-badge">✦ Gemini</span>
+              <span className="ai-powered-badge">✦ ChatGPT</span>
             </div>
           </div>
 
