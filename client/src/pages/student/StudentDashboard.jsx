@@ -83,7 +83,7 @@ export default function StudentDashboard() {
   // Display name and info — fall back to user object if profile not loaded yet
   const displayName  = profile?.name || user?.name || 'Student';
   const classSection = profile
-    ? `${profile.className || ''}${profile.section ? `-${profile.section}` : ''}`.trim() || '—'
+    ? `${(profile.className || '').replace(/^class\s+/i, '')}${profile.section ? `-${profile.section}` : ''}`.trim() || '—'
     : '—';
 
   if (loading) {
