@@ -135,27 +135,7 @@ public class AiService {
                     if (s.getAdmissionNumber() != null) sb.append("- Admission number: ").append(s.getAdmissionNumber()).append("\n");
                     sb.append("\n");
 
-                    // ── FEES ──────────────────────────────────────────────────
-                    try {
-                        List<com.schoolers.model.Fee> fees = feeRepository.findByStudentId(studentDbId);
-                        if (!fees.isEmpty()) {
-                            BigDecimal totalFee   = fees.stream().map(com.schoolers.model.Fee::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
-                            BigDecimal paidFee    = fees.stream().filter(f -> f.getStatus() == com.schoolers.model.Fee.Status.PAID).map(f -> nullSafe(f.getPaidAmount())).reduce(BigDecimal.ZERO, BigDecimal::add);
-                            BigDecimal pendingFee = fees.stream().filter(f -> f.getStatus() == com.schoolers.model.Fee.Status.PENDING).map(com.schoolers.model.Fee::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
-                            sb.append("FEE DETAILS:\n");
-                            sb.append("- Total fee: ₹").append(totalFee.toPlainString()).append("\n");
-                            sb.append("- Paid: ₹").append(paidFee.toPlainString()).append("\n");
-                            sb.append("- Pending: ₹").append(pendingFee.toPlainString()).append("\n");
-                            for (com.schoolers.model.Fee f : fees) {
-                                sb.append("  * ").append(f.getFeeType() != null ? f.getFeeType() : "Fee")
-                                  .append(": ₹").append(f.getAmount()).append(" — ").append(f.getStatus());
-                                if (f.getDueDate() != null) sb.append(" (due: ").append(f.getDueDate()).append(")");
-                                sb.append("\n");
-                            }
-                        } else {
-                            sb.append("FEE DETAILS: No fee records found.\n");
-                        }
-                    } catch (Exception ignored) {}
+                    // Fee data intentionally NOT injected — students must contact admin for fee details
 
                     // ── ATTENDANCE (this month) ────────────────────────────────
                     try {
@@ -308,10 +288,11 @@ public class AiService {
         sb.append("- NEVER show URL paths (like /admin/students) in your response. Use menu names only.\n");
         sb.append("- Never say 'live data doesn't provide' for navigation/how-to questions — use the ERP guide instead.\n");
         if ("STUDENT".equals(role)) {
-            sb.append("- You CAN and SHOULD share the student's own fee details, attendance, homework, and marks from the LOGGED-IN STUDENT DETAILS above.\n");
-            sb.append("- Only refuse to share other students' data. The data above is the logged-in student's own data — always show it when asked.\n");
+            sb.append("- Do NOT share any fee amounts or fee details. For any fee-related question say: 'Please contact your school admin for fee details.'\n");
+            sb.append("- You CAN show attendance, homework, and exam marks from the data above.\n");
         } else if ("TEACHER".equals(role)) {
-            sb.append("- Do NOT share individual student fee amounts. For fee questions from students/parents, say: 'Please contact the school admin for fee details.'\n");
+            sb.append("- Do NOT share any salary or payment information. For any salary-related question say: 'Please contact your school admin for salary details.'\n");
+            sb.append("- Do NOT share student fee amounts. For fee questions say: 'Please contact the school admin for fee details.'\n");
         } else if (!isAdmin) {
             sb.append("- Do NOT share fee amounts or financial data. Say: 'Please contact your school admin for fee details.'\n");
         }
