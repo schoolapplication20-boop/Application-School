@@ -40,8 +40,11 @@ public class AiService {
 
         String systemPrompt = buildSystemPrompt(schoolId, role);
 
-        // Build contents array from history + new message
+        // v1 API does not support system_instruction; inject as opening exchange instead
         List<Map<String, Object>> contents = new ArrayList<>();
+        contents.add(buildContent("user", systemPrompt));
+        contents.add(buildContent("model", "Understood! I'm ready to assist as My-Skoolz AI."));
+
         if (history != null) {
             for (Map<String, String> h : history) {
                 contents.add(buildContent(h.get("role"), h.get("text")));
@@ -50,7 +53,6 @@ public class AiService {
         contents.add(buildContent("user", message));
 
         Map<String, Object> body = new HashMap<>();
-        body.put("system_instruction", Map.of("parts", List.of(Map.of("text", systemPrompt))));
         body.put("contents", contents);
         body.put("generationConfig", Map.of(
             "temperature", 0.7,
