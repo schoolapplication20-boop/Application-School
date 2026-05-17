@@ -475,6 +475,9 @@ export const schoolAPI = {
   /** Any authenticated user: check whether their school is currently active */
   getMyStatus: () => api.get('/api/schools/my-status'),
 
+  /** APPLICATION_OWNER: list all users (name, email, role) for a school by DB id */
+  getSchoolUsers: (schoolDbId) => api.get(`/api/schools/${schoolDbId}/users`),
+
   /** SUPER_ADMIN / ADMIN: replace logo only */
   updateLogo: (id, logoFile) => {
     const formData = new FormData();

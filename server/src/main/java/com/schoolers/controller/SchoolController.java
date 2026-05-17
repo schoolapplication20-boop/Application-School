@@ -16,6 +16,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -177,6 +179,38 @@ public class SchoolController {
         boolean isActive   = school == null || Boolean.TRUE.equals(school.getIsActive());
         String  schoolName = school != null ? school.getName() : "";
         return ResponseEntity.ok(ApiResponse.success("OK", Map.of("active", isActive, "schoolName", schoolName)));
+    }
+
+    // ── GET /api/schools/{id}/users ──────────────────────────────────────────
+    // APPLICATION_OWNER only — list all users belonging to a school.
+    // {id} = DB primary key of the school (sa.schoolDbId on the frontend).
+    @GetMapping("/{id}/users")
+    @PreAuthorize("hasRole('APPLICATION_OWNER')")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getSchoolUsers(@PathVariable Long id) {
+        List<User> users = userRepository.findBySchoolId(id);
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (User u : users) {
+            Map<String, Object> row = new HashMap<>();
+            row.put("id",       u.getId());
+            row.put("name",     u.getName());
+            row.put("email",    u.getEmail());
+            row.put("username", u.getUsername());
+            row.put("mobile",   u.getMobile());
+            row.put("role",     u.getRole() != null ? u.getRole().name() : null);
+            row.put("isActive", u.getIsActive());
+            result.add(row);
+        }
+        // Sort: SUPER_ADMIN → ADMIN → TEACHER → STUDENT
+        java.util.Comparator<Map<String, Object>> roleOrder = java.util.Comparator.comparingInt(m -> {
+            String r = (String) m.get("role");
+            if ("SUPER_ADMIN".equals(r)) return 0;
+            if ("ADMIN".equals(r))       return 1;
+            if ("TEACHER".equals(r))     return 2;
+            if ("STUDENT".equals(r))     return 3;
+            return 4;
+        });
+        result.sort(roleOrder);
+        return ResponseEntity.ok(ApiResponse.success(result));
     }
 
     // ── PATCH /api/schools/{id}/logo ──────────────────────────────────────────
