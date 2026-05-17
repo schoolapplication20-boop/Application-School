@@ -89,7 +89,7 @@ public class AiChatService {
         Long schoolId  = user != null ? user.getSchoolId() : null;
         String role    = user != null ? user.getRole().name() : "STUDENT";
 
-        String aiReply = aiService.chat(message, history, schoolId, role);
+        String aiReply = aiService.chat(message, history, schoolId, role, userId);
 
         // Save AI reply
         ChatMessage saved = messageRepo.save(ChatMessage.builder()

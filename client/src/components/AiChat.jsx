@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import './AiChat.css';
 
 /* ── i18n ────────────────────────────────────────────────────────── */
@@ -131,6 +132,7 @@ function inlineMd(text) {
 
 /* ── Component ───────────────────────────────────────────────────── */
 const AiChat = () => {
+  const { user } = useAuth();
   const [open, setOpen]           = useState(false);
   const [lang, setLang]           = useState('en');
   const [sessions, setSessions]   = useState([]);
@@ -162,6 +164,17 @@ const AiChat = () => {
   useEffect(() => {
     if (open) setTimeout(() => inputRef.current?.focus(), 100);
   }, [open]);
+
+  /* reset all chat state when user changes (logout / different login) */
+  useEffect(() => {
+    setSessions([]);
+    setActiveId(null);
+    setMessages([]);
+    setInput('');
+    setShowQuick(true);
+    setInitialized(false);
+    setOpen(false);
+  }, [user?.id]);
 
   /* load sessions on first open */
   useEffect(() => {

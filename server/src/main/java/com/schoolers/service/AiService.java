@@ -34,11 +34,11 @@ public class AiService {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
-    public String chat(String message, List<Map<String, String>> history, Long schoolId, String role) {
+    public String chat(String message, List<Map<String, String>> history, Long schoolId, String role, Long userId) {
         if (groqApiKey == null || groqApiKey.isBlank())
             return "AI assistant is not configured. Please set the GROQ_API_KEY environment variable on Render.";
 
-        String systemPrompt = buildSystemPrompt(schoolId, role);
+        String systemPrompt = buildSystemPrompt(schoolId, role, userId);
 
         // Build messages array: system + history + current message
         List<Map<String, String>> messages = new ArrayList<>();
@@ -90,7 +90,7 @@ public class AiService {
         "ADMIN", "SUPER_ADMIN", "APPLICATION_OWNER"
     );
 
-    private String buildSystemPrompt(Long schoolId, String role) {
+    private String buildSystemPrompt(Long schoolId, String role, Long userId) {
         boolean isAdmin = role != null && ADMIN_ROLES.contains(role);
 
         StringBuilder sb = new StringBuilder();
@@ -98,6 +98,34 @@ public class AiService {
         sb.append("You help students, teachers, parents, and administrators with educational, academic, and general questions ");
         sb.append("in a helpful, conversational, and intelligent way.\n");
         sb.append("You are helping a ").append(formatRole(role)).append(".\n\n");
+
+        // Add user-specific personal details
+        try {
+            if ("TEACHER".equals(role) && userId != null) {
+                teacherRepository.findByUserId(userId).ifPresent(t -> {
+                    sb.append("LOGGED-IN USER DETAILS:\n");
+                    if (t.getName() != null)       sb.append("- Name: ").append(t.getName()).append("\n");
+                    if (t.getSubject() != null)    sb.append("- Subject(s): ").append(t.getSubject()).append("\n");
+                    if (t.getClasses() != null)    sb.append("- Assigned classes: ").append(t.getClasses()).append("\n");
+                    if (t.getDepartment() != null) sb.append("- Department: ").append(t.getDepartment()).append("\n");
+                    if (t.getTeacherType() != null) sb.append("- Teacher type: ").append(t.getTeacherType()).append("\n");
+                    if (t.getEmployeeId() != null) sb.append("- Employee ID: ").append(t.getEmployeeId()).append("\n");
+                    sb.append("\n");
+                });
+            } else if ("STUDENT".equals(role) && userId != null) {
+                studentRepository.findByStudentUserId(userId).ifPresent(s -> {
+                    sb.append("LOGGED-IN USER DETAILS:\n");
+                    if (s.getName() != null)        sb.append("- Name: ").append(s.getName()).append("\n");
+                    if (s.getClassName() != null)   sb.append("- Class: ").append(s.getClassName()).append("\n");
+                    if (s.getSection() != null)     sb.append("- Section: ").append(s.getSection()).append("\n");
+                    if (s.getRollNumber() != null)  sb.append("- Roll number: ").append(s.getRollNumber()).append("\n");
+                    if (s.getAdmissionNumber() != null) sb.append("- Admission number: ").append(s.getAdmissionNumber()).append("\n");
+                    sb.append("\n");
+                });
+            }
+        } catch (Exception e) {
+            // silently skip if user details unavailable
+        }
 
         try {
             if (schoolId != null) {
