@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -31,6 +32,9 @@ public class AiService {
     @Autowired private ClassRoomRepository  classRoomRepository;
     @Autowired private FeeRepository        feeRepository;
     @Autowired private SchoolRepository     schoolRepository;
+    @Autowired private AttendanceRepository attendanceRepository;
+    @Autowired private HomeworkRepository   homeworkRepository;
+    @Autowired private MarksRepository      marksRepository;
 
     private final RestTemplate restTemplate = new RestTemplate();
 
@@ -99,29 +103,115 @@ public class AiService {
         sb.append("in a helpful, conversational, and intelligent way.\n");
         sb.append("You are helping a ").append(formatRole(role)).append(".\n\n");
 
-        // Add user-specific personal details
+        // Add user-specific personal + live data
         try {
             if ("TEACHER".equals(role) && userId != null) {
-                teacherRepository.findByUserId(userId).ifPresent(t -> {
-                    sb.append("LOGGED-IN USER DETAILS:\n");
-                    if (t.getName() != null)       sb.append("- Name: ").append(t.getName()).append("\n");
-                    if (t.getSubject() != null)    sb.append("- Subject(s): ").append(t.getSubject()).append("\n");
-                    if (t.getClasses() != null)    sb.append("- Assigned classes: ").append(t.getClasses()).append("\n");
-                    if (t.getDepartment() != null) sb.append("- Department: ").append(t.getDepartment()).append("\n");
+                var teacherOpt = teacherRepository.findByUserId(userId);
+                if (teacherOpt.isPresent()) {
+                    var t = teacherOpt.get();
+                    sb.append("LOGGED-IN TEACHER DETAILS:\n");
+                    if (t.getName() != null)        sb.append("- Name: ").append(t.getName()).append("\n");
+                    if (t.getSubject() != null)     sb.append("- Subject(s): ").append(t.getSubject()).append("\n");
+                    if (t.getClasses() != null)     sb.append("- Assigned classes: ").append(t.getClasses()).append("\n");
+                    if (t.getDepartment() != null)  sb.append("- Department: ").append(t.getDepartment()).append("\n");
                     if (t.getTeacherType() != null) sb.append("- Teacher type: ").append(t.getTeacherType()).append("\n");
-                    if (t.getEmployeeId() != null) sb.append("- Employee ID: ").append(t.getEmployeeId()).append("\n");
+                    if (t.getEmployeeId() != null)  sb.append("- Employee ID: ").append(t.getEmployeeId()).append("\n");
                     sb.append("\n");
-                });
+                }
             } else if ("STUDENT".equals(role) && userId != null) {
-                studentRepository.findByStudentUserId(userId).ifPresent(s -> {
-                    sb.append("LOGGED-IN USER DETAILS:\n");
-                    if (s.getName() != null)        sb.append("- Name: ").append(s.getName()).append("\n");
-                    if (s.getClassName() != null)   sb.append("- Class: ").append(s.getClassName()).append("\n");
-                    if (s.getSection() != null)     sb.append("- Section: ").append(s.getSection()).append("\n");
-                    if (s.getRollNumber() != null)  sb.append("- Roll number: ").append(s.getRollNumber()).append("\n");
+                var studentOpt = studentRepository.findByStudentUserId(userId);
+                if (studentOpt.isPresent()) {
+                    var s = studentOpt.get();
+                    Long studentDbId = s.getId();
+                    Long studentSchoolId = s.getSchoolId();
+                    String className = s.getClassName() != null ? s.getClassName() : "";
+                    String section   = s.getSection()   != null ? s.getSection()   : "";
+                    String classSection = className + section;
+
+                    sb.append("LOGGED-IN STUDENT DETAILS:\n");
+                    sb.append("- Name: ").append(s.getName()).append("\n");
+                    sb.append("- Class: ").append(className).append(", Section: ").append(section).append("\n");
+                    if (s.getRollNumber() != null)     sb.append("- Roll number: ").append(s.getRollNumber()).append("\n");
                     if (s.getAdmissionNumber() != null) sb.append("- Admission number: ").append(s.getAdmissionNumber()).append("\n");
                     sb.append("\n");
-                });
+
+                    // ── FEES ──────────────────────────────────────────────────
+                    try {
+                        List<com.schoolers.model.Fee> fees = feeRepository.findByStudentId(studentDbId);
+                        if (!fees.isEmpty()) {
+                            BigDecimal totalFee   = fees.stream().map(com.schoolers.model.Fee::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
+                            BigDecimal paidFee    = fees.stream().filter(f -> f.getStatus() == com.schoolers.model.Fee.Status.PAID).map(f -> nullSafe(f.getPaidAmount())).reduce(BigDecimal.ZERO, BigDecimal::add);
+                            BigDecimal pendingFee = fees.stream().filter(f -> f.getStatus() == com.schoolers.model.Fee.Status.PENDING).map(com.schoolers.model.Fee::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
+                            sb.append("FEE DETAILS:\n");
+                            sb.append("- Total fee: ₹").append(totalFee.toPlainString()).append("\n");
+                            sb.append("- Paid: ₹").append(paidFee.toPlainString()).append("\n");
+                            sb.append("- Pending: ₹").append(pendingFee.toPlainString()).append("\n");
+                            for (com.schoolers.model.Fee f : fees) {
+                                sb.append("  * ").append(f.getFeeType() != null ? f.getFeeType() : "Fee")
+                                  .append(": ₹").append(f.getAmount()).append(" — ").append(f.getStatus());
+                                if (f.getDueDate() != null) sb.append(" (due: ").append(f.getDueDate()).append(")");
+                                sb.append("\n");
+                            }
+                        } else {
+                            sb.append("FEE DETAILS: No fee records found.\n");
+                        }
+                    } catch (Exception ignored) {}
+
+                    // ── ATTENDANCE (this month) ────────────────────────────────
+                    try {
+                        LocalDate today = LocalDate.now();
+                        LocalDate monthStart = today.withDayOfMonth(1);
+                        var attRecords = attendanceRepository.findByStudentIdAndDateBetween(studentDbId, monthStart, today);
+                        if (!attRecords.isEmpty()) {
+                            long present = attRecords.stream().filter(a -> a.getStatus().name().equals("PRESENT")).count();
+                            long absent  = attRecords.size() - present;
+                            long pct     = attRecords.size() > 0 ? (present * 100L / attRecords.size()) : 0;
+                            sb.append("ATTENDANCE (this month):\n");
+                            sb.append("- Present: ").append(present).append(" days\n");
+                            sb.append("- Absent: ").append(absent).append(" days\n");
+                            sb.append("- Total school days this month: ").append(attRecords.size()).append("\n");
+                            sb.append("- Attendance %: ").append(pct).append("%\n");
+                        } else {
+                            sb.append("ATTENDANCE: No records found for this month.\n");
+                        }
+                    } catch (Exception ignored) {}
+
+                    // ── HOMEWORK / DIARY ──────────────────────────────────────
+                    try {
+                        if (!classSection.isBlank() && studentSchoolId != null) {
+                            var hwList = homeworkRepository.findBySchoolIdAndClassSection(studentSchoolId, classSection);
+                            if (!hwList.isEmpty()) {
+                                sb.append("HOMEWORK/DIARY (recent):\n");
+                                hwList.stream().limit(5).forEach(h -> {
+                                    sb.append("  * ").append(h.getSubject() != null ? h.getSubject() : "").append(": ").append(h.getTitle());
+                                    if (h.getDueDate() != null) sb.append(" (due: ").append(h.getDueDate()).append(")");
+                                    sb.append(" [").append(h.getStatus()).append("]\n");
+                                });
+                            } else {
+                                sb.append("HOMEWORK: No homework assigned yet.\n");
+                            }
+                        }
+                    } catch (Exception ignored) {}
+
+                    // ── MARKS / EXAM RESULTS ──────────────────────────────────
+                    try {
+                        var marksList = marksRepository.findByStudentId(studentDbId);
+                        if (!marksList.isEmpty()) {
+                            sb.append("EXAM RESULTS:\n");
+                            marksList.stream().limit(10).forEach(m -> {
+                                sb.append("  * ").append(m.getSubject())
+                                  .append(" (").append(m.getExamType() != null ? m.getExamType() : "Exam").append("): ")
+                                  .append(m.getMarks()).append("/").append(m.getMaxMarks()).append("\n");
+                            });
+                            Double avg = marksRepository.findAveragePercentageByStudentId(studentDbId);
+                            if (avg != null) sb.append("- Overall average: ").append(String.format("%.1f", avg)).append("%\n");
+                        } else {
+                            sb.append("EXAM RESULTS: No marks recorded yet.\n");
+                        }
+                    } catch (Exception ignored) {}
+
+                    sb.append("\n");
+                }
             }
         } catch (Exception e) {
             // silently skip if user details unavailable
