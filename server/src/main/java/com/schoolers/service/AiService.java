@@ -21,7 +21,7 @@ public class AiService {
     private static final Logger log = Logger.getLogger(AiService.class.getName());
 
     private static final String GEMINI_URL =
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=";
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=";
 
     @Value("${gemini.api.key:}")
     private String geminiApiKey;
