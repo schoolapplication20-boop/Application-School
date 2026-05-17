@@ -34,7 +34,7 @@ public class Student {
     @Column(name = "admission_number", length = 30)
     private String admissionNumber;
 
-    @Column(name = "class_name", nullable = false, length = 10)
+    @Column(name = "class_name", nullable = false, length = 50)
     private String className;
 
     @Column(length = 5)

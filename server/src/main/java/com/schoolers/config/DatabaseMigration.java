@@ -403,6 +403,13 @@ public class DatabaseMigration implements CommandLineRunner {
         }
         System.out.println("[DatabaseMigration] school_id FK migration complete.");
 
+        // ── Widen class_name columns from VARCHAR(10) to VARCHAR(50) ──────────────
+        // "Class 5 - A" is 11 chars — exceeds the original 10-char limit.
+        exec("ALTER TABLE students ALTER COLUMN class_name TYPE VARCHAR(50)");
+        exec("ALTER TABLE certificates ALTER COLUMN class_name TYPE VARCHAR(50)");
+        exec("ALTER TABLE hall_tickets ALTER COLUMN class_name TYPE VARCHAR(50)");
+        System.out.println("[DatabaseMigration] class_name columns widened to VARCHAR(50).");
+
         System.out.println("[DatabaseMigration] Done.");
     }
 
