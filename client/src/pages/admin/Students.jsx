@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import Layout from '../../components/Layout';
 import Toast from '../../components/Toast';
 import StudentExportModal from '../../components/StudentExportModal';
+import BulkImportModal from '../../components/BulkImportModal';
 import {
   fetchStudents as apiFetchStudents,
   createStudent as apiCreateStudent,
@@ -230,7 +231,8 @@ export default function Students() {
   const [filterStatus, setFilterStatus] = useState('');
   const [currentPage, setCurrentPage]   = useState(1);
   const [showModal, setShowModal]       = useState(false);
-  const [showExportModal, setShowExportModal] = useState(false);
+  const [showExportModal, setShowExportModal]   = useState(false);
+  const [showBulkImport, setShowBulkImport]     = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [editStudent, setEditStudent]   = useState(null);
   const [selectedStudent, setSelectedStudent] = useState(null);
@@ -601,6 +603,19 @@ export default function Students() {
             <option>Active</option>
             <option>Inactive</option>
           </select>
+          <button
+            onClick={() => setShowBulkImport(true)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '6px',
+              padding: '9px 16px', borderRadius: '9px',
+              border: '1.5px solid #7c3aed', background: '#faf5ff',
+              color: '#7c3aed', fontWeight: 700, fontSize: '13px', cursor: 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <span className="material-icons" style={{ fontSize: '17px' }}>upload_file</span>
+            Bulk Import
+          </button>
           <button
             onClick={() => setShowExportModal(true)}
             style={{
@@ -1284,6 +1299,17 @@ export default function Students() {
         <StudentExportModal
           students={students}
           onClose={() => setShowExportModal(false)}
+        />
+      )}
+
+      {/* Bulk Import Modal */}
+      {showBulkImport && (
+        <BulkImportModal
+          onClose={() => setShowBulkImport(false)}
+          onImportDone={() => {
+            setShowBulkImport(false);
+            loadStudents();
+          }}
         />
       )}
     </Layout>

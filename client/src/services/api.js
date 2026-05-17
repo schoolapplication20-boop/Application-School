@@ -97,6 +97,11 @@ export const adminAPI = {
   deleteStudent: (id) => api.delete(`/api/admin/students/${id}`),
   getStudentCredentials: (id) => api.get(`/api/admin/students/${id}/credentials`),
 
+  // Bulk Import
+  bulkImportStudents:  (data)  => api.post('/api/admin/students/bulk-import', data),
+  getImportHistory:    ()      => api.get('/api/admin/students/bulk-import/history'),
+  getImportFailedRows: (logId) => api.get(`/api/admin/students/bulk-import/${logId}/failed`),
+
   // Teachers
   getTeachers: (params) => api.get('/api/admin/teachers', { params }),
   getTeacherById: (id) => api.get(`/api/admin/teachers/${id}`),
