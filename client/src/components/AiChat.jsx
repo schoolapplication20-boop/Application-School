@@ -1,66 +1,70 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import api from '../services/api';
 import './AiChat.css';
 
+/* ── i18n ────────────────────────────────────────────────────────── */
 const I18N = {
   en: {
-    welcome: "Hi! 👋 I'm your My-Skoolz AI assistant.\n\nI can help with school-related queries. Click a topic below or type your question!",
-    subtitle: 'School Assistant • Online',
-    chooseTopic: 'Choose a topic:',
+    welcome: "Hi! 👋 I'm **My-Skoolz AI**, powered by Google Gemini.\n\nAsk me anything — school questions, homework help, general knowledge, or choose a quick topic below.",
+    subtitle: 'AI Assistant • Online',
+    chooseTopic: 'Quick topics:',
     browseTopics: '📂 Browse Topics',
-    placeholder: 'Type your question...',
-    footer: 'Press Enter to send · Shift+Enter for new line',
+    placeholder: 'Ask me anything...',
+    footer: 'Enter to send · Shift+Enter for new line',
+    newChat: '+ New',
     quickActions: [
-      { label: '📋 Admissions',      message: 'admissions' },
-      { label: '💰 Fees',            message: 'fees' },
-      { label: '📅 Attendance',      message: 'attendance' },
-      { label: '📊 Results',         message: 'results' },
-      { label: '📚 Homework',        message: 'homework' },
-      { label: '🚌 Transport',       message: 'transport' },
-      { label: '🕐 Timetable',       message: 'timetable' },
-      { label: '🏖️ Leave Request',   message: 'leave request' },
-      { label: '📞 Contact Support', message: 'contact support' },
-      { label: '🔐 Login Help',      message: 'login help' },
+      { label: '📋 Admissions',      message: 'Tell me about the admissions process' },
+      { label: '💰 Fees',            message: 'What are the fee details and payment process?' },
+      { label: '📅 Attendance',      message: 'How does attendance work?' },
+      { label: '📊 Results',         message: 'How can I check my results?' },
+      { label: '📚 Homework',        message: 'Help me with homework' },
+      { label: '🚌 Transport',       message: 'Tell me about school transport' },
+      { label: '🕐 Timetable',       message: 'How can I view my timetable?' },
+      { label: '🏖️ Leave Request',   message: 'How do I apply for leave?' },
+      { label: '📞 Contact Support', message: 'How do I contact school support?' },
+      { label: '🔐 Login Help',      message: 'I need help with login' },
     ],
   },
   hi: {
-    welcome: "नमस्ते! 👋 मैं आपका My-Skoolz AI सहायक हूँ।\n\nमैं स्कूल संबंधी प्रश्नों में मदद कर सकता हूँ। नीचे एक विषय चुनें या अपना प्रश्न लिखें!",
-    subtitle: 'स्कूल सहायक • ऑनलाइन',
-    chooseTopic: 'एक विषय चुनें:',
+    welcome: "नमस्ते! 👋 मैं **My-Skoolz AI** हूँ, Google Gemini द्वारा संचालित।\n\nकुछ भी पूछें — स्कूल प्रश्न, होमवर्क सहायता, सामान्य ज्ञान, या नीचे एक त्वरित विषय चुनें।",
+    subtitle: 'AI सहायक • ऑनलाइन',
+    chooseTopic: 'त्वरित विषय:',
     browseTopics: '📂 विषय देखें',
-    placeholder: 'अपना प्रश्न लिखें...',
-    footer: 'भेजने के लिए Enter दबाएं · नई लाइन के लिए Shift+Enter',
+    placeholder: 'कुछ भी पूछें...',
+    footer: 'Enter से भेजें · Shift+Enter नई लाइन',
+    newChat: '+ नया',
     quickActions: [
-      { label: '📋 प्रवेश',         message: 'admissions' },
-      { label: '💰 शुल्क',          message: 'fees' },
-      { label: '📅 उपस्थिति',       message: 'attendance' },
-      { label: '📊 परिणाम',         message: 'results' },
-      { label: '📚 गृहकार्य',       message: 'homework' },
-      { label: '🚌 परिवहन',         message: 'transport' },
-      { label: '🕐 समय-सारणी',      message: 'timetable' },
-      { label: '🏖️ छुट्टी अनुरोध', message: 'leave request' },
-      { label: '📞 सहायता संपर्क',  message: 'contact support' },
-      { label: '🔐 लॉगिन सहायता',  message: 'login help' },
+      { label: '📋 प्रवेश',         message: 'प्रवेश प्रक्रिया के बारे में बताएं' },
+      { label: '💰 शुल्क',          message: 'शुल्क विवरण और भुगतान प्रक्रिया क्या है?' },
+      { label: '📅 उपस्थिति',       message: 'उपस्थिति कैसे काम करती है?' },
+      { label: '📊 परिणाम',         message: 'मैं अपना परिणाम कैसे देख सकता हूँ?' },
+      { label: '📚 गृहकार्य',       message: 'होमवर्क में मेरी मदद करें' },
+      { label: '🚌 परिवहन',         message: 'स्कूल परिवहन के बारे में बताएं' },
+      { label: '🕐 समय-सारणी',      message: 'मैं अपना समय-सारणी कैसे देखूं?' },
+      { label: '🏖️ छुट्टी अनुरोध', message: 'मैं छुट्टी के लिए कैसे आवेदन करूं?' },
+      { label: '📞 सहायता संपर्क',  message: 'मैं स्कूल सहायता से कैसे संपर्क करूं?' },
+      { label: '🔐 लॉगिन सहायता',  message: 'लॉगिन में मुझे मदद चाहिए' },
     ],
   },
   te: {
-    welcome: "నమస్కారం! 👋 నేను మీ My-Skoolz AI సహాయకుడిని.\n\nపాఠశాల సంబంధిత ప్రశ్నలకు నేను సహాయం చేయగలను. దిగువ విషయాన్ని ఎంచుకోండి లేదా మీ ప్రశ్న టైప్ చేయండి!",
-    subtitle: 'పాఠశాల సహాయకుడు • ఆన్‌లైన్',
-    chooseTopic: 'ఒక విషయాన్ని ఎంచుకోండి:',
+    welcome: "నమస్కారం! 👋 నేను **My-Skoolz AI**, Google Gemini ద్వారా నడుస్తున్నాను.\n\nఏదైనా అడగండి — పాఠశాల ప్రశ్నలు, హోంవర్క్ సహాయం, సాధారణ జ్ఞానం, లేదా దిగువ విషయాన్ని ఎంచుకోండి.",
+    subtitle: 'AI సహాయకుడు • ఆన్‌లైన్',
+    chooseTopic: 'త్వరిత విషయాలు:',
     browseTopics: '📂 విషయాలు చూడండి',
-    placeholder: 'మీ ప్రశ్న టైప్ చేయండి...',
-    footer: 'పంపడానికి Enter నొక్కండి · కొత్త వరుసకు Shift+Enter',
+    placeholder: 'ఏదైనా అడగండి...',
+    footer: 'పంపడానికి Enter · కొత్త వరుసకు Shift+Enter',
+    newChat: '+ కొత్తది',
     quickActions: [
-      { label: '📋 అడ్మిషన్లు',       message: 'admissions' },
-      { label: '💰 ఫీజులు',           message: 'fees' },
-      { label: '📅 హాజరు',            message: 'attendance' },
-      { label: '📊 ఫలితాలు',          message: 'results' },
-      { label: '📚 హోంవర్క్',         message: 'homework' },
-      { label: '🚌 రవాణా',            message: 'transport' },
-      { label: '🕐 సమయపట్టిక',       message: 'timetable' },
-      { label: '🏖️ సెలవు అభ్యర్థన', message: 'leave request' },
-      { label: '📞 సంప్రదింపు',       message: 'contact support' },
-      { label: '🔐 లాగిన్ సహాయం',    message: 'login help' },
+      { label: '📋 అడ్మిషన్లు',       message: 'అడ్మిషన్ ప్రక్రియ గురించి చెప్పండి' },
+      { label: '💰 ఫీజులు',           message: 'ఫీజు వివరాలు మరియు చెల్లింపు ప్రక్రియ ఏమిటి?' },
+      { label: '📅 హాజరు',            message: 'హాజరు ఎలా పని చేస్తుంది?' },
+      { label: '📊 ఫలితాలు',          message: 'నా ఫలితాలు ఎలా చూడాలి?' },
+      { label: '📚 హోంవర్క్',         message: 'హోంవర్క్‌లో నాకు సహాయపడండి' },
+      { label: '🚌 రవాణా',            message: 'పాఠశాల రవాణా గురించి చెప్పండి' },
+      { label: '🕐 సమయపట్టిక',       message: 'నా సమయపట్టిక ఎలా చూడాలి?' },
+      { label: '🏖️ సెలవు అభ్యర్థన', message: 'సెలవు కోసం ఎలా దరఖాస్తు చేయాలి?' },
+      { label: '📞 సంప్రదింపు',       message: 'పాఠశాల సహాయతను ఎలా సంప్రదించాలి?' },
+      { label: '🔐 లాగిన్ సహాయం',    message: 'లాగిన్‌లో నాకు సహాయం కావాలి' },
     ],
   },
 };
@@ -71,32 +75,213 @@ const LANG_OPTIONS = [
   { code: 'te', label: 'తెలుగు' },
 ];
 
-const AiChat = () => {
-  const [open, setOpen]         = useState(false);
-  const [input, setInput]       = useState('');
-  const [loading, setLoading]   = useState(false);
-  const [showQuick, setShowQuick] = useState(true);
-  const [lang, setLang]         = useState('en');
-  const [messages, setMessages] = useState([
-    { role: 'bot', text: I18N.en.welcome }
-  ]);
+/* ── Simple markdown renderer ────────────────────────────────────── */
+function renderMd(text) {
+  const lines = text.split('\n');
+  const elements = [];
+  let i = 0;
 
-  const bottomRef = useRef(null);
-  const inputRef  = useRef(null);
+  while (i < lines.length) {
+    const line = lines[i];
 
-  useEffect(() => {
-    if (open) {
-      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
-      inputRef.current?.focus();
+    if (line.startsWith('### ')) {
+      elements.push(<h5 key={i} className="ai-md-h3">{inlineMd(line.slice(4))}</h5>);
+    } else if (line.startsWith('## ')) {
+      elements.push(<h4 key={i} className="ai-md-h2">{inlineMd(line.slice(3))}</h4>);
+    } else if (line.startsWith('# ')) {
+      elements.push(<h3 key={i} className="ai-md-h1">{inlineMd(line.slice(2))}</h3>);
+    } else if (/^[-•] /.test(line)) {
+      const items = [];
+      while (i < lines.length && /^[-•] /.test(lines[i])) {
+        items.push(<li key={i}>{inlineMd(lines[i].slice(2))}</li>);
+        i++;
+      }
+      elements.push(<ul key={`ul-${i}`} className="ai-md-ul">{items}</ul>);
+      continue;
+    } else if (/^\d+\. /.test(line)) {
+      const items = [];
+      while (i < lines.length && /^\d+\. /.test(lines[i])) {
+        items.push(<li key={i}>{inlineMd(lines[i].replace(/^\d+\. /, ''))}</li>);
+        i++;
+      }
+      elements.push(<ol key={`ol-${i}`} className="ai-md-ol">{items}</ol>);
+      continue;
+    } else if (line.trim() === '') {
+      elements.push(<div key={i} className="ai-md-spacer" />);
+    } else {
+      elements.push(<p key={i} className="ai-md-p">{inlineMd(line)}</p>);
     }
-  }, [open, messages]);
+    i++;
+  }
+  return elements;
+}
 
-  const changeLang = (code) => {
-    setLang(code);
-    setMessages([{ role: 'bot', text: I18N[code].welcome }]);
+function inlineMd(text) {
+  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/);
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**'))
+      return <strong key={i}>{part.slice(2, -2)}</strong>;
+    if (part.startsWith('*') && part.endsWith('*'))
+      return <em key={i}>{part.slice(1, -1)}</em>;
+    if (part.startsWith('`') && part.endsWith('`'))
+      return <code key={i} className="ai-md-code">{part.slice(1, -1)}</code>;
+    return part;
+  });
+}
+
+/* ── Component ───────────────────────────────────────────────────── */
+const AiChat = () => {
+  const [open, setOpen]           = useState(false);
+  const [lang, setLang]           = useState('en');
+  const [sessions, setSessions]   = useState([]);
+  const [activeId, setActiveId]   = useState(null);
+  const [messages, setMessages]   = useState([]);
+  const [input, setInput]         = useState('');
+  const [loading, setLoading]     = useState(false);
+  const [histLoading, setHistLoading] = useState(false);
+  const [showQuick, setShowQuick] = useState(true);
+  const [initialized, setInitialized] = useState(false);
+
+  const bottomRef  = useRef(null);
+  const inputRef   = useRef(null);
+  const sessTabRef = useRef(null);
+
+  const t = I18N[lang];
+
+  const welcomeMsg = useCallback(
+    (l) => ({ role: 'bot', text: (I18N[l] || I18N.en).welcome }),
+    []
+  );
+
+  /* scroll to bottom on new messages */
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  /* focus input when opened */
+  useEffect(() => {
+    if (open) setTimeout(() => inputRef.current?.focus(), 100);
+  }, [open]);
+
+  /* load sessions on first open */
+  useEffect(() => {
+    if (!open || initialized) return;
+    setInitialized(true);
+    loadSessions();
+  }, [open]);
+
+  /* load messages when active session changes */
+  useEffect(() => {
+    if (activeId) loadMessages(activeId);
+  }, [activeId]);
+
+  /* scroll session tabs to active */
+  useEffect(() => {
+    const el = sessTabRef.current?.querySelector('.ai-sess-tab--active');
+    el?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+  }, [activeId]);
+
+  const loadSessions = async () => {
+    try {
+      const res = await api.get('/api/ai/sessions');
+      const data = res.data?.data || [];
+      setSessions(data);
+      if (data.length > 0) {
+        setActiveId(data[0].id);
+      } else {
+        setMessages([welcomeMsg(lang)]);
+        setShowQuick(true);
+      }
+    } catch {
+      setMessages([welcomeMsg(lang)]);
+      setShowQuick(true);
+    }
+  };
+
+  const loadMessages = async (sessionId) => {
+    setHistLoading(true);
+    try {
+      const res = await api.get(`/api/ai/sessions/${sessionId}/messages`);
+      const msgs = (res.data?.data || []).map(m => ({
+        role: m.role === 'user' ? 'user' : 'bot',
+        text: m.content,
+      }));
+      if (msgs.length === 0) {
+        setMessages([welcomeMsg(lang)]);
+        setShowQuick(true);
+      } else {
+        setMessages(msgs);
+        setShowQuick(false);
+      }
+    } catch {
+      setMessages([welcomeMsg(lang)]);
+      setShowQuick(true);
+    } finally {
+      setHistLoading(false);
+    }
+  };
+
+  const createSession = async (l = lang) => {
+    const res = await api.post(`/api/ai/sessions?lang=${l}`);
+    const s = res.data?.data;
+    setSessions(prev => [s, ...prev]);
+    setActiveId(s.id);
+    setMessages([welcomeMsg(l)]);
     setShowQuick(true);
     setInput('');
+    return s.id;
   };
+
+  const handleNewChat = async () => {
+    try { await createSession(); } catch { /* ignore */ }
+  };
+
+  const handleDeleteSession = async (e, sessionId) => {
+    e.stopPropagation();
+    try {
+      await api.delete(`/api/ai/sessions/${sessionId}`);
+      setSessions(prev => {
+        const next = prev.filter(s => s.id !== sessionId);
+        if (activeId === sessionId) {
+          if (next.length > 0) {
+            setActiveId(next[0].id);
+          } else {
+            setActiveId(null);
+            setMessages([welcomeMsg(lang)]);
+            setShowQuick(true);
+          }
+        }
+        return next;
+      });
+    } catch { /* ignore */ }
+  };
+
+  /* word-by-word typing animation */
+  const animateTyping = useCallback((fullText) => {
+    return new Promise(resolve => {
+      const words = fullText.split(' ');
+      let idx = 0;
+      setMessages(prev => [...prev, { role: 'bot', text: '', animating: true }]);
+      const tick = setInterval(() => {
+        idx += 3;
+        const partial = words.slice(0, idx).join(' ');
+        setMessages(prev => {
+          const copy = [...prev];
+          copy[copy.length - 1] = { role: 'bot', text: partial, animating: true };
+          return copy;
+        });
+        if (idx >= words.length) {
+          clearInterval(tick);
+          setMessages(prev => {
+            const copy = [...prev];
+            copy[copy.length - 1] = { role: 'bot', text: fullText };
+            return copy;
+          });
+          resolve();
+        }
+      }, 40);
+    });
+  }, []);
 
   const sendMessage = async (text) => {
     const trimmed = text.trim();
@@ -108,17 +293,39 @@ const AiChat = () => {
     setLoading(true);
 
     try {
-      const res = await api.get(`/api/chatbot?message=${encodeURIComponent(trimmed)}&lang=${lang}`);
-      const reply = res.data?.data || "Sorry, I couldn't get a response. Please try again.";
-      setMessages(prev => [...prev, { role: 'bot', text: reply }]);
+      let sid = activeId;
+      if (!sid) sid = await createSession();
+
+      const res = await api.post(`/api/ai/sessions/${sid}/messages`, {
+        message: trimmed,
+        lang,
+      });
+      const reply = res.data?.data?.content || "Sorry, I couldn't get a response. Please try again.";
+
+      await animateTyping(reply);
+
+      // Update session title in sidebar
+      setSessions(prev => prev.map(s =>
+        s.id === sid && s.title === 'New Chat'
+          ? { ...s, title: trimmed.length > 45 ? trimmed.slice(0, 42) + '…' : trimmed }
+          : s
+      ));
     } catch {
       setMessages(prev => [...prev, {
         role: 'bot',
         text: "Something went wrong. Please check your connection and try again.",
-        error: true
+        error: true,
       }]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const changeLang = (code) => {
+    setLang(code);
+    if (!activeId) {
+      setMessages([welcomeMsg(code)]);
+      setShowQuick(true);
     }
   };
 
@@ -129,20 +336,13 @@ const AiChat = () => {
     }
   };
 
-  const clearChat = () => {
-    setMessages([{ role: 'bot', text: I18N[lang].welcome }]);
-    setShowQuick(true);
-    setInput('');
-  };
-
-  const t = I18N[lang];
-
   return (
     <>
+      {/* FAB */}
       <button
         className={`ai-fab ${open ? 'ai-fab--open' : ''}`}
         onClick={() => setOpen(o => !o)}
-        title="My-Skoolz AI Assistant"
+        title="My-Skoolz AI"
       >
         {open ? '✕' : '💬'}
         {!open && <span className="ai-fab__label">My-Skoolz AI</span>}
@@ -150,6 +350,8 @@ const AiChat = () => {
 
       {open && (
         <div className="ai-panel">
+
+          {/* Header */}
           <div className="ai-panel__header">
             <div className="ai-panel__header-left">
               <div className="ai-panel__avatar">🤖</div>
@@ -158,9 +360,12 @@ const AiChat = () => {
                 <div className="ai-panel__subtitle">{t.subtitle}</div>
               </div>
             </div>
-            <button className="ai-panel__clear" onClick={clearChat} title="Clear chat">↺</button>
+            <div className="ai-header-right">
+              <span className="ai-powered-badge">✦ Gemini</span>
+            </div>
           </div>
 
+          {/* Language tab bar */}
           <div className="ai-lang-bar">
             {LANG_OPTIONS.map(opt => (
               <button
@@ -173,53 +378,89 @@ const AiChat = () => {
             ))}
           </div>
 
-          <div className="ai-panel__messages">
-            {messages.map((m, i) => (
-              <div key={i} className={`ai-msg ai-msg--${m.role} ${m.error ? 'ai-msg--error' : ''}`}>
-                {m.role === 'bot' && <div className="ai-msg__avatar">🤖</div>}
-                <div className="ai-msg__bubble">
-                  {m.text.split('\n').map((line, j, arr) => (
-                    <span key={j}>{line}{j < arr.length - 1 && <br />}</span>
-                  ))}
-                </div>
-              </div>
-            ))}
-
-            {showQuick && !loading && (
-              <div className="ai-quick-actions">
-                <p className="ai-quick-label">{t.chooseTopic}</p>
-                <div className="ai-quick-grid">
-                  {t.quickActions.map((action, i) => (
-                    <button
-                      key={i}
-                      className="ai-quick-btn"
-                      onClick={() => sendMessage(action.message)}
-                    >
-                      {action.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {!showQuick && !loading && (
-              <button className="ai-topics-btn" onClick={() => setShowQuick(true)}>
-                {t.browseTopics}
+          {/* Session tabs */}
+          <div className="ai-sess-bar" ref={sessTabRef}>
+            <button className="ai-sess-new" onClick={handleNewChat} title="New chat">
+              {t.newChat}
+            </button>
+            {sessions.map(s => (
+              <button
+                key={s.id}
+                className={`ai-sess-tab ${activeId === s.id ? 'ai-sess-tab--active' : ''}`}
+                onClick={() => setActiveId(s.id)}
+                title={s.title}
+              >
+                <span className="ai-sess-tab__title">{s.title}</span>
+                <span
+                  className="ai-sess-tab__del"
+                  onClick={(e) => handleDeleteSession(e, s.id)}
+                  title="Delete"
+                >✕</span>
               </button>
-            )}
+            ))}
+          </div>
 
-            {loading && (
-              <div className="ai-msg ai-msg--bot">
-                <div className="ai-msg__avatar">🤖</div>
-                <div className="ai-msg__bubble ai-msg__bubble--typing">
-                  <span /><span /><span />
+          {/* Messages */}
+          <div className="ai-panel__messages">
+            {histLoading ? (
+              <div className="ai-hist-loading">
+                <div className="ai-msg ai-msg--bot">
+                  <div className="ai-msg__avatar">🤖</div>
+                  <div className="ai-msg__bubble ai-msg__bubble--typing">
+                    <span /><span /><span />
+                  </div>
                 </div>
               </div>
-            )}
+            ) : (
+              <>
+                {messages.map((m, i) => (
+                  <div key={i} className={`ai-msg ai-msg--${m.role} ${m.error ? 'ai-msg--error' : ''}`}>
+                    {m.role === 'bot' && <div className="ai-msg__avatar">🤖</div>}
+                    <div className="ai-msg__bubble">
+                      {renderMd(m.text)}
+                      {m.animating && <span className="ai-cursor">▍</span>}
+                    </div>
+                    {m.role === 'user' && <div className="ai-msg__avatar ai-msg__avatar--user">👤</div>}
+                  </div>
+                ))}
 
+                {showQuick && !loading && (
+                  <div className="ai-quick-actions">
+                    <p className="ai-quick-label">{t.chooseTopic}</p>
+                    <div className="ai-quick-grid">
+                      {t.quickActions.map((action, i) => (
+                        <button
+                          key={i}
+                          className="ai-quick-btn"
+                          onClick={() => sendMessage(action.message)}
+                        >
+                          {action.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {!showQuick && !loading && (
+                  <button className="ai-topics-btn" onClick={() => setShowQuick(true)}>
+                    {t.browseTopics}
+                  </button>
+                )}
+
+                {loading && (
+                  <div className="ai-msg ai-msg--bot">
+                    <div className="ai-msg__avatar">🤖</div>
+                    <div className="ai-msg__bubble ai-msg__bubble--typing">
+                      <span /><span /><span />
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
             <div ref={bottomRef} />
           </div>
 
+          {/* Input */}
           <div className="ai-panel__input-row">
             <textarea
               ref={inputRef}
@@ -235,9 +476,7 @@ const AiChat = () => {
               className="ai-panel__send"
               onClick={() => sendMessage(input)}
               disabled={loading || !input.trim()}
-            >
-              ➤
-            </button>
+            >➤</button>
           </div>
           <div className="ai-panel__footer">{t.footer}</div>
         </div>
