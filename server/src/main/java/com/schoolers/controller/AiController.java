@@ -29,19 +29,16 @@ public class AiController {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             String email = auth.getName();
 
-            Long schoolId = userRepository.findByEmailIgnoreCase(email)
-                .map(u -> u.getSchoolId())
-                .orElse(null);
-
-            String role = userRepository.findByEmailIgnoreCase(email)
-                .map(u -> u.getRole().name())
-                .orElse("ADMIN");
+            var user = userRepository.findByEmailIgnoreCase(email).orElse(null);
+            Long schoolId = user != null ? user.getSchoolId() : null;
+            String role   = user != null ? user.getRole().name() : "ADMIN";
+            Long userId   = user != null ? user.getId() : null;
 
             if (request.getMessage() == null || request.getMessage().isBlank())
                 return ResponseEntity.badRequest()
                     .body(ApiResponse.error("Message cannot be empty."));
 
-            String reply = aiService.chat(request.getMessage(), request.getHistory(), schoolId, role);
+            String reply = aiService.chat(request.getMessage(), request.getHistory(), schoolId, role, userId);
             return ResponseEntity.ok(ApiResponse.success("OK", reply));
 
         } catch (Exception e) {
