@@ -89,7 +89,6 @@ public class AiChatService {
         Long schoolId  = user != null ? user.getSchoolId() : null;
         String role    = user != null ? user.getRole().name() : "STUDENT";
 
-        // Call Gemini
         String aiReply = aiService.chat(message, history, schoolId, role);
 
         // Save AI reply
