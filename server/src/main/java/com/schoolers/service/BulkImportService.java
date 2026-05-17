@@ -144,8 +144,9 @@ public class BulkImportService {
         map.put("name",           row.getFullName());
         map.put("rollNumber",     row.getRollNumber());
         map.put("admissionNumber",row.getAdmissionNumber());
-        map.put("className",      row.getClassName());
-        map.put("section",        row.getSection());
+        String[] clsSec = parseClassSection(row.getClassName(), row.getSection());
+        map.put("className",      clsSec[0]);
+        map.put("section",        clsSec[1]);
         map.put("fatherName",     row.getFatherName());
         map.put("parentMobile",   row.getFatherPhone());
         map.put("motherName",     row.getMotherName());
@@ -153,6 +154,42 @@ public class BulkImportService {
         map.put("address",        row.getAddress());
         map.put("idProofName",    row.getIdProofFileName());
         return map;
+    }
+
+    /** Parses "Class 5 - A", "5 - A", "5A" into [className, section]. */
+    private String[] parseClassSection(String rawClass, String rawSection) {
+        String cls = rawClass  != null ? rawClass.trim()  : "";
+        String sec = rawSection != null ? rawSection.trim() : "";
+
+        // Strip leading "Class " / "class " prefix
+        cls = cls.replaceAll("(?i)^class\\s+", "").trim();
+
+        if (sec.isEmpty()) {
+            // Split on " - " separator: "5 - A" → ["5","A"]
+            if (cls.contains(" - ")) {
+                String[] parts = cls.split(" - ", 2);
+                cls = parts[0].trim();
+                sec = parts[1].trim();
+            } else if (cls.contains("-")) {
+                // "5-A" → ["5","A"]
+                String[] parts = cls.split("-", 2);
+                cls = parts[0].trim();
+                sec = parts[1].trim();
+            } else {
+                // "5A" → class="5", section="A"
+                String digits = cls.replaceAll("[^0-9].*$", "");
+                String letters = cls.replaceAll("^[0-9]+\\s*", "");
+                if (!digits.isEmpty() && !letters.isEmpty()) {
+                    cls = digits;
+                    sec = letters;
+                }
+            }
+        } else {
+            // Section already given — strip any " - <sec>" suffix from className
+            cls = cls.replaceAll("(?i)\\s*-\\s*" + java.util.regex.Pattern.quote(sec) + "$", "").trim();
+        }
+
+        return new String[]{ cls, sec };
     }
 
     private String sanitizeError(String msg) {

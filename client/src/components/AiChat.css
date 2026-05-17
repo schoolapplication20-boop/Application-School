@@ -1,7 +1,7 @@
 /* ── Floating action button ─────────────────────────────────────── */
 .ai-fab {
   position: fixed;
-  bottom: 28px;
+  bottom: 80px;
   right: 28px;
   z-index: 1000;
   display: flex;
@@ -366,5 +366,5 @@
 /* ── Mobile ─────────────────────────────────────────────────────── */
 @media (max-width: 520px) {
   .ai-panel { right: 10px; left: 10px; width: auto; bottom: 80px; max-height: 75vh; }
-  .ai-fab   { right: 16px; bottom: 16px; }
+  .ai-fab   { right: 16px; bottom: 70px; }
 }
