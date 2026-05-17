@@ -20,11 +20,11 @@ public class AiService {
 
     private static final Logger log = Logger.getLogger(AiService.class.getName());
 
-    private static final String OPENAI_URL = "https://api.openai.com/v1/chat/completions";
-    private static final String MODEL      = "gpt-4o-mini";
+    private static final String GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+    private static final String MODEL    = "llama-3.3-70b-versatile";
 
-    @Value("${openai.api.key:}")
-    private String openaiApiKey;
+    @Value("${groq.api.key:}")
+    private String groqApiKey;
 
     @Autowired private StudentRepository    studentRepository;
     @Autowired private TeacherRepository    teacherRepository;
@@ -35,8 +35,8 @@ public class AiService {
     private final RestTemplate restTemplate = new RestTemplate();
 
     public String chat(String message, List<Map<String, String>> history, Long schoolId, String role) {
-        if (openaiApiKey == null || openaiApiKey.isBlank())
-            return "AI assistant is not configured. Please set the OPENAI_API_KEY environment variable on Render.";
+        if (groqApiKey == null || groqApiKey.isBlank())
+            return "AI assistant is not configured. Please set the GROQ_API_KEY environment variable on Render.";
 
         String systemPrompt = buildSystemPrompt(schoolId, role);
 
@@ -60,12 +60,12 @@ public class AiService {
 
         HttpHeaders headers = new HttpHeaders();
         headers.set("Content-Type", "application/json");
-        headers.set("Authorization", "Bearer " + openaiApiKey);
+        headers.set("Authorization", "Bearer " + groqApiKey);
 
         try {
             @SuppressWarnings("unchecked")
             Map<String, Object> response = restTemplate.postForObject(
-                OPENAI_URL,
+                GROQ_URL,
                 new HttpEntity<>(body, headers),
                 Map.class
             );
@@ -81,7 +81,7 @@ public class AiService {
             return msg.get("content").toString().trim();
 
         } catch (Exception e) {
-            log.severe("[AiService] OpenAI API call failed: " + e.getMessage());
+            log.severe("[AiService] Groq API call failed: " + e.getMessage());
             return "AI request failed: " + e.getMessage();
         }
     }
