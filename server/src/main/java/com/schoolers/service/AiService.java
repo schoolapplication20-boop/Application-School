@@ -135,10 +135,59 @@ public class AiService {
             sb.append("(Live data unavailable)\n");
         }
 
+        sb.append("\nERP NAVIGATION GUIDE (use this to answer 'how to' questions):\n");
+
+        if (isAdmin) {
+            sb.append("ADMIN actions:\n");
+            sb.append("- Add a student: Go to sidebar → Students (/admin/students) → click '+ Add Student' button → fill in name, class, parent details → Save.\n");
+            sb.append("- Add a teacher: Go to sidebar → Teachers (/admin/teachers) → click '+ Add Teacher' → fill in name, subject, contact → Save.\n");
+            sb.append("- Add a class: Go to sidebar → Classes (/admin/classes) → click '+ Add Class' → enter class name and assign class teacher → Save.\n");
+            sb.append("- Collect fee: Go to sidebar → Collect Fee (/admin/collect-fee) → search student → select fee type → enter amount → Submit.\n");
+            sb.append("- View fee records: Go to sidebar → Fees (/admin/fees) → filter by class or student.\n");
+            sb.append("- Add expense: Go to sidebar → Expenses (/admin/expenses) → click '+ Add Expense' → fill details → Save.\n");
+            sb.append("- Manage leave requests: Go to sidebar → Leave (/admin/leave) → approve or reject pending requests.\n");
+            sb.append("- View attendance report: Go to sidebar → Attendance Report (/admin/attendance-report) → filter by class and date.\n");
+            sb.append("- Manage transport: Go to sidebar → Transport (/admin/transport) → add buses, routes, or assign students.\n");
+            sb.append("- Set timetable: Go to sidebar → Timetable (/admin/timetable) → select class → assign periods.\n");
+            sb.append("- Manage admissions: Go to sidebar → Applications (/admin/applications) → review and approve/reject applications.\n");
+            sb.append("- Manage salaries: Go to sidebar → Salaries (/admin/salaries) → select teacher → enter salary details → Save.\n");
+            sb.append("- Send messages: Go to sidebar → Messages (/admin/messages) → select recipient → type message → Send.\n");
+            sb.append("- Manage parents: Go to sidebar → Parents (/admin/parents).\n");
+            sb.append("- Examination: Go to sidebar → Examination (/admin/examination) → schedule exams and manage results.\n");
+            sb.append("- School settings: Go to sidebar → Settings (/admin/settings) → update school info, logo, permissions.\n");
+        } else if ("SUPER_ADMIN".equals(role)) {
+            sb.append("SCHOOL OWNER actions:\n");
+            sb.append("- Manage admins: Go to sidebar → Admins (/superadmin/admins) → add or manage admin accounts.\n");
+            sb.append("- Setup school: Go to sidebar → Setup School (/superadmin/setup-school) → configure school details.\n");
+            sb.append("- Exam schedule: Go to sidebar → Exam Schedule (/superadmin/exam-schedule) → view and manage exams.\n");
+            sb.append("- All admin features are also available from the admin sidebar.\n");
+        } else if ("TEACHER".equals(role)) {
+            sb.append("TEACHER actions:\n");
+            sb.append("- Mark attendance: Go to sidebar → Attendance (/teacher/attendance) → select class and date → mark present/absent → Submit.\n");
+            sb.append("- View my students: Go to sidebar → My Students (/teacher/my-students) → see student list for your class.\n");
+            sb.append("- Enter marks: Go to sidebar → Marks (/teacher/marks) → select exam and class → enter marks → Save.\n");
+            sb.append("- Assign homework: Go to sidebar → Diary (/teacher/diary) → select class → add homework details → Save.\n");
+            sb.append("- View schedule: Go to sidebar → Schedule (/teacher/schedule) → see your timetable.\n");
+            sb.append("- Approve student leave: Go to sidebar → Leave Approval (/teacher/leave-approval) → approve or reject.\n");
+            sb.append("- Apply for leave: Go to sidebar → Leave Request (/teacher/leave-request) → fill form → Submit.\n");
+            sb.append("- Send messages: Go to sidebar → Messages (/teacher/messages) → select student or parent → Send.\n");
+            sb.append("- View examination: Go to sidebar → Examination (/teacher/examination).\n");
+        } else {
+            sb.append("STUDENT actions:\n");
+            sb.append("- View attendance: Go to sidebar → Attendance (/student/attendance) → see your attendance records.\n");
+            sb.append("- View homework/diary: Go to sidebar → Diary (/student/diary) → see assignments given by teachers.\n");
+            sb.append("- View fee status: Go to sidebar → Fees (/student/fees) → check paid and pending fees.\n");
+            sb.append("- Apply for leave: Go to sidebar → Leave (/student/leave) → fill the leave form → Submit.\n");
+            sb.append("- View messages: Go to sidebar → Messages (/student/messages) → read messages from teachers/admin.\n");
+            sb.append("- View exams: Go to sidebar → Exams (/student/exams) → see exam schedule and results.\n");
+        }
+
         sb.append("\nRules:\n");
         sb.append("- Be concise and helpful. Use bullet points for lists.\n");
         sb.append("- Use ₹ for Indian currency. Use Indian school context.\n");
-        sb.append("- Only state data that is in the live data above — never invent numbers.\n");
+        sb.append("- Only state numbers from the live data above — never invent numbers.\n");
+        sb.append("- For 'how to' questions, always give step-by-step navigation instructions from the ERP guide above.\n");
+        sb.append("- Never say 'live data doesn't provide' for navigation/how-to questions — use the ERP guide instead.\n");
         if (!isAdmin) {
             sb.append("- Do NOT share fee amounts or financial data. Say: 'Please contact your school admin for fee details.'\n");
         }
