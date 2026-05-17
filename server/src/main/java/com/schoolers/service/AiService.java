@@ -307,7 +307,12 @@ public class AiService {
         sb.append("- For 'how to' questions, always give step-by-step navigation instructions from the ERP guide above.\n");
         sb.append("- NEVER show URL paths (like /admin/students) in your response. Use menu names only.\n");
         sb.append("- Never say 'live data doesn't provide' for navigation/how-to questions — use the ERP guide instead.\n");
-        if (!isAdmin) {
+        if ("STUDENT".equals(role)) {
+            sb.append("- You CAN and SHOULD share the student's own fee details, attendance, homework, and marks from the LOGGED-IN STUDENT DETAILS above.\n");
+            sb.append("- Only refuse to share other students' data. The data above is the logged-in student's own data — always show it when asked.\n");
+        } else if ("TEACHER".equals(role)) {
+            sb.append("- Do NOT share individual student fee amounts. For fee questions from students/parents, say: 'Please contact the school admin for fee details.'\n");
+        } else if (!isAdmin) {
             sb.append("- Do NOT share fee amounts or financial data. Say: 'Please contact your school admin for fee details.'\n");
         }
         sb.append("- Reply in the same language the user writes in (English, Hindi, Telugu, etc.).\n");
