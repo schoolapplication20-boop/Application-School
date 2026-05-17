@@ -66,16 +66,16 @@ public class AiChatService {
 
         // Load history BEFORE saving the new message (AiService adds the current message itself)
         List<ChatMessage> prior = messageRepo.findBySessionIdOrderByCreatedAtAsc(sessionId);
-        List<Map<String, String>> geminiHistory = prior.stream()
+        List<Map<String, String>> history = prior.stream()
             .map(m -> Map.of(
-                "role", m.getRole() == ChatMessage.Role.USER ? "user" : "model",
+                "role", m.getRole() == ChatMessage.Role.USER ? "user" : "assistant",
                 "text", m.getContent()
             ))
             .collect(Collectors.toList());
 
         // Limit context to last 20 messages to stay within token budget
-        if (geminiHistory.size() > 20)
-            geminiHistory = geminiHistory.subList(geminiHistory.size() - 20, geminiHistory.size());
+        if (history.size() > 20)
+            history = history.subList(history.size() - 20, history.size());
 
         // Save user message
         messageRepo.save(ChatMessage.builder()
@@ -90,7 +90,7 @@ public class AiChatService {
         String role    = user != null ? user.getRole().name() : "STUDENT";
 
         // Call Gemini
-        String aiReply = aiService.chat(message, geminiHistory, schoolId, role);
+        String aiReply = aiService.chat(message, history, schoolId, role);
 
         // Save AI reply
         ChatMessage saved = messageRepo.save(ChatMessage.builder()

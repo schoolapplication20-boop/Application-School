@@ -20,49 +20,52 @@ public class AiService {
 
     private static final Logger log = Logger.getLogger(AiService.class.getName());
 
-    private static final String GEMINI_URL =
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=";
+    private static final String OPENAI_URL = "https://api.openai.com/v1/chat/completions";
+    private static final String MODEL      = "gpt-4o-mini";
 
-    @Value("${gemini.api.key:}")
-    private String geminiApiKey;
+    @Value("${openai.api.key:}")
+    private String openaiApiKey;
 
-    @Autowired private StudentRepository  studentRepository;
-    @Autowired private TeacherRepository  teacherRepository;
-    @Autowired private ClassRoomRepository classRoomRepository;
-    @Autowired private FeeRepository      feeRepository;
-    @Autowired private SchoolRepository   schoolRepository;
+    @Autowired private StudentRepository    studentRepository;
+    @Autowired private TeacherRepository    teacherRepository;
+    @Autowired private ClassRoomRepository  classRoomRepository;
+    @Autowired private FeeRepository        feeRepository;
+    @Autowired private SchoolRepository     schoolRepository;
 
     private final RestTemplate restTemplate = new RestTemplate();
 
     public String chat(String message, List<Map<String, String>> history, Long schoolId, String role) {
-        if (geminiApiKey == null || geminiApiKey.isBlank())
-            return "AI assistant is not configured yet. Please set the GEMINI_API_KEY environment variable on your server.";
+        if (openaiApiKey == null || openaiApiKey.isBlank())
+            return "AI assistant is not configured. Please set the OPENAI_API_KEY environment variable on Render.";
 
         String systemPrompt = buildSystemPrompt(schoolId, role);
 
-        List<Map<String, Object>> contents = new ArrayList<>();
+        // Build messages array: system + history + current message
+        List<Map<String, String>> messages = new ArrayList<>();
+        messages.add(Map.of("role", "system", "content", systemPrompt));
+
         if (history != null) {
             for (Map<String, String> h : history) {
-                contents.add(buildContent(h.get("role"), h.get("text")));
+                String r = "model".equals(h.get("role")) ? "assistant" : h.get("role");
+                messages.add(Map.of("role", r, "content", h.getOrDefault("text", "")));
             }
         }
-        contents.add(buildContent("user", message));
+        messages.add(Map.of("role", "user", "content", message));
 
         Map<String, Object> body = new HashMap<>();
-        body.put("system_instruction", Map.of("parts", List.of(Map.of("text", systemPrompt))));
-        body.put("contents", contents);
-        body.put("generationConfig", Map.of(
-            "temperature", 0.7,
-            "maxOutputTokens", 1024
-        ));
+        body.put("model", MODEL);
+        body.put("messages", messages);
+        body.put("temperature", 0.7);
+        body.put("max_tokens", 1024);
 
         HttpHeaders headers = new HttpHeaders();
         headers.set("Content-Type", "application/json");
+        headers.set("Authorization", "Bearer " + openaiApiKey);
 
         try {
             @SuppressWarnings("unchecked")
             Map<String, Object> response = restTemplate.postForObject(
-                GEMINI_URL + geminiApiKey,
+                OPENAI_URL,
                 new HttpEntity<>(body, headers),
                 Map.class
             );
@@ -70,18 +73,15 @@ public class AiService {
             if (response == null) return "No response from AI. Please try again.";
 
             @SuppressWarnings("unchecked")
-            List<Map<String, Object>> candidates = (List<Map<String, Object>>) response.get("candidates");
-            if (candidates == null || candidates.isEmpty()) return "AI returned an empty response.";
+            List<Map<String, Object>> choices = (List<Map<String, Object>>) response.get("choices");
+            if (choices == null || choices.isEmpty()) return "AI returned an empty response.";
 
             @SuppressWarnings("unchecked")
-            Map<String, Object> content = (Map<String, Object>) candidates.get(0).get("content");
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> parts = (List<Map<String, Object>>) content.get("parts");
-
-            return parts.get(0).get("text").toString().trim();
+            Map<String, Object> msg = (Map<String, Object>) choices.get(0).get("message");
+            return msg.get("content").toString().trim();
 
         } catch (Exception e) {
-            log.severe("[AiService] Gemini API call failed: " + e.getMessage());
+            log.severe("[AiService] OpenAI API call failed: " + e.getMessage());
             return "AI request failed: " + e.getMessage();
         }
     }
@@ -94,7 +94,9 @@ public class AiService {
         boolean isAdmin = role != null && ADMIN_ROLES.contains(role);
 
         StringBuilder sb = new StringBuilder();
-        sb.append("You are an AI assistant built into My-Skoolz, a school management platform used by schools in India.\n");
+        sb.append("You are My-Skoolz AI, an intelligent school ERP assistant similar to ChatGPT. ");
+        sb.append("You help students, teachers, parents, and administrators with educational, academic, and general questions ");
+        sb.append("in a helpful, conversational, and intelligent way.\n");
         sb.append("You are helping a ").append(formatRole(role)).append(".\n\n");
 
         try {
@@ -110,65 +112,39 @@ public class AiService {
                 sb.append("LIVE SCHOOL DATA for ").append(schoolName).append(":\n");
                 sb.append("- Total students: ").append(students)
                   .append(" (").append(active).append(" active)\n");
+                sb.append("- Total teachers: ").append(teachers).append("\n");
+                sb.append("- Total classes: ").append(classes).append("\n");
 
                 if (isAdmin) {
-                    // Financial data is visible only to admin roles
                     BigDecimal paid    = nullSafe(feeRepository.sumPaidFeesBySchool(schoolId));
                     BigDecimal pending = nullSafe(feeRepository.sumPendingFeesBySchool(schoolId));
-                    sb.append("- Total teachers: ").append(teachers).append("\n");
-                    sb.append("- Total classes: ").append(classes).append("\n");
                     sb.append("- Fees collected: ₹").append(paid.toPlainString()).append("\n");
                     sb.append("- Fees pending: ₹").append(pending.toPlainString()).append("\n");
-                } else {
-                    sb.append("- Total teachers: ").append(teachers).append("\n");
-                    sb.append("- Total classes: ").append(classes).append("\n");
                 }
             } else if (isAdmin) {
-                // APPLICATION_OWNER — platform-wide stats (admin only)
                 long totalSchools    = schoolRepository.count();
                 BigDecimal allPaid   = nullSafe(feeRepository.sumPaidFees());
                 BigDecimal allPending = nullSafe(feeRepository.sumPendingFees());
 
                 sb.append("PLATFORM-WIDE DATA:\n");
-                sb.append("- Total schools on platform: ").append(totalSchools).append("\n");
-                sb.append("- Total fees collected across all schools: ₹").append(allPaid.toPlainString()).append("\n");
-                sb.append("- Total pending fees across all schools: ₹").append(allPending.toPlainString()).append("\n");
+                sb.append("- Total schools: ").append(totalSchools).append("\n");
+                sb.append("- Total fees collected: ₹").append(allPaid.toPlainString()).append("\n");
+                sb.append("- Total pending fees: ₹").append(allPending.toPlainString()).append("\n");
             }
         } catch (Exception e) {
-            sb.append("(Live data unavailable at this moment)\n");
+            sb.append("(Live data unavailable)\n");
         }
 
-        sb.append("\nYou can help with:\n");
-        if (isAdmin) {
-            sb.append("- Answering questions about the above live data\n");
-            sb.append("- School management advice and best practices\n");
-            sb.append("- Drafting announcements, notices, or parent communications\n");
-            sb.append("- Explaining fee structures, attendance policies, exam schedules\n");
-            sb.append("- General guidance on school administration\n\n");
-        } else {
-            sb.append("- School-related questions (attendance, homework, timetable, exams)\n");
-            sb.append("- General academic guidance and advice\n");
-            sb.append("- Drafting messages or communications\n\n");
-        }
-        sb.append("Rules:\n");
-        sb.append("- Be concise and clear. Use bullet points for lists.\n");
+        sb.append("\nRules:\n");
+        sb.append("- Be concise and helpful. Use bullet points for lists.\n");
         sb.append("- Use ₹ for Indian currency. Use Indian school context.\n");
         sb.append("- Only state data that is in the live data above — never invent numbers.\n");
         if (!isAdmin) {
-            sb.append("- Do NOT discuss or reveal any fee amounts, financial data, or payment information.\n");
-            sb.append("- If asked about fees or financial data, say: 'Please contact your school admin for fee details.'\n");
+            sb.append("- Do NOT share fee amounts or financial data. Say: 'Please contact your school admin for fee details.'\n");
         }
-        sb.append("- If the user asks something outside your data, say so honestly and offer general advice.\n");
-        sb.append("- Reply in the same language the user writes in.\n");
+        sb.append("- Reply in the same language the user writes in (English, Hindi, Telugu, etc.).\n");
 
         return sb.toString();
-    }
-
-    private Map<String, Object> buildContent(String role, String text) {
-        return Map.of(
-            "role", role,
-            "parts", List.of(Map.of("text", text != null ? text : ""))
-        );
     }
 
     private BigDecimal nullSafe(BigDecimal value) {
@@ -176,10 +152,10 @@ public class AiService {
     }
 
     private String formatRole(String role) {
-        if (role == null) return "administrator";
+        if (role == null) return "user";
         return switch (role) {
             case "APPLICATION_OWNER" -> "platform owner";
-            case "SUPER_ADMIN"       -> "school owner (Super Admin)";
+            case "SUPER_ADMIN"       -> "school owner";
             case "ADMIN"             -> "school administrator";
             case "TEACHER"           -> "teacher";
             case "STUDENT"           -> "student";
