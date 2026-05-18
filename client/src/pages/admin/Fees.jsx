@@ -86,7 +86,8 @@ export default function Fees() {
 
   const [saving, setSaving]   = useState(false);
   const [toast, setToast]     = useState(null);
-  const [deleteConfirm, setDeleteConfirm] = useState(null); // { type, id }
+  const [deleteConfirm, setDeleteConfirm] = useState(null); // { id, studentName }
+  const [deleting, setDeleting] = useState(false);
 
   const showToast = (message, type = 'success') => setToast({ message, type });
 
@@ -261,6 +262,23 @@ export default function Fees() {
     } finally { setSaving(false); }
   };
 
+  /* ── delete assignment ── */
+  const confirmDelete = (a) => setDeleteConfirm({ id: a.id, studentName: a.studentName });
+
+  const deleteAssignment = async () => {
+    if (!deleteConfirm) return;
+    setDeleting(true);
+    try {
+      await adminAPI.deleteStudentFeeAssignment(deleteConfirm.id);
+      showToast('Fee assignment deleted');
+      setDeleteConfirm(null);
+      loadAssignments();
+    } catch (err) {
+      const msg = err?.response?.data?.message || 'Failed to delete assignment';
+      showToast(msg, 'error');
+    } finally { setDeleting(false); }
+  };
+
   /* ── tab bar ── */
   const TAB_STYLE = (active) => ({
     padding: '8px 20px', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13,
@@ -424,9 +442,14 @@ export default function Fees() {
                             <td style={{ padding: '12px 14px', textAlign: 'right', color: due > 0 ? '#e53e3e' : '#276749', fontWeight: 700 }}>₹{fmt(due)}</td>
                             <td style={{ padding: '12px 14px' }}><StatusBadge status={a.status} /></td>
                             <td style={{ padding: '12px 14px' }}>
-                              <button onClick={() => openAssignModal(a)} title="Edit Assignment" style={{ border: 'none', background: '#0de1e818', color: '#276749', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
-                                Edit
-                              </button>
+                              <div style={{ display: 'flex', gap: 6 }}>
+                                <button onClick={() => openAssignModal(a)} title="Edit Assignment" style={{ border: 'none', background: '#0de1e818', color: '#276749', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+                                  Edit
+                                </button>
+                                <button onClick={() => confirmDelete(a)} title="Delete Assignment" style={{ border: 'none', background: '#fff5f5', color: '#e53e3e', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+                                  Delete
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         );
@@ -677,6 +700,30 @@ export default function Fees() {
               <button onClick={() => setShowAssignModal(false)} style={{ padding: '9px 20px', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', color: '#4a5568', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>Cancel</button>
               <button onClick={saveAssignment} disabled={saving} style={{ padding: '9px 22px', background: '#0de1e8', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: saving ? 0.7 : 1 }}>
                 {saving ? 'Saving...' : assignTarget ? 'Update Assignment' : 'Assign Fee'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ══ Delete Confirmation Modal ══ */}
+      {deleteConfirm && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: '#fff', borderRadius: 14, width: '100%', maxWidth: 400, padding: 28, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+            <div style={{ textAlign: 'center', marginBottom: 20 }}>
+              <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#fff5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
+                <span className="material-icons" style={{ color: '#e53e3e', fontSize: 28 }}>delete_forever</span>
+              </div>
+              <h3 style={{ margin: '0 0 8px', fontSize: 17, fontWeight: 800, color: '#1a202c' }}>Delete Fee Assignment?</h3>
+              <p style={{ margin: 0, fontSize: 13, color: '#718096', lineHeight: 1.5 }}>
+                This will permanently delete the fee assignment for <strong style={{ color: '#2d3748' }}>{deleteConfirm.studentName}</strong>. This action cannot be undone.
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setDeleteConfirm(null)} disabled={deleting} style={{ flex: 1, padding: '10px 0', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', color: '#4a5568', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>
+                Cancel
+              </button>
+              <button onClick={deleteAssignment} disabled={deleting} style={{ flex: 1, padding: '10px 0', background: '#e53e3e', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: deleting ? 'not-allowed' : 'pointer', opacity: deleting ? 0.7 : 1 }}>
+                {deleting ? 'Deleting...' : 'Yes, Delete'}
               </button>
             </div>
           </div>
