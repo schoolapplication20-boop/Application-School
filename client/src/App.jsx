@@ -1,14 +1,12 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider } from './context/AuthContext';
 import { SchoolProvider } from './context/SchoolContext';
 import { NotificationProvider } from './context/NotificationContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import MarketingLayout from './components/MarketingLayout';
 import InstallPrompt from './components/InstallPrompt';
 import SessionTimeoutWarning from './components/SessionTimeoutWarning';
-import { usePushNotifications } from './hooks/usePushNotifications';
-
 // Marketing Pages
 import HomePage from './pages/marketing/HomePage';
 import SolutionsPage from './pages/marketing/SolutionsPage';
@@ -82,19 +80,12 @@ import SchoolSettings        from './pages/admin/SchoolSettings';
 import NotFound              from './pages/NotFound';
 
 
-function PushNotificationInitializer() {
-  const { isAuthenticated } = useAuth();
-  usePushNotifications(isAuthenticated);
-  return null;
-}
-
 function App() {
   return (
     <AuthProvider>
       <SchoolProvider>
       <NotificationProvider>
         <Router>
-          <PushNotificationInitializer />
           <InstallPrompt />
           <SessionTimeoutWarning />
           <Routes>

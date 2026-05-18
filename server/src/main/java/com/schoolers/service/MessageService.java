@@ -20,7 +20,6 @@ public class MessageService {
     @Autowired private UserRepository userRepository;
     @Autowired private StudentRepository studentRepository;
     @Autowired private TeacherRepository teacherRepository;
-    @Autowired private PushNotificationService pushNotificationService;
 
     // ── Existing 1-to-1 message methods ──────────────────────────────────────
 
@@ -51,15 +50,6 @@ public class MessageService {
                 .content(content)
                 .build();
         Message saved = messageRepository.save(msg);
-
-        // Send push notification to receiver
-        try {
-            String preview = content.length() > 80 ? content.substring(0, 80) + "…" : content;
-            pushNotificationService.sendToUser(receiverId, "New message from " + senderName, preview, "/messages");
-        } catch (Exception e) {
-            // Push failure must not break message sending
-        }
-
         return ApiResponse.success("Message sent", saved);
     }
 
