@@ -197,36 +197,6 @@ export const teacherAPI = {
 };
 
 // ============================================
-// PARENT APIs
-// ============================================
-
-export const parentAPI = {
-  // Child Info — resolves from JWT (no parentId param needed)
-  getMyChildren: () => api.get('/api/parent/me/children'),
-  // Legacy — kept for admin use
-  getChildInfo: (parentId) => api.get(`/api/parent/child/${parentId}`),
-
-  // Attendance
-  getChildAttendance: (studentId, params) =>
-    api.get(`/api/parent/attendance/${studentId}`, { params }),
-
-  // Assignments
-  getChildAssignments: (studentId) =>
-    api.get(`/api/parent/assignments/${studentId}`),
-
-  // Fees
-  getChildFees: (studentId) => api.get(`/api/parent/fees/${studentId}`),
-  payFee: (data) => api.post('/api/parent/fees/pay', data),
-
-  // Performance/Marks
-  getChildMarks: (studentId) => api.get(`/api/parent/marks/${studentId}`),
-
-  // Messages
-  getMessages: (parentId) => api.get(`/api/parent/messages/${parentId}`),
-  sendMessage: (data) => api.post('/api/parent/messages', data),
-};
-
-// ============================================
 // STUDENT APIs
 // ============================================
 
