@@ -84,7 +84,7 @@ const SetNewPassword = () => {
 
   return (
     <div className="auth-wrapper">
-      <div className="auth-left" style={{ background: 'linear-gradient(160deg, #0f172a 0%, #1e40afe0 55%, #7c3aedcc 100%)' }}>
+      <div className="auth-left" style={{ background: 'linear-gradient(160deg, #0f172a 0%, #1e3a8a 50%, #312e81 100%)' }}>
         <div className="auth-left__grid" />
         <div className="auth-brand">
           <Logo size={42} />

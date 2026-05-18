@@ -298,9 +298,9 @@
 }
 
 .login-toggle-btn.active {
-  background-color: #F97316;
+  background-color: #2563EB;
   color: #ffffff;
-  box-shadow: 0 2px 8px rgba(13, 225, 232, 0.4);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.4);
 }
 
 .login-toggle-btn .material-icons {
@@ -338,8 +338,8 @@
 }
 
 .input-wrapper .form-control:focus {
-  border-color: #F97316;
-  box-shadow: 0 0 0 3px rgba(13, 225, 232, 0.15);
+  border-color: #2563EB;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
   background-color: #ffffff;
   outline: none;
 }
@@ -361,7 +361,7 @@
 }
 
 .input-wrapper .input-icon:hover {
-  color: #F97316;
+  color: #2563EB;
 }
 
 .input-wrapper .input-icon-left {
@@ -388,7 +388,7 @@
 /* Forgot Password Link */
 .forgot-password-link {
   font-size: 13px;
-  color: #F97316;
+  color: #2563EB;
   font-weight: 600;
   text-decoration: none;
   float: right;
@@ -397,7 +397,7 @@
 }
 
 .forgot-password-link:hover {
-  color: #EA6C0A;
+  color: #1d4ed8;
   text-decoration: underline;
 }
 
@@ -405,7 +405,7 @@
 .btn-auth-submit {
   width: 100%;
   padding: 14px;
-  background-color: #F97316;
+  background: linear-gradient(135deg, #2563EB 0%, #7C3AED 100%);
   border: none;
   border-radius: 12px;
   color: #ffffff;
@@ -417,13 +417,13 @@
   text-transform: uppercase;
   margin-top: 10px;
   font-family: 'Poppins', sans-serif;
-  box-shadow: 0 4px 16px rgba(249, 115, 22, 0.35);
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.35);
 }
 
 .btn-auth-submit:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(249, 115, 22, 0.45);
-  filter: brightness(1.05);
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.45);
+  filter: brightness(1.08);
 }
 
 .btn-auth-submit:active {
@@ -454,7 +454,7 @@
 }
 
 .btn-back:hover {
-  color: #F97316;
+  color: #2563EB;
 }
 
 .btn-back .material-icons {
@@ -489,14 +489,14 @@
 }
 
 .otp-input:focus {
-  border-color: #F97316;
-  box-shadow: 0 0 0 3px rgba(13, 225, 232, 0.2);
+  border-color: #2563EB;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
   background-color: #fff;
 }
 
 .otp-input.filled {
-  border-color: #F97316;
-  background-color: rgba(13, 225, 232, 0.08);
+  border-color: #2563EB;
+  background-color: rgba(37, 99, 235, 0.06);
 }
 
 /* OTP Timer */
