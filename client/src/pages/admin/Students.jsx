@@ -251,6 +251,9 @@ export default function Students() {
   const [availableClasses, setAvailableClasses] = useState([]); // [{name, section}] from DB
   const [capacityInfo, setCapacityInfo] = useState(null);   // { capacity, enrolled, available, isFull }
   const [capacityChecking, setCapacityChecking] = useState(false);
+  const [selectedIds, setSelectedIds]   = useState(new Set());
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   // Load from API — called on mount and after every mutation
   const loadStudents = () => {
@@ -517,6 +520,33 @@ export default function Students() {
     }
   };
 
+  const toggleSelect = (id) => setSelectedIds(prev => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+
+  const isAllPageSelected = paginated.length > 0 && paginated.every(s => selectedIds.has(s.id));
+  const toggleSelectAll = () => {
+    if (isAllPageSelected) {
+      setSelectedIds(prev => { const n = new Set(prev); paginated.forEach(s => n.delete(s.id)); return n; });
+    } else {
+      setSelectedIds(prev => { const n = new Set(prev); paginated.forEach(s => n.add(s.id)); return n; });
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = [...selectedIds];
+    setBulkDeleting(true);
+    const results = await Promise.all(ids.map(id => apiDeleteStudent(id).catch(() => false)));
+    const ok = results.filter(Boolean).length;
+    setBulkDeleting(false);
+    setBulkDeleteConfirm(false);
+    setSelectedIds(new Set());
+    showToast(`${ok} student${ok !== 1 ? 's' : ''} deleted`, ok > 0 ? 'warning' : 'error');
+    loadStudents();
+  };
+
   const handleViewCredentials = async (student) => {
     setLoadingCred(true);
     try {
@@ -629,6 +659,21 @@ export default function Students() {
             <span className="material-icons" style={{ fontSize: '17px' }}>table_view</span>
             Export Excel
           </button>
+          {selectedIds.size > 0 && (
+            <button
+              onClick={() => setBulkDeleteConfirm(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                padding: '9px 16px', borderRadius: '9px',
+                border: '1.5px solid #e53e3e', background: '#fff5f5',
+                color: '#e53e3e', fontWeight: 700, fontSize: '13px', cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <span className="material-icons" style={{ fontSize: '17px' }}>delete_sweep</span>
+              Delete Selected ({selectedIds.size})
+            </button>
+          )}
           <button className="btn-add" onClick={openAddModal}>
             <span className="material-icons">person_add</span> Add Student
           </button>
@@ -638,6 +683,15 @@ export default function Students() {
           <table className="data-table">
             <thead>
               <tr>
+                <th style={{ width: 40, textAlign: 'center' }}>
+                  <input
+                    type="checkbox"
+                    checked={isAllPageSelected}
+                    onChange={toggleSelectAll}
+                    title="Select all on this page"
+                    style={{ cursor: 'pointer', width: 15, height: 15, accentColor: '#e53e3e' }}
+                  />
+                </th>
                 <th>Student</th>
                 <th>Roll No</th>
                 <th>Class</th>
@@ -650,14 +704,14 @@ export default function Students() {
             </thead>
             <tbody>
               {loadingStudents ? (
-                <tr><td colSpan={8}>
+                <tr><td colSpan={9}>
                   <div className="empty-state">
                     <span className="material-icons" style={{ animation: 'spin 1s linear infinite', fontSize: 40, color: '#94a3b8' }}>refresh</span>
                     <h3>Loading students…</h3>
                   </div>
                 </td></tr>
               ) : paginated.length === 0 ? (
-                <tr><td colSpan={8}>
+                <tr><td colSpan={9}>
                   <div className="empty-state" style={{ padding: '48px 24px', textAlign: 'center' }}>
                     <span className="material-icons" style={{ fontSize: 56, color: '#c7d2fe', display: 'block', marginBottom: 12 }}>
                       {students.length === 0 ? 'school' : 'search_off'}
@@ -671,14 +725,22 @@ export default function Students() {
                         : 'Try adjusting your search or filter criteria.'}
                     </p>
                     {students.length === 0 && (
-                      <button onClick={() => setShowForm(true)} className="btn btn-primary" style={{ borderRadius: 8 }}>
+                      <button onClick={() => openAddModal()} className="btn btn-primary" style={{ borderRadius: 8 }}>
                         + Add First Student
                       </button>
                     )}
                   </div>
                 </td></tr>
               ) : paginated.map(s => (
-                <tr key={s.id}>
+                <tr key={s.id} style={{ background: selectedIds.has(s.id) ? '#fff5f5' : undefined }}>
+                  <td style={{ textAlign: 'center' }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(s.id)}
+                      onChange={() => toggleSelect(s.id)}
+                      style={{ cursor: 'pointer', width: 15, height: 15, accentColor: '#e53e3e' }}
+                    />
+                  </td>
                   <td>
                     <div className="student-cell">
                       {s.photo ? (
@@ -1289,6 +1351,47 @@ export default function Students() {
                 style={{ padding: '10px 32px', background: '#0de1e8', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, cursor: 'pointer', fontFamily: 'Poppins, sans-serif' }}>
                 Done
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Delete Confirm */}
+      {bulkDeleteConfirm && (
+        <div className="modal-overlay">
+          <div className="modal-container" style={{ maxWidth: 420 }}>
+            <div className="modal-body" style={{ textAlign: 'center', padding: '32px 28px' }}>
+              <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#fff5f5', margin: '0 auto 16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span className="material-icons" style={{ fontSize: 32, color: '#e53e3e' }}>delete_sweep</span>
+              </div>
+              <h3 style={{ fontSize: 17, fontWeight: 700, margin: '0 0 8px', color: '#1a202c' }}>
+                Delete {selectedIds.size} Student{selectedIds.size !== 1 ? 's' : ''}?
+              </h3>
+              <p style={{ fontSize: 13, color: '#718096', margin: '0 0 16px' }}>
+                You have selected <strong style={{ color: '#2d3748' }}>{selectedIds.size}</strong> student{selectedIds.size !== 1 ? 's' : ''} for deletion.
+              </p>
+              <div style={{ background: '#fff5f5', border: '1px solid #fed7d7', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: '#c53030', marginBottom: 20, textAlign: 'left', display: 'flex', gap: 8 }}>
+                <span className="material-icons" style={{ fontSize: 15, flexShrink: 0, marginTop: 1 }}>warning</span>
+                <span>This will permanently delete all selected students and cannot be undone.</span>
+              </div>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+                <button
+                  onClick={() => setBulkDeleteConfirm(false)}
+                  disabled={bulkDeleting}
+                  style={{ padding: '9px 22px', border: '1.5px solid #e2e8f0', borderRadius: 9, background: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+                  Cancel
+                </button>
+                <button
+                  onClick={handleBulkDelete}
+                  disabled={bulkDeleting}
+                  style={{ padding: '9px 22px', background: '#e53e3e', color: '#fff', border: 'none', borderRadius: 9, fontWeight: 700, fontSize: 13, cursor: bulkDeleting ? 'not-allowed' : 'pointer', opacity: bulkDeleting ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {bulkDeleting ? (
+                    <><span className="material-icons" style={{ fontSize: 16, animation: 'spin 1s linear infinite' }}>refresh</span> Deleting…</>
+                  ) : (
+                    <>Delete {selectedIds.size} Student{selectedIds.size !== 1 ? 's' : ''}</>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>
