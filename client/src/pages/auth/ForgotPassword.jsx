@@ -234,9 +234,9 @@ const ForgotPassword = () => {
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999,
         }}>
           <div style={{
-            background: '#fff', borderRadius: '18px', padding: '36px 32px',
-            width: '100%', maxWidth: '400px', boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
-            position: 'relative',
+            background: '#fff', borderRadius: '18px', padding: '32px 24px',
+            width: 'calc(100% - 32px)', maxWidth: '400px', boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
+            position: 'relative', boxSizing: 'border-box', overflow: 'hidden',
           }}>
             {/* Close */}
             <button
