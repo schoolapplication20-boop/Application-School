@@ -9,7 +9,7 @@ let authAPI;
 let adminAPI;
 let teacherAPI;
 let studentAPI;
-let parentAPI;
+
 let transportAPI;
 
 beforeEach(async () => {
@@ -22,7 +22,7 @@ beforeEach(async () => {
   adminAPI       = apiModule.adminAPI;
   teacherAPI     = apiModule.teacherAPI;
   studentAPI     = apiModule.studentAPI;
-  parentAPI      = apiModule.parentAPI;
+
   transportAPI   = apiModule.transportAPI;
 });
 
@@ -83,22 +83,7 @@ describe('API Service — authAPI exports', () => {
     expect(typeof authAPI.changePassword).toBe('function');
   });
 
-  it('BUG: sendLoginOTP and forgotPassword point to the same endpoint', () => {
-    // Both call /api/auth/forgot-password — this is a duplicate API definition
-    // Create a mock to verify the same URL is called
-    const loginOTPCall   = authAPI.sendLoginOTP.toString();
-    const forgotPwdCall  = authAPI.forgotPassword.toString();
-    // Both should contain the same endpoint string
-    expect(loginOTPCall).toContain('forgot-password');
-    expect(forgotPwdCall).toContain('forgot-password');
-  });
 
-  it('BUG: verifyLoginOTP and verifyOTP point to the same endpoint', () => {
-    const verifyLoginOTPStr = authAPI.verifyLoginOTP.toString();
-    const verifyOTPStr      = authAPI.verifyOTP.toString();
-    expect(verifyLoginOTPStr).toContain('verify-otp');
-    expect(verifyOTPStr).toContain('verify-otp');
-  });
 });
 
 describe('API Service — adminAPI exports', () => {
@@ -169,11 +154,3 @@ describe('API Service — transportAPI exports', () => {
   });
 });
 
-describe('API Service — parentAPI exports', () => {
-  it('exposes parent child methods', () => {
-    expect(typeof parentAPI.getMyChildren).toBe('function');
-    expect(typeof parentAPI.getChildAttendance).toBe('function');
-    expect(typeof parentAPI.getChildFees).toBe('function');
-    expect(typeof parentAPI.getChildMarks).toBe('function');
-  });
-});

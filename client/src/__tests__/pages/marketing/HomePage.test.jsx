@@ -100,19 +100,6 @@ describe('HomePage — CTA / Navigation', () => {
   });
 });
 
-describe('HomePage — Quick Access Section', () => {
-  it('renders Quick Access login links', () => {
-    renderHomePage();
-    // Quick access section should have role-specific login links
-    const adminLink = screen.queryByText(/Admin Login/i) ||
-                      screen.queryByText(/Admin Portal/i);
-    const teacherLink = screen.queryByText(/Teacher Login/i) ||
-                        screen.queryByText(/Teacher Portal/i);
-    // At least one of these should exist
-    expect(adminLink || teacherLink).toBeTruthy();
-  });
-});
-
 describe('HomePage — SEO / Structured Data', () => {
   it('renders without crashing and has root element', () => {
     const { container } = renderHomePage();

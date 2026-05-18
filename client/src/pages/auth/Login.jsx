@@ -327,7 +327,9 @@ const Login = () => {
               <div className="form-group">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                   <label className="form-label" style={{ margin: 0 }}>Password</label>
-                  <Link to="/forgot-password" className="forgot-password-link" style={{ float: 'none' }}>Forgot Password?</Link>
+                  {!isStudentRole && (
+                    <Link to="/forgot-password" className="forgot-password-link" style={{ float: 'none' }}>Forgot Password?</Link>
+                  )}
                 </div>
                 <div className="input-wrapper">
                   <span className="material-icons input-icon-left">lock</span>
