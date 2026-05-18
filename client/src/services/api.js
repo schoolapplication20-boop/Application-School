@@ -509,4 +509,13 @@ export const systemAPI = {
   clearNotice:     ()     => api.delete('/api/system/notice'),
 };
 
+// ============================================
+// PUSH NOTIFICATION APIs
+// ============================================
+export const pushAPI = {
+  getVapidPublicKey: ()     => api.get('/api/push/vapid-public-key'),
+  subscribe:         (data) => api.post('/api/push/subscribe', data),
+  unsubscribe:       (data) => api.post('/api/push/unsubscribe', data),
+};
+
 export default api;

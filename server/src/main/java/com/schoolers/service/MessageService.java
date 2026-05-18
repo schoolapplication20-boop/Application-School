@@ -20,6 +20,7 @@ public class MessageService {
     @Autowired private UserRepository userRepository;
     @Autowired private StudentRepository studentRepository;
     @Autowired private TeacherRepository teacherRepository;
+    @Autowired private PushNotificationService pushNotificationService;
 
     // ── Existing 1-to-1 message methods ──────────────────────────────────────
 
@@ -39,16 +40,27 @@ public class MessageService {
         if (receiverId == null) return ApiResponse.error("Receiver ID is required");
         if (content == null || content.isBlank()) return ApiResponse.error("Message content is required");
 
+        String senderName = str(body, "senderName", "Someone");
         Message msg = Message.builder()
                 .senderId(senderId)
-                .senderName(str(body, "senderName", null))
+                .senderName(senderName)
                 .senderRole(str(body, "senderRole", null))
                 .receiverId(receiverId)
                 .receiverName(str(body, "receiverName", null))
                 .receiverRole(str(body, "receiverRole", null))
                 .content(content)
                 .build();
-        return ApiResponse.success("Message sent", messageRepository.save(msg));
+        Message saved = messageRepository.save(msg);
+
+        // Send push notification to receiver
+        try {
+            String preview = content.length() > 80 ? content.substring(0, 80) + "…" : content;
+            pushNotificationService.sendToUser(receiverId, "New message from " + senderName, preview, "/messages");
+        } catch (Exception e) {
+            // Push failure must not break message sending
+        }
+
+        return ApiResponse.success("Message sent", saved);
     }
 
     public ApiResponse<String> markAsRead(Long id) {
