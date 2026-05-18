@@ -251,9 +251,12 @@ export default function Students() {
   const [availableClasses, setAvailableClasses] = useState([]); // [{name, section}] from DB
   const [capacityInfo, setCapacityInfo] = useState(null);   // { capacity, enrolled, available, isFull }
   const [capacityChecking, setCapacityChecking] = useState(false);
-  const [selectedIds, setSelectedIds]   = useState(new Set());
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds]     = useState(new Set());
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
-  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkDeleting, setBulkDeleting]   = useState(false);
+
+  const exitSelectionMode = () => { setSelectionMode(false); setSelectedIds(new Set()); };
 
   // Load from API — called on mount and after every mutation
   const loadStudents = () => {
@@ -542,7 +545,7 @@ export default function Students() {
     const ok = results.filter(Boolean).length;
     setBulkDeleting(false);
     setBulkDeleteConfirm(false);
-    setSelectedIds(new Set());
+    exitSelectionMode();
     showToast(`${ok} student${ok !== 1 ? 's' : ''} deleted`, ok > 0 ? 'warning' : 'error');
     loadStudents();
   };
@@ -659,39 +662,74 @@ export default function Students() {
             <span className="material-icons" style={{ fontSize: '17px' }}>table_view</span>
             Export Excel
           </button>
-          {selectedIds.size > 0 && (
-            <button
-              onClick={() => setBulkDeleteConfirm(true)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '6px',
-                padding: '9px 16px', borderRadius: '9px',
-                border: '1.5px solid #e53e3e', background: '#fff5f5',
-                color: '#e53e3e', fontWeight: 700, fontSize: '13px', cursor: 'pointer',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              <span className="material-icons" style={{ fontSize: '17px' }}>delete_sweep</span>
-              Delete Selected ({selectedIds.size})
-            </button>
+          {!selectionMode ? (
+            <>
+              <button
+                onClick={() => setSelectionMode(true)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  padding: '9px 16px', borderRadius: '9px',
+                  border: '1.5px solid #e53e3e', background: '#fff5f5',
+                  color: '#e53e3e', fontWeight: 700, fontSize: '13px', cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                <span className="material-icons" style={{ fontSize: '17px' }}>checklist</span>
+                Select to Delete
+              </button>
+              <button className="btn-add" onClick={openAddModal}>
+                <span className="material-icons">person_add</span> Add Student
+              </button>
+            </>
+          ) : (
+            <>
+              {selectedIds.size > 0 && (
+                <button
+                  onClick={() => setBulkDeleteConfirm(true)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    padding: '9px 16px', borderRadius: '9px',
+                    border: '1.5px solid #e53e3e', background: '#e53e3e',
+                    color: '#fff', fontWeight: 700, fontSize: '13px', cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <span className="material-icons" style={{ fontSize: '17px' }}>delete_sweep</span>
+                  Delete ({selectedIds.size})
+                </button>
+              )}
+              <button
+                onClick={exitSelectionMode}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  padding: '9px 16px', borderRadius: '9px',
+                  border: '1.5px solid #cbd5e0', background: '#fff',
+                  color: '#4a5568', fontWeight: 700, fontSize: '13px', cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                <span className="material-icons" style={{ fontSize: '17px' }}>close</span>
+                Cancel
+              </button>
+            </>
           )}
-          <button className="btn-add" onClick={openAddModal}>
-            <span className="material-icons">person_add</span> Add Student
-          </button>
         </div>
 
         <div style={{ overflowX: 'auto' }}>
           <table className="data-table">
             <thead>
               <tr>
-                <th style={{ width: 40, textAlign: 'center' }}>
-                  <input
-                    type="checkbox"
-                    checked={isAllPageSelected}
-                    onChange={toggleSelectAll}
-                    title="Select all on this page"
-                    style={{ cursor: 'pointer', width: 15, height: 15, accentColor: '#e53e3e' }}
-                  />
-                </th>
+                {selectionMode && (
+                  <th style={{ width: 40, textAlign: 'center' }}>
+                    <input
+                      type="checkbox"
+                      checked={isAllPageSelected}
+                      onChange={toggleSelectAll}
+                      title="Select all on this page"
+                      style={{ cursor: 'pointer', width: 15, height: 15, accentColor: '#e53e3e' }}
+                    />
+                  </th>
+                )}
                 <th>Student</th>
                 <th>Roll No</th>
                 <th>Class</th>
@@ -704,14 +742,14 @@ export default function Students() {
             </thead>
             <tbody>
               {loadingStudents ? (
-                <tr><td colSpan={9}>
+                <tr><td colSpan={selectionMode ? 9 : 8}>
                   <div className="empty-state">
                     <span className="material-icons" style={{ animation: 'spin 1s linear infinite', fontSize: 40, color: '#94a3b8' }}>refresh</span>
                     <h3>Loading students…</h3>
                   </div>
                 </td></tr>
               ) : paginated.length === 0 ? (
-                <tr><td colSpan={9}>
+                <tr><td colSpan={selectionMode ? 9 : 8}>
                   <div className="empty-state" style={{ padding: '48px 24px', textAlign: 'center' }}>
                     <span className="material-icons" style={{ fontSize: 56, color: '#c7d2fe', display: 'block', marginBottom: 12 }}>
                       {students.length === 0 ? 'school' : 'search_off'}
@@ -732,15 +770,17 @@ export default function Students() {
                   </div>
                 </td></tr>
               ) : paginated.map(s => (
-                <tr key={s.id} style={{ background: selectedIds.has(s.id) ? '#fff5f5' : undefined }}>
-                  <td style={{ textAlign: 'center' }}>
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.has(s.id)}
-                      onChange={() => toggleSelect(s.id)}
-                      style={{ cursor: 'pointer', width: 15, height: 15, accentColor: '#e53e3e' }}
-                    />
-                  </td>
+                <tr key={s.id} style={{ background: selectionMode && selectedIds.has(s.id) ? '#fff5f5' : undefined }}>
+                  {selectionMode && (
+                    <td style={{ textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(s.id)}
+                        onChange={() => toggleSelect(s.id)}
+                        style={{ cursor: 'pointer', width: 15, height: 15, accentColor: '#e53e3e' }}
+                      />
+                    </td>
+                  )}
                   <td>
                     <div className="student-cell">
                       {s.photo ? (
