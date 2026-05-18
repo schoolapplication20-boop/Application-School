@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useSchool } from '../../context/SchoolContext';
-import { schoolAPI } from '../../services/api';
+import { schoolAPI, BASE_URL } from '../../services/api';
 import Layout from '../../components/Layout';
 
 const MAX_SIZE_MB = 5;
@@ -75,7 +75,10 @@ const SchoolSettings = () => {
     }
   };
 
-  const currentLogoSrc = school?.logoUrl ? `${school.logoUrl}?v=${logoVersion}` : null;
+  const resolvedLogoUrl = school?.logoUrl
+    ? (school.logoUrl.startsWith('http') ? school.logoUrl : `${BASE_URL}${school.logoUrl}`)
+    : null;
+  const currentLogoSrc = resolvedLogoUrl ? `${resolvedLogoUrl}?v=${logoVersion}` : null;
 
   return (
     <Layout pageTitle="School Settings">

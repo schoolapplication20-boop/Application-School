@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSchool } from '../context/SchoolContext';
-import { schoolAPI } from '../services/api';
+import { schoolAPI, BASE_URL } from '../services/api';
 import '../styles/sidebar.css';
 
 const adminNavItems = [
@@ -99,11 +99,13 @@ const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
   const primary   = school?.primaryColor   || '#76C442';
   const secondary = school?.secondaryColor || '#5fa832';
 
-  // Build a cache-busted logo URL using a relative path so the Vite proxy (dev)
-  // and reverse proxy (prod) forward the request to the backend without CORS friction.
-  const logoSrc = school?.logoUrl
-    ? `${school.logoUrl}?v=${logoVersion}`
+  // Build a cache-busted logo URL. Relative paths are prefixed with BASE_URL so
+  // the image loads from the backend in both dev and production (Vercel has no
+  // /uploads proxy — all paths are rewritten to index.html by the SPA catch-all).
+  const resolvedLogoUrl = school?.logoUrl
+    ? (school.logoUrl.startsWith('http') ? school.logoUrl : `${BASE_URL}${school.logoUrl}`)
     : null;
+  const logoSrc = resolvedLogoUrl ? `${resolvedLogoUrl}?v=${logoVersion}` : null;
 
   // Initials fallback: first letter of each word (max 2)
   const schoolInitials = (school?.name || 'S')
