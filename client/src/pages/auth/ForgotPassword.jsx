@@ -34,15 +34,11 @@ const ForgotPassword = () => {
   };
 
   const isEmail = (val) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
-  const isMobile = (val) => /^\d{10}$/.test(val);
 
   const maskIdentifier = (val) => {
-    if (isEmail(val)) {
-      const [local, domain] = val.split('@');
-      return local.slice(0, 2) + '****@' + domain;
-    }
-    if (val.length < 4) return val;
-    return val.slice(0, 2) + '****' + val.slice(-2);
+    if (!val.includes('@')) return val;
+    const [local, domain] = val.split('@');
+    return local.slice(0, 2) + '****@' + domain;
   };
 
   const sendOtp = async () => {
@@ -59,9 +55,9 @@ const ForgotPassword = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!identifier.trim()) { setError('Please enter your mobile number or email address.'); return; }
-    if (!isMobile(identifier) && !isEmail(identifier)) {
-      setError('Please enter a valid 10-digit mobile number or email address.');
+    if (!identifier.trim()) { setError('Please enter your email address.'); return; }
+    if (!isEmail(identifier)) {
+      setError('Please enter a valid email address.');
       return;
     }
     setIsLoading(true);
@@ -150,7 +146,8 @@ const ForgotPassword = () => {
     <div className="auth-wrapper">
       <SEOMeta title="Forgot Password" description="Reset your My-Skoolz account password securely." />
       {/* Left Panel */}
-      <div className="auth-left">
+      <div className="auth-left" style={{ background: 'linear-gradient(160deg, #0f172a 0%, #1e40afe0 55%, #7c3aedcc 100%)' }}>
+        <div className="auth-left__grid" />
         <div className="auth-brand">
           <span className="brand-icon">🏆</span>
           <span className="brand-name">My-Skoolz</span>
@@ -158,8 +155,7 @@ const ForgotPassword = () => {
         <div className="auth-tagline">
           <h2>Reset Your Password Securely</h2>
           <p>
-            Don't worry! Enter your mobile number (or email if you are the Application Owner)
-            and we'll send you an OTP to reset your password.
+            Enter your registered email address and we'll send you a one-time password (OTP) to reset your account password.
           </p>
         </div>
         <div className="auth-illustration">
@@ -179,12 +175,12 @@ const ForgotPassword = () => {
           </Link>
 
           <div className="auth-icon-box">
-            <span className="material-icons">phone_android</span>
+            <span className="material-icons">email</span>
           </div>
 
           <div className="auth-form-header" style={{ textAlign: 'center' }}>
-            <h1>Verify Identity</h1>
-            <p>Enter your mobile number or email address to receive an OTP</p>
+            <h1>Forgot Password</h1>
+            <p>Enter your registered email address to receive an OTP</p>
           </div>
 
           {error && (
@@ -196,15 +192,13 @@ const ForgotPassword = () => {
 
           <form onSubmit={handleSubmit}>
             <div className="form-group">
-              <label className="form-label">Mobile Number or Email Address</label>
+              <label className="form-label">Email Address</label>
               <div className="input-wrapper">
-                <span className="material-icons input-icon-left">
-                  {isEmail(identifier) ? 'email' : 'smartphone'}
-                </span>
+                <span className="material-icons input-icon-left">email</span>
                 <input
-                  type="text"
+                  type="email"
                   className="form-control has-left-icon"
-                  placeholder="Enter mobile number or email address"
+                  placeholder="Enter your email address"
                   value={identifier}
                   onChange={(e) => { setIdentifier(e.target.value); setError(''); }}
                   autoFocus
