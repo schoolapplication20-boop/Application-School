@@ -464,18 +464,18 @@
 /* OTP Inputs */
 .otp-container {
   display: flex;
-  gap: 16px;
+  gap: 10px;
   justify-content: center;
-  margin: 32px 0;
+  margin: 24px 0;
 }
 
 .otp-input {
-  width: 68px;
-  height: 68px;
+  width: 46px;
+  height: 52px;
   border: 2px solid #e2e8f0;
   border-radius: 12px;
   text-align: center;
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 700;
   color: #2d3748;
   background-color: #fafafa;
@@ -618,13 +618,12 @@
   }
 
   .otp-input {
-    width: 54px;
-    height: 54px;
-    font-size: 20px;
+    width: 40px;
+    height: 46px;
+    font-size: 18px;
   }
 
-  /* Stack OTP inputs on very small screens */
   .otp-container {
-    gap: 10px;
+    gap: 8px;
   }
 }
