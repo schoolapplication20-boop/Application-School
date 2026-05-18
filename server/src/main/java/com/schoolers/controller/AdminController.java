@@ -262,6 +262,12 @@ public class AdminController {
         return ResponseEntity.ok(adminService.getAllFeePayments(getCurrentSchoolId(auth)));
     }
 
+    @DeleteMapping("/student-fee-assignments/{id}")
+    public ResponseEntity<?> deleteStudentFeeAssignment(@PathVariable Long id, Authentication auth) {
+        var response = adminService.deleteStudentFeeAssignment(id, getCurrentSchoolId(auth));
+        return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
+    }
+
     @PostMapping("/student-fee-assignments")
     public ResponseEntity<?> assignStudentFee(@RequestBody Map<String, Object> body) {
         var response = adminService.assignStudentFee(body);

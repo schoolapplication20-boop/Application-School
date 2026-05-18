@@ -1480,6 +1480,19 @@ public class AdminService {
     }
 
     @Transactional
+    public ApiResponse<String> deleteStudentFeeAssignment(Long id, Long schoolId) {
+        StudentFeeAssignment assignment = studentFeeAssignmentRepository.findById(id).orElse(null);
+        if (assignment == null) return ApiResponse.error("Fee assignment not found");
+        if (schoolId != null) {
+            Student student = studentRepository.findById(assignment.getStudentId()).orElse(null);
+            if (student == null || schoolMismatch(schoolId, student.getSchoolId()))
+                return ApiResponse.error("Unauthorized");
+        }
+        studentFeeAssignmentRepository.deleteById(id);
+        return ApiResponse.success("Fee assignment deleted successfully");
+    }
+
+    @Transactional
     public ApiResponse<StudentFeeAssignment> assignStudentFee(Map<String, Object> body) {
         try {
             Object sidObj = body.get("studentId");
