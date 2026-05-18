@@ -20,10 +20,14 @@
   top: 0;
   left: 0;
   height: 100vh;
+  height: 100dvh;
   z-index: 1000;
   transition: all 0.3s ease;
   overflow-y: auto;
   overflow-x: hidden;
+  /* Push content below iOS status bar when running as PWA */
+  padding-top: constant(safe-area-inset-top);
+  padding-top: env(safe-area-inset-top);
 }
 
 .sidebar.collapsed {
@@ -262,6 +266,7 @@
 /* Sidebar Bottom */
 .sidebar-bottom {
   padding: 16px 12px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid rgba(255,255,255,0.08);
 }
 
@@ -341,7 +346,10 @@
 .top-navbar {
   background: #ffffff;
   padding: 0 28px;
+  padding-top: constant(safe-area-inset-top);
+  padding-top: env(safe-area-inset-top);
   height: 72px;
+  min-height: calc(72px + env(safe-area-inset-top, 0px));
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -497,28 +505,51 @@
   }
 
   .top-navbar {
-    padding: 0 14px;
-    height: 60px;
+    padding: constant(safe-area-inset-top) 14px 0;
+    padding: env(safe-area-inset-top) 14px 0;
+    height: auto;
+    min-height: calc(60px + env(safe-area-inset-top, 0px));
   }
 
-  /* Hide search bar on mobile — sidebar nav is the primary navigation */
+  /* Hide search bar on mobile */
   .navbar-search {
     display: none !important;
   }
 
-  /* Hide user name/role text in navbar, keep avatar */
+  /* Hide user name/role text and chevron in navbar on mobile — logout is in sidebar */
   .navbar-user-info {
     display: none !important;
   }
 
-  /* Tighten navbar right side */
-  .navbar-right {
-    gap: 8px;
+  .navbar-user-chevron {
+    display: none !important;
   }
 
-  /* Welcome text compact */
+  /* Keep avatar only — tighter padding */
+  .navbar-user {
+    padding: 4px 6px !important;
+  }
+
+  /* Tighten navbar right side */
+  .navbar-right {
+    gap: 6px;
+  }
+
   .navbar-left {
     gap: 10px;
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .navbar-left > div {
+    overflow: hidden;
+  }
+
+  .navbar-left > div > div {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 
@@ -528,7 +559,8 @@
   }
 
   .top-navbar {
-    padding: 0 10px;
-    height: 56px;
+    padding: constant(safe-area-inset-top) 10px 0;
+    padding: env(safe-area-inset-top) 10px 0;
+    min-height: calc(56px + env(safe-area-inset-top, 0px));
   }
 }

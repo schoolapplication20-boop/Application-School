@@ -243,7 +243,7 @@ const Navbar = ({ onMenuToggle }) => {
               <div style={{ fontSize: '13px', fontWeight: 600, color: '#2d3748' }}>{user?.name}</div>
               <div style={{ fontSize: '11px', color: '#a0aec0' }}>{user?.role}</div>
             </div>
-            <span className="material-icons" style={{ fontSize: '18px', color: '#a0aec0' }}>expand_more</span>
+            <span className="material-icons navbar-user-chevron" style={{ fontSize: '18px', color: '#a0aec0' }}>expand_more</span>
           </div>
 
           {showDropdown && (

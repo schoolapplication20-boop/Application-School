@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSchool } from '../context/SchoolContext';
 import { schoolAPI, BASE_URL } from '../services/api';
@@ -65,7 +65,8 @@ const studentNavItems = [
 
 
 const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
-  const { user }                            = useAuth();
+  const { user, logout }                    = useAuth();
+  const navigate                            = useNavigate();
   const { school, logoVersion, loadSchool } = useSchool();
   const [logoError, setLogoError]           = useState(false);
   const [logoHover, setLogoHover]           = useState(false);
@@ -338,6 +339,24 @@ const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
             </div>
           </div>
         </div>
+
+        {/* Logout button */}
+        <button
+          onClick={() => { logout(); navigate('/login'); }}
+          data-tooltip="Logout"
+          style={{
+            display: 'flex', alignItems: 'center', gap: '10px',
+            width: '100%', marginTop: '8px', padding: '10px 12px',
+            background: 'none', border: 'none', borderRadius: '10px',
+            cursor: 'pointer', color: '#fc8181', fontSize: '13px',
+            fontWeight: 600, transition: 'background 0.2s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.background = 'rgba(252,129,129,0.1)'}
+          onMouseLeave={e => e.currentTarget.style.background = 'none'}
+        >
+          <span className="material-icons" style={{ fontSize: '20px', flexShrink: 0 }}>logout</span>
+          <span className="nav-label">Logout</span>
+        </button>
       </div>
     </aside>
   );
