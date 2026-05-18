@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authAPI } from '../../services/api';
 import SEOMeta from '../../components/SEOMeta';
+import Logo from '../../components/Logo';
 import '../../styles/auth.css';
 
 const ForgotPassword = () => {
@@ -149,7 +150,7 @@ const ForgotPassword = () => {
       <div className="auth-left" style={{ background: 'linear-gradient(160deg, #0f172a 0%, #1e40afe0 55%, #7c3aedcc 100%)' }}>
         <div className="auth-left__grid" />
         <div className="auth-brand">
-          <span className="brand-icon">🏆</span>
+          <Logo size={42} />
           <span className="brand-name">My-Skoolz</span>
         </div>
         <div className="auth-tagline">
