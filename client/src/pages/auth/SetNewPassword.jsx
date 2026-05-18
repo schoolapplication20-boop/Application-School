@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { authAPI } from '../../services/api';
+import Logo from '../../components/Logo';
 import '../../styles/auth.css';
 
 const SetNewPassword = () => {
@@ -83,9 +84,10 @@ const SetNewPassword = () => {
 
   return (
     <div className="auth-wrapper">
-      <div className="auth-left">
+      <div className="auth-left" style={{ background: 'linear-gradient(160deg, #0f172a 0%, #1e40afe0 55%, #7c3aedcc 100%)' }}>
+        <div className="auth-left__grid" />
         <div className="auth-brand">
-          <span className="brand-icon">🏆</span>
+          <Logo size={42} />
           <span className="brand-name">My-Skoolz</span>
         </div>
         <div className="auth-tagline">
