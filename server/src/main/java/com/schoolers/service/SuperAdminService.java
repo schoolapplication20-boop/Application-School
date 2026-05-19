@@ -8,6 +8,7 @@ import com.schoolers.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -64,6 +65,8 @@ public class SuperAdminService {
     @Autowired private TransportStudentAssignmentRepository transportStudentAssignmentRepository;
     @Autowired private TransportFeeRepository            transportFeeRepository;
     @Autowired private StudentTransportRepository        studentTransportRepository;
+    @Autowired private ParentProfileRepository           parentProfileRepository;
+    @Autowired private JdbcTemplate                      jdbcTemplate;
 
     private static final String CHARS = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#$!";
     private static final SecureRandom RANDOM = new SecureRandom();
@@ -485,7 +488,11 @@ public class SuperAdminService {
         // ── 12. Class rooms ──────────────────────────────────────────────────
         classRoomRepository.deleteBySchoolId(schoolDisplayId);
 
-        // ── 13. Students: delete student records first (removes FK), then user accounts ──
+        // ── 13. teacher_class_assignments (non-JPA table, has school_id) ────────
+        jdbcTemplate.update("DELETE FROM teacher_class_assignments WHERE school_id = ?", schoolDisplayId);
+        log.info("[deleteSchool] teacher_class_assignments deleted");
+
+        // ── 14. Students: delete student records first (removes FK), then user accounts ──
         // Collect student user IDs before deleting the student rows.
         List<Long> studentUserIds = studentRepository.findBySchoolId(schoolDisplayId).stream()
                 .map(s -> s.getStudentUserId())
@@ -494,7 +501,7 @@ public class SuperAdminService {
         studentRepository.deleteBySchoolId(schoolDisplayId);
         studentUserIds.forEach(userRepository::deleteById);
 
-        // ── 14. Teachers: delete teacher records first (removes user_id FK), then user accounts ──
+        // ── 15. Teachers: delete teacher records first (removes user_id FK), then user accounts ──
         // Teacher.user is @OneToOne with a FK column on teachers.user_id → users.id.
         // Deleting the user BEFORE the teacher row causes a FK violation in PostgreSQL.
         List<Long> teacherUserIds = teacherRepository.findBySchoolId(schoolDisplayId).stream()
@@ -505,10 +512,15 @@ public class SuperAdminService {
         teacherUserIds.forEach(userRepository::deleteById);
         log.info("[deleteSchool] students and teachers deleted");
 
-        // ── 15. Remaining users (ADMIN, SUPER_ADMIN) linked to this school ───
+        // ── 16. Parent profiles: FK parent_profiles.user_id → users.id must be removed
+        //        BEFORE we delete any remaining user rows.
+        parentProfileRepository.deleteBySchoolId(schoolDisplayId);
+        log.info("[deleteSchool] parent profiles deleted");
+
+        // ── 17. Remaining users (ADMIN, SUPER_ADMIN, any orphaned accounts) ───
         userRepository.deleteBySchoolId(schoolDisplayId);
 
-        // ── 16. Delete the school record itself (use DB primary key) ─────────
+        // ── 18. Delete the school record itself (use DB primary key) ─────────
         schoolRepository.deleteById(schoolDbPk);
         log.info("[deleteSchool] COMPLETE — school '" + schoolName + "' (displayId=" + schoolDisplayId + ") fully removed");
 
