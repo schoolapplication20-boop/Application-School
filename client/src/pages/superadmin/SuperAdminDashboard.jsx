@@ -184,7 +184,7 @@ function OwnerDashboard() {
     if (!schoolDeleteTarget) return;
     setSchoolDeleting(true);
     try {
-      await superAdminAPI.deleteSchool(schoolDeleteTarget.schoolDbId);
+      await superAdminAPI.deleteSchool(schoolDeleteTarget.schoolActualId ?? schoolDeleteTarget.schoolDbId);
       setSchoolDeleteTarget(null);
       load();
     } catch (err) {
