@@ -404,103 +404,113 @@ public class SuperAdminService {
      * Permanently deletes a school and ALL its related data from the database.
      * Only APPLICATION_OWNER can call this.
      * Deletion order respects foreign key dependencies.
+     *
+     * @param schoolDisplayId the human-assigned school number stored in User.schoolId
      */
     @Transactional
-    public ApiResponse<String> deleteSchool(Long schoolId) {
-        School school = schoolRepository.findById(schoolId).orElse(null);
+    public ApiResponse<String> deleteSchool(Long schoolDisplayId) {
+        // Look up by display number (School.schoolId), not the auto-increment PK.
+        School school = schoolRepository.findBySchoolId(schoolDisplayId.intValue()).orElse(null);
         if (school == null) return ApiResponse.error("School not found");
 
+        Long schoolDbPk = school.getId(); // DB primary key — used only to delete the School row itself
         String schoolName = school.getName();
-        log.info("[deleteSchool] START — schoolId=" + schoolId + " name=" + schoolName);
+        log.info("[deleteSchool] START — displayId=" + schoolDisplayId + " dbPk=" + schoolDbPk + " name=" + schoolName);
 
         // ── 1. AI chat history ────────────────────────────────────────────────
-        chatMessageRepository.deleteBySchoolId(schoolId);
-        chatSessionRepository.deleteBySchoolId(schoolId);
+        chatMessageRepository.deleteBySchoolId(schoolDisplayId);
+        chatSessionRepository.deleteBySchoolId(schoolDisplayId);
         log.info("[deleteSchool] chat history deleted");
 
         // ── 2. App notifications ──────────────────────────────────────────────
-        appNotificationRepository.deleteBySchoolId(schoolId);
+        appNotificationRepository.deleteBySchoolId(schoolDisplayId);
         log.info("[deleteSchool] notifications deleted");
 
         // ── 3. Messages (broadcasts + 1-to-1) ────────────────────────────────
-        messageRepository.deleteBySchoolId(schoolId);
-        messageRepository.deleteBySenderSchoolId(schoolId);
+        messageRepository.deleteBySchoolId(schoolDisplayId);
+        messageRepository.deleteBySenderSchoolId(schoolDisplayId);
         log.info("[deleteSchool] messages deleted");
 
         // ── 4. Announcements ──────────────────────────────────────────────────
-        announcementRepository.deleteBySchoolId(schoolId);
+        announcementRepository.deleteBySchoolId(schoolDisplayId);
 
         // ── 5. Attendance records ─────────────────────────────────────────────
-        attendanceRepository.deleteBySchoolId(schoolId);
-        teacherAttendanceRepository.deleteBySchoolId(schoolId);
+        attendanceRepository.deleteBySchoolId(schoolDisplayId);
+        teacherAttendanceRepository.deleteBySchoolId(schoolDisplayId);
         log.info("[deleteSchool] attendance deleted");
 
         // ── 6. Academic records ───────────────────────────────────────────────
-        marksRepository.deleteBySchoolId(schoolId);
-        hallTicketRepository.deleteBySchoolId(schoolId);
-        certificateRepository.deleteBySchoolId(schoolId);
-        homeworkRepository.deleteBySchoolId(schoolId);
-        assignmentRepository.deleteBySchoolId(schoolId);
-        classDiaryRepository.deleteBySchoolId(schoolId);
-        examScheduleRepository.deleteBySchoolId(schoolId);
-        timetableRepository.deleteBySchoolId(schoolId);
+        marksRepository.deleteBySchoolId(schoolDisplayId);
+        hallTicketRepository.deleteBySchoolId(schoolDisplayId);
+        certificateRepository.deleteBySchoolId(schoolDisplayId);
+        homeworkRepository.deleteBySchoolId(schoolDisplayId);
+        assignmentRepository.deleteBySchoolId(schoolDisplayId);
+        classDiaryRepository.deleteBySchoolId(schoolDisplayId);
+        examScheduleRepository.deleteBySchoolId(schoolDisplayId);
+        timetableRepository.deleteBySchoolId(schoolDisplayId);
         log.info("[deleteSchool] academic records deleted");
 
         // ── 7. Leave requests ─────────────────────────────────────────────────
-        leaveRequestRepository.deleteBySchoolId(schoolId);
+        leaveRequestRepository.deleteBySchoolId(schoolDisplayId);
 
         // ── 8. Fees (installments first — FK depends on assignment) ──────────
-        feeInstallmentRepository.deleteBySchoolId(schoolId);
-        studentFeeAssignmentRepository.deleteBySchoolId(schoolId);
-        classFeeStructureRepository.deleteBySchoolId(schoolId);
-        feePaymentRepository.deleteBySchoolId(schoolId);
-        feeRepository.deleteBySchoolId(schoolId);
+        feeInstallmentRepository.deleteBySchoolId(schoolDisplayId);
+        studentFeeAssignmentRepository.deleteBySchoolId(schoolDisplayId);
+        classFeeStructureRepository.deleteBySchoolId(schoolDisplayId);
+        feePaymentRepository.deleteBySchoolId(schoolDisplayId);
+        feeRepository.deleteBySchoolId(schoolDisplayId);
         log.info("[deleteSchool] fee records deleted");
 
         // ── 9. Salaries (payments first — FK depends on salary) ──────────────
-        salaryPaymentRepository.deleteBySchoolId(schoolId);
-        salaryRepository.deleteBySchoolId(schoolId);
+        salaryPaymentRepository.deleteBySchoolId(schoolDisplayId);
+        salaryRepository.deleteBySchoolId(schoolDisplayId);
         log.info("[deleteSchool] salary records deleted");
 
         // ── 10. Transport ────────────────────────────────────────────────────
-        studentTransportRepository.deleteBySchoolId(schoolId);
-        transportStudentAssignmentRepository.deleteBySchoolId(schoolId);
-        transportFeeRepository.deleteBySchoolId(schoolId);
-        transportStopRepository.deleteBySchoolId(schoolId);
-        transportRouteRepository.deleteBySchoolId(schoolId);
-        transportDriverRepository.deleteBySchoolId(schoolId);
-        transportBusRepository.deleteBySchoolId(schoolId);
+        studentTransportRepository.deleteBySchoolId(schoolDisplayId);
+        transportStudentAssignmentRepository.deleteBySchoolId(schoolDisplayId);
+        transportFeeRepository.deleteBySchoolId(schoolDisplayId);
+        transportStopRepository.deleteBySchoolId(schoolDisplayId);
+        transportRouteRepository.deleteBySchoolId(schoolDisplayId);
+        transportDriverRepository.deleteBySchoolId(schoolDisplayId);
+        transportBusRepository.deleteBySchoolId(schoolDisplayId);
         log.info("[deleteSchool] transport records deleted");
 
         // ── 11. Expenses, holidays, import logs, admissions ──────────────────
-        expenseRepository.deleteBySchoolId(schoolId);
-        holidayRepository.deleteBySchoolId(schoolId);
-        importLogRepository.deleteBySchoolId(schoolId);
-        admissionApplicationRepository.deleteBySchoolId(schoolId);
+        expenseRepository.deleteBySchoolId(schoolDisplayId);
+        holidayRepository.deleteBySchoolId(schoolDisplayId);
+        importLogRepository.deleteBySchoolId(schoolDisplayId);
+        admissionApplicationRepository.deleteBySchoolId(schoolDisplayId);
 
         // ── 12. Class rooms ──────────────────────────────────────────────────
-        classRoomRepository.deleteBySchoolId(schoolId);
+        classRoomRepository.deleteBySchoolId(schoolDisplayId);
 
-        // ── 13. Students and teachers (user accounts included via cascade) ───
-        // Delete student user accounts first
-        studentRepository.findBySchoolId(schoolId).forEach(s -> {
-            if (s.getStudentUserId() != null) userRepository.deleteById(s.getStudentUserId());
-        });
-        studentRepository.deleteBySchoolId(schoolId);
+        // ── 13. Students: delete student records first (removes FK), then user accounts ──
+        // Collect student user IDs before deleting the student rows.
+        List<Long> studentUserIds = studentRepository.findBySchoolId(schoolDisplayId).stream()
+                .map(s -> s.getStudentUserId())
+                .filter(uid -> uid != null)
+                .collect(Collectors.toList());
+        studentRepository.deleteBySchoolId(schoolDisplayId);
+        studentUserIds.forEach(userRepository::deleteById);
 
-        // Delete teacher user accounts first
-        teacherRepository.findBySchoolId(schoolId).forEach(t -> {
-            if (t.getUser() != null) userRepository.deleteById(t.getUser().getId());
-        });
-        teacherRepository.deleteBySchoolId(schoolId);
+        // ── 14. Teachers: delete teacher records first (removes user_id FK), then user accounts ──
+        // Teacher.user is @OneToOne with a FK column on teachers.user_id → users.id.
+        // Deleting the user BEFORE the teacher row causes a FK violation in PostgreSQL.
+        List<Long> teacherUserIds = teacherRepository.findBySchoolId(schoolDisplayId).stream()
+                .filter(t -> t.getUser() != null)
+                .map(t -> t.getUser().getId())
+                .collect(Collectors.toList());
+        teacherRepository.deleteBySchoolId(schoolDisplayId);
+        teacherUserIds.forEach(userRepository::deleteById);
         log.info("[deleteSchool] students and teachers deleted");
 
-        // ── 14. Remaining users (ADMIN, SUPER_ADMIN) linked to this school ───
-        userRepository.deleteBySchoolId(schoolId);
+        // ── 15. Remaining users (ADMIN, SUPER_ADMIN) linked to this school ───
+        userRepository.deleteBySchoolId(schoolDisplayId);
 
-        // ── 15. Delete the school itself ─────────────────────────────────────
-        schoolRepository.deleteById(schoolId);
-        log.info("[deleteSchool] COMPLETE — school '" + schoolName + "' (id=" + schoolId + ") fully removed");
+        // ── 16. Delete the school record itself (use DB primary key) ─────────
+        schoolRepository.deleteById(schoolDbPk);
+        log.info("[deleteSchool] COMPLETE — school '" + schoolName + "' (displayId=" + schoolDisplayId + ") fully removed");
 
         return ApiResponse.success("School '" + schoolName + "' and all related data permanently deleted", "Deleted");
     }
