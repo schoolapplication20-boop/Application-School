@@ -19,6 +19,7 @@ const adminNavItems = [
   { path: '/admin/leave',              icon: 'event_busy',              label: 'Leave Management',   permKey: 'leave' },
   { path: '/admin/transport',          icon: 'directions_bus',          label: 'Transport',          permKey: 'transport' },
   { path: '/admin/attendance-report',  icon: 'fact_check',              label: 'Attendance Report',  permKey: 'attendance' },
+  { path: '/admin/teacher-attendance', icon: 'co_present',              label: 'Teacher Attendance',  permKey: null },
   { path: '/admin/timetable',          icon: 'schedule',                label: 'Timetable',          permKey: 'timetable' },
   { path: '/admin/examination',        icon: 'verified',                label: 'Exam & Certificates', permKey: 'examination' },
   { path: '/admin/messages',            icon: 'campaign',                label: 'Messages',            permKey: null },
@@ -50,7 +51,8 @@ const teacherNavItems = [
   { path: '/teacher/messages',        icon: 'chat',           label: 'Messages' },
   { path: '/teacher/leave-approval',  icon: 'how_to_reg',     label: 'Leave Approval' },
   { path: '/teacher/leave-request',   icon: 'event_busy',     label: 'Leave Request' },
-  { path: '/teacher/examination',     icon: 'verified',       label: 'Exam & Certificates' },
+  { path: '/teacher/my-attendance',  icon: 'co_present',     label: 'My Attendance' },
+  { path: '/teacher/examination',    icon: 'verified',        label: 'Exam & Certificates' },
 ];
 
 const studentNavItems = [

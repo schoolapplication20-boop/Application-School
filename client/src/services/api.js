@@ -510,4 +510,15 @@ export const systemAPI = {
 };
 
 // ============================================
+// TEACHER SELF-ATTENDANCE APIs
+// ============================================
+export const teacherAttendanceAPI = {
+  mark:    (data)   => api.post('/api/teacher-attendance/mark', data),
+  my:      ()       => api.get('/api/teacher-attendance/my'),
+  today:   ()       => api.get('/api/teacher-attendance/today'),
+  byDate:  (date)   => api.get('/api/teacher-attendance/by-date', { params: { date } }),
+  byRange: (from, to) => api.get('/api/teacher-attendance/by-range', { params: { from, to } }),
+};
+
+// ============================================
 export default api;

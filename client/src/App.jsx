@@ -37,6 +37,7 @@ import Salaries from './pages/admin/Salaries';
 import LeaveManagement from './pages/admin/LeaveManagement';
 import Transport from './pages/admin/Transport';
 import AttendanceReport from './pages/admin/AttendanceReport';
+import TeacherAttendanceView from './pages/admin/TeacherAttendanceView';
 import Parents from './pages/admin/Parents';
 
 // Teacher Pages
@@ -49,6 +50,7 @@ import Homework from './pages/teacher/Homework';
 import LeaveApproval from './pages/teacher/LeaveApproval';
 import TeacherMessages from './pages/teacher/TeacherMessages';
 import TeacherLeaveRequest from './pages/teacher/TeacherLeaveRequest';
+import TeacherSelfAttendance from './pages/teacher/TeacherSelfAttendance';
 
 // Super Admin Pages
 import SuperAdminDashboard from './pages/superadmin/SuperAdminDashboard';
@@ -156,7 +158,8 @@ function App() {
             <Route path="/admin/salaries"          element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} permKey="salaries"><Salaries /></ProtectedRoute>} />
             <Route path="/admin/leave"             element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} permKey="leave"><LeaveManagement /></ProtectedRoute>} />
             <Route path="/admin/transport"         element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} permKey="transport"><Transport /></ProtectedRoute>} />
-            <Route path="/admin/attendance-report" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} permKey="attendance"><AttendanceReport /></ProtectedRoute>} />
+            <Route path="/admin/attendance-report"    element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} permKey="attendance"><AttendanceReport /></ProtectedRoute>} />
+            <Route path="/admin/teacher-attendance"   element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']}><TeacherAttendanceView /></ProtectedRoute>} />
             <Route path="/admin/parents"           element={<ProtectedRoute allowedRoles={['ADMIN']} permKey="parents"><Parents /></ProtectedRoute>} />
             <Route path="/admin/timetable"         element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} permKey="timetable"><Timetable /></ProtectedRoute>} />
             <Route path="/admin/examination"       element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} permKey="examination"><Examination /></ProtectedRoute>} />
@@ -187,8 +190,9 @@ function App() {
             <Route path="/teacher/diary" element={<ProtectedRoute allowedRoles={['TEACHER']}><Homework /></ProtectedRoute>} />
             <Route path="/teacher/leave-approval" element={<ProtectedRoute allowedRoles={['TEACHER']}><LeaveApproval /></ProtectedRoute>} />
             <Route path="/teacher/messages" element={<ProtectedRoute allowedRoles={['TEACHER']}><TeacherMessages /></ProtectedRoute>} />
-            <Route path="/teacher/leave-request" element={<ProtectedRoute allowedRoles={['TEACHER']}><TeacherLeaveRequest /></ProtectedRoute>} />
-            <Route path="/teacher/examination"   element={<ProtectedRoute allowedRoles={['TEACHER']}><ExaminationView /></ProtectedRoute>} />
+            <Route path="/teacher/leave-request"   element={<ProtectedRoute allowedRoles={['TEACHER']}><TeacherLeaveRequest /></ProtectedRoute>} />
+            <Route path="/teacher/examination"     element={<ProtectedRoute allowedRoles={['TEACHER']}><ExaminationView /></ProtectedRoute>} />
+            <Route path="/teacher/my-attendance"   element={<ProtectedRoute allowedRoles={['TEACHER']}><TeacherSelfAttendance /></ProtectedRoute>} />
 
             {/* Student Routes */}
             <Route path="/student/dashboard"  element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentDashboard /></ProtectedRoute>} />
