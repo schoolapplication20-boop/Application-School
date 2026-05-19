@@ -18,6 +18,6 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
 
     @Transactional
     @Modifying
-    @org.springframework.data.jpa.repository.Query("DELETE FROM ChatMessage cm WHERE cm.sessionId IN (SELECT cs.id FROM ChatSession cs WHERE cs.schoolId = :schoolId)")
+    @org.springframework.data.jpa.repository.Query("DELETE FROM ChatMessage cm WHERE cm.sessionId IN (SELECT cs.id FROM ChatSession cs WHERE cs.userId IN (SELECT u.id FROM User u WHERE u.schoolId = :schoolId))")
     void deleteBySchoolId(@org.springframework.data.repository.query.Param("schoolId") Long schoolId);
 }
