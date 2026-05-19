@@ -31,4 +31,8 @@ public interface ClassRoomRepository extends JpaRepository<ClassRoom, Long> {
     Optional<ClassRoom> findByNameIgnoreCaseAndSectionIgnoreCase(String name, String section);
     boolean existsByNameIgnoreCaseAndSectionIgnoreCase(String name, String section);
     List<ClassRoom> findByIsActive(Boolean isActive);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    void deleteBySchoolId(Long schoolId);
 }

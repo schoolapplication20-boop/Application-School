@@ -71,6 +71,7 @@ export const superAdminAPI = {
   createSuperAdmin: (data)     => api.post('/api/superadmin/super-admins', data),
   getSuperAdmins:   ()         => api.get('/api/superadmin/super-admins'),
   deleteSuperAdmin: (id)       => api.delete(`/api/superadmin/super-admins/${id}`),
+  deleteSchool:     (id)       => api.delete(`/api/superadmin/schools/${id}`),
   getMyPermissions: ()         => api.get('/api/admin/permissions'),
 };
 

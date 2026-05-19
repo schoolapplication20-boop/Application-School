@@ -15,4 +15,8 @@ public interface ClassFeeStructureRepository extends JpaRepository<ClassFeeStruc
     List<ClassFeeStructure> findByAcademicYear(String academicYear);
     List<ClassFeeStructure> findBySchoolId(Long schoolId);
     Optional<ClassFeeStructure> findByClassName(String className);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    void deleteBySchoolId(Long schoolId);
 }

@@ -4,8 +4,7 @@ import com.schoolers.dto.AdminCreatedResponse;
 import com.schoolers.dto.ApiResponse;
 import com.schoolers.model.School;
 import com.schoolers.model.User;
-import com.schoolers.repository.SchoolRepository;
-import com.schoolers.repository.UserRepository;
+import com.schoolers.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -25,14 +24,46 @@ public class SuperAdminService {
 
     private static final Logger log = Logger.getLogger(SuperAdminService.class.getName());
 
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private SchoolRepository schoolRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+    @Autowired private UserRepository                    userRepository;
+    @Autowired private SchoolRepository                  schoolRepository;
+    @Autowired private PasswordEncoder                   passwordEncoder;
+    @Autowired private AttendanceRepository              attendanceRepository;
+    @Autowired private TeacherAttendanceRepository       teacherAttendanceRepository;
+    @Autowired private MarksRepository                   marksRepository;
+    @Autowired private HallTicketRepository              hallTicketRepository;
+    @Autowired private CertificateRepository             certificateRepository;
+    @Autowired private HomeworkRepository                homeworkRepository;
+    @Autowired private AssignmentRepository              assignmentRepository;
+    @Autowired private ClassDiaryRepository              classDiaryRepository;
+    @Autowired private LeaveRequestRepository            leaveRequestRepository;
+    @Autowired private FeePaymentRepository              feePaymentRepository;
+    @Autowired private FeeInstallmentRepository          feeInstallmentRepository;
+    @Autowired private StudentFeeAssignmentRepository    studentFeeAssignmentRepository;
+    @Autowired private ClassFeeStructureRepository       classFeeStructureRepository;
+    @Autowired private FeeRepository                     feeRepository;
+    @Autowired private SalaryPaymentRepository           salaryPaymentRepository;
+    @Autowired private SalaryRepository                  salaryRepository;
+    @Autowired private TimetableRepository               timetableRepository;
+    @Autowired private ExamScheduleRepository            examScheduleRepository;
+    @Autowired private AnnouncementRepository            announcementRepository;
+    @Autowired private AdmissionApplicationRepository    admissionApplicationRepository;
+    @Autowired private ImportLogRepository               importLogRepository;
+    @Autowired private AppNotificationRepository         appNotificationRepository;
+    @Autowired private MessageRepository                 messageRepository;
+    @Autowired private ChatMessageRepository             chatMessageRepository;
+    @Autowired private ChatSessionRepository             chatSessionRepository;
+    @Autowired private ClassRoomRepository               classRoomRepository;
+    @Autowired private ExpenseRepository                 expenseRepository;
+    @Autowired private HolidayRepository                 holidayRepository;
+    @Autowired private StudentRepository                 studentRepository;
+    @Autowired private TeacherRepository                 teacherRepository;
+    @Autowired private TransportBusRepository            transportBusRepository;
+    @Autowired private TransportRouteRepository          transportRouteRepository;
+    @Autowired private TransportDriverRepository         transportDriverRepository;
+    @Autowired private TransportStopRepository           transportStopRepository;
+    @Autowired private TransportStudentAssignmentRepository transportStudentAssignmentRepository;
+    @Autowired private TransportFeeRepository            transportFeeRepository;
+    @Autowired private StudentTransportRepository        studentTransportRepository;
 
     private static final String CHARS = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#$!";
     private static final SecureRandom RANDOM = new SecureRandom();
@@ -360,7 +391,6 @@ public class SuperAdminService {
         return userRepository.findById(id)
                 .filter(u -> u.getRole() == User.Role.ADMIN)
                 .map(user -> {
-                    // School isolation: reject if the admin belongs to a different school
                     if (callerSchoolId != null && !callerSchoolId.equals(user.getSchoolId())) {
                         return ApiResponse.<String>error("Access denied: admin belongs to a different school.");
                     }
@@ -368,5 +398,110 @@ public class SuperAdminService {
                     return ApiResponse.success("Admin deleted", "Deleted");
                 })
                 .orElse(ApiResponse.<String>error("Admin not found"));
+    }
+
+    /**
+     * Permanently deletes a school and ALL its related data from the database.
+     * Only APPLICATION_OWNER can call this.
+     * Deletion order respects foreign key dependencies.
+     */
+    @Transactional
+    public ApiResponse<String> deleteSchool(Long schoolId) {
+        School school = schoolRepository.findById(schoolId).orElse(null);
+        if (school == null) return ApiResponse.error("School not found");
+
+        String schoolName = school.getName();
+        log.info("[deleteSchool] START — schoolId=" + schoolId + " name=" + schoolName);
+
+        // ── 1. AI chat history ────────────────────────────────────────────────
+        chatMessageRepository.deleteBySchoolId(schoolId);
+        chatSessionRepository.deleteBySchoolId(schoolId);
+        log.info("[deleteSchool] chat history deleted");
+
+        // ── 2. App notifications ──────────────────────────────────────────────
+        appNotificationRepository.deleteBySchoolId(schoolId);
+        log.info("[deleteSchool] notifications deleted");
+
+        // ── 3. Messages (broadcasts + 1-to-1) ────────────────────────────────
+        messageRepository.deleteBySchoolId(schoolId);
+        messageRepository.deleteBySenderSchoolId(schoolId);
+        log.info("[deleteSchool] messages deleted");
+
+        // ── 4. Announcements ──────────────────────────────────────────────────
+        announcementRepository.deleteBySchoolId(schoolId);
+
+        // ── 5. Attendance records ─────────────────────────────────────────────
+        attendanceRepository.deleteBySchoolId(schoolId);
+        teacherAttendanceRepository.deleteBySchoolId(schoolId);
+        log.info("[deleteSchool] attendance deleted");
+
+        // ── 6. Academic records ───────────────────────────────────────────────
+        marksRepository.deleteBySchoolId(schoolId);
+        hallTicketRepository.deleteBySchoolId(schoolId);
+        certificateRepository.deleteBySchoolId(schoolId);
+        homeworkRepository.deleteBySchoolId(schoolId);
+        assignmentRepository.deleteBySchoolId(schoolId);
+        classDiaryRepository.deleteBySchoolId(schoolId);
+        examScheduleRepository.deleteBySchoolId(schoolId);
+        timetableRepository.deleteBySchoolId(schoolId);
+        log.info("[deleteSchool] academic records deleted");
+
+        // ── 7. Leave requests ─────────────────────────────────────────────────
+        leaveRequestRepository.deleteBySchoolId(schoolId);
+
+        // ── 8. Fees (installments first — FK depends on assignment) ──────────
+        feeInstallmentRepository.deleteBySchoolId(schoolId);
+        studentFeeAssignmentRepository.deleteBySchoolId(schoolId);
+        classFeeStructureRepository.deleteBySchoolId(schoolId);
+        feePaymentRepository.deleteBySchoolId(schoolId);
+        feeRepository.deleteBySchoolId(schoolId);
+        log.info("[deleteSchool] fee records deleted");
+
+        // ── 9. Salaries (payments first — FK depends on salary) ──────────────
+        salaryPaymentRepository.deleteBySchoolId(schoolId);
+        salaryRepository.deleteBySchoolId(schoolId);
+        log.info("[deleteSchool] salary records deleted");
+
+        // ── 10. Transport ────────────────────────────────────────────────────
+        studentTransportRepository.deleteBySchoolId(schoolId);
+        transportStudentAssignmentRepository.deleteBySchoolId(schoolId);
+        transportFeeRepository.deleteBySchoolId(schoolId);
+        transportStopRepository.deleteBySchoolId(schoolId);
+        transportRouteRepository.deleteBySchoolId(schoolId);
+        transportDriverRepository.deleteBySchoolId(schoolId);
+        transportBusRepository.deleteBySchoolId(schoolId);
+        log.info("[deleteSchool] transport records deleted");
+
+        // ── 11. Expenses, holidays, import logs, admissions ──────────────────
+        expenseRepository.deleteBySchoolId(schoolId);
+        holidayRepository.deleteBySchoolId(schoolId);
+        importLogRepository.deleteBySchoolId(schoolId);
+        admissionApplicationRepository.deleteBySchoolId(schoolId);
+
+        // ── 12. Class rooms ──────────────────────────────────────────────────
+        classRoomRepository.deleteBySchoolId(schoolId);
+
+        // ── 13. Students and teachers (user accounts included via cascade) ───
+        // Delete student user accounts first
+        studentRepository.findBySchoolId(schoolId).forEach(s -> {
+            if (s.getStudentUserId() != null) userRepository.deleteById(s.getStudentUserId());
+        });
+        studentRepository.deleteBySchoolId(schoolId);
+
+        // Delete teacher user accounts first
+        teacherRepository.findBySchoolId(schoolId).forEach(t -> {
+            if (t.getUser() != null) userRepository.deleteById(t.getUser().getId());
+        });
+        teacherRepository.deleteBySchoolId(schoolId);
+        log.info("[deleteSchool] students and teachers deleted");
+
+        // ── 14. Remaining users (ADMIN, SUPER_ADMIN) linked to this school ───
+        userRepository.deleteBySchoolId(schoolId);
+
+        // ── 15. Delete the school itself ─────────────────────────────────────
+        schoolRepository.deleteById(schoolId);
+        log.info("[deleteSchool] COMPLETE — school '" + schoolName + "' (id=" + schoolId + ") fully removed");
+
+        return ApiResponse.success("School '" + schoolName + "' and all related data permanently deleted", "Deleted");
     }
 }

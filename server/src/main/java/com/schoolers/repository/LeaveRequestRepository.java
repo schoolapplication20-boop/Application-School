@@ -40,4 +40,8 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Long
 
     @Modifying @Transactional
     void deleteByRequesterId(Long requesterId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    void deleteBySchoolId(Long schoolId);
 }

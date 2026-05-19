@@ -9,4 +9,8 @@ import java.util.List;
 @Repository
 public interface TransportRouteRepository extends JpaRepository<TransportRoute, Long> {
     List<TransportRoute> findBySchoolIdOrderByNameAsc(Long schoolId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    void deleteBySchoolId(Long schoolId);
 }

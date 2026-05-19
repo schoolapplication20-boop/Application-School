@@ -29,4 +29,8 @@ public interface ExamScheduleRepository extends JpaRepository<ExamSchedule, Long
 
     @Query("SELECT e FROM ExamSchedule e WHERE e.examType = :examType AND (e.schoolId = :schoolId OR e.schoolId IS NULL) ORDER BY e.examDate ASC")
     List<ExamSchedule> findByExamTypeAndSchoolIdOrNull(@Param("examType") String examType, @Param("schoolId") Long schoolId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    void deleteBySchoolId(Long schoolId);
 }

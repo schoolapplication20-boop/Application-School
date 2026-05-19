@@ -46,4 +46,11 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
 
     @Modifying @Transactional
     void deleteByTargetStudentId(Long targetStudentId);
+
+    @Modifying @Transactional
+    void deleteBySchoolId(Long schoolId);
+
+    @Modifying @Transactional
+    @Query("DELETE FROM Message m WHERE m.senderId IN (SELECT u.id FROM User u WHERE u.schoolId = :schoolId)")
+    void deleteBySenderSchoolId(@Param("schoolId") Long schoolId);
 }

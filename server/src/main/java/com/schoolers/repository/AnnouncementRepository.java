@@ -14,4 +14,8 @@ public interface AnnouncementRepository extends JpaRepository<Announcement, Long
     // School-scoped queries
     List<Announcement> findBySchoolIdAndIsActiveTrueOrderByCreatedAtDesc(Long schoolId);
     List<Announcement> findBySchoolIdAndTargetRoleInOrderByCreatedAtDesc(Long schoolId, List<String> roles);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    void deleteBySchoolId(Long schoolId);
 }

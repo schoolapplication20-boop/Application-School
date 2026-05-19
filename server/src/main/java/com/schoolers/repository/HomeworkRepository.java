@@ -24,4 +24,8 @@ public interface HomeworkRepository extends JpaRepository<Homework, Long> {
 
     @Modifying @Transactional
     void deleteByClassSection(String classSection);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    void deleteBySchoolId(Long schoolId);
 }

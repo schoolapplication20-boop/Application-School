@@ -16,4 +16,7 @@ public interface SalaryPaymentRepository extends JpaRepository<SalaryPayment, Lo
 
     @Modifying @Transactional
     void deleteBySalaryId(Long salaryId);
+
+    @Modifying @Transactional
+    void deleteBySchoolId(Long schoolId);
 }

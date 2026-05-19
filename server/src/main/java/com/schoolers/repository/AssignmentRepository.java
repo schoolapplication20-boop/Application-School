@@ -22,4 +22,8 @@ public interface AssignmentRepository extends JpaRepository<Assignment, Long> {
 
     @Modifying @Transactional
     void deleteByTeacherId(Long teacherId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    void deleteBySchoolId(Long schoolId);
 }

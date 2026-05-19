@@ -49,8 +49,10 @@ function OwnerDashboard() {
   const [credentials,  setCredentials]  = useState(null);
   const [search,       setSearch]       = useState('');
   const [expandedRow,  setExpandedRow]  = useState(null); // schoolId of expanded row
-  const [deleteTarget, setDeleteTarget] = useState(null); // sa object pending confirmation
-  const [deleting,     setDeleting]     = useState(false);
+  const [deleteTarget,       setDeleteTarget]       = useState(null); // sa object — delete super admin
+  const [deleting,           setDeleting]           = useState(false);
+  const [schoolDeleteTarget, setSchoolDeleteTarget] = useState(null); // sa object — delete entire school
+  const [schoolDeleting,     setSchoolDeleting]     = useState(false);
   const [editTarget,   setEditTarget]   = useState(null); // sa object being edited
   const [demoBookings, setDemoBookings] = useState([]);
   const [bookingsLoading, setBookingsLoading] = useState(true);
@@ -175,6 +177,20 @@ function OwnerDashboard() {
       alert(err.response?.data?.message || 'Failed to delete. Please try again.');
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleSchoolDeleteConfirm = async () => {
+    if (!schoolDeleteTarget) return;
+    setSchoolDeleting(true);
+    try {
+      await superAdminAPI.deleteSchool(schoolDeleteTarget.schoolDbId);
+      setSchoolDeleteTarget(null);
+      load();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to delete school. Please try again.');
+    } finally {
+      setSchoolDeleting(false);
     }
   };
 
@@ -393,7 +409,16 @@ function OwnerDashboard() {
                             title="Delete Super Admin"
                             style={{ border: 'none', background: '#fff5f5', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                           >
-                            <span className="material-icons" style={{ fontSize: 16, color: '#e53e3e' }}>delete</span>
+                            <span className="material-icons" style={{ fontSize: 16, color: '#e53e3e' }}>person_remove</span>
+                          </button>
+                        </td>
+                        <td>
+                          <button
+                            onClick={() => setSchoolDeleteTarget(sa)}
+                            title="Delete Entire School & All Data"
+                            style={{ border: 'none', background: '#fff0f0', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          >
+                            <span className="material-icons" style={{ fontSize: 16, color: '#c53030' }}>delete_forever</span>
                           </button>
                         </td>
                       </tr>
@@ -786,6 +811,61 @@ function OwnerDashboard() {
                   <>
                     <span className="material-icons" style={{ fontSize: 16 }}>delete</span>
                     Delete
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Delete School Confirmation Modal ────────────────────────────────── */}
+      {schoolDeleteTarget && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 460, width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+              <div style={{ width: 48, height: 48, borderRadius: 12, background: '#fff0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <span className="material-icons" style={{ color: '#c53030', fontSize: 28 }}>domain_disabled</span>
+              </div>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 17, color: '#1a202c' }}>Delete Entire School</div>
+                <div style={{ fontSize: 12, color: '#e53e3e', marginTop: 2, fontWeight: 600 }}>⚠ This is permanent and cannot be undone</div>
+              </div>
+            </div>
+
+            <div style={{ background: '#fff0f0', borderRadius: 10, padding: '14px 16px', marginBottom: 16, border: '1.5px solid #feb2b2' }}>
+              <div style={{ fontSize: 13, color: '#2d3748', marginBottom: 6 }}>You are about to permanently delete:</div>
+              <div style={{ fontWeight: 800, fontSize: 16, color: '#c53030' }}>{schoolDeleteTarget.schoolName || '—'}</div>
+              <div style={{ fontSize: 12, color: '#718096', marginTop: 2 }}>Code: {schoolDeleteTarget.schoolCode || '—'}</div>
+              <div style={{ fontSize: 12, color: '#718096', marginTop: 1 }}>{schoolDeleteTarget.name} · {schoolDeleteTarget.email}</div>
+            </div>
+
+            <div style={{ background: '#fffbeb', borderRadius: 8, padding: '10px 14px', marginBottom: 20, border: '1px solid #fcd34d', fontSize: 12, color: '#92400e', lineHeight: 1.6 }}>
+              This will delete <strong>ALL data</strong> associated with this school — students, teachers, attendance, marks, fees, salary, transport, chat messages, announcements, and the school record itself.
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setSchoolDeleteTarget(null)}
+                disabled={schoolDeleting}
+                style={{ padding: '9px 20px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: '#fff', color: '#4a5568', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSchoolDeleteConfirm}
+                disabled={schoolDeleting}
+                style={{ padding: '9px 22px', borderRadius: 8, border: 'none', background: '#c53030', color: '#fff', fontWeight: 700, fontSize: 13, cursor: schoolDeleting ? 'not-allowed' : 'pointer', opacity: schoolDeleting ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 6 }}
+              >
+                {schoolDeleting ? (
+                  <>
+                    <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />
+                    Deleting…
+                  </>
+                ) : (
+                  <>
+                    <span className="material-icons" style={{ fontSize: 16 }}>delete_forever</span>
+                    Delete Everything
                   </>
                 )}
               </button>

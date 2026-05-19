@@ -121,4 +121,8 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     @Transactional
     @Query("DELETE FROM Student s WHERE LOWER(s.className) = LOWER(:cls) AND LOWER(s.section) = LOWER(:sec)")
     int deleteByClassNameIgnoreCaseAndSectionIgnoreCase(@Param("cls") String className, @Param("sec") String section);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    void deleteBySchoolId(Long schoolId);
 }

@@ -35,4 +35,8 @@ public interface TeacherRepository extends JpaRepository<Teacher, Long> {
 
     List<Teacher> findBySubject(String subject);
     long countByIsActive(Boolean isActive);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    void deleteBySchoolId(Long schoolId);
 }

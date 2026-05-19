@@ -18,4 +18,8 @@ public interface TeacherAttendanceRepository extends JpaRepository<TeacherAttend
     List<TeacherAttendance> findBySchoolIdAndDateBetweenOrderByDateDesc(Long schoolId, LocalDate from, LocalDate to);
 
     List<TeacherAttendance> findByTeacherIdAndDateBetweenOrderByDateDesc(Long teacherId, LocalDate from, LocalDate to);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    void deleteBySchoolId(Long schoolId);
 }

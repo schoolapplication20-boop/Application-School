@@ -168,4 +168,12 @@ public class SuperAdminController {
         ApiResponse<String> response = superAdminService.deleteAdmin(id, callerSchoolId);
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.status(403).body(response);
     }
+
+    /** Permanently delete a school and ALL its data. APPLICATION_OWNER only. */
+    @DeleteMapping("/schools/{id}")
+    @PreAuthorize("hasRole('APPLICATION_OWNER')")
+    public ResponseEntity<ApiResponse<String>> deleteSchool(@PathVariable Long id) {
+        ApiResponse<String> response = superAdminService.deleteSchool(id);
+        return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
+    }
 }

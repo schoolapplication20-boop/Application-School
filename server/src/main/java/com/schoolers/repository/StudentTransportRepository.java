@@ -18,4 +18,8 @@ public interface StudentTransportRepository extends JpaRepository<StudentTranspo
     List<StudentTransport> findBySchoolIdOrderByCreatedAtDesc(Long schoolId);
     Optional<StudentTransport> findByStudentIdAndSchoolId(Long studentId, Long schoolId);
     boolean existsByStudentIdAndSchoolId(Long studentId, Long schoolId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    void deleteBySchoolId(Long schoolId);
 }

@@ -28,4 +28,8 @@ public interface HolidayRepository extends JpaRepository<Holiday, Long> {
 
     @Query("SELECT h FROM Holiday h WHERE h.recurring = true AND MONTH(h.date) = :month")
     List<Holiday> findRecurringByMonth(@Param("month") int month);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    void deleteBySchoolId(Long schoolId);
 }

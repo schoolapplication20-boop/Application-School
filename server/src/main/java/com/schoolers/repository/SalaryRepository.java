@@ -35,4 +35,8 @@ public interface SalaryRepository extends JpaRepository<Salary, Long> {
 
     @Modifying @Transactional
     void deleteByStaffId(Long staffId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    void deleteBySchoolId(Long schoolId);
 }

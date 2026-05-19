@@ -10,4 +10,8 @@ import java.util.List;
 public interface ImportLogRepository extends JpaRepository<ImportLog, Long> {
     List<ImportLog> findBySchoolIdOrderByImportedAtDesc(Long schoolId);
     List<ImportLog> findTop10BySchoolIdOrderByImportedAtDesc(Long schoolId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    void deleteBySchoolId(Long schoolId);
 }

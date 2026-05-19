@@ -16,4 +16,8 @@ public interface TransportStopRepository extends JpaRepository<TransportStop, Lo
 
     @Modifying @Transactional
     void deleteByRouteId(Long routeId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    void deleteBySchoolId(Long schoolId);
 }

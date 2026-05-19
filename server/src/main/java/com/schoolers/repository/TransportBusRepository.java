@@ -16,4 +16,8 @@ public interface TransportBusRepository extends JpaRepository<TransportBus, Long
     List<TransportBus> findBySchoolIdOrderByBusNoAsc(Long schoolId);
     Optional<TransportBus> findByBusNoAndSchoolId(String busNo, Long schoolId);
     boolean existsByBusNoAndSchoolId(String busNo, Long schoolId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    void deleteBySchoolId(Long schoolId);
 }

@@ -29,4 +29,8 @@ public interface TransportStudentAssignmentRepository extends JpaRepository<Tran
 
     @Modifying @Transactional
     void deleteByStopId(Long stopId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    void deleteBySchoolId(Long schoolId);
 }

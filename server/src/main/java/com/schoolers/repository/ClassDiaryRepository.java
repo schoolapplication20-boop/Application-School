@@ -66,4 +66,8 @@ public interface ClassDiaryRepository extends JpaRepository<ClassDiary, Long> {
             @Param("className") String className,
             @Param("teacherId") Long teacherId,
             @Param("date") LocalDate date);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    void deleteBySchoolId(Long schoolId);
 }

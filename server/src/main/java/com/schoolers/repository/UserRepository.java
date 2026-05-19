@@ -31,4 +31,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     /** All users belonging to a specific school */
     List<User> findBySchoolId(Long schoolId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    void deleteBySchoolId(Long schoolId);
 }

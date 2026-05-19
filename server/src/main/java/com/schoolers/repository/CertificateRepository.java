@@ -24,4 +24,8 @@ public interface CertificateRepository extends JpaRepository<Certificate, Long> 
 
     @Modifying @Transactional
     void deleteByStudentId(Long studentId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    void deleteBySchoolId(Long schoolId);
 }
