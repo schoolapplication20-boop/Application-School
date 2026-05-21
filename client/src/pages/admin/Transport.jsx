@@ -945,11 +945,12 @@ function StudentsPanel({ students, setStudents, routes, stops, buses, showToast 
   // When route/stop/bus dropdowns change, also populate the name fields
   const setRoute = (id) => {
     const r = routes.find(r => String(r.id) === String(id));
-    setForm(f => ({ ...f, routeId: id, routeName: r?.name || '', stopId: '', stopName: '' }));
+    const dropLoc = r ? (r.area ? `${r.name} (${r.area})` : r.name) : '';
+    setForm(f => ({ ...f, routeId: id, routeName: r?.name || '', stopId: '', stopName: '', dropLocation: dropLoc }));
   };
   const setStop = (id) => {
     const s = stops.find(s => String(s.id) === String(id));
-    setForm(f => ({ ...f, stopId: id, stopName: s?.name || '' }));
+    setForm(f => ({ ...f, stopId: id, stopName: s?.name || '', pickupLocation: s?.name || '' }));
   };
   const setBus = (id) => {
     const b = buses.find(b => String(b.id) === String(id));
