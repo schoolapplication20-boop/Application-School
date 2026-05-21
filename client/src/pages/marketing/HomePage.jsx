@@ -76,14 +76,6 @@ const userRoles = [
     color: '#7C3AED',
   },
   {
-    role: 'For Parents',
-    img: 'https://images.unsplash.com/photo-1491013516836-7db643ee125a?auto=format&fit=crop&w=700&q=80',
-    title: 'Stay Informed. Always.',
-    desc: 'Know what\'s happening in your child\'s school life in real time — from attendance to exam results, fee receipts to teacher messages.',
-    points: ['Real-time attendance alerts', 'Exam results & report cards', 'Online fee payment', 'Direct teacher communication'],
-    color: '#059669',
-  },
-  {
     role: 'For Students',
     img: 'https://images.unsplash.com/photo-1571260899304-425eee4c7efc?auto=format&fit=crop&w=700&q=80',
     title: 'Everything You Need to Succeed.',
