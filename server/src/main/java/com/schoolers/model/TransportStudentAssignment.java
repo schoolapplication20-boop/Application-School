@@ -28,6 +28,12 @@ public class TransportStudentAssignment {
     @Column(name = "student_name", length = 100)
     private String studentName;
 
+    @Column(name = "student_class", length = 50)
+    private String studentClass;
+
+    @Column(name = "student_section", length = 20)
+    private String studentSection;
+
     @Column(name = "bus_id")
     private Long busId;
 

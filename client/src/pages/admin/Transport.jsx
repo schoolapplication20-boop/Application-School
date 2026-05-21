@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Layout from '../../components/Layout';
+import { adminAPI } from '../../services/api';
 import Toast from '../../components/Toast';
 import {
   fetchBuses, createBus, updateBus, deleteBus,
@@ -891,10 +892,14 @@ function StudentsPanel({ students, setStudents, routes, stops, buses, showToast 
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
-  const EMPTY_STUDENT = { studentId: '', studentName: '', routeId: '', routeName: '', stopId: '', stopName: '', busId: '', busNo: '', pickupLocation: '', dropLocation: '', pickupTime: '', dropTime: '', transportFee: '' };
+  const EMPTY_STUDENT = { studentId: '', studentName: '', studentClass: '', studentSection: '', routeId: '', routeName: '', stopId: '', stopName: '', busId: '', busNo: '', pickupLocation: '', dropLocation: '' };
   const [form, setForm] = useState(EMPTY_STUDENT);
   const [errors, setErrors] = useState({});
   const [busCapacityFull, setBusCapacityFull] = useState(false);
+  const [studentSuggestions, setStudentSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const suggestionsRef = useRef(null);
 
   const filteredStops = stops.filter(s => !form.routeId || String(s.routeId) === String(form.routeId));
 
@@ -922,6 +927,8 @@ function StudentsPanel({ students, setStudents, routes, stops, buses, showToast 
     setForm({
       studentId:      item.studentId      || '',
       studentName:    item.studentName    || '',
+      studentClass:   item.studentClass   || '',
+      studentSection: item.studentSection || '',
       routeId:        item.routeId        || '',
       routeName:      item.routeName      || '',
       stopId:         item.stopId         || '',
@@ -930,9 +937,6 @@ function StudentsPanel({ students, setStudents, routes, stops, buses, showToast 
       busNo:          item.busNo          || '',
       pickupLocation: item.pickupLocation || '',
       dropLocation:   item.dropLocation   || '',
-      pickupTime:     item.pickupTime     || '',
-      dropTime:       item.dropTime       || '',
-      transportFee:   item.transportFee   != null ? String(item.transportFee) : '',
     });
     setErrors({});
     setShowModal(true);
@@ -953,6 +957,41 @@ function StudentsPanel({ students, setStudents, routes, stops, buses, showToast 
     setBusCapacityFull(b ? (b.currentStudents ?? 0) >= (b.capacity ?? 0) : false);
   };
 
+  const handleStudentNameChange = async (value) => {
+    setForm(f => ({ ...f, studentName: value, studentId: '', studentClass: '', studentSection: '' }));
+    if (errors.studentName) setErrors(ev => ({ ...ev, studentName: '' }));
+    if (value.trim().length < 2) { setStudentSuggestions([]); setShowSuggestions(false); return; }
+    setSuggestionsLoading(true);
+    try {
+      const res = await adminAPI.searchStudentsForFee(value.trim());
+      const list = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+      setStudentSuggestions(list);
+      setShowSuggestions(list.length > 0);
+    } catch { setStudentSuggestions([]); setShowSuggestions(false); }
+    finally { setSuggestionsLoading(false); }
+  };
+
+  const selectStudent = (s) => {
+    setForm(f => ({
+      ...f,
+      studentId:      s.id      || s.studentId || '',
+      studentName:    s.name    || s.studentName || '',
+      studentClass:   s.class   || s.className  || s.studentClass || '',
+      studentSection: s.section || s.sectionName || s.studentSection || '',
+    }));
+    if (errors.studentId)   setErrors(ev => ({ ...ev, studentId: '' }));
+    if (errors.studentName) setErrors(ev => ({ ...ev, studentName: '' }));
+    setShowSuggestions(false);
+    setStudentSuggestions([]);
+  };
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handler = (e) => { if (suggestionsRef.current && !suggestionsRef.current.contains(e.target)) setShowSuggestions(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
   const handleSave = async (e) => {
     e.preventDefault();
     if (!validate()) return;
@@ -964,6 +1003,8 @@ function StudentsPanel({ students, setStudents, routes, stops, buses, showToast 
       const payload = {
         studentId:      Number(form.studentId),
         studentName:    form.studentName,
+        studentClass:   form.studentClass   || null,
+        studentSection: form.studentSection || null,
         routeId:        form.routeId  ? Number(form.routeId)  : null,
         routeName:      form.routeName,
         stopId:         form.stopId   ? Number(form.stopId)   : null,
@@ -972,9 +1013,6 @@ function StudentsPanel({ students, setStudents, routes, stops, buses, showToast 
         busNo:          form.busNo,
         pickupLocation: form.pickupLocation || null,
         dropLocation:   form.dropLocation   || null,
-        pickupTime:     form.pickupTime     || null,
-        dropTime:       form.dropTime       || null,
-        transportFee:   form.transportFee   ? Number(form.transportFee) : null,
       };
       if (editItem) {
         await updateStudentAssignment(editItem.id, payload);
@@ -1057,19 +1095,50 @@ function StudentsPanel({ students, setStudents, routes, stops, buses, showToast 
       {showModal && (
         <Modal title={editItem ? 'Edit Transport Assignment' : 'Assign Student to Transport'} onClose={() => setShowModal(false)} onSubmit={handleSave} submitLabel={editItem ? 'Update' : 'Assign'} size="modal-lg" submitDisabled={!editItem && busCapacityFull}>
           <div className="row g-3">
+            <div className="col-md-8" ref={suggestionsRef} style={{ position: 'relative' }}>
+              <label className="form-label fw-medium small">Student Name *</label>
+              <input type="text" className={`form-control form-control-sm ${errors.studentName ? 'is-invalid' : ''}`}
+                placeholder="Type name to search student…" value={form.studentName} autoComplete="off"
+                onChange={e => handleStudentNameChange(e.target.value)}
+                onFocus={() => studentSuggestions.length > 0 && setShowSuggestions(true)} />
+              {errors.studentName && <div className="invalid-feedback">{errors.studentName}</div>}
+              {showSuggestions && (
+                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 1050, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.12)', maxHeight: 220, overflowY: 'auto' }}>
+                  {suggestionsLoading
+                    ? <div style={{ padding: '10px 14px', color: '#a0aec0', fontSize: 13 }}>Searching…</div>
+                    : studentSuggestions.map((s, i) => (
+                      <div key={s.id || i} onMouseDown={() => selectStudent(s)}
+                        style={{ padding: '8px 14px', cursor: 'pointer', borderBottom: '1px solid #f7fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#f0f4ff'}
+                        onMouseLeave={e => e.currentTarget.style.background = '#fff'}>
+                        <span style={{ fontWeight: 600, fontSize: 13 }}>{s.name || s.studentName}</span>
+                        <span style={{ fontSize: 11, color: '#718096' }}>
+                          ID: {s.id || s.studentId}
+                          {(s.class || s.className) ? ` · Class ${s.class || s.className}` : ''}
+                          {(s.section || s.sectionName) ? `-${s.section || s.sectionName}` : ''}
+                        </span>
+                      </div>
+                    ))
+                  }
+                </div>
+              )}
+            </div>
             <div className="col-md-4">
               <label className="form-label fw-medium small">Student ID *</label>
               <input type="number" className={`form-control form-control-sm ${errors.studentId ? 'is-invalid' : ''}`}
-                placeholder="e.g., 1001" value={form.studentId} min="1"
+                placeholder="Auto-filled" value={form.studentId} min="1"
                 onChange={e => { setForm(f => ({ ...f, studentId: e.target.value })); if (errors.studentId) setErrors(ev => ({ ...ev, studentId: '' })); }} />
               {errors.studentId && <div className="invalid-feedback">{errors.studentId}</div>}
             </div>
-            <div className="col-md-8">
-              <label className="form-label fw-medium small">Student Name *</label>
-              <input type="text" className={`form-control form-control-sm ${errors.studentName ? 'is-invalid' : ''}`}
-                placeholder="Full name" value={form.studentName}
-                onChange={e => { setForm(f => ({ ...f, studentName: e.target.value })); if (errors.studentName) setErrors(ev => ({ ...ev, studentName: '' })); }} />
-              {errors.studentName && <div className="invalid-feedback">{errors.studentName}</div>}
+            <div className="col-md-6">
+              <label className="form-label fw-medium small">Class</label>
+              <input type="text" className="form-control form-control-sm" placeholder="e.g., 10"
+                value={form.studentClass} onChange={e => setForm(f => ({ ...f, studentClass: e.target.value }))} />
+            </div>
+            <div className="col-md-6">
+              <label className="form-label fw-medium small">Section</label>
+              <input type="text" className="form-control form-control-sm" placeholder="e.g., A"
+                value={form.studentSection} onChange={e => setForm(f => ({ ...f, studentSection: e.target.value }))} />
             </div>
             <div className="col-md-6">
               <label className="form-label fw-medium small">Route *</label>
@@ -1115,21 +1184,6 @@ function StudentsPanel({ students, setStudents, routes, stops, buses, showToast 
               <label className="form-label fw-medium small">Drop Location</label>
               <input type="text" className="form-control form-control-sm" placeholder="e.g., School Main Entrance"
                 value={form.dropLocation} onChange={e => setForm(f => ({ ...f, dropLocation: e.target.value }))} />
-            </div>
-            <div className="col-md-4">
-              <label className="form-label fw-medium small">Pickup Time</label>
-              <input type="time" className="form-control form-control-sm"
-                value={form.pickupTime} onChange={e => setForm(f => ({ ...f, pickupTime: e.target.value }))} />
-            </div>
-            <div className="col-md-4">
-              <label className="form-label fw-medium small">Drop Time</label>
-              <input type="time" className="form-control form-control-sm"
-                value={form.dropTime} onChange={e => setForm(f => ({ ...f, dropTime: e.target.value }))} />
-            </div>
-            <div className="col-md-4">
-              <label className="form-label fw-medium small">Transport Fee (₹)</label>
-              <input type="number" className="form-control form-control-sm" placeholder="e.g., 1500" min="0"
-                value={form.transportFee} onChange={e => setForm(f => ({ ...f, transportFee: e.target.value }))} />
             </div>
           </div>
         </Modal>

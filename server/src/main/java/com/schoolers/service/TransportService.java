@@ -263,6 +263,8 @@ public class TransportService {
         }
 
         assignment.setStudentName(str(body, "studentName", assignment.getStudentName()));
+        if (body.containsKey("studentClass"))   assignment.setStudentClass(str(body, "studentClass", assignment.getStudentClass()));
+        if (body.containsKey("studentSection")) assignment.setStudentSection(str(body, "studentSection", assignment.getStudentSection()));
         assignment.setRouteId(longVal(body, "routeId", assignment.getRouteId()));
         assignment.setRouteName(str(body, "routeName", assignment.getRouteName()));
         assignment.setStopId(longVal(body, "stopId", assignment.getStopId()));
@@ -335,7 +337,10 @@ public class TransportService {
             });
             a.setBusId(newBusId);
         }
-        if (body.containsKey("busNo"))          a.setBusNo(str(body, "busNo", a.getBusNo()));
+        if (body.containsKey("busNo"))           a.setBusNo(str(body, "busNo", a.getBusNo()));
+        if (body.containsKey("studentName"))     a.setStudentName(str(body, "studentName", a.getStudentName()));
+        if (body.containsKey("studentClass"))    a.setStudentClass(str(body, "studentClass", a.getStudentClass()));
+        if (body.containsKey("studentSection"))  a.setStudentSection(str(body, "studentSection", a.getStudentSection()));
         if (body.containsKey("routeId"))         a.setRouteId(longVal(body, "routeId", a.getRouteId()));
         if (body.containsKey("routeName"))       a.setRouteName(str(body, "routeName", a.getRouteName()));
         if (body.containsKey("stopId"))          a.setStopId(longVal(body, "stopId", a.getStopId()));
