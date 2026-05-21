@@ -1437,7 +1437,44 @@ public class AdminService {
         } catch (Exception e) {
             return ApiResponse.error("Invalid fee amount");
         }
-        return ApiResponse.success("Fee structure saved", classFeeStructureRepository.save(cfs));
+
+        ClassFeeStructure saved = classFeeStructureRepository.save(cfs);
+        BigDecimal totalFee = saved.getTotalFee();
+
+        // Auto-apply fee structure to all students in this class
+        int updatedCount = 0;
+        if (schoolId != null && totalFee.compareTo(BigDecimal.ZERO) > 0) {
+            List<Student> students = studentRepository.findBySchoolIdAndClassName(schoolId, className);
+            for (Student student : students) {
+                StudentFeeAssignment assignment = studentFeeAssignmentRepository
+                        .findByStudentIdAndAcademicYearAndSchoolId(student.getId(), academicYear, schoolId)
+                        .orElse(StudentFeeAssignment.builder()
+                                .studentId(student.getId())
+                                .academicYear(academicYear)
+                                .schoolId(schoolId)
+                                .paidAmount(BigDecimal.ZERO)
+                                .status(StudentFeeAssignment.Status.PENDING)
+                                .build());
+
+                assignment.setStudentName(student.getName());
+                assignment.setRollNumber(student.getRollNumber());
+                assignment.setClassName(student.getClassName());
+                assignment.setTotalFee(totalFee);
+
+                BigDecimal paid = assignment.getPaidAmount() != null ? assignment.getPaidAmount() : BigDecimal.ZERO;
+                if (paid.compareTo(totalFee) >= 0)        assignment.setStatus(StudentFeeAssignment.Status.PAID);
+                else if (paid.compareTo(BigDecimal.ZERO) > 0) assignment.setStatus(StudentFeeAssignment.Status.PARTIAL);
+                else                                       assignment.setStatus(StudentFeeAssignment.Status.PENDING);
+
+                studentFeeAssignmentRepository.save(assignment);
+                updatedCount++;
+            }
+        }
+
+        String msg = updatedCount > 0
+                ? "Fee structure saved and applied to " + updatedCount + " student" + (updatedCount == 1 ? "" : "s")
+                : "Fee structure saved";
+        return ApiResponse.success(msg, saved);
     }
 
     @Transactional

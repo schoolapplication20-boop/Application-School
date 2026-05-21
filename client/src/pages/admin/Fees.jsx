@@ -168,10 +168,11 @@ export default function Fees() {
   const saveFeeStructure = async () => {
     setSaving(true);
     try {
-      await adminAPI.saveClassFeeStructure({ className: feeModalClassName, academicYear: CURRENT_YEAR, ...feeForm });
-      showToast('Fee structure saved');
+      const res = await adminAPI.saveClassFeeStructure({ className: feeModalClassName, academicYear: CURRENT_YEAR, ...feeForm });
+      showToast(res.data?.message || 'Fee structure saved');
       setShowFeeModal(false);
       loadStructures();
+      loadAssignments();
     } catch { showToast('Failed to save fee structure', 'error'); } finally { setSaving(false); }
   };
 
