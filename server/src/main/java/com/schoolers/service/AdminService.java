@@ -1396,7 +1396,7 @@ public class AdminService {
     @Transactional
     public ApiResponse<ClassFeeStructure> saveClassFeeStructure(Map<String, Object> body) {
         String className    = str(body, "className", null);
-        String academicYear = str(body, "academicYear", "2024-25");
+        String academicYear = str(body, "academicYear", currentAcademicYear());
         Long   schoolId     = body.get("schoolId") != null
                 ? Long.parseLong(body.get("schoolId").toString()) : null;
 
@@ -1787,6 +1787,38 @@ public class AdminService {
         StudentFeeAssignment assignment = studentFeeAssignmentRepository
                 .findFirstByStudentIdOrderByCreatedAtDesc(studentId).orElse(null);
 
+        // If no assignment exists yet, try to auto-create one from the class fee structure
+        if (assignment == null) {
+            Student student = studentRepository.findById(studentId).orElse(null);
+            if (student != null && student.getSchoolId() != null && student.getClassName() != null) {
+                // Find the fee structure for this student's class in their school
+                ClassFeeStructure cfs = classFeeStructureRepository
+                        .findByClassNameAndAcademicYearAndSchoolId(student.getClassName(), currentAcademicYear(), student.getSchoolId())
+                        .orElse(null);
+                if (cfs == null) {
+                    // Fall back: any structure for this class in this school, regardless of academic year
+                    cfs = classFeeStructureRepository.findBySchoolId(student.getSchoolId()).stream()
+                            .filter(c -> c.getClassName().equalsIgnoreCase(student.getClassName()))
+                            .findFirst().orElse(null);
+                }
+                if (cfs != null && cfs.getTotalFee().compareTo(BigDecimal.ZERO) > 0) {
+                    String year = cfs.getAcademicYear() != null ? cfs.getAcademicYear() : currentAcademicYear();
+                    StudentFeeAssignment newAssignment = StudentFeeAssignment.builder()
+                            .studentId(studentId)
+                            .studentName(student.getName())
+                            .rollNumber(student.getRollNumber())
+                            .className(student.getClassName())
+                            .academicYear(year)
+                            .totalFee(cfs.getTotalFee())
+                            .paidAmount(BigDecimal.ZERO)
+                            .status(StudentFeeAssignment.Status.PENDING)
+                            .schoolId(student.getSchoolId())
+                            .build();
+                    assignment = studentFeeAssignmentRepository.save(newAssignment);
+                }
+            }
+        }
+
         if (assignment == null) {
             Map<String, Object> emptySummary = new LinkedHashMap<>();
             emptySummary.put("totalFee",   0);
@@ -2164,6 +2196,13 @@ public class AdminService {
     }
 
     // ── Helper ─────────────────────────────────────────────────────────────
+
+    private String currentAcademicYear() {
+        int year = LocalDate.now().getYear();
+        int month = LocalDate.now().getMonthValue();
+        int start = month >= 4 ? year : year - 1;
+        return start + "-" + String.valueOf(start + 1).substring(2);
+    }
 
     @SuppressWarnings("unchecked")
     private String str(Map<String, Object> map, String key, String fallback) {
