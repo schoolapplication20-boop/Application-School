@@ -3,6 +3,36 @@ import { Link } from 'react-router-dom';
 import SEOMeta from '../../components/SEOMeta';
 import './marketing.css';
 
+const WaveDivider = ({ fill, bg, flip = false }) => (
+  <div style={{ background: bg, lineHeight: 0, overflow: 'hidden' }}>
+    <svg
+      viewBox="0 0 1440 56"
+      preserveAspectRatio="none"
+      style={{ display: 'block', width: '100%', height: '56px' }}
+      aria-hidden="true"
+    >
+      <path
+        d={flip
+          ? 'M0,28 C240,0 480,56 720,28 C960,0 1200,56 1440,28 L1440,56 L0,56 Z'
+          : 'M0,28 C240,56 480,0 720,28 C960,56 1200,0 1440,28 L1440,0 L0,0 Z'
+        }
+        fill={fill}
+      />
+    </svg>
+  </div>
+);
+
+const StarRow = ({ items }) => (
+  <div className="mkt-star-row">
+    {items.map((item, i) => (
+      <React.Fragment key={i}>
+        {i > 0 && <span className="star">✦</span>}
+        <span>{item}</span>
+      </React.Fragment>
+    ))}
+  </div>
+);
+
 /* ── Structured data for Google ──────────────────────────────────────────── */
 
 const websiteSchema = {
@@ -195,6 +225,9 @@ const HomePage = () => (
       </div>
     </section>
 
+    {/* Wave: dark hero → cream trust bar */}
+    <WaveDivider fill="#7C2D12" bg="#FFFBF5" />
+
     {/* ══ TRUST BAR ══ */}
     <section className="mkt-trust-bar">
       <div className="mkt-container">
@@ -209,6 +242,10 @@ const HomePage = () => (
         </div>
       </div>
     </section>
+
+    {/* Star row + wave: cream trust bar → white what section */}
+    <StarRow items={['Trusted by Schools Across India', '100% Cloud-Based', 'Free Demo Available', '24/7 Dedicated Support']} />
+    <WaveDivider fill="#FFFBF5" bg="#ffffff" />
 
     {/* ══ WHAT IS MY-SKOOLZ ══ */}
     <section className="mkt-section mkt-section--white">
@@ -256,6 +293,9 @@ const HomePage = () => (
       </div>
     </section>
 
+    {/* Wave: white what section → cream features */}
+    <WaveDivider fill="#ffffff" bg="#FFFBF5" />
+
     {/* ══ FEATURES ══ */}
     <section className="mkt-section mkt-section--bg">
       <div className="mkt-container">
@@ -281,6 +321,9 @@ const HomePage = () => (
         </div>
       </div>
     </section>
+
+    {/* Wave: cream features → white roles */}
+    <WaveDivider fill="#FFFBF5" bg="#ffffff" />
 
     {/* ══ BUILT FOR EVERYONE ══ */}
     <section className="mkt-section mkt-section--white">
@@ -327,6 +370,10 @@ const HomePage = () => (
       <img src="https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=500&q=80" alt="Student reading" />
       <img src="https://images.unsplash.com/photo-1588072432836-e10032774350?auto=format&fit=crop&w=500&q=80" alt="Teacher explaining" />
     </section>
+
+    {/* Wave + star row: white photo strip → cream how-it-works */}
+    <WaveDivider fill="#ffffff" bg="#FFFBF5" />
+    <StarRow items={['Demo to Go-Live in Days', 'Zero IT Setup', 'No Hidden Fees', 'Cancel Anytime']} />
 
     {/* ══ HOW IT WORKS ══ */}
     <section className="mkt-section mkt-section--bg">
@@ -387,6 +434,9 @@ const HomePage = () => (
         ))}
       </div>
     </section>
+
+    {/* Wave: lifecycle cream → CTA dark */}
+    <WaveDivider fill="#431407" bg="#FFF7ED" flip />
 
     {/* ══ CTA BANNER ══ */}
     <section className="mkt-cta-banner">
