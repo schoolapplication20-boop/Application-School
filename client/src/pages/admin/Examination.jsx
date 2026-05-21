@@ -2,8 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Layout from '../../components/Layout';
 import Toast from '../../components/Toast';
 import HallTicketDocument from '../../components/HallTicketDocument';
-import { examinationAPI } from '../../services/api';
-import { adminAPI } from '../../services/api';
+import { examinationAPI, adminAPI, BASE_URL } from '../../services/api';
 import { useSchool } from '../../context/SchoolContext';
 import '../../styles/examination.css';
 
@@ -25,6 +24,9 @@ function CertificatePrint({ cert, school }) {
   const type = cert.certificateType;
   const schoolName  = school?.name  || 'School';
   const schoolBoard = school?.board || '';
+  const logoSrc = school?.logoUrl
+    ? (school.logoUrl.startsWith('http') ? school.logoUrl : `${BASE_URL}${school.logoUrl}`)
+    : null;
 
   const body = {
     BONAFIDE: <>This is to certify that <strong>{cert.studentName}</strong> (Roll No: {cert.rollNumber}) is a bonafide student of Class <strong>{cert.className}{cert.section ? ' – ' + cert.section : ''}</strong> for the academic year <strong>{cert.academicYear || '—'}</strong>. This certificate is issued for the purpose of <strong>{cert.purpose || 'official use'}</strong>.</>,
@@ -36,7 +38,11 @@ function CertificatePrint({ cert, school }) {
   return (
     <div className="cert-preview">
       <div className="cert-header">
-        <div className="cert-logo">🏆</div>
+        <div className="cert-logo">
+          {logoSrc
+            ? <img src={logoSrc} alt={schoolName} style={{ width: '70px', height: '70px', objectFit: 'contain' }} />
+            : '🏆'}
+        </div>
         <div className="cert-school-name">{schoolName}</div>
         <div className="cert-school-sub">{schoolBoard ? `${schoolBoard} Affiliated` : 'Affiliated'}</div>
       </div>
