@@ -1054,11 +1054,11 @@ function StudentsPanel({ students, setStudents, routes, stops, buses, showToast 
         filters={[{ value: filterRoute, onChange: v => { setFilterRoute(v); setPage(1); }, options: [{ value: '', label: 'All Routes' }, ...routes.map(r => ({ value: r.id, label: r.name }))] }]}>
         <table className="data-table">
           <thead>
-            <tr><th>Student</th><th>Route</th><th>Stop</th><th>Bus</th><th>Pickup</th><th>Drop</th><th>Fee</th><th>Actions</th></tr>
+            <tr><th>Student</th><th>Route</th><th>Stop</th><th>Bus</th><th>Actions</th></tr>
           </thead>
           <tbody>
             {paginated.length === 0 ? (
-              <tr><td colSpan={8}><div className="empty-state"><span className="material-icons">people</span><h3>No students assigned</h3></div></td></tr>
+              <tr><td colSpan={5}><div className="empty-state"><span className="material-icons">people</span><h3>No students assigned</h3></div></td></tr>
             ) : paginated.map(s => (
               <tr key={s.id}>
                 <td>
@@ -1077,9 +1077,6 @@ function StudentsPanel({ students, setStudents, routes, stops, buses, showToast 
                   </span>
                 </td>
                 <td style={{ fontWeight: 700, fontFamily: 'monospace', color: '#2d3748' }}>{s.busNo || busNo(s.busId)}</td>
-                <td style={{ fontSize: 12, color: '#276749' }}>{s.pickupTime || '—'}</td>
-                <td style={{ fontSize: 12, color: '#276749' }}>{s.dropTime || '—'}</td>
-                <td style={{ fontWeight: 600, fontSize: 12, color: '#2b6cb0' }}>{s.transportFee != null ? `₹${s.transportFee}` : '—'}</td>
                 <td>
                   <div className="action-btns">
                     <button className="action-btn action-btn-edit" onClick={() => openEdit(s)} title="Edit"><span className="material-icons">edit</span></button>

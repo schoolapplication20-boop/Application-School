@@ -271,12 +271,6 @@ public class TransportService {
         assignment.setStopName(str(body, "stopName", assignment.getStopName()));
         if (body.containsKey("pickupLocation")) assignment.setPickupLocation(str(body, "pickupLocation", assignment.getPickupLocation()));
         if (body.containsKey("dropLocation"))   assignment.setDropLocation(str(body, "dropLocation", assignment.getDropLocation()));
-        if (body.containsKey("pickupTime"))     assignment.setPickupTime(str(body, "pickupTime", assignment.getPickupTime()));
-        if (body.containsKey("dropTime"))       assignment.setDropTime(str(body, "dropTime", assignment.getDropTime()));
-        if (body.containsKey("transportFee") && body.get("transportFee") != null) {
-            try { assignment.setTransportFee(new java.math.BigDecimal(body.get("transportFee").toString())); }
-            catch (NumberFormatException ignored) {}
-        }
 
         // Update bus counts when bus changes
         if (newBusId != null) {
@@ -347,13 +341,6 @@ public class TransportService {
         if (body.containsKey("stopName"))        a.setStopName(str(body, "stopName", a.getStopName()));
         if (body.containsKey("pickupLocation"))  a.setPickupLocation(str(body, "pickupLocation", a.getPickupLocation()));
         if (body.containsKey("dropLocation"))    a.setDropLocation(str(body, "dropLocation", a.getDropLocation()));
-        if (body.containsKey("pickupTime"))      a.setPickupTime(str(body, "pickupTime", a.getPickupTime()));
-        if (body.containsKey("dropTime"))        a.setDropTime(str(body, "dropTime", a.getDropTime()));
-        if (body.containsKey("transportFee") && body.get("transportFee") != null) {
-            try { a.setTransportFee(new java.math.BigDecimal(body.get("transportFee").toString())); }
-            catch (NumberFormatException ignored) {}
-        }
-        if (body.containsKey("feePaid"))         a.setFeePaid(Boolean.TRUE.equals(body.get("feePaid")));
         return ApiResponse.success("Assignment updated", assignmentRepository.save(a));
     }
 

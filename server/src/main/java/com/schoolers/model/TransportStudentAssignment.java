@@ -58,19 +58,6 @@ public class TransportStudentAssignment {
     @Column(name = "drop_location", length = 200)
     private String dropLocation;
 
-    @Column(name = "pickup_time", length = 20)
-    private String pickupTime;
-
-    @Column(name = "drop_time", length = 20)
-    private String dropTime;
-
-    @Column(name = "transport_fee", precision = 10, scale = 2)
-    private java.math.BigDecimal transportFee;
-
-    @Column(name = "fee_paid")
-    @Builder.Default
-    private Boolean feePaid = false;
-
     @Column(name = "school_id")
     private Long schoolId;
 
