@@ -69,7 +69,7 @@ const userRoles = [
   },
   {
     role: 'For Teachers',
-    img: 'https://images.unsplash.com/photo-1544717297-fa95b6ee9643?auto=format&fit=crop&w=700&q=80',
+    img: '/teacher.png',
     title: 'Less Admin. More Teaching.',
     desc: 'Mark attendance in seconds, share homework, upload marks, and communicate with parents — all from your phone or laptop, without drowning in paperwork.',
     points: ['One-click attendance marking', 'Digital diary & homework', 'Exam marks management', 'Parent messaging'],
