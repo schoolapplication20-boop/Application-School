@@ -72,7 +72,8 @@ const ResetPassword = () => {
 
   return (
     <div className="auth-wrapper">
-      <div className="auth-left">
+      <div className="auth-left" style={{ background: 'linear-gradient(160deg, #1e2a45 0%, #8B4A1F 50%, #e8823a 100%)' }}>
+        <div className="auth-left__grid" />
         <div className="auth-brand">
           <span className="brand-icon">🏆</span>
           <span className="brand-name">My-Skoolz</span>
