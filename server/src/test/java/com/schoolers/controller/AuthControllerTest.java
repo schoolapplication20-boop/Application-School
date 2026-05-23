@@ -10,23 +10,25 @@ import com.schoolers.security.JwtUtil;
 import com.schoolers.security.UserDetailsServiceImpl;
 import com.schoolers.service.AuthService;
 import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletRequest;
-import jakarta.servlet.ServletResponse;
-import org.junit.jupiter.api.BeforeEach;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.io.IOException;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -45,6 +47,23 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @DisplayName("AuthController Integration Tests")
 class AuthControllerTest {
 
+    // Pass-through JwtFilter: avoids Mockito final-method issues on Java 25.
+    static class PassThroughJwtFilter extends JwtFilter {
+        @Override
+        protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
+                throws ServletException, IOException {
+            chain.doFilter(req, res);
+        }
+    }
+
+    @TestConfiguration
+    static class TestSecurityConfig {
+        @Bean
+        JwtFilter jwtFilter() {
+            return new PassThroughJwtFilter();
+        }
+    }
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -57,28 +76,8 @@ class AuthControllerTest {
     @MockBean
     private UserDetailsServiceImpl userDetailsService;
 
-    /**
-     * Mocking JwtFilter lets SecurityConfig wire up properly in @WebMvcTest,
-     * which applies the permitAll() rules from SecurityConfig.filterChain().
-     * Without this mock, SecurityConfig cannot find JwtFilter in the slice context
-     * and the full security config silently fails to load.
-     */
-    @MockBean
-    private JwtFilter jwtFilter;
-
     @Autowired
     private ObjectMapper objectMapper;
-
-    @BeforeEach
-    void setup() throws Exception {
-        // Pass every request through — no authentication is set, so permitAll()
-        // routes work and protected routes require credentials.
-        doAnswer(inv -> {
-            FilterChain chain = inv.getArgument(2);
-            chain.doFilter(inv.getArgument(0), inv.getArgument(1));
-            return null;
-        }).when(jwtFilter).doFilter(any(ServletRequest.class), any(ServletResponse.class), any(FilterChain.class));
-    }
 
     // ── POST /api/auth/login ────────────────────────────────────────────────
 

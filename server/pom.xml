@@ -21,6 +21,7 @@
     <properties>
         <java.version>17</java.version>
         <lombok.version>1.18.38</lombok.version>
+        <spring-framework.version>6.1.5</spring-framework.version>
     </properties>
 
     <dependencies>
@@ -153,6 +154,17 @@
                             <artifactId>lombok</artifactId>
                         </exclude>
                     </excludes>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <argLine>
+                        -XX:+EnableDynamicAgentLoading
+                        --add-opens java.base/java.lang=ALL-UNNAMED
+                        --add-opens java.base/java.util=ALL-UNNAMED
+                    </argLine>
                 </configuration>
             </plugin>
         </plugins>
