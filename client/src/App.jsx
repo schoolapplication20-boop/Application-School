@@ -71,6 +71,7 @@ import StudentFees           from './pages/student/StudentFees';
 import StudentLeaveRequest   from './pages/student/StudentLeaveRequest';
 import StudentMessages       from './pages/student/StudentMessages';
 import StudentExams          from './pages/student/StudentExams';
+import StudentMarks          from './pages/student/StudentMarks';
 
 // Admin Messages
 import AdminMessages         from './pages/admin/AdminMessages';
@@ -202,6 +203,7 @@ function App() {
             <Route path="/student/leave"      element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentLeaveRequest /></ProtectedRoute>} />
             <Route path="/student/messages"   element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentMessages /></ProtectedRoute>} />
             <Route path="/student/exams"      element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentExams /></ProtectedRoute>} />
+            <Route path="/student/marks"      element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentMarks /></ProtectedRoute>} />
 
             {/* Admin Messages */}
             <Route path="/admin/messages"     element={<ProtectedRoute allowedRoles={['ADMIN','SUPER_ADMIN']}><AdminMessages /></ProtectedRoute>} />

@@ -63,6 +63,7 @@ const studentNavItems = [
   { path: '/student/leave',       icon: 'event_busy',     label: 'Leave Request' },
   { path: '/student/messages',    icon: 'chat',           label: 'Messages' },
   { path: '/student/exams',       icon: 'calendar_view_week', label: 'Schedule & Exams' },
+  { path: '/student/marks',       icon: 'grade',              label: 'My Marks' },
 ];
 
 
