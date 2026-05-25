@@ -318,11 +318,15 @@ public class SuperAdminService {
                     dto.put("needsSchoolSetup",   !Boolean.TRUE.equals(school.getIsSetupCompleted()));
                     dto.put("board",              school.getBoard());
                     dto.put("academicYear",       school.getAcademicYear());
+                    dto.put("address",            school.getAddress());
+                    dto.put("city",               school.getCity());
+                    dto.put("state",              school.getState());
+                    dto.put("pincode",            school.getPincode());
                     dto.put("phone",              school.getPhone());
                     dto.put("schoolEmail",        school.getEmail());
                     dto.put("website",            school.getWebsite());
-                    dto.put("city",               school.getCity());
-                    dto.put("state",              school.getState());
+                    dto.put("primaryColor",       school.getPrimaryColor());
+                    dto.put("secondaryColor",     school.getSecondaryColor());
                     dto.put("subscriptionPlan",   school.getSubscriptionPlan());
                     dto.put("subscriptionExpiry", school.getSubscriptionExpiry());
                     dto.put("permissions",        sa.getPermissions());

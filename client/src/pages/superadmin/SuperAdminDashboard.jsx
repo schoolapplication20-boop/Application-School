@@ -1414,26 +1414,25 @@ function EditField({ label, children, required }) {
 // Edit School Modal
 // ═════════════════════════════════════════════════════════════════════════════
 function EditSchoolModal({ sa, onClose, onSaved }) {
-  const school = sa.school || {};
   const [saving, setSaving] = useState(false);
   const [error,  setError]  = useState('');
   const [form,   setForm]   = useState({
-    schoolId:        school.schoolId != null ? String(school.schoolId) : '',
-    name:            school.name            || sa.schoolName || '',
-    code:            school.code            || sa.schoolCode || '',
-    board:           school.board           || '',
-    academicYear:    school.academicYear    || '',
-    address:         school.address         || '',
-    city:            school.city            || '',
-    state:           school.state           || '',
-    pincode:         school.pincode         || '',
-    phone:           school.phone           || '',
-    email:           school.email           || '',
-    website:         school.website         || '',
-    primaryColor:    school.primaryColor    || '#276749',
-    secondaryColor:  school.secondaryColor  || '#76C442',
-    subscriptionPlan:   school.subscriptionPlan   || 'BASIC',
-    subscriptionExpiry: school.subscriptionExpiry || '',
+    schoolId:           sa.schoolId        != null ? String(sa.schoolId) : '',
+    name:               sa.schoolName      || '',
+    code:               sa.schoolCode      || '',
+    board:              sa.board           || '',
+    academicYear:       sa.academicYear    || '',
+    address:            sa.address         || '',
+    city:               sa.city            || '',
+    state:              sa.state           || '',
+    pincode:            sa.pincode         || '',
+    phone:              sa.phone           || '',
+    email:              sa.schoolEmail     || '',
+    website:            sa.website         || '',
+    primaryColor:       sa.primaryColor    || '#276749',
+    secondaryColor:     sa.secondaryColor  || '#76C442',
+    subscriptionPlan:   sa.subscriptionPlan   || 'BASIC',
+    subscriptionExpiry: sa.subscriptionExpiry || '',
   });
 
   const on = (e) => {
@@ -1455,7 +1454,7 @@ function EditSchoolModal({ sa, onClose, onSaved }) {
     setSaving(true);
     setError('');
     try {
-      await schoolAPI.updateSchool(sa.schoolDbId || school.id, {
+      await schoolAPI.updateSchool(sa.schoolDbId, {
         schoolId:  form.schoolId ? Number(form.schoolId) : null,
         name:            form.name.trim(),
         code:            form.code.trim().toUpperCase(),
@@ -1489,7 +1488,7 @@ function EditSchoolModal({ sa, onClose, onSaved }) {
         <div style={{ padding: '18px 24px 14px', borderBottom: '1px solid #f0f4f8', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <div>
             <div style={{ fontWeight: 800, fontSize: 16, color: '#1a202c' }}>Edit School</div>
-            <div style={{ fontSize: 12, color: '#718096', marginTop: 2 }}>{sa.schoolName || school.name}</div>
+            <div style={{ fontSize: 12, color: '#718096', marginTop: 2 }}>{sa.schoolName}</div>
           </div>
           <button onClick={onClose} style={{ border: 'none', background: '#f7fafc', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <span className="material-icons" style={{ fontSize: 18, color: '#718096' }}>close</span>
