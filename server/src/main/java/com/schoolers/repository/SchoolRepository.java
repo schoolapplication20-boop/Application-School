@@ -4,6 +4,8 @@ import com.schoolers.model.School;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -17,4 +19,6 @@ public interface SchoolRepository extends JpaRepository<School, Long> {
     boolean existsBySchoolIdAndIdNot(Integer schoolId, Long excludeId);
     /** Look up a school by its human-assigned display number (the value shown in the UI). */
     Optional<School> findBySchoolId(Integer schoolId);
+    /** Find schools whose subscription expires on a specific date (used for expiry alerts). */
+    List<School> findBySubscriptionExpiry(LocalDate date);
 }

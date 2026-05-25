@@ -1418,20 +1418,22 @@ function EditSchoolModal({ sa, onClose, onSaved }) {
   const [saving, setSaving] = useState(false);
   const [error,  setError]  = useState('');
   const [form,   setForm]   = useState({
-    schoolId:  school.schoolId != null ? String(school.schoolId) : '',
-    name:          school.name          || sa.schoolName || '',
-    code:          school.code          || sa.schoolCode || '',
-    board:         school.board         || '',
-    academicYear:  school.academicYear  || '',
-    address:       school.address       || '',
-    city:          school.city          || '',
-    state:         school.state         || '',
-    pincode:       school.pincode       || '',
-    phone:         school.phone         || '',
-    email:         school.email         || '',
-    website:       school.website       || '',
-    primaryColor:  school.primaryColor  || '#276749',
-    secondaryColor:school.secondaryColor|| '#76C442',
+    schoolId:        school.schoolId != null ? String(school.schoolId) : '',
+    name:            school.name            || sa.schoolName || '',
+    code:            school.code            || sa.schoolCode || '',
+    board:           school.board           || '',
+    academicYear:    school.academicYear    || '',
+    address:         school.address         || '',
+    city:            school.city            || '',
+    state:           school.state           || '',
+    pincode:         school.pincode         || '',
+    phone:           school.phone           || '',
+    email:           school.email           || '',
+    website:         school.website         || '',
+    primaryColor:    school.primaryColor    || '#276749',
+    secondaryColor:  school.secondaryColor  || '#76C442',
+    subscriptionPlan:   school.subscriptionPlan   || 'BASIC',
+    subscriptionExpiry: school.subscriptionExpiry || '',
   });
 
   const on = (e) => {
@@ -1455,19 +1457,21 @@ function EditSchoolModal({ sa, onClose, onSaved }) {
     try {
       await schoolAPI.updateSchool(sa.schoolDbId || school.id, {
         schoolId:  form.schoolId ? Number(form.schoolId) : null,
-        name:          form.name.trim(),
-        code:          form.code.trim().toUpperCase(),
-        board:         form.board,
-        academicYear:  form.academicYear.trim(),
-        address:       form.address.trim(),
-        city:          form.city.trim(),
-        state:         form.state.trim(),
-        pincode:       form.pincode.trim(),
-        phone:         form.phone.trim(),
-        email:         form.email.trim(),
-        website:       form.website.trim() || null,
-        primaryColor:  form.primaryColor,
-        secondaryColor:form.secondaryColor,
+        name:            form.name.trim(),
+        code:            form.code.trim().toUpperCase(),
+        board:           form.board,
+        academicYear:    form.academicYear.trim(),
+        address:         form.address.trim(),
+        city:            form.city.trim(),
+        state:           form.state.trim(),
+        pincode:         form.pincode.trim(),
+        phone:           form.phone.trim(),
+        email:           form.email.trim(),
+        website:         form.website.trim() || null,
+        primaryColor:    form.primaryColor,
+        secondaryColor:  form.secondaryColor,
+        subscriptionPlan:   form.subscriptionPlan || null,
+        subscriptionExpiry: form.subscriptionExpiry || null,
       });
       onSaved();
     } catch (e) {
@@ -1568,6 +1572,35 @@ function EditSchoolModal({ sa, onClose, onSaved }) {
               </div>
             </EditField>
           </EditRow2>
+
+          {/* Subscription */}
+          <div style={{ margin: '18px 0 8px', fontWeight: 700, fontSize: 13, color: '#4a5568', letterSpacing: '0.04em', textTransform: 'uppercase', borderTop: '1px solid #f0f4f8', paddingTop: 16 }}>
+            Subscription
+          </div>
+          <EditRow2>
+            <EditField label="Plan">
+              <select name="subscriptionPlan" value={form.subscriptionPlan} onChange={on}
+                style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: 14, outline: 'none', background: '#fff', boxSizing: 'border-box' }}>
+                {['BASIC', 'STANDARD', 'PREMIUM'].map(p => (
+                  <option key={p} value={p}>{p.charAt(0) + p.slice(1).toLowerCase()}</option>
+                ))}
+              </select>
+            </EditField>
+            <EditField label="Expiry Date">
+              <input type="date" name="subscriptionExpiry" value={form.subscriptionExpiry}
+                onChange={on}
+                style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
+            </EditField>
+          </EditRow2>
+          {form.subscriptionExpiry && (() => {
+            const days = Math.ceil((new Date(form.subscriptionExpiry) - new Date()) / 86400000);
+            const color = days <= 5 ? '#c53030' : days <= 30 ? '#dd6b20' : '#276749';
+            return (
+              <div style={{ fontSize: 12, color, marginTop: -8, marginBottom: 8, fontWeight: 600 }}>
+                {days < 0 ? `Expired ${Math.abs(days)} days ago` : days === 0 ? 'Expires today' : `Expires in ${days} day${days !== 1 ? 's' : ''}`}
+              </div>
+            );
+          })()}
         </div>
 
         {/* Footer */}
