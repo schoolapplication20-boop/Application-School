@@ -78,9 +78,10 @@ public class AuthService {
                     return ApiResponse.error("Your school's subscription has ended. Please reach out to the My-Skoolz team to reactivate.");
 
                 // Block all school users when subscription is expired (skip for APPLICATION_OWNER only)
+                // !isAfter(today) means expired if expiry date is today or in the past
                 boolean expired = schoolOpt.map(s ->
                     s.getSubscriptionExpiry() != null &&
-                    s.getSubscriptionExpiry().isBefore(java.time.LocalDate.now())
+                    !s.getSubscriptionExpiry().isAfter(java.time.LocalDate.now())
                 ).orElse(false);
                 if (expired)
                     return ApiResponse.error("Your school's subscription has expired. Please contact the My-Skoolz team to renew.");
