@@ -77,16 +77,13 @@ public class AuthService {
                 if (!schoolActive)
                     return ApiResponse.error("Your school's subscription has ended. Please reach out to the My-Skoolz team to reactivate.");
 
-                // Block ADMIN / TEACHER / STUDENT when subscription is expired.
-                // SUPER_ADMIN can still log in so they can see the status and contact support.
-                if (user.getRole() != User.Role.SUPER_ADMIN) {
-                    boolean expired = schoolOpt.map(s ->
-                        s.getSubscriptionExpiry() != null &&
-                        s.getSubscriptionExpiry().isBefore(java.time.LocalDate.now())
-                    ).orElse(false);
-                    if (expired)
-                        return ApiResponse.error("Your school's subscription has expired. Please contact your school administrator to renew.");
-                }
+                // Block all school users when subscription is expired (skip for APPLICATION_OWNER only)
+                boolean expired = schoolOpt.map(s ->
+                    s.getSubscriptionExpiry() != null &&
+                    s.getSubscriptionExpiry().isBefore(java.time.LocalDate.now())
+                ).orElse(false);
+                if (expired)
+                    return ApiResponse.error("Your school's subscription has expired. Please contact the My-Skoolz team to renew.");
             }
 
             // ── Step 3: Password ───────────────────────────────────────────
