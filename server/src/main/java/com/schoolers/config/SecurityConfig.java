@@ -72,6 +72,7 @@ public class SecurityConfig {
             // These rules are the coarse-grained security gate.
             .authorizeHttpRequests(auth -> auth
                 // ── Public ────────────────────────────────────────────────────
+                .requestMatchers("/api/health").permitAll()
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/applications").permitAll()   // public admission form
                 .requestMatchers("/api/marketing/**").permitAll()   // public marketing: demo booking, job applications
