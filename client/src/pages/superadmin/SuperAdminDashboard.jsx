@@ -1414,26 +1414,31 @@ function EditField({ label, children, required }) {
 // Edit School Modal
 // ═════════════════════════════════════════════════════════════════════════════
 function EditSchoolModal({ sa, onClose, onSaved }) {
-  const [saving,  setSaving]  = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState('');
-  const [form,    setForm]    = useState({
+  const [saving,   setSaving]   = useState(false);
+  const [loading,  setLoading]  = useState(true);
+  const [error,    setError]    = useState('');
+  const [logoFile, setLogoFile] = useState(null);
+  const [form,     setForm]     = useState({
     schoolId:           sa.schoolId != null ? String(sa.schoolId) : '',
-    name:               sa.schoolName || '',
-    code:               sa.schoolCode || '',
-    board:              '',
-    academicYear:       '',
-    address:            '',
-    city:               '',
-    state:              '',
-    pincode:            '',
-    phone:              '',
-    email:              '',
-    website:            '',
-    primaryColor:       '#276749',
-    secondaryColor:     '#76C442',
-    subscriptionPlan:   'BASIC',
-    subscriptionExpiry: '',
+    name:               sa.schoolName  || '',
+    code:               sa.schoolCode  || '',
+    board:              sa.board       || '',
+    academicYear:       sa.academicYear || '',
+    address:            sa.address     || '',
+    city:               sa.city        || '',
+    state:              sa.state       || '',
+    pincode:            sa.pincode     || '',
+    country:            'India',
+    phone:              sa.phone       || '',
+    email:              sa.schoolEmail || '',
+    website:            sa.website     || '',
+    logoUrl:            '',
+    primaryColor:       sa.primaryColor    || '#276749',
+    secondaryColor:     sa.secondaryColor  || '#76C442',
+    totalClasses:       '',
+    sections:           'A,B,C,D',
+    subscriptionPlan:   sa.subscriptionPlan   || 'BASIC',
+    subscriptionExpiry: sa.subscriptionExpiry || '',
   });
 
   useEffect(() => {
@@ -1451,11 +1456,15 @@ function EditSchoolModal({ sa, onClose, onSaved }) {
           city:               s.city               || '',
           state:              s.state              || '',
           pincode:            s.pincode            || '',
+          country:            s.country            || 'India',
           phone:              s.phone              || '',
           email:              s.email              || '',
           website:            s.website            || '',
+          logoUrl:            s.logoUrl            || '',
           primaryColor:       s.primaryColor       || '#276749',
           secondaryColor:     s.secondaryColor     || '#76C442',
+          totalClasses:       s.totalClasses       != null ? String(s.totalClasses) : '',
+          sections:           s.sections           || 'A,B,C,D',
           subscriptionPlan:   s.subscriptionPlan   || 'BASIC',
           subscriptionExpiry: s.subscriptionExpiry || '',
         });
@@ -1484,23 +1493,26 @@ function EditSchoolModal({ sa, onClose, onSaved }) {
     setError('');
     try {
       await schoolAPI.updateSchool(sa.schoolDbId, {
-        schoolId:  form.schoolId ? Number(form.schoolId) : null,
-        name:            form.name.trim(),
-        code:            form.code.trim().toUpperCase(),
-        board:           form.board,
-        academicYear:    form.academicYear.trim(),
-        address:         form.address.trim(),
-        city:            form.city.trim(),
-        state:           form.state.trim(),
-        pincode:         form.pincode.trim(),
-        phone:           form.phone.trim(),
-        email:           form.email.trim(),
-        website:         form.website.trim() || null,
-        primaryColor:    form.primaryColor,
-        secondaryColor:  form.secondaryColor,
+        schoolId:           form.schoolId ? Number(form.schoolId) : null,
+        name:               form.name.trim(),
+        code:               form.code.trim().toUpperCase(),
+        board:              form.board,
+        academicYear:       form.academicYear.trim(),
+        address:            form.address.trim(),
+        city:               form.city.trim(),
+        state:              form.state.trim(),
+        pincode:            form.pincode.trim(),
+        country:            form.country.trim(),
+        phone:              form.phone.trim(),
+        email:              form.email.trim(),
+        website:            form.website.trim() || null,
+        primaryColor:       form.primaryColor,
+        secondaryColor:     form.secondaryColor,
+        totalClasses:       form.totalClasses ? Number(form.totalClasses) : null,
+        sections:           form.sections.trim() || null,
         subscriptionPlan:   form.subscriptionPlan || null,
         subscriptionExpiry: form.subscriptionExpiry || null,
-      });
+      }, logoFile || null);
       onSaved();
     } catch (e) {
       setError(e.response?.data?.message || 'Failed to save. Please try again.');
@@ -1580,13 +1592,52 @@ function EditSchoolModal({ sa, onClose, onSaved }) {
           </EditRow2>
           <EditRow2>
             <EditField label="Pincode"><input name="pincode" value={form.pincode} onChange={on} placeholder="Pincode" style={inp(false)} /></EditField>
-            <EditField label="Phone"><input name="phone" value={form.phone} onChange={on} placeholder="Phone" style={inp(false)} /></EditField>
+            <EditField label="Country"><input name="country" value={form.country} onChange={on} placeholder="Country" style={inp(false)} /></EditField>
           </EditRow2>
 
           {/* Contact */}
           <EditRow2>
+            <EditField label="Phone"><input name="phone" value={form.phone} onChange={on} placeholder="+91 9876543210" style={inp(false)} /></EditField>
             <EditField label="School Email"><input name="email" value={form.email} onChange={on} placeholder="email@school.com" style={inp(false)} /></EditField>
-            <EditField label="Website"><input name="website" value={form.website} onChange={on} placeholder="https://..." style={inp(false)} /></EditField>
+          </EditRow2>
+          <EditField label="Website">
+            <input name="website" value={form.website} onChange={on} placeholder="https://..." style={inp(false)} />
+          </EditField>
+
+          {/* Logo */}
+          <EditField label="School Logo">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              {form.logoUrl && !logoFile && (
+                <img src={form.logoUrl} alt="Current logo"
+                  style={{ width: 48, height: 48, objectFit: 'contain', borderRadius: 8, border: '1.5px solid #e2e8f0' }} />
+              )}
+              {logoFile && (
+                <img src={URL.createObjectURL(logoFile)} alt="New logo"
+                  style={{ width: 48, height: 48, objectFit: 'contain', borderRadius: 8, border: '1.5px solid #276749' }} />
+              )}
+              <label style={{ cursor: 'pointer', padding: '7px 14px', borderRadius: 8, border: '1.5px dashed #cbd5e0', fontSize: 13, color: '#4a5568', background: '#f8fafc' }}>
+                {logoFile ? logoFile.name : (form.logoUrl ? 'Replace Logo' : 'Upload Logo')}
+                <input type="file" accept="image/*" style={{ display: 'none' }}
+                  onChange={e => setLogoFile(e.target.files[0] || null)} />
+              </label>
+              {logoFile && (
+                <button type="button" onClick={() => setLogoFile(null)}
+                  style={{ fontSize: 12, color: '#e53e3e', background: 'none', border: 'none', cursor: 'pointer' }}>Remove</button>
+              )}
+            </div>
+          </EditField>
+
+          {/* Academic Config */}
+          <div style={{ margin: '18px 0 8px', fontWeight: 700, fontSize: 13, color: '#4a5568', letterSpacing: '0.04em', textTransform: 'uppercase', borderTop: '1px solid #f0f4f8', paddingTop: 16 }}>
+            Academic Configuration
+          </div>
+          <EditRow2>
+            <EditField label="Total Classes / Grades">
+              <input name="totalClasses" type="number" min="1" value={form.totalClasses} onChange={on} placeholder="e.g. 10" style={inp(false)} />
+            </EditField>
+            <EditField label="Sections (comma-separated)">
+              <input name="sections" value={form.sections} onChange={on} placeholder="e.g. A,B,C,D" style={inp(false)} />
+            </EditField>
           </EditRow2>
 
           {/* Colors */}
