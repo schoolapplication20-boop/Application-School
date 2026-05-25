@@ -574,12 +574,21 @@ const SetupSchool = () => {
                     onBlur={e => e.target.style.borderColor = errors.adminEmail ? '#fc8181' : '#e2e8f0'} />
                 </Field>
                 <Field label="Admin Mobile" error={errors.adminMobile}>
-                  <input name="adminMobile" type="tel" value={form.adminMobile}
+                  <input name="adminMobile" type="text" inputMode="numeric"
+                    value={form.adminMobile}
                     onChange={e => {
                       const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
                       onChange({ target: { name: 'adminMobile', value: digits } });
                     }}
-                    placeholder="10-digit mobile number"
+                    onKeyDown={e => {
+                      if (e.key.length === 1 && !/[0-9]/.test(e.key)) e.preventDefault();
+                    }}
+                    onPaste={e => {
+                      e.preventDefault();
+                      const digits = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 10);
+                      onChange({ target: { name: 'adminMobile', value: digits } });
+                    }}
+                    placeholder="e.g. 9876543210"
                     maxLength={10}
                     style={inputStyle(!!errors.adminMobile)}
                     onFocus={e => e.target.style.borderColor = '#0de1e8'}
