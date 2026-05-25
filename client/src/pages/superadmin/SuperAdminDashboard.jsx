@@ -1414,26 +1414,55 @@ function EditField({ label, children, required }) {
 // Edit School Modal
 // ═════════════════════════════════════════════════════════════════════════════
 function EditSchoolModal({ sa, onClose, onSaved }) {
-  const [saving, setSaving] = useState(false);
-  const [error,  setError]  = useState('');
-  const [form,   setForm]   = useState({
-    schoolId:           sa.schoolId        != null ? String(sa.schoolId) : '',
-    name:               sa.schoolName      || '',
-    code:               sa.schoolCode      || '',
-    board:              sa.board           || '',
-    academicYear:       sa.academicYear    || '',
-    address:            sa.address         || '',
-    city:               sa.city            || '',
-    state:              sa.state           || '',
-    pincode:            sa.pincode         || '',
-    phone:              sa.phone           || '',
-    email:              sa.schoolEmail     || '',
-    website:            sa.website         || '',
-    primaryColor:       sa.primaryColor    || '#276749',
-    secondaryColor:     sa.secondaryColor  || '#76C442',
-    subscriptionPlan:   sa.subscriptionPlan   || 'BASIC',
-    subscriptionExpiry: sa.subscriptionExpiry || '',
+  const [saving,  setSaving]  = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error,   setError]   = useState('');
+  const [form,    setForm]    = useState({
+    schoolId:           sa.schoolId != null ? String(sa.schoolId) : '',
+    name:               sa.schoolName || '',
+    code:               sa.schoolCode || '',
+    board:              '',
+    academicYear:       '',
+    address:            '',
+    city:               '',
+    state:              '',
+    pincode:            '',
+    phone:              '',
+    email:              '',
+    website:            '',
+    primaryColor:       '#276749',
+    secondaryColor:     '#76C442',
+    subscriptionPlan:   'BASIC',
+    subscriptionExpiry: '',
   });
+
+  useEffect(() => {
+    if (!sa.schoolDbId) { setLoading(false); return; }
+    schoolAPI.getSchoolById(sa.schoolDbId)
+      .then(res => {
+        const s = res.data?.data ?? res.data;
+        setForm({
+          schoolId:           s.schoolId           != null ? String(s.schoolId) : '',
+          name:               s.name               || '',
+          code:               s.code               || '',
+          board:              s.board              || '',
+          academicYear:       s.academicYear       || '',
+          address:            s.address            || '',
+          city:               s.city               || '',
+          state:              s.state              || '',
+          pincode:            s.pincode            || '',
+          phone:              s.phone              || '',
+          email:              s.email              || '',
+          website:            s.website            || '',
+          primaryColor:       s.primaryColor       || '#276749',
+          secondaryColor:     s.secondaryColor     || '#76C442',
+          subscriptionPlan:   s.subscriptionPlan   || 'BASIC',
+          subscriptionExpiry: s.subscriptionExpiry || '',
+        });
+      })
+      .catch(() => setError('Failed to load school details. Please close and try again.'))
+      .finally(() => setLoading(false));
+  }, [sa.schoolDbId]);
 
   const on = (e) => {
     const { name, value } = e.target;
@@ -1497,13 +1526,19 @@ function EditSchoolModal({ sa, onClose, onSaved }) {
 
         {/* Body */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
-          {error && (
+          {loading && (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 48 }}>
+              <span className="material-icons" style={{ fontSize: 36, color: '#276749', animation: 'spin 1s linear infinite' }}>sync</span>
+            </div>
+          )}
+          {!loading && error && (
             <div style={{ background: '#fff5f5', border: '1.5px solid #fed7d7', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: '#c53030', display: 'flex', alignItems: 'center', gap: 8 }}>
               <span className="material-icons" style={{ fontSize: 16 }}>error_outline</span>
               {error}
             </div>
           )}
 
+          {!loading && <>
           {/* School ID */}
           <EditField label="School ID">
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -1600,6 +1635,7 @@ function EditSchoolModal({ sa, onClose, onSaved }) {
               </div>
             );
           })()}
+          </>}
         </div>
 
         {/* Footer */}
