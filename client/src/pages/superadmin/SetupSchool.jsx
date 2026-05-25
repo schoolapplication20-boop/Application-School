@@ -63,9 +63,10 @@ const validate = (step, form) => {
       errors.email = 'Enter a valid email address.';
   }
   if (step === 'admin') {
-    // Admin fields are optional but if email provided, it must be valid
     if (form.adminEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.adminEmail))
       errors.adminEmail = 'Enter a valid admin email.';
+    if (form.adminMobile && !/^\d{10}$/.test(form.adminMobile))
+      errors.adminMobile = 'Mobile number must be exactly 10 digits.';
   }
   return errors;
 };
@@ -573,11 +574,16 @@ const SetupSchool = () => {
                     onBlur={e => e.target.style.borderColor = errors.adminEmail ? '#fc8181' : '#e2e8f0'} />
                 </Field>
                 <Field label="Admin Mobile" error={errors.adminMobile}>
-                  <input name="adminMobile" value={form.adminMobile} onChange={onChange}
-                    placeholder="+91 9876543210"
-                    style={inputStyle(false)}
+                  <input name="adminMobile" type="tel" value={form.adminMobile}
+                    onChange={e => {
+                      const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
+                      onChange({ target: { name: 'adminMobile', value: digits } });
+                    }}
+                    placeholder="10-digit mobile number"
+                    maxLength={10}
+                    style={inputStyle(!!errors.adminMobile)}
                     onFocus={e => e.target.style.borderColor = '#0de1e8'}
-                    onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
+                    onBlur={e => e.target.style.borderColor = errors.adminMobile ? '#fc8181' : '#e2e8f0'} />
                 </Field>
               </div>
             </div>
