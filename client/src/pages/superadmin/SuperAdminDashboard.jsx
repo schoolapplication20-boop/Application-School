@@ -1413,11 +1413,30 @@ function EditField({ label, children, required }) {
 // ═════════════════════════════════════════════════════════════════════════════
 // Edit School Modal
 // ═════════════════════════════════════════════════════════════════════════════
+const DEFAULT_FEATURES = { attendance: true, transport: true, fees: true, salary: true, examination: true, diary: true, announcements: true, messages: true };
+const FEATURE_LIST = [
+  { key: 'attendance',    label: 'Attendance Tracking',  icon: 'fact_check' },
+  { key: 'fees',          label: 'Fees & Payments',      icon: 'payments' },
+  { key: 'transport',     label: 'Transport Management', icon: 'directions_bus' },
+  { key: 'salary',        label: 'Staff Salary',         icon: 'account_balance_wallet' },
+  { key: 'examination',   label: 'Exam & Certificates',  icon: 'verified' },
+  { key: 'diary',         label: 'Class Diary',          icon: 'photo_library' },
+  { key: 'announcements', label: 'Announcements',        icon: 'campaign' },
+  { key: 'messages',      label: 'Messaging',            icon: 'chat' },
+];
+
+function parseFeatures(raw) {
+  if (!raw) return { ...DEFAULT_FEATURES };
+  try { return { ...DEFAULT_FEATURES, ...(typeof raw === 'string' ? JSON.parse(raw) : raw) }; }
+  catch { return { ...DEFAULT_FEATURES }; }
+}
+
 function EditSchoolModal({ sa, onClose, onSaved }) {
   const [saving,   setSaving]   = useState(false);
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState('');
   const [logoFile, setLogoFile] = useState(null);
+  const [features, setFeatures] = useState({ ...DEFAULT_FEATURES });
   const [form,     setForm]     = useState({
     schoolId:           sa.schoolId != null ? String(sa.schoolId) : '',
     name:               sa.schoolName  || '',
@@ -1446,6 +1465,7 @@ function EditSchoolModal({ sa, onClose, onSaved }) {
     schoolAPI.getSchoolById(sa.schoolDbId)
       .then(res => {
         const s = res.data?.data ?? res.data;
+        setFeatures(parseFeatures(s.features));
         setForm({
           schoolId:           s.schoolId           != null ? String(s.schoolId) : '',
           name:               s.name               || '',
@@ -1512,6 +1532,7 @@ function EditSchoolModal({ sa, onClose, onSaved }) {
         sections:           form.sections.trim() || null,
         subscriptionPlan:   form.subscriptionPlan || null,
         subscriptionExpiry: form.subscriptionExpiry || null,
+        features:           JSON.stringify(features),
       }, logoFile || null);
       onSaved();
     } catch (e) {
@@ -1686,6 +1707,33 @@ function EditSchoolModal({ sa, onClose, onSaved }) {
               </div>
             );
           })()}
+
+          {/* Module Permissions */}
+          <div style={{ margin: '18px 0 8px', fontWeight: 700, fontSize: 13, color: '#4a5568', letterSpacing: '0.04em', textTransform: 'uppercase', borderTop: '1px solid #f0f4f8', paddingTop: 16 }}>
+            Module Permissions
+          </div>
+          <p style={{ fontSize: 12, color: '#718096', marginBottom: 14, marginTop: 0 }}>
+            Enable or disable modules for this school.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 10 }}>
+            {FEATURE_LIST.map(({ key, label, icon }) => (
+              <div key={key} onClick={() => setFeatures(f => ({ ...f, [key]: !f[key] }))}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
+                  borderRadius: 10, cursor: 'pointer', transition: 'all 0.2s',
+                  border: `1.5px solid ${features[key] ? '#9ae6b4' : '#e2e8f0'}`,
+                  background: features[key] ? '#f0fff4' : '#fafafa',
+                }}>
+                <div style={{ width: 34, height: 34, borderRadius: 8, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: features[key] ? '#dcfce7' : '#f0f4f8' }}>
+                  <span className="material-icons" style={{ fontSize: 18, color: features[key] ? '#276749' : '#a0aec0' }}>{icon}</span>
+                </div>
+                <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#2d3748' }}>{label}</span>
+                <div style={{ width: 38, height: 20, borderRadius: 10, background: features[key] ? '#276749' : '#cbd5e0', position: 'relative', flexShrink: 0, transition: 'background 0.2s' }}>
+                  <div style={{ position: 'absolute', top: 2, left: features[key] ? 20 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s' }} />
+                </div>
+              </div>
+            ))}
+          </div>
           </>}
         </div>
 
