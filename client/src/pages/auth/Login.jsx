@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useSchool } from '../../context/SchoolContext';
@@ -42,6 +42,11 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading]       = useState(false);
   const [error, setError]               = useState('');
+  const [serverWaking, setServerWaking] = useState(false);
+  const [retryIn, setRetryIn]           = useState(0);
+  const retryCountRef  = useRef(0);
+  const retryTimerRef  = useRef(null);
+  const attemptLoginFn = useRef(null);
 
   const seo = ROLE_SEO[selectedRole] || {
     title: 'School Login',
@@ -51,6 +56,10 @@ const Login = () => {
   useEffect(() => {
     if (isAuthenticated) navigate(getDashboardPath(), { replace: true });
   }, [isAuthenticated, navigate, getDashboardPath]);
+
+  useEffect(() => {
+    return () => { if (retryTimerRef.current) clearInterval(retryTimerRef.current); };
+  }, []);
 
   // Reset form when role changes
   const handleRoleSelect = (roleKey) => {
@@ -87,32 +96,25 @@ const Login = () => {
     navigate(rolePathMap[registeredUser.role] || '/login', { replace: true });
   };
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    if (!selectedRole) { setError('Please select your role first.'); return; }
-    if (!emailForm.email.trim()) {
-      setError(isStudentRole ? 'Please enter your admission number.' : 'Please enter your email.');
-      return;
-    }
-    if (!emailForm.password) { setError('Please enter your password.'); return; }
-
+  const attemptLogin = async () => {
     setIsLoading(true);
     setError('');
-
     try {
       const { user: loggedInUser, token } = await apiLoginWithEmail(
         emailForm.email.trim().toLowerCase(),
         emailForm.password,
-        selectedRole,  // sent to backend for server-side role validation
+        selectedRole,
       );
 
-      // Frontend guard — ensure backend confirmed the correct role
       if (loggedInUser.role !== selectedRole) {
+        setServerWaking(false);
+        retryCountRef.current = 0;
         setError('Access denied. You do not have permission for the selected role.');
         return;
       }
 
-
+      setServerWaking(false);
+      retryCountRef.current = 0;
       login(loggedInUser, token);
 
       if (loggedInUser.role === 'ADMIN') {
@@ -122,10 +124,51 @@ const Login = () => {
 
       navigateByRole(loggedInUser);
     } catch (err) {
-      setError(err.message || 'Login failed. Please try again.');
+      if (err.isColdStart && retryCountRef.current < 4) {
+        retryCountRef.current++;
+        setServerWaking(true);
+        let count = 12;
+        setRetryIn(count);
+        retryTimerRef.current = setInterval(() => {
+          count--;
+          setRetryIn(count);
+          if (count === 0) {
+            clearInterval(retryTimerRef.current);
+            attemptLoginFn.current?.();
+          }
+        }, 1000);
+      } else {
+        setServerWaking(false);
+        retryCountRef.current = 0;
+        setError(
+          err.isColdStart
+            ? 'Server took too long to respond. Please wait a moment and try again.'
+            : (err.message || 'Login failed. Please try again.')
+        );
+      }
     } finally {
       setIsLoading(false);
     }
+  };
+
+  attemptLoginFn.current = attemptLogin;
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    if (!selectedRole) { setError('Please select your role first.'); return; }
+    if (!emailForm.email.trim()) {
+      setError(isStudentRole ? 'Please enter your admission number.' : 'Please enter your email.');
+      return;
+    }
+    if (!emailForm.password) { setError('Please enter your password.'); return; }
+
+    if (retryTimerRef.current) {
+      clearInterval(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+    retryCountRef.current = 0;
+    setServerWaking(false);
+    await attemptLogin();
   };
 
   return (
@@ -295,7 +338,33 @@ const Login = () => {
             </div>
           </div>
 
-          {error && (
+          {serverWaking && (
+            <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '10px', padding: '12px 14px', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#c2410c', fontWeight: 600, fontSize: '13px', marginBottom: '6px' }}>
+                <span className="material-icons" style={{ fontSize: '18px', animation: 'spin 2s linear infinite' }}>hourglass_empty</span>
+                Server is waking up... retrying in {retryIn}s
+              </div>
+              <p style={{ margin: '0 0 8px', fontSize: '12px', color: '#92400e', lineHeight: 1.5 }}>
+                The server was sleeping due to inactivity (Render free plan). Your credentials are fine — please wait.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  clearInterval(retryTimerRef.current);
+                  retryTimerRef.current = null;
+                  retryCountRef.current = 0;
+                  setServerWaking(false);
+                  setRetryIn(0);
+                  setIsLoading(false);
+                }}
+                style={{ background: 'none', border: '1px solid #c2410c', color: '#c2410c', borderRadius: '6px', padding: '3px 10px', fontSize: '12px', cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+
+          {error && !serverWaking && (
             <div className="alert-error">
               <span className="material-icons" style={{ fontSize: '16px' }}>error_outline</span>
               {error}
@@ -354,9 +423,14 @@ const Login = () => {
                 </div>
               </div>
 
-              <button type="submit" className="btn-auth-submit" disabled={isLoading}
+              <button type="submit" className="btn-auth-submit" disabled={isLoading || serverWaking}
                 style={{ background: `linear-gradient(135deg, ${primary}, ${secondary})` }}>
-                {isLoading ? (
+                {serverWaking ? (
+                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                    <span style={{ width: '16px', height: '16px', border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />
+                    Retrying in {retryIn}s...
+                  </span>
+                ) : isLoading ? (
                   <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                     <span style={{ width: '16px', height: '16px', border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />
                     Signing In...

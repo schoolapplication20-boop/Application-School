@@ -20,10 +20,15 @@ export const loginWithEmail = async (email, password, selectedRole) => {
     const normalizedUser = { ...user, role: String(user.role).toUpperCase() };
     return { user: normalizedUser, token };
   } catch (apiErr) {
-    const msg = apiErr.response?.data?.message
-      || apiErr.response?.data?.error
-      || 'Invalid credentials. Please check your email and password.';
-    throw new Error(msg);
+    const isColdStart = !apiErr.response || [502, 503, 504].includes(apiErr.response?.status);
+    const msg = isColdStart
+      ? 'Server is starting up. Please wait...'
+      : (apiErr.response?.data?.message
+          || apiErr.response?.data?.error
+          || 'Invalid credentials. Please check your email and password.');
+    const error = new Error(msg);
+    error.isColdStart = isColdStart;
+    throw error;
   }
 };
 
