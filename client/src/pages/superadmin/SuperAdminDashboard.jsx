@@ -1575,14 +1575,23 @@ function EditSchoolWizard({ sa, onClose, onSaved }) {
         subscriptionPlan:   form.subscriptionPlan,
         subscriptionExpiry: form.subscriptionExpiry || null,
         features: JSON.stringify({
-          attendance:    perms.attendance    ?? true,
-          transport:     perms.transport     ?? true,
+          // All 13 module keys (drives sidebar visibility for all users)
+          students:      perms.students      ?? true,
+          teachers:      perms.teachers      ?? true,
+          classes:       perms.classes       ?? true,
+          applications:  perms.applications  ?? true,
           fees:          perms.fees          ?? true,
+          collectFee:    perms.collectFee    ?? true,
+          salaries:      perms.salaries      ?? true,
           salary:        perms.salaries      ?? true,
+          expenses:      perms.expenses      ?? true,
+          leave:         perms.leave         ?? true,
+          transport:     perms.transport     ?? true,
+          attendance:    perms.attendance    ?? true,
+          timetable:     perms.timetable     ?? true,
           examination:   perms.examination   ?? true,
-          diary:         perms.diary         ?? true,
-          announcements: perms.announcements ?? true,
-          messages:      perms.messages      ?? true,
+          // Legacy-only features (no toggle — always on)
+          diary: true, announcements: true, messages: true,
         }),
       }, logoFile || null);
       onSaved();

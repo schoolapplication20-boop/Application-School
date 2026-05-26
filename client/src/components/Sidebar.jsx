@@ -70,7 +70,7 @@ const studentNavItems = [
 const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
   const { user, logout }                    = useAuth();
   const navigate                            = useNavigate();
-  const { school, logoVersion, loadSchool } = useSchool();
+  const { school, logoVersion, loadSchool, hasFeature } = useSchool();
   const [logoError, setLogoError]           = useState(false);
   const [logoHover, setLogoHover]           = useState(false);
   const [uploading,  setUploading]          = useState(false);
@@ -144,7 +144,8 @@ const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
 
         const visibleAdminItems = adminNavItems
           .filter(item => item.path !== '/admin/parents')
-          .filter(item => item.permKey === null || !perms || perms[item.permKey] === true);
+          .filter(item => item.permKey === null || !perms || perms[item.permKey] === true)
+          .filter(item => item.permKey === null || hasFeature(item.permKey));
 
         // "Setup School" only while school setup is still pending
         const saItems = superAdminOnlyItems.filter(item => {
@@ -171,7 +172,7 @@ const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
         // Dashboard & Timetable (permKey: null) always show
         // All other items require explicit true permission
         const visibleItems = adminNavItems.filter(
-          item => item.permKey === null || perms[item.permKey] === true
+          item => item.permKey === null || (perms[item.permKey] === true && hasFeature(item.permKey))
         );
         return [{ label: 'Navigation', items: visibleItems }];
       }

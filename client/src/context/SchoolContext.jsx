@@ -20,9 +20,13 @@ export const useSchool = () => {
  */
 const parseFeatures = (raw) => {
   const defaults = {
-    attendance: true, transport: true, fees: true,
-    salary: true, examination: true, diary: true,
-    announcements: true, messages: true,
+    // All 13 module keys
+    students: true, teachers: true, classes: true, applications: true,
+    fees: true, collectFee: true, salaries: true, salary: true,
+    expenses: true, leave: true, transport: true, attendance: true,
+    timetable: true, examination: true,
+    // Legacy keys
+    diary: true, announcements: true, messages: true,
   };
   if (!raw) return defaults;
   try {
@@ -132,6 +136,20 @@ export const SchoolProvider = ({ children }) => {
     window.addEventListener('auth:logout', handler);
     return () => window.removeEventListener('auth:logout', handler);
   }, [clearSchool]);
+
+  // Re-fetch school features when the tab regains focus or every 60 s.
+  // This ensures module permission changes made by the app owner are picked
+  // up by existing sessions without requiring a re-login.
+  useEffect(() => {
+    if (!user || user.role === 'APPLICATION_OWNER') return;
+    const refresh = () => { if (!document.hidden) loadSchool(); };
+    document.addEventListener('visibilitychange', refresh);
+    const interval = setInterval(refresh, 60000);
+    return () => {
+      document.removeEventListener('visibilitychange', refresh);
+      clearInterval(interval);
+    };
+  }, [user, loadSchool]);
 
   const value = {
     school,
