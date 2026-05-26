@@ -226,7 +226,7 @@ const HomePage = () => (
     </section>
 
     {/* Wave: dark hero → cream trust bar */}
-    <WaveDivider fill="#7C2D12" bg="#FFFBF5" />
+    <WaveDivider fill="#9A3412" bg="#FFFBF5" />
 
     {/* ══ TRUST BAR ══ */}
     <section className="mkt-trust-bar">

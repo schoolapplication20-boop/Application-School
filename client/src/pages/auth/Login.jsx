@@ -15,10 +15,10 @@ const ROLE_SEO = {
 };
 
 const ALL_ROLES = [
-  { key: 'SUPER_ADMIN', label: 'Super Admin', icon: 'manage_accounts' },
-  { key: 'ADMIN',       label: 'Admin',       icon: 'badge'           },
-  { key: 'TEACHER',     label: 'Teacher',     icon: 'school'          },
-  { key: 'STUDENT',     label: 'Student',     icon: 'person'          },
+  { key: 'SUPER_ADMIN', label: 'Super Admin', icon: 'manage_accounts', color: '#7c3aed', bg: '#ede9fe' },
+  { key: 'ADMIN',       label: 'Admin',       icon: 'badge',           color: '#0369a1', bg: '#e0f2fe' },
+  { key: 'TEACHER',     label: 'Teacher',     icon: 'school',          color: '#059669', bg: '#d1fae5' },
+  { key: 'STUDENT',     label: 'Student',     icon: 'person',          color: '#d97706', bg: '#fef3c7' },
 ];
 
 const Login = () => {
@@ -250,26 +250,28 @@ const Login = () => {
 
           {/* Brand header */}
           <div className="auth-form-header">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '22px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
               {school?.logoUrl ? (
                 <img src={school.logoUrl} alt={school.name}
-                  style={{ width: 38, height: 38, objectFit: 'contain', borderRadius: 10 }}
+                  style={{ width: 36, height: 36, objectFit: 'contain', borderRadius: 10, boxShadow: '0 2px 8px rgba(0,0,0,.1)' }}
                   onError={e => { e.target.style.display = 'none'; }} />
               ) : (
-                <Logo size={38} />
+                <Logo size={36} />
               )}
-              <span style={{ fontSize: '22px', fontWeight: 800, color: primary, fontFamily: 'Poppins, sans-serif', letterSpacing: '-.3px' }}>
+              <span style={{ fontSize: '20px', fontWeight: 800, color: '#1e293b', fontFamily: 'Poppins, sans-serif', letterSpacing: '-.3px' }}>
                 {school?.name || 'My-Skoolz'}
               </span>
             </div>
-            <h1 style={{ fontSize: '26px', fontWeight: 800, marginBottom: '6px', color: '#0f172a' }}>Welcome Back!</h1>
-            <p style={{ fontSize: '14px', color: '#64748b' }}>Choose your role below to access your portal</p>
+            <h1 style={{ fontSize: '26px', fontWeight: 900, marginBottom: '6px', color: '#0f172a', letterSpacing: '-.5px' }}>
+              Welcome <span style={{ background: 'linear-gradient(135deg,#6366f1,#a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Back!</span>
+            </h1>
+            <p style={{ fontSize: '13.5px', color: '#64748b', lineHeight: 1.6 }}>Select your role below to access your portal</p>
           </div>
 
           {/* Role Selector */}
-          <div style={{ marginBottom: '24px' }}>
-            <label style={{ fontSize: '13px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '10px' }}>
-              Select Role for Login
+          <div style={{ marginBottom: '22px' }}>
+            <label style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8', display: 'block', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '.06em' }}>
+              Select Your Role
             </label>
             <div className="auth-role-grid-4" style={{
               display: 'grid',
@@ -288,50 +290,41 @@ const Login = () => {
                       flexDirection: 'column',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      gap: '7px',
-                      padding: '14px 6px 12px',
-                      borderRadius: '12px',
-                      border: isSelected ? `2px solid ${primary}` : '2px solid #e8edf4',
-                      background: isSelected
-                        ? `linear-gradient(145deg, ${primary}18, ${primary}08)`
-                        : '#fafbfc',
+                      gap: '8px',
+                      padding: '16px 6px 13px',
+                      borderRadius: '14px',
+                      border: isSelected ? `2px solid ${role.color}` : '2px solid #e8edf4',
+                      background: isSelected ? role.bg : '#f8fafc',
                       cursor: 'pointer',
-                      transition: 'all 0.2s ease',
+                      transition: 'all 0.22s ease',
                       outline: 'none',
                       boxShadow: isSelected
-                        ? `0 4px 14px ${primary}30`
-                        : '0 1px 3px rgba(0,0,0,.06)',
-                      transform: isSelected ? 'translateY(-2px)' : 'none',
+                        ? `0 4px 16px ${role.color}28`
+                        : '0 1px 3px rgba(0,0,0,.05)',
+                      transform: isSelected ? 'translateY(-3px) scale(1.02)' : 'translateY(0) scale(1)',
                     }}
                   >
-                    <span className="material-icons" style={{
-                      fontSize: '24px',
-                      color: isSelected ? primary : '#94a3b8',
-                      transition: 'color 0.2s',
+                    <div style={{
+                      width: 38, height: 38, borderRadius: 10,
+                      background: isSelected ? role.color : '#e2e8f0',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      transition: 'all .22s ease',
+                      boxShadow: isSelected ? `0 3px 10px ${role.color}40` : 'none',
                     }}>
-                      {role.icon}
-                    </span>
+                      <span className="material-icons" style={{ fontSize: '20px', color: '#fff' }}>
+                        {role.icon}
+                      </span>
+                    </div>
                     <span style={{
                       fontSize: '11px',
-                      fontWeight: isSelected ? 700 : 500,
-                      color: isSelected ? primary : '#64748b',
+                      fontWeight: isSelected ? 800 : 600,
+                      color: isSelected ? role.color : '#64748b',
                       textAlign: 'center',
                       lineHeight: 1.2,
-                      letterSpacing: isSelected ? '0.02em' : '0',
+                      letterSpacing: '.01em',
                     }}>
                       {role.label}
                     </span>
-                    {isSelected && (
-                      <span style={{
-                        width: '18px', height: '18px',
-                        borderRadius: '50%',
-                        background: primary,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        marginTop: '2px',
-                      }}>
-                        <span className="material-icons" style={{ fontSize: '12px', color: '#fff' }}>check</span>
-                      </span>
-                    )}
                   </button>
                 );
               })}
