@@ -7,7 +7,7 @@ import SEOMeta from '../../components/SEOMeta';
 
 // ─── Module definitions (used for permission toggles) ────────────────────────
 const ALL_MODULES = [
-  { key: 'students',     label: 'Students',          icon: 'school' },
+  { key: 'students',     label: 'Students',           icon: 'school' },
   { key: 'teachers',     label: 'Teachers',           icon: 'person' },
   { key: 'classes',      label: 'Classes',            icon: 'class' },
   { key: 'applications', label: 'Applications',       icon: 'assignment_ind' },
@@ -20,6 +20,8 @@ const ALL_MODULES = [
   { key: 'attendance',   label: 'Attendance',         icon: 'fact_check' },
   { key: 'timetable',    label: 'Timetable',          icon: 'schedule' },
   { key: 'examination',  label: 'Exam & Certificates',icon: 'verified' },
+  { key: 'diary',        label: 'Class Diary',        icon: 'menu_book' },
+  { key: 'messages',     label: 'Messages',           icon: 'chat' },
 ];
 
 const DEFAULT_PERMS = ALL_MODULES.reduce((acc, m) => ({ ...acc, [m.key]: true }), {});
@@ -60,6 +62,40 @@ function OwnerDashboard() {
   // ── School users modal ───────────────────────────────────────────────────────
   const [usersModal,    setUsersModal]    = useState(null); // { school: sa, users: [] } | null
   const [usersLoading,  setUsersLoading]  = useState(false);
+
+  // ── Manage Modules modal ─────────────────────────────────────────────────────
+  const [modulesModal,   setModulesModal]   = useState(null); // sa object | null
+  const [moduleToggles,  setModuleToggles]  = useState({});   // { key: bool }
+  const [modulesSaving,  setModulesSaving]  = useState(false);
+
+  const openModulesModal = (sa) => {
+    const raw = sa.schoolFeatures;
+    const parsed = raw
+      ? (typeof raw === 'string' ? (() => { try { return JSON.parse(raw); } catch { return null; } })() : raw)
+      : null;
+    const defaults = ALL_MODULES.reduce((acc, m) => ({ ...acc, [m.key]: true }), {});
+    setModuleToggles({ ...defaults, ...(parsed || {}) });
+    setModulesModal(sa);
+  };
+
+  const saveModules = async () => {
+    if (!modulesModal?.schoolDbId) return;
+    setModulesSaving(true);
+    try {
+      await schoolAPI.updateFeatures(modulesModal.schoolDbId, moduleToggles);
+      // Reflect change locally so the count badge updates immediately
+      setSuperAdmins(prev => prev.map(sa =>
+        sa.id === modulesModal.id
+          ? { ...sa, schoolFeatures: JSON.stringify(moduleToggles) }
+          : sa
+      ));
+      setModulesModal(null);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to save module settings.');
+    } finally {
+      setModulesSaving(false);
+    }
+  };
 
   const openUsersModal = async (sa) => {
     setUsersModal({ school: sa, users: [] });
@@ -294,10 +330,10 @@ function OwnerDashboard() {
               </thead>
               <tbody>
                 {filtered.map(sa => {
-                  const perms = sa.permissions
-                    ? (typeof sa.permissions === 'string' ? (() => { try { return JSON.parse(sa.permissions); } catch { return null; } })() : sa.permissions)
+                  const schoolFeatures = sa.schoolFeatures
+                    ? (typeof sa.schoolFeatures === 'string' ? (() => { try { return JSON.parse(sa.schoolFeatures); } catch { return null; } })() : sa.schoolFeatures)
                     : null;
-                  const enabledCount = perms ? ALL_MODULES.filter(m => perms[m.key]).length : ALL_MODULES.length;
+                  const enabledCount = schoolFeatures ? ALL_MODULES.filter(m => schoolFeatures[m.key] !== false).length : ALL_MODULES.length;
                   const isExpanded   = expandedRow === sa.schoolDbId;
 
                   return (
@@ -385,6 +421,16 @@ function OwnerDashboard() {
                         </td>
                         <td>
                           <button
+                            onClick={() => sa.schoolDbId && openModulesModal(sa)}
+                            disabled={!sa.schoolDbId}
+                            title="Manage Modules"
+                            style={{ border: 'none', background: '#f0fdf4', borderRadius: 8, width: 30, height: 30, cursor: sa.schoolDbId ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: sa.schoolDbId ? 1 : 0.4 }}
+                          >
+                            <span className="material-icons" style={{ fontSize: 16, color: '#16a34a' }}>tune</span>
+                          </button>
+                        </td>
+                        <td>
+                          <button
                             onClick={() => setExpandedRow(isExpanded ? null : sa.schoolDbId)}
                             title={isExpanded ? 'Collapse' : 'View details'}
                             style={{ border: 'none', background: isExpanded ? '#ede9fe' : '#f8fafc', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -426,7 +472,7 @@ function OwnerDashboard() {
                       {/* ── Expanded detail row ─────────────────────────────── */}
                       {isExpanded && (
                         <tr>
-                          <td colSpan={11} style={{ padding: 0, background: '#fafbff', borderTop: '1px dashed #e2e8f0' }}>
+                          <td colSpan={12} style={{ padding: 0, background: '#fafbff', borderTop: '1px dashed #e2e8f0' }}>
                             <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
                               {/* School info */}
                               <div style={{ background: '#fff', borderRadius: 10, padding: '12px 14px', border: '1.5px solid #e2e8f0' }}>
@@ -444,13 +490,25 @@ function OwnerDashboard() {
                               </div>
                               {/* Enabled modules */}
                               <div style={{ background: '#fff', borderRadius: 10, padding: '12px 14px', border: '1.5px solid #e2e8f0' }}>
-                                <div style={{ fontSize: 11, fontWeight: 700, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
-                                  Enabled Modules ({enabledCount})
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                                  <div style={{ fontSize: 11, fontWeight: 700, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: 1 }}>
+                                    Enabled Modules ({enabledCount}/{ALL_MODULES.length})
+                                  </div>
+                                  <button
+                                    onClick={() => sa.schoolDbId && openModulesModal(sa)}
+                                    style={{ border: 'none', background: '#f0fdf4', color: '#16a34a', borderRadius: 6, padding: '2px 8px', fontSize: 10, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3 }}
+                                  >
+                                    <span className="material-icons" style={{ fontSize: 12 }}>tune</span>
+                                    Manage
+                                  </button>
                                 </div>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                                  {ALL_MODULES.filter(m => perms ? perms[m.key] : true).map(m => (
-                                    <span key={m.key} style={{ padding: '2px 8px', background: '#ede9fe', color: '#5b21b6', borderRadius: 12, fontSize: 10, fontWeight: 600 }}>{m.label}</span>
-                                  ))}
+                                  {ALL_MODULES.map(m => {
+                                    const on = schoolFeatures ? schoolFeatures[m.key] !== false : true;
+                                    return (
+                                      <span key={m.key} style={{ padding: '2px 8px', background: on ? '#ede9fe' : '#f1f5f9', color: on ? '#5b21b6' : '#94a3b8', borderRadius: 12, fontSize: 10, fontWeight: 600, textDecoration: on ? 'none' : 'line-through' }}>{m.label}</span>
+                                    );
+                                  })}
                                 </div>
                               </div>
                             </div>
@@ -738,6 +796,97 @@ function OwnerDashboard() {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Manage Modules Modal ───────────────────────────────────────────── */}
+      {modulesModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 560, maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.25)' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 24px', borderBottom: '1.5px solid #e2e8f0', flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 10, background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <span className="material-icons" style={{ color: '#16a34a', fontSize: 22 }}>tune</span>
+                </div>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: 16, color: '#1a202c' }}>Manage Modules — {modulesModal.schoolName || 'School'}</div>
+                  <div style={{ fontSize: 12, color: '#718096' }}>Enable or disable modules for this school. Changes take effect within 60 seconds.</div>
+                </div>
+              </div>
+              <button
+                onClick={() => setModulesModal(null)}
+                style={{ border: 'none', background: '#f8fafc', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <span className="material-icons" style={{ fontSize: 18, color: '#718096' }}>close</span>
+              </button>
+            </div>
+
+            {/* Body — toggle grid */}
+            <div style={{ overflowY: 'auto', flexGrow: 1, padding: '16px 24px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                {ALL_MODULES.map(m => {
+                  const enabled = moduleToggles[m.key] !== false;
+                  return (
+                    <button
+                      key={m.key}
+                      onClick={() => setModuleToggles(prev => ({ ...prev, [m.key]: !enabled }))}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '10px 14px', borderRadius: 10, cursor: 'pointer',
+                        border: `1.5px solid ${enabled ? '#bbf7d0' : '#e2e8f0'}`,
+                        background: enabled ? '#f0fdf4' : '#f8fafc',
+                        textAlign: 'left', transition: 'all 0.15s',
+                      }}
+                    >
+                      <span className="material-icons" style={{ fontSize: 18, color: enabled ? '#16a34a' : '#cbd5e0', flexShrink: 0 }}>{m.icon}</span>
+                      <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: enabled ? '#166534' : '#94a3b8' }}>{m.label}</span>
+                      <span className="material-icons" style={{ fontSize: 20, color: enabled ? '#16a34a' : '#cbd5e0', flexShrink: 0 }}>
+                        {enabled ? 'toggle_on' : 'toggle_off'}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div style={{ marginTop: 12, padding: '10px 12px', background: '#fffbeb', borderRadius: 8, border: '1px solid #fcd34d', fontSize: 12, color: '#92400e' }}>
+                <strong>Note:</strong> Disabled modules are hidden from navigation and direct URL access shows a "Module not enabled" page.
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div style={{ padding: '14px 24px', borderTop: '1.5px solid #e2e8f0', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, background: '#f8fafc', borderRadius: '0 0 16px 16px' }}>
+              <span style={{ fontSize: 12, color: '#718096' }}>
+                {ALL_MODULES.filter(m => moduleToggles[m.key] !== false).length} / {ALL_MODULES.length} modules enabled
+              </span>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  onClick={() => setModulesModal(null)}
+                  disabled={modulesSaving}
+                  style={{ padding: '8px 18px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: '#fff', color: '#4a5568', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveModules}
+                  disabled={modulesSaving}
+                  style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg,#16a34a,#15803d)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: modulesSaving ? 'not-allowed' : 'pointer', opacity: modulesSaving ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 6 }}
+                >
+                  {modulesSaving ? (
+                    <>
+                      <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />
+                      Saving…
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-icons" style={{ fontSize: 16 }}>save</span>
+                      Save Changes
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

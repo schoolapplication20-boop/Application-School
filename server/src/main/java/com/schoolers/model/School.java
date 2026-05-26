@@ -97,9 +97,11 @@ public class School {
     // ── Feature Toggles (stored as JSON string) ──────────────────────────────
     @Column(name = "features", columnDefinition = "TEXT")
     @Builder.Default
-    private String features = "{\"attendance\":true,\"transport\":true,\"fees\":true,"
-            + "\"salary\":true,\"examination\":true,\"diary\":true,"
-            + "\"announcements\":true,\"messages\":true}";
+    private String features = "{\"students\":true,\"teachers\":true,\"classes\":true,"
+            + "\"applications\":true,\"fees\":true,\"collectFee\":true,"
+            + "\"salaries\":true,\"expenses\":true,\"leave\":true,"
+            + "\"transport\":true,\"attendance\":true,\"timetable\":true,"
+            + "\"examination\":true,\"diary\":true,\"messages\":true}";
 
     // ── Setup Status ──────────────────────────────────────────────────────────
     /**

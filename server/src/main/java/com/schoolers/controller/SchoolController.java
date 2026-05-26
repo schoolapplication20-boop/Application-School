@@ -160,6 +160,29 @@ public class SchoolController {
         return ResponseEntity.ok(ApiResponse.success(msg, null));
     }
 
+    // ── PATCH /api/schools/{id}/features ─────────────────────────────────────
+    // APPLICATION_OWNER only — set which modules are enabled for a school.
+    // {id} = human-assigned display number (schools.school_id column).
+    // Body: { "students": true, "fees": false, ... }
+    @PatchMapping("/{id}/features")
+    @PreAuthorize("hasRole('APPLICATION_OWNER')")
+    public ResponseEntity<ApiResponse<Void>> updateSchoolFeatures(
+            @PathVariable Integer id,
+            @RequestBody Map<String, Object> features) {
+
+        School school = schoolRepository.findBySchoolId(id).orElse(null);
+        if (school == null)
+            return ResponseEntity.status(404).body(ApiResponse.error("School not found."));
+
+        try {
+            school.setFeatures(objectMapper.writeValueAsString(features));
+            schoolRepository.save(school);
+            return ResponseEntity.ok(ApiResponse.success("Module settings updated.", null));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Failed to save features: " + e.getMessage()));
+        }
+    }
+
     // ── GET /api/schools/my-status ────────────────────────────────────────────
     // Any authenticated user — check whether their school is currently active.
     // APPLICATION_OWNER always returns active = true.

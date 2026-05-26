@@ -449,6 +449,9 @@ export const schoolAPI = {
   /** APPLICATION_OWNER: enable or disable a school (id = display number) */
   toggleSchoolActive: (id, active) => api.patch(`/api/schools/${id}/active`, null, { params: { active } }),
 
+  /** APPLICATION_OWNER: update module feature flags for a school (id = display number) */
+  updateFeatures: (id, features) => api.patch(`/api/schools/${id}/features`, features),
+
   /** Any authenticated user: check whether their school is currently active */
   getMyStatus: () => api.get('/api/schools/my-status'),
 

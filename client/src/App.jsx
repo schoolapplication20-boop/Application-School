@@ -183,30 +183,30 @@ function App() {
             <Route path="/superadmin/setup-school"      element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']}><SetupSchool /></ProtectedRoute>} />
 
             {/* Teacher Routes */}
-            <Route path="/teacher/dashboard" element={<ProtectedRoute allowedRoles={['TEACHER']}><TeacherDashboard /></ProtectedRoute>} />
-            <Route path="/teacher/my-students" element={<ProtectedRoute allowedRoles={['TEACHER']}><MyStudents /></ProtectedRoute>} />
-            <Route path="/teacher/schedule" element={<ProtectedRoute allowedRoles={['TEACHER']}><Schedule /></ProtectedRoute>} />
-            <Route path="/teacher/attendance" element={<ProtectedRoute allowedRoles={['TEACHER']}><Attendance /></ProtectedRoute>} />
-            <Route path="/teacher/marks" element={<ProtectedRoute allowedRoles={['TEACHER']}><Marks /></ProtectedRoute>} />
-            <Route path="/teacher/diary" element={<ProtectedRoute allowedRoles={['TEACHER']}><Homework /></ProtectedRoute>} />
-            <Route path="/teacher/leave-approval" element={<ProtectedRoute allowedRoles={['TEACHER']}><LeaveApproval /></ProtectedRoute>} />
-            <Route path="/teacher/messages" element={<ProtectedRoute allowedRoles={['TEACHER']}><TeacherMessages /></ProtectedRoute>} />
-            <Route path="/teacher/leave-request"   element={<ProtectedRoute allowedRoles={['TEACHER']}><TeacherLeaveRequest /></ProtectedRoute>} />
-            <Route path="/teacher/examination"     element={<ProtectedRoute allowedRoles={['TEACHER']}><ExaminationView /></ProtectedRoute>} />
-            <Route path="/teacher/my-attendance"   element={<ProtectedRoute allowedRoles={['TEACHER']}><TeacherSelfAttendance /></ProtectedRoute>} />
+            <Route path="/teacher/dashboard"     element={<ProtectedRoute allowedRoles={['TEACHER']}><TeacherDashboard /></ProtectedRoute>} />
+            <Route path="/teacher/my-students"   element={<ProtectedRoute allowedRoles={['TEACHER']} moduleKey="students"><MyStudents /></ProtectedRoute>} />
+            <Route path="/teacher/schedule"      element={<ProtectedRoute allowedRoles={['TEACHER']} moduleKey="timetable"><Schedule /></ProtectedRoute>} />
+            <Route path="/teacher/attendance"    element={<ProtectedRoute allowedRoles={['TEACHER']} moduleKey="attendance"><Attendance /></ProtectedRoute>} />
+            <Route path="/teacher/marks"         element={<ProtectedRoute allowedRoles={['TEACHER']} moduleKey="examination"><Marks /></ProtectedRoute>} />
+            <Route path="/teacher/diary"         element={<ProtectedRoute allowedRoles={['TEACHER']} moduleKey="diary"><Homework /></ProtectedRoute>} />
+            <Route path="/teacher/leave-approval" element={<ProtectedRoute allowedRoles={['TEACHER']} moduleKey="leave"><LeaveApproval /></ProtectedRoute>} />
+            <Route path="/teacher/messages"      element={<ProtectedRoute allowedRoles={['TEACHER']} moduleKey="messages"><TeacherMessages /></ProtectedRoute>} />
+            <Route path="/teacher/leave-request" element={<ProtectedRoute allowedRoles={['TEACHER']} moduleKey="leave"><TeacherLeaveRequest /></ProtectedRoute>} />
+            <Route path="/teacher/examination"   element={<ProtectedRoute allowedRoles={['TEACHER']} moduleKey="examination"><ExaminationView /></ProtectedRoute>} />
+            <Route path="/teacher/my-attendance" element={<ProtectedRoute allowedRoles={['TEACHER']} moduleKey="attendance"><TeacherSelfAttendance /></ProtectedRoute>} />
 
             {/* Student Routes */}
             <Route path="/student/dashboard"  element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentDashboard /></ProtectedRoute>} />
-            <Route path="/student/attendance" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentAttendance /></ProtectedRoute>} />
-            <Route path="/student/diary"      element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentDiary /></ProtectedRoute>} />
-            <Route path="/student/fees"       element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentFees /></ProtectedRoute>} />
-            <Route path="/student/leave"      element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentLeaveRequest /></ProtectedRoute>} />
-            <Route path="/student/messages"   element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentMessages /></ProtectedRoute>} />
-            <Route path="/student/exams"      element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentExams /></ProtectedRoute>} />
-            <Route path="/student/marks"      element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentMarks /></ProtectedRoute>} />
+            <Route path="/student/attendance" element={<ProtectedRoute allowedRoles={['STUDENT']} moduleKey="attendance"><StudentAttendance /></ProtectedRoute>} />
+            <Route path="/student/diary"      element={<ProtectedRoute allowedRoles={['STUDENT']} moduleKey="diary"><StudentDiary /></ProtectedRoute>} />
+            <Route path="/student/fees"       element={<ProtectedRoute allowedRoles={['STUDENT']} moduleKey="fees"><StudentFees /></ProtectedRoute>} />
+            <Route path="/student/leave"      element={<ProtectedRoute allowedRoles={['STUDENT']} moduleKey="leave"><StudentLeaveRequest /></ProtectedRoute>} />
+            <Route path="/student/messages"   element={<ProtectedRoute allowedRoles={['STUDENT']} moduleKey="messages"><StudentMessages /></ProtectedRoute>} />
+            <Route path="/student/exams"      element={<ProtectedRoute allowedRoles={['STUDENT']} moduleKey="examination"><StudentExams /></ProtectedRoute>} />
+            <Route path="/student/marks"      element={<ProtectedRoute allowedRoles={['STUDENT']} moduleKey="examination"><StudentMarks /></ProtectedRoute>} />
 
             {/* Admin Messages */}
-            <Route path="/admin/messages"     element={<ProtectedRoute allowedRoles={['ADMIN','SUPER_ADMIN']}><AdminMessages /></ProtectedRoute>} />
+            <Route path="/admin/messages"     element={<ProtectedRoute allowedRoles={['ADMIN','SUPER_ADMIN']} permKey="messages"><AdminMessages /></ProtectedRoute>} />
 
             {/* School Settings */}
             <Route path="/admin/settings"     element={<ProtectedRoute allowedRoles={['ADMIN','SUPER_ADMIN']}><SchoolSettings /></ProtectedRoute>} />

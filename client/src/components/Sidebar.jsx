@@ -22,7 +22,7 @@ const adminNavItems = [
   { path: '/admin/teacher-attendance', icon: 'co_present',              label: 'Teacher Attendance',  permKey: null },
   { path: '/admin/timetable',          icon: 'schedule',                label: 'Timetable',          permKey: 'timetable' },
   { path: '/admin/examination',        icon: 'verified',                label: 'Exam & Certificates', permKey: 'examination' },
-  { path: '/admin/messages',            icon: 'campaign',                label: 'Messages',            permKey: null },
+  { path: '/admin/messages',            icon: 'campaign',                label: 'Messages',            permKey: 'messages' },
   { path: '/admin/settings',            icon: 'settings',                label: 'School Settings',      permKey: null },
 ];
 
@@ -42,28 +42,28 @@ const appOwnerNavItems = [
 ];
 
 const teacherNavItems = [
-  { path: '/teacher/dashboard',       icon: 'dashboard',      label: 'Dashboard' },
-  { path: '/teacher/my-students',     icon: 'group',          label: 'My Students' },
-  { path: '/teacher/schedule',        icon: 'calendar_today', label: 'My Schedule' },
-  { path: '/teacher/attendance',      icon: 'fact_check',     label: 'Attendance' },
-  { path: '/teacher/diary',           icon: 'menu_book',      label: 'Diary' },
-  { path: '/teacher/marks',           icon: 'grade',          label: 'Marks' },
-  { path: '/teacher/messages',        icon: 'chat',           label: 'Messages' },
-  { path: '/teacher/leave-approval',  icon: 'how_to_reg',     label: 'Leave Approval' },
-  { path: '/teacher/leave-request',   icon: 'event_busy',     label: 'Leave Request' },
-  { path: '/teacher/my-attendance',  icon: 'co_present',     label: 'My Attendance' },
-  { path: '/teacher/examination',    icon: 'verified',        label: 'Exam & Certificates' },
+  { path: '/teacher/dashboard',       icon: 'dashboard',      label: 'Dashboard',           moduleKey: null },
+  { path: '/teacher/my-students',     icon: 'group',          label: 'My Students',         moduleKey: 'students' },
+  { path: '/teacher/schedule',        icon: 'calendar_today', label: 'My Schedule',         moduleKey: 'timetable' },
+  { path: '/teacher/attendance',      icon: 'fact_check',     label: 'Attendance',          moduleKey: 'attendance' },
+  { path: '/teacher/diary',           icon: 'menu_book',      label: 'Diary',               moduleKey: 'diary' },
+  { path: '/teacher/marks',           icon: 'grade',          label: 'Marks',               moduleKey: 'examination' },
+  { path: '/teacher/messages',        icon: 'chat',           label: 'Messages',            moduleKey: 'messages' },
+  { path: '/teacher/leave-approval',  icon: 'how_to_reg',     label: 'Leave Approval',      moduleKey: 'leave' },
+  { path: '/teacher/leave-request',   icon: 'event_busy',     label: 'Leave Request',       moduleKey: 'leave' },
+  { path: '/teacher/my-attendance',   icon: 'co_present',     label: 'My Attendance',       moduleKey: 'attendance' },
+  { path: '/teacher/examination',     icon: 'verified',       label: 'Exam & Certificates', moduleKey: 'examination' },
 ];
 
 const studentNavItems = [
-  { path: '/student/dashboard',   icon: 'dashboard',      label: 'Dashboard' },
-  { path: '/student/attendance',  icon: 'fact_check',     label: 'Attendance' },
-  { path: '/student/diary',       icon: 'photo_library',  label: 'Class Diary' },
-  { path: '/student/fees',        icon: 'payments',       label: 'Pay Fees' },
-  { path: '/student/leave',       icon: 'event_busy',     label: 'Leave Request' },
-  { path: '/student/messages',    icon: 'chat',           label: 'Messages' },
-  { path: '/student/exams',       icon: 'calendar_view_week', label: 'Schedule & Exams' },
-  { path: '/student/marks',       icon: 'grade',              label: 'My Marks' },
+  { path: '/student/dashboard',   icon: 'dashboard',          label: 'Dashboard',        moduleKey: null },
+  { path: '/student/attendance',  icon: 'fact_check',         label: 'Attendance',       moduleKey: 'attendance' },
+  { path: '/student/diary',       icon: 'photo_library',      label: 'Class Diary',      moduleKey: 'diary' },
+  { path: '/student/fees',        icon: 'payments',           label: 'Pay Fees',         moduleKey: 'fees' },
+  { path: '/student/leave',       icon: 'event_busy',         label: 'Leave Request',    moduleKey: 'leave' },
+  { path: '/student/messages',    icon: 'chat',               label: 'Messages',         moduleKey: 'messages' },
+  { path: '/student/exams',       icon: 'calendar_view_week', label: 'Schedule & Exams', moduleKey: 'examination' },
+  { path: '/student/marks',       icon: 'grade',              label: 'My Marks',         moduleKey: 'examination' },
 ];
 
 
@@ -178,10 +178,10 @@ const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
       }
 
       case 'TEACHER':
-        return [{ label: 'Navigation', items: teacherNavItems }];
+        return [{ label: 'Navigation', items: teacherNavItems.filter(item => item.moduleKey === null || hasFeature(item.moduleKey)) }];
 
       case 'STUDENT':
-        return [{ label: 'Navigation', items: studentNavItems }];
+        return [{ label: 'Navigation', items: studentNavItems.filter(item => item.moduleKey === null || hasFeature(item.moduleKey)) }];
 
       default:
         return [];
