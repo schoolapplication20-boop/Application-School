@@ -8,7 +8,10 @@ import com.schoolers.config.SecurityConfig;
 import com.schoolers.security.JwtFilter;
 import com.schoolers.security.JwtUtil;
 import com.schoolers.security.UserDetailsServiceImpl;
+import com.schoolers.config.RateLimitingInterceptor;
+import com.schoolers.repository.SchoolRepository;
 import com.schoolers.service.AuthService;
+import com.schoolers.service.TokenBlacklistService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,6 +19,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -76,8 +80,22 @@ class AuthControllerTest {
     @MockBean
     private UserDetailsServiceImpl userDetailsService;
 
+    @MockBean
+    private TokenBlacklistService tokenBlacklistService;
+
+    @MockBean
+    private SchoolRepository schoolRepository;
+
+    @MockBean
+    private RateLimitingInterceptor rateLimitingInterceptor;
+
     @Autowired
     private ObjectMapper objectMapper;
+
+    @org.junit.jupiter.api.BeforeEach
+    void setUp() throws Exception {
+        when(rateLimitingInterceptor.preHandle(any(), any(), any())).thenReturn(true);
+    }
 
     // ── POST /api/auth/login ────────────────────────────────────────────────
 
@@ -214,5 +232,30 @@ class AuthControllerTest {
                 .content(objectMapper.writeValueAsString(
                     Map.of("identifier", "9876543210"))))
                .andExpect(status().isBadRequest());
+    }
+
+    // ── POST /api/auth/logout ──────────────────────────────────────────────
+
+    @Test
+    @DisplayName("POST /api/auth/logout without auth returns 401")
+    void logout_noAuth_returns401() throws Exception {
+        mockMvc.perform(post("/api/auth/logout")
+                .with(csrf()))
+               .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("POST /api/auth/logout with valid auth token revokes it and returns 200")
+    @WithMockUser(username = "admin@school.com", roles = "ADMIN")
+    void logout_withToken_returns200() throws Exception {
+        when(jwtUtil.extractExpiration("test-jwt-token"))
+            .thenReturn(new java.util.Date(System.currentTimeMillis() + 7200000L));
+
+        mockMvc.perform(post("/api/auth/logout")
+                .with(csrf())
+                .header("Authorization", "Bearer test-jwt-token"))
+               .andExpect(status().isOk())
+               .andExpect(jsonPath("$.success").value(true))
+               .andExpect(jsonPath("$.message").value("Logged out successfully"));
     }
 }

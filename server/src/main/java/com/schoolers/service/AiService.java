@@ -192,7 +192,6 @@ public class AiService {
 
                     sb.append("\n");
                 }
-            }
             } else if ("PARENT".equals(role) && userId != null) {
                 var children = studentRepository.findByParentId(userId);
                 if (!children.isEmpty()) {

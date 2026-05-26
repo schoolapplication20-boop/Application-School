@@ -8,7 +8,11 @@ import com.schoolers.config.SecurityConfig;
 import com.schoolers.security.JwtFilter;
 import com.schoolers.security.JwtUtil;
 import com.schoolers.security.UserDetailsServiceImpl;
+import com.schoolers.config.RateLimitingInterceptor;
+import com.schoolers.repository.IdempotencyKeyRepository;
+import com.schoolers.repository.SchoolRepository;
 import com.schoolers.service.AdminService;
+import com.schoolers.service.TokenBlacklistService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -83,11 +87,24 @@ class AdminControllerTest {
     @MockBean
     private UserDetailsServiceImpl userDetailsService;
 
+    @MockBean
+    private TokenBlacklistService tokenBlacklistService;
+
+    @MockBean
+    private SchoolRepository schoolRepository;
+
+    @MockBean
+    private IdempotencyKeyRepository idempotencyKeyRepository;
+
+    @MockBean
+    private RateLimitingInterceptor rateLimitingInterceptor;
+
     @Autowired
     private ObjectMapper objectMapper;
 
     @BeforeEach
-    void setup() {
+    void setup() throws Exception {
+        when(rateLimitingInterceptor.preHandle(any(), any(), any())).thenReturn(true);
         when(userRepository.findByEmailIgnoreCase(anyString())).thenReturn(Optional.empty());
     }
 

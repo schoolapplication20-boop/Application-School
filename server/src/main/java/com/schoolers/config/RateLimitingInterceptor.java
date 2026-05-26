@@ -1,5 +1,6 @@
 package com.schoolers.config;
 
+import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import io.github.bucket4j.Bucket4j;
 import io.github.bucket4j.Refill;
@@ -43,7 +44,7 @@ public class RateLimitingInterceptor implements HandlerInterceptor {
             response.addHeader("X-Rate-Limit-Remaining", String.valueOf(bucket.getAvailableTokens()));
             return true;
         } else {
-            response.setStatus(HttpServletResponse.SC_TOO_MANY_REQUESTS);
+            response.setStatus(429);
             response.setContentType("application/json");
             response.getWriter().write("{\"success\":false,\"message\":\"Too many attempts. Please try again in 15 minutes.\"}");
             return false;
@@ -57,20 +58,20 @@ public class RateLimitingInterceptor implements HandlerInterceptor {
                 || path.contains("/api/auth/forgot-password")
                 || path.contains("/api/auth/register")) {
             return loginBuckets.computeIfAbsent(ipAddress, k -> Bucket4j.builder()
-                    .addLimit(Refill.intervally(5, java.time.Duration.ofMinutes(15)))
+                    .addLimit(Bandwidth.classic(5, Refill.intervally(5, java.time.Duration.ofMinutes(15))))
                     .build());
         }
 
         // Public endpoints (admissions, marketing) get moderate limit
         if (path.contains("/api/applications") || path.contains("/api/marketing") || path.contains("/api/chatbot")) {
             return generalBuckets.computeIfAbsent(ipAddress, k -> Bucket4j.builder()
-                    .addLimit(Refill.intervally(1000, java.time.Duration.ofMinutes(10)))
+                    .addLimit(Bandwidth.classic(1000, Refill.intervally(1000, java.time.Duration.ofMinutes(10))))
                     .build());
         }
 
         // Authenticated endpoints get higher limit
         return authenticationBuckets.computeIfAbsent(ipAddress, k -> Bucket4j.builder()
-                .addLimit(Refill.intervally(2000, java.time.Duration.ofMinutes(10)))
+                .addLimit(Bandwidth.classic(2000, Refill.intervally(2000, java.time.Duration.ofMinutes(10))))
                 .build());
     }
 
