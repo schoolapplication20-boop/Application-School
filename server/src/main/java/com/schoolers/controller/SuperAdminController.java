@@ -18,7 +18,6 @@ import java.util.HashMap;
 @RestController
 @RequestMapping("/api/superadmin")
 @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPLICATION_OWNER')")
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001", "http://localhost:5173", "http://127.0.0.1:5173"})
 public class SuperAdminController {
 
     private static final java.util.regex.Pattern EMAIL_PATTERN =

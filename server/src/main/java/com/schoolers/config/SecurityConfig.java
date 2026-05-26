@@ -81,7 +81,11 @@ public class SecurityConfig {
                 .requestMatchers("/api/system/**").authenticated()  // system notices — all users read; write gated by @PreAuthorize
                 .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/error").permitAll()
-                .requestMatchers("/uploads/**").permitAll()          // logo / document assets
+                .requestMatchers("/uploads/logos/**").permitAll()    // school logos — public
+                .requestMatchers("/uploads/**").authenticated()      // docs/receipts/slips require auth
+
+                // ── Audit logs — SUPER_ADMIN and APPLICATION_OWNER only ───────
+                .requestMatchers("/api/audit-logs/**").hasAnyRole("SUPER_ADMIN", "APPLICATION_OWNER")
 
                 // ── School management ─────────────────────────────────────────
                 // Fine-grained access (create=SUPER_ADMIN, update=SUPER_ADMIN|APPLICATION_OWNER)

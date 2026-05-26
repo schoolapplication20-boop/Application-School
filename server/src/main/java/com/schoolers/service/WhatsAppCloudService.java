@@ -28,6 +28,10 @@ public class WhatsAppCloudService {
     @Value("${whatsapp.cloud.verify.token:myskoolz2026}")
     private String verifyToken;
 
+    /** Meta App Secret — used to verify X-Hub-Signature-256 on incoming webhooks. */
+    @Value("${whatsapp.cloud.app.secret:}")
+    private String appSecret;
+
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper mapper = new ObjectMapper();
 
@@ -38,6 +42,10 @@ public class WhatsAppCloudService {
 
     public String getVerifyToken() {
         return verifyToken;
+    }
+
+    public String getAppSecret() {
+        return appSecret;
     }
 
     // ── Process incoming webhook payload ─────────────────────────────────────

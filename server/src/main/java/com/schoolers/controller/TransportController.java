@@ -16,7 +16,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/transport")
 @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001"})
 public class TransportController {
 
     @Autowired

@@ -3,8 +3,10 @@ package com.schoolers.controller;
 import com.schoolers.dto.ApiResponse;
 import com.schoolers.dto.CreateTeacherRequest;
 import com.schoolers.model.*;
+import com.schoolers.repository.IdempotencyKeyRepository;
 import com.schoolers.repository.UserRepository;
 import com.schoolers.service.AdminService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -21,14 +23,11 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/admin")
 @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001", "http://localhost:5173", "http://127.0.0.1:5173"})
 public class AdminController {
 
-    @Autowired
-    private AdminService adminService;
-
-    @Autowired
-    private UserRepository userRepository;
+    @Autowired private AdminService adminService;
+    @Autowired private UserRepository userRepository;
+    @Autowired private IdempotencyKeyRepository idempotencyKeyRepository;
 
     /** Returns the school_id of the currently authenticated user */
     private Long getCurrentSchoolId(Authentication auth) {
@@ -43,6 +42,22 @@ public class AdminController {
         return userRepository.findByEmailIgnoreCase(auth.getName())
                 .map(com.schoolers.model.User::getId)
                 .orElse(null);
+    }
+
+    /**
+     * Returns true (and short-circuits the caller) when the Idempotency-Key header was already processed.
+     * If the key is new, saves it and returns false so the caller can proceed.
+     */
+    private boolean isDuplicate(HttpServletRequest request, Long schoolId, String endpoint, ResponseEntity<?>[] out) {
+        String key = request.getHeader("Idempotency-Key");
+        if (key == null || key.isBlank()) return false;
+        if (idempotencyKeyRepository.existsByKeyAndSchoolId(key, schoolId)) {
+            out[0] = ResponseEntity.ok(ApiResponse.success("Already processed", null));
+            return true;
+        }
+        idempotencyKeyRepository.save(IdempotencyKey.builder()
+                .key(key).schoolId(schoolId).endpoint(endpoint).build());
+        return false;
     }
 
     // ===== Permissions =====
@@ -194,8 +209,12 @@ public class AdminController {
     }
 
     @PostMapping("/fees/{id}/collect")
-    public ResponseEntity<?> collectCashFee(@PathVariable Long id, @RequestBody Map<String, Object> body, Authentication auth) {
-        ApiResponse<Fee> response = adminService.collectCashFee(id, body, getCurrentSchoolId(auth));
+    public ResponseEntity<?> collectCashFee(@PathVariable Long id, @RequestBody Map<String, Object> body,
+            Authentication auth, HttpServletRequest request) {
+        Long schoolId = getCurrentSchoolId(auth);
+        ResponseEntity<?>[] out = new ResponseEntity[1];
+        if (isDuplicate(request, schoolId, "/fees/" + id + "/collect", out)) return out[0];
+        ApiResponse<Fee> response = adminService.collectCashFee(id, body, schoolId);
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
@@ -275,7 +294,11 @@ public class AdminController {
     }
 
     @PostMapping("/student-fee-assignments/{assignmentId}/collect")
-    public ResponseEntity<?> collectAssignmentFee(@PathVariable Long assignmentId, @RequestBody Map<String, Object> body) {
+    public ResponseEntity<?> collectAssignmentFee(@PathVariable Long assignmentId, @RequestBody Map<String, Object> body,
+            Authentication auth, HttpServletRequest request) {
+        Long schoolId = getCurrentSchoolId(auth);
+        ResponseEntity<?>[] out = new ResponseEntity[1];
+        if (isDuplicate(request, schoolId, "/student-fee-assignments/" + assignmentId + "/collect", out)) return out[0];
         var response = adminService.collectAssignmentFee(assignmentId, body);
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
@@ -291,7 +314,11 @@ public class AdminController {
     public ResponseEntity<?> collectInstallmentFee(
             @PathVariable Long installmentId,
             @RequestBody Map<String, Object> body,
-            Authentication auth) {
+            Authentication auth,
+            HttpServletRequest request) {
+        Long schoolId = getCurrentSchoolId(auth);
+        ResponseEntity<?>[] out = new ResponseEntity[1];
+        if (isDuplicate(request, schoolId, "/fee-installments/" + installmentId + "/pay", out)) return out[0];
         // Inject receivedBy from JWT if caller didn't supply it
         if (body.get("receivedBy") == null || body.get("receivedBy").toString().isBlank()) {
             body.put("receivedBy", auth != null ? auth.getName() : "Admin");

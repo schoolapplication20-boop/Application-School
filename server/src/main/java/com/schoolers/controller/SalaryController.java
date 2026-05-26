@@ -18,7 +18,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/salary")
 @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
-@CrossOrigin(origins = {
     "http://localhost:3000", "http://localhost:3001",
     "http://localhost:5173", "http://127.0.0.1:5173"
 })

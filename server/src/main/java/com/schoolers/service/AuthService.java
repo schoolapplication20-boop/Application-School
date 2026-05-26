@@ -14,18 +14,20 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.security.MessageDigest;
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.security.SecureRandom;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 public class AuthService {
 
-    private static final Logger log = Logger.getLogger(AuthService.class.getName());
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
     @Autowired private UserRepository    userRepository;
     @Autowired private SchoolRepository  schoolRepository;
@@ -68,6 +70,13 @@ public class AuthService {
             if (!Boolean.TRUE.equals(user.getIsActive()))
                 return ApiResponse.error("Your account has been deactivated. Please contact admin.");
 
+            // ── Step 2b: Account lockout check ────────────────────────────
+            // Account is locked when lockedUntil is set (permanently — cleared only on password reset).
+            if (user.getLockedUntil() != null) {
+                return ApiResponse.error("Your account has been locked after too many failed attempts. "
+                        + "Please use 'Forgot Password' to reset your password and unlock your account.");
+            }
+
             // Check if the school itself is active (skip for APPLICATION_OWNER)
             if (user.getRole() != User.Role.APPLICATION_OWNER && user.getSchoolId() != null) {
                 java.util.Optional<School> schoolOpt =
@@ -90,16 +99,33 @@ public class AuthService {
             // ── Step 3: Password ───────────────────────────────────────────
             if (request.getPassword() == null || request.getPassword().isBlank())
                 return ApiResponse.error("Password is required.");
-            if (!passwordEncoder.matches(request.getPassword(), user.getPassword()))
-                return ApiResponse.error("Incorrect password. Please check your password and try again.");
+            if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+                int attempts = (user.getFailedLoginAttempts() == null ? 0 : user.getFailedLoginAttempts()) + 1;
+                user.setFailedLoginAttempts(attempts);
+                if (attempts >= 5) {
+                    // Lock permanently — cleared only when user completes a password reset via OTP
+                    user.setLockedUntil(LocalDateTime.now(ZoneOffset.UTC));
+                    user.setFailedLoginAttempts(0);
+                    userRepository.save(user);
+                    log.warn("[login] Account locked after 5 failed attempts");
+                    return ApiResponse.error("Account locked after 5 failed attempts. "
+                            + "Please use 'Forgot Password' to reset your password and unlock your account.");
+                }
+                userRepository.save(user);
+                return ApiResponse.error("Incorrect password. " + (5 - attempts) + " attempt(s) remaining before account lock.");
+            }
+            // Reset counter on successful password match
+            if (user.getFailedLoginAttempts() != null && user.getFailedLoginAttempts() > 0) {
+                user.setFailedLoginAttempts(0);
+                userRepository.save(user);
+            }
 
             // ── Step 3b: Role validation — selectedRole must match actual DB role ──
             // This blocks cross-role access even if the frontend is tampered with.
             if (request.getSelectedRole() != null && !request.getSelectedRole().isBlank()) {
                 String claimed = request.getSelectedRole().trim().toUpperCase();
                 if (!user.getRole().name().equals(claimed)) {
-                    log.warning("[login] Role mismatch for " + username
-                            + ": claimed=" + claimed + " actual=" + user.getRole().name());
+                    log.warn("[login] Role mismatch: claimed={} actual={}", claimed, user.getRole().name());
                     return ApiResponse.error("Access denied. You do not have the selected role.");
                 }
             }
@@ -182,14 +208,13 @@ public class AuthService {
                     .teacherType(teacherType)
                     .build();
 
-            log.info("[login] Success: " + username + " role=" + user.getRole().name()
-                    + " schoolId=" + user.getSchoolId());
+            log.info("[login] Success: role={} schoolId={}", user.getRole().name(), user.getSchoolId());
 
             return ApiResponse.success("Login successful",
                     LoginResponse.builder().token(token).user(userDto).build());
 
         } catch (Exception e) {
-            log.severe("[login] Unexpected error: " + e.getMessage());
+            log.error("[login] Unexpected error: {}", e.getMessage());
             return ApiResponse.error("Login failed: " + e.getMessage());
         }
     }
@@ -241,7 +266,7 @@ public class AuthService {
             school.setSchoolId(school.getId().intValue());
             school = schoolRepository.save(school);
         }
-        log.info("[register] Created school id=" + school.getId() + " schoolId=" + school.getSchoolId() + " code=" + code);
+        log.info("[register] Created school id={} schoolId={} code={}", school.getId(), school.getSchoolId(), code);
 
         // ── Create SUPER_ADMIN linked to the school ───────────────────────────
         User superAdmin = User.builder()
@@ -255,8 +280,7 @@ public class AuthService {
                 .firstLogin(false)
                 .build();
         userRepository.save(superAdmin);
-        log.info("[register] SUPER_ADMIN created email=" + normalizedEmail
-                + " schoolId=" + school.getId());
+        log.info("[register] SUPER_ADMIN created schoolId={}", school.getId());
 
         return ApiResponse.success(
                 "Registration successful. Please login to complete your school setup.",
@@ -292,11 +316,11 @@ public class AuthService {
         try {
             boolean isEmail = identifier != null && identifier.contains("@");
             User user;
-            log.info("[forgotPassword] identifier='" + identifier + "' isEmail=" + isEmail);
+            log.info("[forgotPassword] isEmail={}", isEmail);
 
             if (isEmail) {
                 String email = identifier.trim().toLowerCase();
-                log.info("[forgotPassword] searching by email='" + email + "'");
+                log.info("[forgotPassword] searching by email");
                 user = userRepository.findByEmailIgnoreCase(email).orElse(null);
                 if (user == null) {
                     user = userRepository.findByEmail(email).orElse(null);
@@ -308,7 +332,7 @@ public class AuthService {
             }
 
             String otp = String.format("%06d", 100000 + new SecureRandom().nextInt(900000));
-            LocalDateTime expiry = LocalDateTime.now(ZoneOffset.UTC).plusMinutes(5);
+            LocalDateTime expiry = LocalDateTime.now(ZoneOffset.UTC).plusMinutes(10);
             user.setResetOtp(otp);
             user.setOtpExpiry(expiry);
             userRepository.save(user);
@@ -318,15 +342,15 @@ public class AuthService {
                     emailService.sendOtpEmail(identifier.trim().toLowerCase(), otp);
                     return ApiResponse.success("OTP sent to your registered email address", null);
                 } catch (Exception mailEx) {
-                    log.severe("[forgotPassword] Failed to send OTP email: " + mailEx.getMessage());
+                    log.error("[forgotPassword] Failed to send OTP email: {}", mailEx.getMessage());
                     return ApiResponse.error("Failed to send OTP email. Please check your email configuration.");
                 }
             } else {
-                log.info("[DEV] OTP for " + identifier + ": " + otp);
+                log.info("[DEV] OTP sent via SMS");
                 return ApiResponse.success("OTP sent successfully to " + identifier, otp);
             }
         } catch (Exception e) {
-            log.severe("[forgotPassword] Unexpected error: " + e.getMessage());
+            log.error("[forgotPassword] Unexpected error: {}", e.getMessage());
             return ApiResponse.error("An error occurred. Please try again.");
         }
     }
@@ -347,7 +371,7 @@ public class AuthService {
         }
 
         String dbOtp = user.getResetOtp();
-        if (dbOtp == null || !dbOtp.trim().equals(otp.trim()))
+        if (dbOtp == null || !constantTimeEquals(dbOtp.trim(), otp.trim()))
             return ApiResponse.error("Invalid OTP.");
 
         LocalDateTime expiry = user.getOtpExpiry();
@@ -383,6 +407,9 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(newPassword));
         user.setResetOtp(null);
         user.setOtpExpiry(null);
+        // Clear any lockout so user can log in with new password
+        user.setLockedUntil(null);
+        user.setFailedLoginAttempts(0);
         userRepository.save(user);
         return ApiResponse.success("Password reset successfully", "Password updated");
     }
@@ -420,6 +447,12 @@ public class AuthService {
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
+
+    /** Constant-time string comparison to prevent timing-based OTP enumeration. */
+    private boolean constantTimeEquals(String a, String b) {
+        return MessageDigest.isEqual(a.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                                     b.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    }
 
     private LoginResponse.SchoolDto toSchoolDto(School s) {
         return LoginResponse.SchoolDto.builder()

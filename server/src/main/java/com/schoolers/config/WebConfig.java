@@ -12,14 +12,25 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
-    @Autowired
-    private RateLimitingInterceptor rateLimitingInterceptor;
+    @Autowired private RateLimitingInterceptor rateLimitingInterceptor;
+    @Autowired private SubscriptionInterceptor subscriptionInterceptor;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        // Register rate limiting interceptor for all requests
         registry.addInterceptor(rateLimitingInterceptor)
                 .addPathPatterns("/**")
                 .excludePathPatterns("/health", "/error", "/uploads/**");
+
+        // Subscription expiry check — runs on all authenticated school endpoints
+        registry.addInterceptor(subscriptionInterceptor)
+                .addPathPatterns("/api/**")
+                .excludePathPatterns(
+                        "/api/auth/**",
+                        "/api/applications",
+                        "/api/marketing/**",
+                        "/api/chatbot/**",
+                        "/api/whatsapp/webhook",
+                        "/api/health"
+                );
     }
 }
