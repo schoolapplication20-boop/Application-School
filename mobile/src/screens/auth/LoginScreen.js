@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -11,6 +12,7 @@ const ROLES = [
 
 export default function LoginScreen({ navigation }) {
   const { login } = useAuth();
+  const insets = useSafeAreaInsets();
   const [selectedRole, setSelectedRole] = useState('');
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -59,7 +61,10 @@ export default function LoginScreen({ navigation }) {
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16 }]}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.header}>
           <Text style={styles.logo}>My-Skoolz</Text>
           <Text style={styles.tagline}>Smart School Management</Text>
@@ -139,7 +144,7 @@ export default function LoginScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#1e40af' },
-  scroll: { flexGrow: 1, justifyContent: 'center', padding: 20 },
+  scroll: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 20 },
   header: { alignItems: 'center', marginBottom: 28 },
   logo: { fontSize: 32, fontWeight: '900', color: '#fff', letterSpacing: 1 },
   tagline: { fontSize: 13, color: '#bfdbfe', marginTop: 4 },

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
@@ -17,6 +18,7 @@ const TILES = [
 
 export default function StudentDashboard({ navigation }) {
   const { user, logout } = useAuth();
+  const insets = useSafeAreaInsets();
   const [profile, setProfile] = useState(null);
   const [stats, setStats] = useState({ attendance: null, pendingFees: 0 });
 
@@ -39,7 +41,7 @@ export default function StudentDashboard({ navigation }) {
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <View style={{ flex: 1 }}>
           <Text style={styles.greeting}>Hello, 👋</Text>
           <Text style={styles.name}>{user?.name || 'Student'}</Text>
@@ -86,7 +88,7 @@ export default function StudentDashboard({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f1f5f9' },
-  header: { backgroundColor: '#2563eb', paddingHorizontal: 20, paddingTop: 52, paddingBottom: 24, flexDirection: 'row', alignItems: 'flex-start' },
+  header: { backgroundColor: '#2563eb', paddingHorizontal: 20, paddingBottom: 24, flexDirection: 'row', alignItems: 'flex-start' },
   greeting: { color: '#bfdbfe', fontSize: 13 },
   name: { color: '#fff', fontSize: 22, fontWeight: '800', marginTop: 2 },
   classInfo: { color: '#bfdbfe', fontSize: 13, marginTop: 4 },

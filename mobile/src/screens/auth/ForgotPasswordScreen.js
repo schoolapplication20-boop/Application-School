@@ -3,12 +3,14 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import api from '../../services/api';
 
 const STEP = { EMAIL: 'EMAIL', OTP: 'OTP', PASSWORD: 'PASSWORD' };
 const OTP_EXPIRY = 300;
 
 export default function ForgotPasswordScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const [step, setStep] = useState(STEP.EMAIL);
   const [identifier, setIdentifier] = useState('');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -102,7 +104,10 @@ export default function ForgotPasswordScreen({ navigation }) {
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16 }]}
+        keyboardShouldPersistTaps="handled"
+      >
 
         <View style={styles.header}>
           <Text style={styles.logo}>My-Skoolz</Text>
@@ -241,7 +246,7 @@ export default function ForgotPasswordScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#1e40af' },
-  scroll: { flexGrow: 1, justifyContent: 'center', padding: 20 },
+  scroll: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 20 },
   header: { alignItems: 'center', marginBottom: 24 },
   logo: { fontSize: 28, fontWeight: '900', color: '#fff', letterSpacing: 1 },
   tagline: { fontSize: 13, color: '#bfdbfe', marginTop: 4 },

@@ -405,16 +405,6 @@ a {
     font-size: 20px;
   }
 
-  /* Hide non-essential table columns on very small screens */
-  .hide-mobile {
-    display: none !important;
-  }
-
-  /* Buttons — full width on very small screens */
-  .btn-mobile-full {
-    width: 100%;
-    justify-content: center;
-  }
 }
 
 /* ============================================

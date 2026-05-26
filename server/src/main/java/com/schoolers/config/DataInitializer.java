@@ -3,6 +3,8 @@ package com.schoolers.config;
 import com.schoolers.model.*;
 import com.schoolers.repository.*;
 import java.util.ArrayList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
@@ -14,6 +16,8 @@ import java.util.List;
 
 @Configuration
 public class DataInitializer {
+
+    private static final Logger log = LoggerFactory.getLogger(DataInitializer.class);
 
     @Value("${app.owner.email:superadmin@schoolers.com}")
     private String ownerEmail;
@@ -62,18 +66,18 @@ public class DataInitializer {
                     if (existing.getRole() != User.Role.APPLICATION_OWNER) {
                         existing.setRole(User.Role.APPLICATION_OWNER);
                         changed = true;
-                        System.out.println("  [DataInitializer] Corrected role to APPLICATION_OWNER for: " + existing.getEmail());
+                        log.warn("Corrected role to APPLICATION_OWNER for: {}", existing.getEmail());
                     }
                     // APPLICATION_OWNER must never have a schoolId — it is platform-level.
                     // A schoolId would incorrectly scope this account to a single school.
                     if (existing.getSchoolId() != null) {
                         existing.setSchoolId(null);
                         changed = true;
-                        System.out.println("  [DataInitializer] Cleared schoolId from APPLICATION_OWNER account.");
+                        log.warn("Cleared schoolId from APPLICATION_OWNER account.");
                     }
                     if (changed) {
                         userRepo.save(existing);
-                        System.out.println("  [DataInitializer] APPLICATION_OWNER account corrected.");
+                        log.info("APPLICATION_OWNER account corrected.");
                     }
                 },
                 () -> {
@@ -87,7 +91,7 @@ public class DataInitializer {
                             .isActive(true)
                             .firstLogin(false)
                             .build());
-                    System.out.println("  [DataInitializer] APPLICATION_OWNER created -> " + ownerEmail);
+                    log.info("APPLICATION_OWNER created -> {}", ownerEmail);
                 }
             );
 
@@ -278,7 +282,7 @@ public class DataInitializer {
                 "🔒 పాస్‌వర్డ్ మార్చండి:\n\nడాష్‌బోర్డ్ → ప్రొఫైల్ → పాస్‌వర్డ్ మార్చండి\n\nప్రస్తుత పాస్‌వర్డ్ నమోదు చేయండి, తర్వాత అక్షరాలు మరియు సంఖ్యలతో బలమైన కొత్త పాస్‌వర్డ్ సెట్ చేయండి."));
 
             faqRepo.saveAll(faqs);
-            System.out.println("  [DataInitializer] Seeded " + faqs.size() + " chatbot FAQs (EN + HI + TE).");
+            log.info("Seeded {} chatbot FAQs (EN + HI + TE).", faqs.size());
         };
     }
 
@@ -304,7 +308,7 @@ public class DataInitializer {
                     .filter(t -> t.getUser() != null && t.getUser().getId().equals(u.getId()))
                     .forEach(t -> {
                         teacherRepo.deleteById(t.getId());
-                        System.out.println("  [DataInitializer] Removed seeded teacher: " + email);
+                        log.info("Removed seeded teacher: {}", email);
                     });
                 userRepo.deleteById(u.getId());
             });
@@ -314,7 +318,7 @@ public class DataInitializer {
         for (String email : List.of("admin@schoolers.com", "suresh@schoolers.com", "meena@schoolers.com")) {
             userRepo.findByEmail(email).ifPresent(u -> {
                 userRepo.deleteById(u.getId());
-                System.out.println("  [DataInitializer] Removed seeded user: " + email);
+                log.info("Removed seeded user: {}", email);
             });
         }
 
@@ -323,7 +327,7 @@ public class DataInitializer {
             .filter(s -> "10A001".equals(s.getRollNumber()) || "9A001".equals(s.getRollNumber()))
             .forEach(s -> {
                 studentRepo.deleteById(s.getId());
-                System.out.println("  [DataInitializer] Removed seeded student: " + s.getRollNumber());
+                log.info("Removed seeded student: {}", s.getRollNumber());
             });
 
         // 4. Seeded classrooms
@@ -332,7 +336,7 @@ public class DataInitializer {
                       || ("9-A".equals(c.getName())  && "Priya Sharma".equals(c.getTeacherName())))
             .forEach(c -> {
                 classRoomRepo.deleteById(c.getId());
-                System.out.println("  [DataInitializer] Removed seeded classroom: " + c.getName());
+                log.info("Removed seeded classroom: {}", c.getName());
             });
     }
 }

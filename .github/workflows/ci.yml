@@ -1,0 +1,126 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # JOB 1 — Backend: compile + test (Java 17 + Maven + H2 in-memory DB)
+  # ─────────────────────────────────────────────────────────────────────────────
+  backend:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+
+    env:
+      # These satisfy the ${DB_URL} placeholder in application.properties.
+      # The actual test DB is H2 (overridden by application-test.properties).
+      DB_URL: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+      DB_USERNAME: sa
+      DB_PASSWORD: ""
+      JWT_SECRET: CI-TestSecretKeyThatIsAtLeast32BytesLong!
+      RESEND_API_KEY: ci-fake-key
+      GROQ_API_KEY: ci-fake-key
+      WHATSAPP_API_KEY: ci-fake-key
+      WHATSAPP_PHONE: ""
+      WHATSAPP_CLOUD_TOKEN: ""
+      WHATSAPP_PHONE_NUMBER_ID: ""
+      LOG_LEVEL: WARN
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: temurin
+          cache: maven   # caches ~/.m2 automatically
+
+      - name: Run backend tests
+        working-directory: server
+        run: mvn test --batch-mode --no-transfer-progress
+
+      - name: Upload test report
+        if: always()   # upload even when tests fail so you can see the report
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-report
+          path: server/target/surefire-reports/
+          retention-days: 7
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # JOB 2 — Frontend: lint + test (Node 18 + Vitest)
+  # ─────────────────────────────────────────────────────────────────────────────
+  frontend:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install dependencies
+        working-directory: client
+        run: npm ci
+
+      - name: Run tests
+        working-directory: client
+        run: npm test
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: client/coverage/
+          retention-days: 7
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # JOB 3 — Frontend build check (only on push to main, not on PRs)
+  # Catches import errors, missing env vars, and Vite build failures
+  # before they hit Render's production deploy.
+  # ─────────────────────────────────────────────────────────────────────────────
+  build-check:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    needs: [frontend]   # only build if tests pass
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install dependencies
+        working-directory: client
+        run: npm ci
+
+      - name: Build for production
+        working-directory: client
+        env:
+          VITE_API_URL: https://placeholder-for-build-check.example.com
+        run: npm run build
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: client/dist/
+          retention-days: 3

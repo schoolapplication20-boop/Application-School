@@ -1,0 +1,128 @@
+name: Database Backup
+
+on:
+  schedule:
+    - cron: '0 2 * * *'   # Every day at 2:00 AM UTC
+  workflow_dispatch:        # Also allow manual trigger from GitHub UI
+
+jobs:
+  backup:
+    name: Backup PostgreSQL → Backblaze B2
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      # ── 1. Install PostgreSQL client tools (pg_dump) ─────────────────────────
+      - name: Install pg_dump
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends postgresql-client
+
+      # ── 2. Dump the database ─────────────────────────────────────────────────
+      #
+      # Supabase direct connection host:
+      #   db.<PROJECT_REF>.supabase.co  (port 5432)
+      #
+      # Do NOT use the pooler host (aws-0-*.pooler.supabase.com) for pg_dump —
+      # it breaks prepared statements.  Use the direct host.
+      #
+      - name: Create compressed backup
+        env:
+          PGPASSWORD: ${{ secrets.DB_PASSWORD }}
+        run: |
+          TIMESTAMP=$(date +%Y-%m-%d_%H-%M-%S)
+          FILENAME="myskoolz_${TIMESTAMP}.dump"
+
+          pg_dump \
+            --host="${{ secrets.DB_HOST }}" \
+            --port=5432 \
+            --username="${{ secrets.DB_USERNAME }}" \
+            --dbname="${{ secrets.DB_NAME }}" \
+            --no-password \
+            --format=custom \
+            --compress=9 \
+            --verbose \
+            --file="${FILENAME}"
+
+          # Print backup size for the log
+          SIZE=$(du -sh "${FILENAME}" | cut -f1)
+          echo "BACKUP_FILE=${FILENAME}" >> "$GITHUB_ENV"
+          echo "BACKUP_SIZE=${SIZE}"     >> "$GITHUB_ENV"
+          echo "✅ Backup created: ${FILENAME} (${SIZE})"
+
+      # ── 3. Upload to Backblaze B2 ─────────────────────────────────────────────
+      #
+      # Backblaze B2 is S3-compatible, so we reuse the AWS CLI that is
+      # pre-installed on every GitHub Actions runner.
+      #
+      # B2 endpoint format: https://s3.<region>.backblazeb2.com
+      # Find your region in the B2 bucket details page (e.g. us-west-004).
+      #
+      - name: Upload to B2
+        env:
+          AWS_ACCESS_KEY_ID:     ${{ secrets.B2_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.B2_APP_KEY }}
+        run: |
+          aws s3 cp "$BACKUP_FILE" \
+            "s3://${{ secrets.B2_BUCKET_NAME }}/backups/${BACKUP_FILE}" \
+            --endpoint-url "${{ secrets.B2_ENDPOINT }}" \
+            --no-progress
+
+          echo "✅ Uploaded to B2: backups/${BACKUP_FILE} (${BACKUP_SIZE})"
+
+      # ── 4. Delete backups older than 30 days from B2 ─────────────────────────
+      #
+      # Keeps your B2 bucket clean. Lists all objects, finds ones older than
+      # 30 days, and deletes them one by one.
+      #
+      - name: Prune backups older than 30 days
+        env:
+          AWS_ACCESS_KEY_ID:     ${{ secrets.B2_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.B2_APP_KEY }}
+        run: |
+          CUTOFF=$(date -d '30 days ago' +%s)
+
+          aws s3api list-objects \
+            --bucket "${{ secrets.B2_BUCKET_NAME }}" \
+            --prefix "backups/" \
+            --endpoint-url "${{ secrets.B2_ENDPOINT }}" \
+            --query 'Contents[].{Key: Key, LastModified: LastModified}' \
+            --output json \
+          | jq -r '.[] | "\(.LastModified) \(.Key)"' \
+          | while read -r MODIFIED KEY; do
+              FILE_TIME=$(date -d "$MODIFIED" +%s)
+              if [ "$FILE_TIME" -lt "$CUTOFF" ]; then
+                aws s3 rm \
+                  "s3://${{ secrets.B2_BUCKET_NAME }}/${KEY}" \
+                  --endpoint-url "${{ secrets.B2_ENDPOINT }}"
+                echo "🗑️  Deleted old backup: ${KEY}"
+              fi
+            done
+
+          echo "✅ Pruning complete"
+
+      # ── 5. Summary ───────────────────────────────────────────────────────────
+      - name: Print summary
+        if: success()
+        run: |
+          echo "============================================"
+          echo "  My-Skoolz Database Backup — SUCCESS"
+          echo "============================================"
+          echo "  File   : ${BACKUP_FILE}"
+          echo "  Size   : ${BACKUP_SIZE}"
+          echo "  Bucket : ${{ secrets.B2_BUCKET_NAME }}/backups/"
+          echo "  Time   : $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "============================================"
+
+      # ── 6. Notify on failure via email (GitHub built-in) ─────────────────────
+      #
+      # GitHub automatically emails the repo owner when a scheduled workflow
+      # fails — no extra setup needed.  The step below just makes the failure
+      # reason visible in the Actions log.
+      #
+      - name: Log failure reason
+        if: failure()
+        run: |
+          echo "❌ Backup FAILED at $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "Check the logs above for the exact error."
+          echo "GitHub will send a failure email to the repo owner automatically."

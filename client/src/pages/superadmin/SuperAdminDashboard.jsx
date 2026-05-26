@@ -1050,13 +1050,9 @@ function CreateSuperAdminWizard({ onClose, onCreated }) {
             }),
             isSetupCompleted: true,
           }, logoFile || null);
-          if (!updateRes.data?.success) {
-            console.warn('[CreateSuperAdminWizard] School detail update failed:', updateRes.data?.message);
-          }
-        } catch (updateErr) {
-          // School was created with all required fields in step 1.
-          // The Super Admin can complete remaining details from their dashboard.
-          console.warn('[CreateSuperAdminWizard] School detail update error:', updateErr?.message);
+        } catch {
+          // School was created successfully in step 1.
+          // Super Admin can complete remaining details from their dashboard.
         }
       }
 

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 
@@ -17,6 +18,7 @@ const tiles = [
 
 export default function TeacherDashboard({ navigation }) {
   const { user, logout } = useAuth();
+  const insets = useSafeAreaInsets();
   const [profile, setProfile] = useState(null);
   const [classInfo, setClassInfo] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -35,7 +37,7 @@ export default function TeacherDashboard({ navigation }) {
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <View style={styles.headerTop}>
           <View>
             <Text style={styles.greeting}>Good Morning 👋</Text>
@@ -86,7 +88,7 @@ export default function TeacherDashboard({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f1f5f9' },
-  header: { backgroundColor: '#059669', padding: 20, paddingTop: 52, paddingBottom: 24 },
+  header: { backgroundColor: '#059669', paddingHorizontal: 20, paddingBottom: 24 },
   headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   greeting: { color: '#a7f3d0', fontSize: 13 },
   name: { color: '#fff', fontSize: 22, fontWeight: '800', marginTop: 2 },

@@ -1,5 +1,7 @@
 package com.schoolers.config;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
@@ -15,12 +17,14 @@ import org.springframework.stereotype.Component;
 @Order(1)
 public class DatabaseMigration implements CommandLineRunner {
 
+    private static final Logger log = LoggerFactory.getLogger(DatabaseMigration.class);
+
     @Autowired
     private JdbcTemplate jdbc;
 
     @Override
     public void run(String... args) {
-        System.out.println("[DatabaseMigration] Running expense table patches...");
+        log.info("Running DB constraint migrations...");
 
         // ── students: drop old global roll-number constraint, ensure school-scoped one ──
         // If the DB was created before school_id was part of the unique key, a constraint
@@ -65,7 +69,7 @@ public class DatabaseMigration implements CommandLineRunner {
             "  END IF; " +
             "END $$"
         );
-        System.out.println("[DatabaseMigration] students roll-number constraint patched.");
+        log.debug("students roll-number constraint patched.");
 
         // ── Classrooms: fix multi-tenant unique constraint ─────────────────────
         // Old schema had UNIQUE(class_name, section) without school_id, which
@@ -85,7 +89,7 @@ public class DatabaseMigration implements CommandLineRunner {
             "  END IF; " +
             "END $$"
         );
-        System.out.println("[DatabaseMigration] Classrooms unique constraint patched.");
+        log.debug("Classrooms unique constraint patched.");
 
         // ── class_fee_structure: fix multi-tenant unique constraint ───────────────
         // Old constraint was (class_name, academic_year) without school_id, blocking
@@ -131,13 +135,13 @@ public class DatabaseMigration implements CommandLineRunner {
             "  END IF; " +
             "END $$"
         );
-        System.out.println("[DatabaseMigration] class_fee_structure unique constraint patched.");
+        log.debug("class_fee_structure unique constraint patched.");
 
         // ── fee_installments: ensure table exists with required columns ─────────
         // Hibernate ddl-auto=update will create the table, but we add the index
         // manually in case the table was created before the @Index annotation existed.
         exec("CREATE INDEX IF NOT EXISTS idx_fee_installments_assignment_id ON fee_installments(assignment_id)");
-        System.out.println("[DatabaseMigration] fee_installments index ensured.");
+        log.debug("fee_installments index ensured.");
 
         // 1. Drop NOT NULL from legacy columns so INSERT works without them
         exec("ALTER TABLE expenses ALTER COLUMN category    DROP NOT NULL");
@@ -194,13 +198,13 @@ public class DatabaseMigration implements CommandLineRunner {
             "  END LOOP; " +
             "END $$"
         );
-        System.out.println("[DatabaseMigration] teachers employee_id constraint patched.");
+        log.debug("teachers employee_id constraint patched.");
 
         // ── teachers: ensure primary_class_id and teacher_type columns exist ──────
         // Hibernate ddl-auto=update may not have added these on older deployments.
         exec("ALTER TABLE teachers ADD COLUMN IF NOT EXISTS primary_class_id BIGINT");
         exec("ALTER TABLE teachers ADD COLUMN IF NOT EXISTS teacher_type VARCHAR(20) DEFAULT 'SUBJECT_TEACHER'");
-        System.out.println("[DatabaseMigration] teachers primary_class_id and teacher_type columns ensured.");
+        log.debug("teachers primary_class_id and teacher_type columns ensured.");
 
         // ── messages: add broadcast columns ───────────────────────────────────────
         exec("ALTER TABLE messages ADD COLUMN IF NOT EXISTS title VARCHAR(200)");
@@ -211,7 +215,7 @@ public class DatabaseMigration implements CommandLineRunner {
         exec("ALTER TABLE messages ADD COLUMN IF NOT EXISTS is_school_wide BOOLEAN DEFAULT FALSE");
         exec("ALTER TABLE messages ADD COLUMN IF NOT EXISTS is_important BOOLEAN DEFAULT FALSE");
         exec("ALTER TABLE messages ADD COLUMN IF NOT EXISTS read_by_user_ids TEXT DEFAULT ''");
-        System.out.println("[DatabaseMigration] messages broadcast columns ensured.");
+        log.debug("messages broadcast columns ensured.");
 
         // ── teacher_class_assignments: junction table for teacher→class→subject ──
         exec("CREATE TABLE IF NOT EXISTS teacher_class_assignments (" +
@@ -225,49 +229,49 @@ public class DatabaseMigration implements CommandLineRunner {
              ")");
         exec("CREATE INDEX IF NOT EXISTS idx_tca_teacher_id ON teacher_class_assignments(teacher_id)");
         exec("CREATE INDEX IF NOT EXISTS idx_tca_school_id  ON teacher_class_assignments(school_id)");
-        System.out.println("[DatabaseMigration] teacher_class_assignments table ensured.");
+        log.debug("teacher_class_assignments table ensured.");
 
         // ── Widen subject columns to TEXT (was VARCHAR) for multi-subject support ──
         exec("ALTER TABLE teachers ALTER COLUMN subject TYPE TEXT");
         exec("ALTER TABLE teacher_class_assignments ALTER COLUMN subject TYPE TEXT");
-        System.out.println("[DatabaseMigration] subject columns widened to TEXT.");
+        log.debug("subject columns widened to TEXT.");
 
         // ── leave_requests: ensure school_id column and indexes exist ─────────
         exec("ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS school_id BIGINT");
         exec("CREATE INDEX IF NOT EXISTS idx_leave_requests_school_id ON leave_requests(school_id)");
         exec("CREATE INDEX IF NOT EXISTS idx_leave_requests_requester ON leave_requests(requester_id, requester_type)");
-        System.out.println("[DatabaseMigration] leave_requests school_id column and indexes ensured.");
+        log.debug("leave_requests school_id column and indexes ensured.");
 
         // ── exam_schedules: ensure school_id column exists for multi-tenant isolation ──
         exec("ALTER TABLE exam_schedules ADD COLUMN IF NOT EXISTS school_id BIGINT");
         exec("CREATE INDEX IF NOT EXISTS idx_exam_schedules_school_id ON exam_schedules(school_id)");
         exec("CREATE INDEX IF NOT EXISTS idx_exam_schedules_class_school ON exam_schedules(class_name, school_id)");
-        System.out.println("[DatabaseMigration] exam_schedules school_id column and indexes ensured.");
+        log.debug("exam_schedules school_id column and indexes ensured.");
 
         // ── assignments: add school_id for tenant isolation ───────────────────────
         exec("ALTER TABLE assignments ADD COLUMN IF NOT EXISTS school_id BIGINT");
         exec("CREATE INDEX IF NOT EXISTS idx_assignments_school_id ON assignments(school_id)");
-        System.out.println("[DatabaseMigration] assignments school_id ensured.");
+        log.debug("assignments school_id ensured.");
 
         // ── admission_applications: add school_id ─────────────────────────────────
         exec("ALTER TABLE admission_applications ADD COLUMN IF NOT EXISTS school_id BIGINT");
         exec("CREATE INDEX IF NOT EXISTS idx_admission_applications_school_id ON admission_applications(school_id)");
-        System.out.println("[DatabaseMigration] admission_applications school_id ensured.");
+        log.debug("admission_applications school_id ensured.");
 
         // ── certificates: add school_id ───────────────────────────────────────────
         exec("ALTER TABLE certificates ADD COLUMN IF NOT EXISTS school_id BIGINT");
         exec("CREATE INDEX IF NOT EXISTS idx_certificates_school_id ON certificates(school_id)");
-        System.out.println("[DatabaseMigration] certificates school_id ensured.");
+        log.debug("certificates school_id ensured.");
 
         // ── hall_tickets: add school_id ───────────────────────────────────────────
         exec("ALTER TABLE hall_tickets ADD COLUMN IF NOT EXISTS school_id BIGINT");
         exec("CREATE INDEX IF NOT EXISTS idx_hall_tickets_school_id ON hall_tickets(school_id)");
-        System.out.println("[DatabaseMigration] hall_tickets school_id ensured.");
+        log.debug("hall_tickets school_id ensured.");
 
         // ── holidays: add school_id ───────────────────────────────────────────────
         exec("ALTER TABLE holidays ADD COLUMN IF NOT EXISTS school_id BIGINT");
         exec("CREATE INDEX IF NOT EXISTS idx_holidays_school_id ON holidays(school_id)");
-        System.out.println("[DatabaseMigration] holidays school_id ensured.");
+        log.debug("holidays school_id ensured.");
 
         // ── student_fee_assignments: add school_id, fix unique constraint ─────────
         exec("ALTER TABLE student_fee_assignments ADD COLUMN IF NOT EXISTS school_id BIGINT");
@@ -284,12 +288,12 @@ public class DatabaseMigration implements CommandLineRunner {
             "END $$"
         );
         exec("CREATE INDEX IF NOT EXISTS idx_student_fee_assignments_school_id ON student_fee_assignments(school_id)");
-        System.out.println("[DatabaseMigration] student_fee_assignments school_id and constraint ensured.");
+        log.debug("student_fee_assignments school_id and constraint ensured.");
 
         // ── student_transport: add school_id ──────────────────────────────────────
         exec("ALTER TABLE student_transport ADD COLUMN IF NOT EXISTS school_id BIGINT");
         exec("CREATE INDEX IF NOT EXISTS idx_student_transport_school_id ON student_transport(school_id)");
-        System.out.println("[DatabaseMigration] student_transport school_id ensured.");
+        log.debug("student_transport school_id ensured.");
 
         // ── transport_buses: add school_id, relax global unique(bus_no) ──────────
         exec("ALTER TABLE transport_buses ADD COLUMN IF NOT EXISTS school_id BIGINT");
@@ -305,7 +309,7 @@ public class DatabaseMigration implements CommandLineRunner {
             "  END IF; " +
             "END $$"
         );
-        System.out.println("[DatabaseMigration] transport_buses school_id ensured.");
+        log.debug("transport_buses school_id ensured.");
 
         // ── transport_routes, drivers, stops, fees, student_assignments ───────────
         exec("ALTER TABLE transport_routes ADD COLUMN IF NOT EXISTS school_id BIGINT");
@@ -318,7 +322,7 @@ public class DatabaseMigration implements CommandLineRunner {
         exec("ALTER TABLE transport_routes ADD COLUMN IF NOT EXISTS driver_name VARCHAR(100)");
         exec("ALTER TABLE transport_routes ADD COLUMN IF NOT EXISTS capacity INTEGER DEFAULT 0");
         exec("ALTER TABLE transport_routes ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'Active'");
-        System.out.println("[DatabaseMigration] transport_routes extra fields ensured.");
+        log.debug("transport_routes extra fields ensured.");
 
         exec("ALTER TABLE transport_drivers ADD COLUMN IF NOT EXISTS school_id BIGINT");
         exec("CREATE INDEX IF NOT EXISTS idx_transport_drivers_school_id ON transport_drivers(school_id)");
@@ -337,9 +341,7 @@ public class DatabaseMigration implements CommandLineRunner {
         exec("ALTER TABLE transport_student_assignments ADD COLUMN IF NOT EXISTS pickup_time VARCHAR(20)");
         exec("ALTER TABLE transport_student_assignments ADD COLUMN IF NOT EXISTS drop_time VARCHAR(20)");
         exec("ALTER TABLE transport_student_assignments ADD COLUMN IF NOT EXISTS transport_fee NUMERIC(10,2)");
-        System.out.println("[DatabaseMigration] transport_student_assignments extra fields ensured.");
-
-        System.out.println("[DatabaseMigration] remaining transport tables school_id ensured.");
+        log.debug("transport tables school_id ensured.");
 
         // ── schools: rename school_number → school_id (or add school_id if absent) ──
         execRaw(
@@ -364,7 +366,7 @@ public class DatabaseMigration implements CommandLineRunner {
             "  END IF; " +
             "END $$"
         );
-        System.out.println("[DatabaseMigration] schools.school_id column ensured.");
+        log.debug("schools.school_id column ensured.");
 
         // ── Migrate FK references: replace schools.id with schools.school_id ─────
         // Previously all tables stored the DB auto-generated PK (schools.id) as their
@@ -373,7 +375,6 @@ public class DatabaseMigration implements CommandLineRunner {
         // This block runs a safe UPDATE for every table.  Rows whose school already has
         // a school_id set will be updated; rows linked to schools without a school_id
         // are left unchanged (they will be corrected once the school is configured).
-        System.out.println("[DatabaseMigration] Migrating school_id FKs to display numbers...");
         String[] fkTables = {
             "users", "students", "teachers", "classrooms", "assignments",
             "attendance", "homework", "leave_requests", "fee_payments",
@@ -401,23 +402,23 @@ public class DatabaseMigration implements CommandLineRunner {
                 "END $$"
             );
         }
-        System.out.println("[DatabaseMigration] school_id FK migration complete.");
+        log.debug("school_id FK migration complete.");
 
         // ── Widen class_name columns from VARCHAR(10) to VARCHAR(50) ──────────────
         // "Class 5 - A" is 11 chars — exceeds the original 10-char limit.
         exec("ALTER TABLE students ALTER COLUMN class_name TYPE VARCHAR(50)");
         exec("ALTER TABLE certificates ALTER COLUMN class_name TYPE VARCHAR(50)");
         exec("ALTER TABLE hall_tickets ALTER COLUMN class_name TYPE VARCHAR(50)");
-        System.out.println("[DatabaseMigration] class_name columns widened to VARCHAR(50).");
+        log.debug("class_name columns widened to VARCHAR(50).");
 
-        System.out.println("[DatabaseMigration] Done.");
+        log.info("DB migrations complete.");
     }
 
     private void exec(String sql) {
         try {
             jdbc.execute(sql);
         } catch (Exception e) {
-            System.out.println("[DatabaseMigration] skipped: " + sql.split(" ")[2] + " — " + e.getMessage());
+            log.debug("Skipped: {} — {}", sql.split(" ")[2], e.getMessage());
         }
     }
 
@@ -426,7 +427,7 @@ public class DatabaseMigration implements CommandLineRunner {
         try {
             jdbc.execute(sql);
         } catch (Exception e) {
-            System.out.println("[DatabaseMigration] skipped block — " + e.getMessage());
+            log.debug("Skipped block — {}", e.getMessage());
         }
     }
 }

@@ -193,6 +193,65 @@ public class AiService {
                     sb.append("\n");
                 }
             }
+            } else if ("PARENT".equals(role) && userId != null) {
+                var children = studentRepository.findByParentId(userId);
+                if (!children.isEmpty()) {
+                    sb.append("LOGGED-IN PARENT'S CHILDREN:\n");
+                    for (var child : children) {
+                        Long childId = child.getId();
+                        String childClass = child.getClassName() != null ? child.getClassName() : "";
+                        String childSection = child.getSection() != null ? child.getSection() : "";
+                        String childClassSection = childClass + childSection;
+                        Long childSchoolId = child.getSchoolId();
+
+                        sb.append("- ").append(child.getName())
+                          .append(" | Class: ").append(childClass)
+                          .append(childSection.isEmpty() ? "" : "-" + childSection)
+                          .append(" | Roll: ").append(child.getRollNumber()).append("\n");
+
+                        // Attendance for this child (current month)
+                        try {
+                            LocalDate today = LocalDate.now();
+                            LocalDate monthStart = today.withDayOfMonth(1);
+                            var attRecords = attendanceRepository.findByStudentIdAndDateBetween(childId, monthStart, today);
+                            if (!attRecords.isEmpty()) {
+                                long present = attRecords.stream().filter(a -> a.getStatus().name().equals("PRESENT")).count();
+                                long pct = (present * 100L) / attRecords.size();
+                                sb.append("  Attendance this month: ").append(present).append("/").append(attRecords.size())
+                                  .append(" days (").append(pct).append("%)\n");
+                            }
+                        } catch (Exception ignored) {}
+
+                        // Recent homework for this child
+                        try {
+                            if (!childClassSection.isBlank() && childSchoolId != null) {
+                                var hwList = homeworkRepository.findBySchoolIdAndClassSection(childSchoolId, childClassSection);
+                                if (!hwList.isEmpty()) {
+                                    sb.append("  Pending homework:\n");
+                                    hwList.stream().limit(3).forEach(h ->
+                                        sb.append("    * ").append(h.getSubject() != null ? h.getSubject() : "")
+                                          .append(": ").append(h.getTitle())
+                                          .append(h.getDueDate() != null ? " (due: " + h.getDueDate() + ")" : "").append("\n")
+                                    );
+                                }
+                            }
+                        } catch (Exception ignored) {}
+
+                        // Recent marks for this child
+                        try {
+                            var marksList = marksRepository.findByStudentId(childId);
+                            if (!marksList.isEmpty()) {
+                                sb.append("  Recent exam results:\n");
+                                marksList.stream().limit(5).forEach(m ->
+                                    sb.append("    * ").append(m.getSubject())
+                                      .append(": ").append(m.getMarks()).append("/").append(m.getMaxMarks()).append("\n")
+                                );
+                            }
+                        } catch (Exception ignored) {}
+                    }
+                    sb.append("\n");
+                }
+            }
         } catch (Exception e) {
             // silently skip if user details unavailable
         }
@@ -270,6 +329,16 @@ public class AiService {
             sb.append("- Apply for leave: Sidebar → Leave Request → fill the form → Submit.\n");
             sb.append("- Send messages: Sidebar → Messages → select student or parent → type message → Send.\n");
             sb.append("- View exams: Sidebar → Examination → see scheduled exams.\n");
+        } else if ("PARENT".equals(role)) {
+            sb.append("PARENT actions:\n");
+            sb.append("- View child's attendance: Sidebar → Attendance → see your child's daily attendance.\n");
+            sb.append("- View child's marks: Sidebar → Performance → see exam results and subject-wise marks.\n");
+            sb.append("- View child's homework: Sidebar → Diary → see homework and assignments from teachers.\n");
+            sb.append("- View child's exams: Sidebar → Exams → see exam schedule and hall tickets.\n");
+            sb.append("- Pay fees: Sidebar → Pay Fees → view pending fees and make payments.\n");
+            sb.append("- Apply for leave: Sidebar → Leave → submit a leave request for your child.\n");
+            sb.append("- View assignments: Sidebar → Assignments → see submitted and pending assignments.\n");
+            sb.append("- Send messages: Sidebar → Messages → communicate with teachers or admin.\n");
         } else {
             sb.append("STUDENT actions:\n");
             sb.append("- View attendance: Sidebar → Attendance → see your attendance records.\n");
@@ -297,6 +366,10 @@ public class AiService {
             sb.append("- Do NOT share fee amounts or financial data. Say: 'Please contact your school admin for fee details.'\n");
         }
         sb.append("- Reply in the same language the user writes in (English, Hindi, Telugu, etc.).\n");
+        if ("PARENT".equals(role)) {
+            sb.append("- Do NOT share fee amounts or financial totals. For fee payment questions say: 'Please use the Pay Fees section to view and pay fees.'\n");
+            sb.append("- You CAN share the child's attendance percentage, homework tasks, and exam marks from the data above.\n");
+        }
 
         return sb.toString();
     }
@@ -313,6 +386,7 @@ public class AiService {
             case "ADMIN"             -> "school administrator";
             case "TEACHER"           -> "teacher";
             case "STUDENT"           -> "student";
+            case "PARENT"            -> "parent";
             default                  -> "user";
         };
     }
