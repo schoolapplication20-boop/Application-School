@@ -15,7 +15,7 @@ vi.mock('../../services/api', () => ({
 }));
 
 vi.mock('../../context/SchoolContext', () => ({
-  useSchool: () => ({ school: null, setSchool: vi.fn() }),
+  useSchool: () => ({ school: null, setSchool: vi.fn(), hasFeature: () => true }),
   SchoolProvider: ({ children }) => <>{children}</>,
 }));
 
