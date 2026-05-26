@@ -238,8 +238,8 @@ public class AuthService {
             return ApiResponse.error("Your name is required.");
         if (email == null || !email.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"))
             return ApiResponse.error("A valid email address is required.");
-        if (password == null || password.length() < 8)
-            return ApiResponse.error("Password must be at least 8 characters.");
+        String pwdError = validatePasswordComplexity(password);
+        if (pwdError != null) return ApiResponse.error(pwdError);
 
         String normalizedEmail = email.trim().toLowerCase();
         String normalizedPhone = (phone != null && !phone.isBlank()) ? phone.trim() : null;
@@ -320,15 +320,13 @@ public class AuthService {
 
             if (isEmail) {
                 String email = identifier.trim().toLowerCase();
-                log.info("[forgotPassword] searching by email");
                 user = userRepository.findByEmailIgnoreCase(email).orElse(null);
-                if (user == null) {
-                    user = userRepository.findByEmail(email).orElse(null);
-                }
-                if (user == null) return ApiResponse.error("Not registered. Please contact admin.");
+                if (user == null) user = userRepository.findByEmail(email).orElse(null);
+                // Return the same message whether the account exists or not — prevents enumeration
+                if (user == null) return ApiResponse.success("If this account exists, an OTP has been sent.", null);
             } else {
                 user = userRepository.findByMobile(identifier).orElse(null);
-                if (user == null) return ApiResponse.error("Not registered. Please contact admin.");
+                if (user == null) return ApiResponse.success("If this account exists, an OTP has been sent.", null);
             }
 
             String otp = String.format("%06d", 100000 + new SecureRandom().nextInt(900000));
@@ -404,6 +402,9 @@ public class AuthService {
         if (!"VERIFIED".equals(user.getResetOtp()))
             return ApiResponse.error("OTP verification required before resetting password.");
 
+        String pwdError = validatePasswordComplexity(newPassword);
+        if (pwdError != null) return ApiResponse.error(pwdError);
+
         user.setPassword(passwordEncoder.encode(newPassword));
         user.setResetOtp(null);
         user.setOtpExpiry(null);
@@ -447,6 +448,22 @@ public class AuthService {
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
+
+    /**
+     * Returns an error message if the password doesn't meet complexity rules, null if valid.
+     * Rules: 8+ chars, 1 uppercase, 1 digit, 1 special character.
+     */
+    private String validatePasswordComplexity(String password) {
+        if (password == null || password.length() < 8)
+            return "Password must be at least 8 characters.";
+        if (!password.matches(".*[A-Z].*"))
+            return "Password must contain at least one uppercase letter.";
+        if (!password.matches(".*[0-9].*"))
+            return "Password must contain at least one number.";
+        if (!password.matches(".*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?].*"))
+            return "Password must contain at least one special character (!@#$%^&* etc.).";
+        return null;
+    }
 
     /** Constant-time string comparison to prevent timing-based OTP enumeration. */
     private boolean constantTimeEquals(String a, String b) {

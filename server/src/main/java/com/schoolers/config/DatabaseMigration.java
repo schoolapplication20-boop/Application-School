@@ -405,11 +405,56 @@ public class DatabaseMigration implements CommandLineRunner {
         log.debug("school_id FK migration complete.");
 
         // ── Widen class_name columns from VARCHAR(10) to VARCHAR(50) ──────────────
-        // "Class 5 - A" is 11 chars — exceeds the original 10-char limit.
         exec("ALTER TABLE students ALTER COLUMN class_name TYPE VARCHAR(50)");
         exec("ALTER TABLE certificates ALTER COLUMN class_name TYPE VARCHAR(50)");
         exec("ALTER TABLE hall_tickets ALTER COLUMN class_name TYPE VARCHAR(50)");
         log.debug("class_name columns widened to VARCHAR(50).");
+
+        // ── users: account lockout columns ────────────────────────────────────────
+        exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_login_attempts INTEGER DEFAULT 0");
+        exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until TIMESTAMP");
+        log.debug("users lockout columns ensured.");
+
+        // ── audit_logs table ──────────────────────────────────────────────────────
+        exec("CREATE TABLE IF NOT EXISTS audit_logs (" +
+             "id BIGSERIAL PRIMARY KEY, " +
+             "actor_id BIGINT, " +
+             "actor_name VARCHAR(100), " +
+             "actor_role VARCHAR(30), " +
+             "school_id BIGINT, " +
+             "action VARCHAR(30) NOT NULL, " +
+             "entity_type VARCHAR(60), " +
+             "entity_id BIGINT, " +
+             "description TEXT, " +
+             "old_value TEXT, " +
+             "new_value TEXT, " +
+             "ip_address VARCHAR(45), " +
+             "created_at TIMESTAMP DEFAULT NOW()" +
+             ")");
+        exec("CREATE INDEX IF NOT EXISTS idx_audit_school_created ON audit_logs(school_id, created_at DESC)");
+        exec("CREATE INDEX IF NOT EXISTS idx_audit_actor ON audit_logs(actor_id)");
+        log.debug("audit_logs table ensured.");
+
+        // ── idempotency_keys table ────────────────────────────────────────────────
+        exec("CREATE TABLE IF NOT EXISTS idempotency_keys (" +
+             "id BIGSERIAL PRIMARY KEY, " +
+             "idem_key VARCHAR(64) NOT NULL, " +
+             "school_id BIGINT NOT NULL, " +
+             "endpoint VARCHAR(120), " +
+             "created_at TIMESTAMP DEFAULT NOW()" +
+             ")");
+        execRaw(
+            "DO $$ BEGIN " +
+            "  IF NOT EXISTS (" +
+            "    SELECT 1 FROM pg_constraint WHERE conname = 'uk_idempotency_key_school'" +
+            "  ) THEN " +
+            "    ALTER TABLE idempotency_keys ADD CONSTRAINT uk_idempotency_key_school " +
+            "      UNIQUE (idem_key, school_id); " +
+            "  END IF; " +
+            "END $$"
+        );
+        exec("CREATE INDEX IF NOT EXISTS idx_idempotency_created ON idempotency_keys(created_at)");
+        log.debug("idempotency_keys table ensured.");
 
         log.info("DB migrations complete.");
     }

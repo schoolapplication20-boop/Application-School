@@ -99,6 +99,7 @@ export const AuthProvider = ({ children }) => {
     clearAuthToken();
     sessionStorage.removeItem(SESSION_KEY);
     localStorage.removeItem('ms_school_tenant');
+    localStorage.removeItem('ms_last_activity');
     window.dispatchEvent(new Event('auth:logout'));
   }, []);
 

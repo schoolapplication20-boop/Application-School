@@ -1,19 +1,20 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 
-const IDLE_TIMEOUT_MS = 5 * 60 * 1000;  // 5 minutes of inactivity → logout
+const IDLE_TIMEOUT_MS = 5 * 60 * 1000;  // 5 minutes total
 const WARN_BEFORE_MS  = 60 * 1000;       // show warning 1 minute before logout
+const LS_KEY = 'ms_last_activity';       // shared across tabs via localStorage
 
 const ACTIVITY_EVENTS = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
 
 export default function SessionTimeoutWarning() {
   const { logout, isAuthenticated } = useAuth();
-  const lastActivityRef = useRef(Date.now());
-  const [secondsLeft, setSecondsLeft] = useState(null); // null = no warning shown
+  const tickRef = useRef(null);
+  const [secondsLeft, setSecondsLeft] = useState(null);
 
-  const resetActivity = useCallback(() => {
-    lastActivityRef.current = Date.now();
-    setSecondsLeft(null); // dismiss warning on any activity
+  const stamp = useCallback(() => {
+    localStorage.setItem(LS_KEY, String(Date.now()));
+    setSecondsLeft(null);
   }, []);
 
   useEffect(() => {
@@ -22,11 +23,20 @@ export default function SessionTimeoutWarning() {
       return;
     }
 
-    // Listen for any user activity
-    ACTIVITY_EVENTS.forEach(e => window.addEventListener(e, resetActivity, { passive: true }));
+    // Initialise timestamp so a brand-new tab isn't immediately stale
+    if (!localStorage.getItem(LS_KEY)) stamp();
 
-    const tick = setInterval(() => {
-      const idle = Date.now() - lastActivityRef.current;
+    // User activity in THIS tab → update shared timestamp
+    ACTIVITY_EVENTS.forEach(e => window.addEventListener(e, stamp, { passive: true }));
+
+    // Cross-tab sync: another tab updated the timestamp → dismiss warning here
+    const onStorage = (e) => { if (e.key === LS_KEY) setSecondsLeft(null); };
+    window.addEventListener('storage', onStorage);
+
+    // Poll every second to drive the countdown
+    tickRef.current = setInterval(() => {
+      const last = parseInt(localStorage.getItem(LS_KEY) || '0', 10);
+      const idle = Date.now() - last;
       const remaining = IDLE_TIMEOUT_MS - idle;
 
       if (remaining <= 0) {
@@ -39,18 +49,17 @@ export default function SessionTimeoutWarning() {
     }, 1000);
 
     return () => {
-      clearInterval(tick);
-      ACTIVITY_EVENTS.forEach(e => window.removeEventListener(e, resetActivity));
+      clearInterval(tickRef.current);
+      ACTIVITY_EVENTS.forEach(e => window.removeEventListener(e, stamp));
+      window.removeEventListener('storage', onStorage);
     };
-  }, [isAuthenticated, logout, resetActivity]);
+  }, [isAuthenticated, logout, stamp]);
 
   if (secondsLeft === null) return null;
 
   const mins = Math.floor(secondsLeft / 60);
   const secs = secondsLeft % 60;
-  const timeStr = mins > 0
-    ? `${mins}:${String(secs).padStart(2, '0')} min`
-    : `${secs} sec`;
+  const timeStr = mins > 0 ? `${mins}:${String(secs).padStart(2, '0')} min` : `${secs} sec`;
 
   return (
     <div style={{
@@ -65,7 +74,7 @@ export default function SessionTimeoutWarning() {
         Logging out due to inactivity in <strong>{timeStr}</strong>.
       </span>
       <button
-        onClick={resetActivity}
+        onClick={stamp}
         style={{
           background: '#3b82f6', border: 'none', color: '#fff',
           borderRadius: 6, padding: '5px 14px',

@@ -12,39 +12,41 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 import java.time.LocalDate;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Enforces school subscription expiry on every authenticated API call.
  * Returns HTTP 402 when a school's subscription is expired.
  * APPLICATION_OWNER accounts are exempt.
+ * Results are cached per schoolId for 5 minutes to avoid a DB hit on every request.
  */
 @Component
 public class SubscriptionInterceptor implements HandlerInterceptor {
 
     private static final Logger log = LoggerFactory.getLogger(SubscriptionInterceptor.class);
+    private static final long CACHE_TTL_MS = 5 * 60 * 1000L; // 5 minutes
 
     @Autowired private JwtUtil jwtUtil;
     @Autowired private SchoolRepository schoolRepository;
+
+    /** schoolId → epoch-ms when the cache entry expires (use -1 to mean "not expired") */
+    private final Map<Long, long[]> cache = new ConcurrentHashMap<>();
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
             throws Exception {
 
         String token = extractToken(request);
-        if (token == null) return true; // no token — let Spring Security handle auth
+        if (token == null) return true;
 
         String role = jwtUtil.extractRole(token);
-        if ("APPLICATION_OWNER".equals(role)) return true; // platform admins are exempt
+        if ("APPLICATION_OWNER".equals(role)) return true;
 
         Long schoolId = jwtUtil.extractSchoolId(token);
         if (schoolId == null) return true;
 
-        boolean expired = schoolRepository.findById(schoolId)
-                .map(s -> s.getSubscriptionExpiry() != null
-                        && !s.getSubscriptionExpiry().isAfter(LocalDate.now()))
-                .orElse(false);
-
-        if (expired) {
+        if (isExpired(schoolId)) {
             log.warn("[Subscription] Blocked request — schoolId={} subscription expired", schoolId);
             response.setStatus(402);
             response.setContentType("application/json");
@@ -55,6 +57,22 @@ public class SubscriptionInterceptor implements HandlerInterceptor {
         }
 
         return true;
+    }
+
+    private boolean isExpired(Long schoolId) {
+        long[] entry = cache.get(schoolId);
+        long now = System.currentTimeMillis();
+        if (entry != null && now < entry[0]) {
+            // cache hit — entry[1] == 1 means expired
+            return entry[1] == 1;
+        }
+        // cache miss or stale — query DB
+        boolean expired = schoolRepository.findById(schoolId)
+                .map(s -> s.getSubscriptionExpiry() != null
+                        && !s.getSubscriptionExpiry().isAfter(LocalDate.now()))
+                .orElse(false);
+        cache.put(schoolId, new long[]{now + CACHE_TTL_MS, expired ? 1 : 0});
+        return expired;
     }
 
     private String extractToken(HttpServletRequest request) {

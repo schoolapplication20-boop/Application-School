@@ -51,11 +51,23 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            // Enable CORS — delegates to CorsFilter bean (allows port 5173, 3000, 3001)
+            // Enable CORS — delegates to CorsFilter bean
             .cors(Customizer.withDefaults())
 
-            // Disable CSRF (using JWT)
+            // Disable CSRF (using JWT — stateless)
             .csrf(csrf -> csrf.disable())
+
+            // ── HTTP security headers ────────────────────────────────────────────
+            .headers(headers -> headers
+                .frameOptions(f -> f.deny())                          // X-Frame-Options: DENY (clickjacking)
+                .xssProtection(x -> x.disable())                      // X-XSS-Protection: handled by CSP
+                .contentTypeOptions(c -> {})                           // X-Content-Type-Options: nosniff
+                .httpStrictTransportSecurity(hsts -> hsts             // HSTS: force HTTPS for 1 year
+                    .maxAgeInSeconds(31536000)
+                    .includeSubDomains(true))
+                .contentSecurityPolicy(csp -> csp
+                    .policyDirectives("default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'"))
+            )
 
             // Session management - stateless (JWT)
             .sessionManagement(session ->

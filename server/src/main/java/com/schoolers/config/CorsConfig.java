@@ -1,11 +1,14 @@
 package com.schoolers.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.util.StringUtils;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -13,43 +16,46 @@ import java.util.List;
 public class CorsConfig {
 
     /**
-     * Exposes a CorsConfigurationSource bean so Spring Security's
-     * .cors(Customizer.withDefaults()) can find it and handle CORS
-     * pre-flight OPTIONS requests BEFORE the authorization rules run.
-     * Using CorsFilter instead would require explicit ordering to beat
-     * Spring Security's filter chain, which this approach avoids.
+     * Production origins come from the CORS_ALLOWED_ORIGINS env var (comma-separated).
+     * In development (when the env var is absent), localhost ports are added automatically.
+     * Never use wildcards with credentialed requests.
      */
+    @Value("${cors.allowed.origins:}")
+    private String allowedOriginsEnv;
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
+        List<String> origins = new ArrayList<>();
+
+        // Always allow the known production domains
+        origins.add("https://application-school.vercel.app");
+        origins.add("https://my-skoolz.com");
+        origins.add("https://www.my-skoolz.com");
+
+        // Add any extra origins from CORS_ALLOWED_ORIGINS env var
+        if (StringUtils.hasText(allowedOriginsEnv)) {
+            for (String o : allowedOriginsEnv.split(",")) {
+                String trimmed = o.trim();
+                if (!trimmed.isEmpty()) origins.add(trimmed);
+            }
+        }
+
+        // In local development (no env var set) also allow localhost
+        if (!StringUtils.hasText(allowedOriginsEnv)) {
+            origins.add("http://localhost:3000");
+            origins.add("http://localhost:3001");
+            origins.add("http://localhost:5173");
+            origins.add("http://127.0.0.1:3000");
+            origins.add("http://127.0.0.1:5173");
+        }
+
         CorsConfiguration config = new CorsConfiguration();
-
-        // Do NOT use wildcard subdomains (*.vercel.app, *.onrender.com) — they allow
-        // any tenant on those platforms to make credentialed requests to this backend.
-        config.setAllowedOriginPatterns(List.of(
-            "http://localhost:3000",
-            "http://localhost:3001",
-            "http://localhost:5173",
-            "http://127.0.0.1:3000",
-            "http://127.0.0.1:5173",
-            "https://application-school.vercel.app",
-            "https://my-skoolz.com",
-            "https://www.my-skoolz.com"
-        ));
-
-        config.setAllowedMethods(Arrays.asList(
-            "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"
-        ));
-
+        config.setAllowedOriginPatterns(origins);
+        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(Arrays.asList(
-            "Authorization",
-            "Content-Type",
-            "Accept",
-            "Origin",
-            "X-Requested-With",
-            "Access-Control-Request-Method",
-            "Access-Control-Request-Headers"
-        ));
-
+                "Authorization", "Content-Type", "Accept", "Origin",
+                "X-Requested-With", "Access-Control-Request-Method",
+                "Access-Control-Request-Headers", "Idempotency-Key"));
         config.setExposedHeaders(List.of("Authorization"));
         config.setAllowCredentials(true);
         config.setMaxAge(3600L);

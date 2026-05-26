@@ -10,6 +10,7 @@ import org.springframework.web.servlet.HandlerInterceptor;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Rate Limiting Interceptor using Bucket4j
@@ -22,9 +23,11 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class RateLimitingInterceptor implements HandlerInterceptor {
 
-    private final Map<String, Bucket> authenticationBuckets = new ConcurrentHashMap<>();
-    private final Map<String, Bucket> generalBuckets = new ConcurrentHashMap<>();
-    private final Map<String, Bucket> loginBuckets = new ConcurrentHashMap<>();
+    private final Map<String, Bucket>     authenticationBuckets = new ConcurrentHashMap<>();
+    private final Map<String, Bucket>     generalBuckets        = new ConcurrentHashMap<>();
+    private final Map<String, Bucket>     loginBuckets          = new ConcurrentHashMap<>();
+    /** Last-access epoch-ms per IP — used by evictStaleBuckets() to remove idle entries */
+    private final Map<String, AtomicLong> lastSeen              = new ConcurrentHashMap<>();
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
@@ -33,6 +36,7 @@ public class RateLimitingInterceptor implements HandlerInterceptor {
         String ipAddress = getClientIp(request);
         String requestPath = request.getRequestURI();
 
+        lastSeen.computeIfAbsent(ipAddress, k -> new AtomicLong()).set(System.currentTimeMillis());
         Bucket bucket = selectBucket(requestPath, ipAddress);
 
         if (bucket.tryConsume(1)) {
@@ -67,6 +71,23 @@ public class RateLimitingInterceptor implements HandlerInterceptor {
         return authenticationBuckets.computeIfAbsent(ipAddress, k -> Bucket4j.builder()
                 .addLimit(Refill.intervally(2000, java.time.Duration.ofMinutes(10)))
                 .build());
+    }
+
+    /** Remove buckets for IPs that haven't been seen in the last hour. Returns count removed. */
+    public int evictStaleBuckets() {
+        long staleThreshold = System.currentTimeMillis() - 60 * 60 * 1000L;
+        int removed = 0;
+        for (Map.Entry<String, AtomicLong> entry : lastSeen.entrySet()) {
+            if (entry.getValue().get() < staleThreshold) {
+                String ip = entry.getKey();
+                loginBuckets.remove(ip);
+                generalBuckets.remove(ip);
+                authenticationBuckets.remove(ip);
+                lastSeen.remove(ip);
+                removed++;
+            }
+        }
+        return removed;
     }
 
     /**
