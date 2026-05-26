@@ -1,6 +1,8 @@
 Get-Content .env | ForEach-Object {
-    if ($_ -match '^([^#][^=]*)=(.*)$') {
-        [System.Environment]::SetEnvironmentVariable($Matches[1], $Matches[2], 'Process')
+    if ($_ -match '^([^#=][^=]*)=(.*)$') {
+        $name = $Matches[1].Trim()
+        $value = $Matches[2].Trim()
+        Set-Item -Path "env:$name" -Value $value
     }
 }
 

@@ -1306,7 +1306,25 @@ function CreateSuperAdminWizard({ onClose, onCreated }) {
                 <input type="email" value={form.adminEmail} onChange={on('adminEmail')} placeholder="e.g. rajesh@springfield.edu" style={inp(false)} />
               </WizardField>
               <WizardField label="Mobile Number" hint="Optional">
-                <input type="tel" value={form.adminMobile} onChange={on('adminMobile')} placeholder="e.g. 9876543210" style={inp(false)} />
+                <input
+                  type="tel"
+                  value={form.adminMobile}
+                  onChange={e => {
+                    const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    on('adminMobile')({ target: { value: digits } });
+                  }}
+                  onKeyDown={e => {
+                    if (e.key.length === 1 && !/[0-9]/.test(e.key)) e.preventDefault();
+                  }}
+                  onPaste={e => {
+                    e.preventDefault();
+                    const digits = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 10);
+                    on('adminMobile')({ target: { value: digits } });
+                  }}
+                  placeholder="e.g. 9876543210"
+                  maxLength={10}
+                  style={inp(false)}
+                />
               </WizardField>
             </div>
           )}
