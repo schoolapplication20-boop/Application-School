@@ -757,7 +757,7 @@ function OwnerDashboard() {
 
       {/* ── Edit School Modal ───────────────────────────────────────────────── */}
       {editTarget && (
-        <EditSchoolModal
+        <EditSchoolWizard
           sa={editTarget}
           onClose={() => setEditTarget(null)}
           onSaved={() => { setEditTarget(null); load(); }}
@@ -1407,41 +1407,10 @@ function CreateSuperAdminWizard({ onClose, onCreated }) {
   );
 }
 
-// ─── Stable helper components for EditSchoolModal ────────────────────────────
-// IMPORTANT: defined at module level so their reference never changes between
-// renders. If defined inside EditSchoolModal, React treats them as new component
-// types on every keystroke (new function reference = new type) and unmounts/
-// remounts all child inputs, which causes focus loss after every character.
-function EditRow2({ children }) {
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>{children}</div>
-  );
-}
-function EditField({ label, children, required }) {
-  return (
-    <div style={{ marginBottom: 14 }}>
-      <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>
-        {label}{required && <span style={{ color: '#e53e3e', marginLeft: 2 }}>*</span>}
-      </label>
-      {children}
-    </div>
-  );
-}
-
 // ═════════════════════════════════════════════════════════════════════════════
-// Edit School Modal
+// Edit School Wizard — same 8-step structure as create, pre-filled from API
 // ═════════════════════════════════════════════════════════════════════════════
 const DEFAULT_FEATURES = { attendance: true, transport: true, fees: true, salary: true, examination: true, diary: true, announcements: true, messages: true };
-const FEATURE_LIST = [
-  { key: 'attendance',    label: 'Attendance Tracking',  icon: 'fact_check' },
-  { key: 'fees',          label: 'Fees & Payments',      icon: 'payments' },
-  { key: 'transport',     label: 'Transport Management', icon: 'directions_bus' },
-  { key: 'salary',        label: 'Staff Salary',         icon: 'account_balance_wallet' },
-  { key: 'examination',   label: 'Exam & Certificates',  icon: 'verified' },
-  { key: 'diary',         label: 'Class Diary',          icon: 'photo_library' },
-  { key: 'announcements', label: 'Announcements',        icon: 'campaign' },
-  { key: 'messages',      label: 'Messaging',            icon: 'chat' },
-];
 
 function parseFeatures(raw) {
   if (!raw) return { ...DEFAULT_FEATURES };
@@ -1449,33 +1418,38 @@ function parseFeatures(raw) {
   catch { return { ...DEFAULT_FEATURES }; }
 }
 
-function EditSchoolModal({ sa, onClose, onSaved }) {
-  const [saving,   setSaving]   = useState(false);
-  const [loading,  setLoading]  = useState(true);
-  const [error,    setError]    = useState('');
-  const [logoFile, setLogoFile] = useState(null);
-  const [features, setFeatures] = useState({ ...DEFAULT_FEATURES });
-  const [form,     setForm]     = useState({
+function EditSchoolWizard({ sa, onClose, onSaved }) {
+  const [step,        setStep]        = useState(1);
+  const [saving,      setSaving]      = useState(false);
+  const [loading,     setLoading]     = useState(true);
+  const [error,       setError]       = useState('');
+  const [logoFile,    setLogoFile]    = useState(null);
+  const [logoPreview, setLogoPreview] = useState(null);
+  const [perms,       setPerms]       = useState({ ...DEFAULT_PERMS });
+  const [form,        setForm]        = useState({
     schoolId:           sa.schoolId != null ? String(sa.schoolId) : '',
     name:               sa.schoolName  || '',
     code:               sa.schoolCode  || '',
-    board:              sa.board       || '',
-    academicYear:       sa.academicYear || '',
-    address:            sa.address     || '',
-    city:               sa.city        || '',
-    state:              sa.state       || '',
-    pincode:            sa.pincode     || '',
+    board:              'CBSE',
+    academicYear:       '2025-2026',
+    address:            '',
+    city:               '',
+    state:              '',
+    pincode:            '',
     country:            'India',
-    phone:              sa.phone       || '',
-    email:              sa.schoolEmail || '',
-    website:            sa.website     || '',
+    phone:              '',
+    schoolEmail:        '',
+    website:            '',
     logoUrl:            '',
-    primaryColor:       sa.primaryColor    || '#276749',
-    secondaryColor:     sa.secondaryColor  || '#76C442',
+    primaryColor:       '#76C442',
+    secondaryColor:     '#5fa832',
     totalClasses:       '',
     sections:           'A,B,C,D',
-    subscriptionPlan:   sa.subscriptionPlan   || 'BASIC',
-    subscriptionExpiry: sa.subscriptionExpiry || '',
+    subscriptionPlan:   'STANDARD',
+    subscriptionExpiry: '',
+    adminName:          sa.adminName   || '',
+    adminEmail:         sa.adminEmail  || '',
+    adminMobile:        sa.adminMobile || '',
   });
 
   useEffect(() => {
@@ -1483,49 +1457,99 @@ function EditSchoolModal({ sa, onClose, onSaved }) {
     schoolAPI.getSchoolById(sa.schoolDbId)
       .then(res => {
         const s = res.data?.data ?? res.data;
-        setFeatures(parseFeatures(s.features));
+        const feat = parseFeatures(s.features);
+        setPerms(p => ({
+          ...p,
+          attendance:  feat.attendance  ?? true,
+          transport:   feat.transport   ?? true,
+          fees:        feat.fees        ?? true,
+          salaries:    feat.salary      ?? true,
+          examination: feat.examination ?? true,
+        }));
         setForm({
-          schoolId:           s.schoolId           != null ? String(s.schoolId) : '',
-          name:               s.name               || '',
-          code:               s.code               || '',
-          board:              s.board              || '',
-          academicYear:       s.academicYear       || '',
-          address:            s.address            || '',
-          city:               s.city               || '',
-          state:              s.state              || '',
-          pincode:            s.pincode            || '',
-          country:            s.country            || 'India',
-          phone:              s.phone              || '',
-          email:              s.email              || '',
-          website:            s.website            || '',
-          logoUrl:            s.logoUrl            || '',
-          primaryColor:       s.primaryColor       || '#276749',
-          secondaryColor:     s.secondaryColor     || '#76C442',
-          totalClasses:       s.totalClasses       != null ? String(s.totalClasses) : '',
-          sections:           s.sections           || 'A,B,C,D',
-          subscriptionPlan:   s.subscriptionPlan   || 'BASIC',
-          subscriptionExpiry: s.subscriptionExpiry || '',
+          schoolId:           s.schoolId != null ? String(s.schoolId) : '',
+          name:               s.name           || '',
+          code:               s.code           || '',
+          board:              s.board          || 'CBSE',
+          academicYear:       s.academicYear   || '2025-2026',
+          address:            s.address        || '',
+          city:               s.city           || '',
+          state:              s.state          || '',
+          pincode:            s.pincode        || '',
+          country:            s.country        || 'India',
+          phone:              s.phone          || '',
+          schoolEmail:        s.email          || '',
+          website:            s.website        || '',
+          logoUrl:            s.logoUrl        || '',
+          primaryColor:       s.primaryColor   || '#76C442',
+          secondaryColor:     s.secondaryColor || '#5fa832',
+          totalClasses:       s.totalClasses != null ? String(s.totalClasses) : '',
+          sections:           s.sections       || 'A,B,C,D',
+          subscriptionPlan:   s.subscriptionPlan   || 'STANDARD',
+          subscriptionExpiry: s.subscriptionExpiry  || '',
+          adminName:          sa.adminName   || '',
+          adminEmail:         sa.adminEmail  || '',
+          adminMobile:        sa.adminMobile || '',
         });
       })
       .catch(() => setError('Failed to load school details. Please close and try again.'))
       .finally(() => setLoading(false));
   }, [sa.schoolDbId]);
 
-  const on = (e) => {
-    const { name, value } = e.target;
-    setForm(f => ({ ...f, [name]: value }));
+  const handleLogoChange = (file) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { setError('Please select an image file.'); return; }
+    if (file.size > 2 * 1024 * 1024)    { setError('Logo must be under 2 MB.'); return; }
+    setLogoFile(file);
+    setLogoPreview(URL.createObjectURL(file));
+    setError('');
+  };
+  const removeLogo = () => {
+    if (logoPreview) URL.revokeObjectURL(logoPreview);
+    setLogoFile(null);
+    setLogoPreview(null);
   };
 
-  const inp = (hasErr) => ({
-    width: '100%', padding: '8px 12px', borderRadius: 8, border: `1.5px solid ${hasErr ? '#fc8181' : '#e2e8f0'}`,
-    fontSize: 14, outline: 'none', boxSizing: 'border-box',
-  });
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const on  = (k)    => (e) => set(k, e.target.value);
+
+  const allEnabled  = ALL_MODULES.every(m => perms[m.key]);
+  const noneEnabled = ALL_MODULES.every(m => !perms[m.key]);
+  const toggleAll   = (v) => setPerms(ALL_MODULES.reduce((a, m) => ({ ...a, [m.key]: v }), {}));
+
+  const validate = (s) => {
+    if (s === 1) {
+      if (!form.name.trim())         return 'School name is required';
+      if (!form.code.trim())         return 'School code is required';
+      if (!/^[A-Z0-9]{3,10}$/i.test(form.code.trim())) return 'Code must be 3–10 alphanumeric characters';
+      if (!form.academicYear.trim()) return 'Academic year is required';
+    }
+    if (s === 2) {
+      if (!form.address.trim()) return 'Address is required';
+      if (!form.city.trim())    return 'City is required';
+      if (!form.state.trim())   return 'State is required';
+    }
+    if (s === 3) {
+      if (!form.phone.trim())               return 'Phone number is required';
+      if (!/^\d{10}$/.test(form.phone))     return 'Phone number must be exactly 10 digits';
+      if (!form.schoolEmail.trim())          return 'Email is required';
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.schoolEmail)) return 'Enter a valid email';
+    }
+    return null;
+  };
+
+  const next = () => {
+    const err = validate(step);
+    if (err) { setError(err); return; }
+    setError('');
+    setStep(s => Math.min(s + 1, 8));
+  };
+  const back = () => { setError(''); setStep(s => Math.max(s - 1, 1)); };
 
   const handleSave = async () => {
-    if (!form.name.trim())  { setError('School name is required'); return; }
-    if (!form.code.trim())  { setError('School code is required'); return; }
-    if (form.schoolId && (isNaN(Number(form.schoolId)) || Number(form.schoolId) < 1)) {
-      setError('School ID must be a positive number'); return;
+    for (const s of [1, 2, 3]) {
+      const err = validate(s);
+      if (err) { setStep(s); setError(err); return; }
     }
     setSaving(true);
     setError('');
@@ -1540,17 +1564,26 @@ function EditSchoolModal({ sa, onClose, onSaved }) {
         city:               form.city.trim(),
         state:              form.state.trim(),
         pincode:            form.pincode.trim(),
-        country:            form.country.trim(),
+        country:            form.country.trim() || 'India',
         phone:              form.phone.trim(),
-        email:              form.email.trim(),
+        email:              form.schoolEmail.trim(),
         website:            form.website.trim() || null,
         primaryColor:       form.primaryColor,
         secondaryColor:     form.secondaryColor,
         totalClasses:       form.totalClasses ? Number(form.totalClasses) : null,
         sections:           form.sections.trim() || null,
-        subscriptionPlan:   form.subscriptionPlan || null,
+        subscriptionPlan:   form.subscriptionPlan,
         subscriptionExpiry: form.subscriptionExpiry || null,
-        features:           JSON.stringify(features),
+        features: JSON.stringify({
+          attendance:    perms.attendance    ?? true,
+          transport:     perms.transport     ?? true,
+          fees:          perms.fees          ?? true,
+          salary:        perms.salaries      ?? true,
+          examination:   perms.examination   ?? true,
+          diary:         perms.diary         ?? true,
+          announcements: perms.announcements ?? true,
+          messages:      perms.messages      ?? true,
+        }),
       }, logoFile || null);
       onSaved();
     } catch (e) {
@@ -1560,211 +1593,309 @@ function EditSchoolModal({ sa, onClose, onSaved }) {
     }
   };
 
+  const pct = Math.round((step / 8) * 100);
+
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 680, maxHeight: '92vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.25)', overflow: 'hidden' }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 620, maxHeight: '94vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)', overflow: 'hidden' }}>
 
         {/* Header */}
         <div style={{ padding: '18px 24px 14px', borderBottom: '1px solid #f0f4f8', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <div>
             <div style={{ fontWeight: 800, fontSize: 16, color: '#1a202c' }}>Edit School</div>
-            <div style={{ fontSize: 12, color: '#718096', marginTop: 2 }}>{sa.schoolName}</div>
+            <div style={{ fontSize: 12, color: '#718096', marginTop: 2 }}>
+              {sa.schoolName} — Step {step} of 8 — <span style={{ fontWeight: 600, color: '#276749' }}>{WIZARD_STEPS[step - 1].label}</span>
+            </div>
           </div>
           <button onClick={onClose} style={{ border: 'none', background: '#f7fafc', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <span className="material-icons" style={{ fontSize: 18, color: '#718096' }}>close</span>
           </button>
         </div>
 
+        {/* Progress bar */}
+        <div style={{ height: 4, background: '#f0f4f8', flexShrink: 0 }}>
+          <div style={{ height: '100%', width: `${pct}%`, background: 'linear-gradient(90deg,#276749,#16a34a)', transition: 'width 0.3s ease' }} />
+        </div>
+
+        {/* Step pills — all clickable once data is loaded */}
+        <div style={{ display: 'flex', gap: 4, padding: '10px 20px', borderBottom: '1px solid #f0f4f8', flexShrink: 0, overflowX: 'auto' }}>
+          {WIZARD_STEPS.map((s, i) => {
+            const n = i + 1;
+            const done   = step > n;
+            const active = step === n;
+            return (
+              <div key={s.label} onClick={() => !loading && setStep(n)}
+                style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 11px', borderRadius: 20, fontSize: 11, fontWeight: 700, flexShrink: 0,
+                  cursor: loading ? 'default' : 'pointer',
+                  background: active ? '#276749' : done ? '#f0fdf4' : '#f8fafc',
+                  color:      active ? '#fff'    : done ? '#276749' : '#a0aec0',
+                  border:     `1.5px solid ${active ? '#276749' : done ? '#86efac' : '#e2e8f0'}` }}>
+                <span className="material-icons" style={{ fontSize: 12 }}>{done ? 'check' : s.icon}</span>
+                {s.label}
+              </div>
+            );
+          })}
+        </div>
+
         {/* Body */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '22px 24px' }}>
           {loading && (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 48 }}>
               <span className="material-icons" style={{ fontSize: 36, color: '#276749', animation: 'spin 1s linear infinite' }}>sync</span>
             </div>
           )}
-          {!loading && error && (
-            <div style={{ background: '#fff5f5', border: '1.5px solid #fed7d7', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: '#c53030', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span className="material-icons" style={{ fontSize: 16 }}>error_outline</span>
-              {error}
+
+          {!loading && <>
+          {/* ── Step 1: School Identity ── */}
+          {step === 1 && (
+            <div>
+              <div style={{ padding: '10px 14px', background: '#f0fdf4', borderRadius: 8, borderLeft: '4px solid #16a34a', fontSize: 13, color: '#166534', marginBottom: 18 }}>
+                Update school identity details. School ID is fixed and cannot be changed.
+              </div>
+              <WizardField label="School ID" hint="Fixed identifier — cannot be changed">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg,#276749,#16a34a)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <span className="material-icons" style={{ color: '#fff', fontSize: 20 }}>tag</span>
+                  </div>
+                  <input type="number" value={form.schoolId} readOnly
+                    style={{ ...inp(false), width: 120, fontWeight: 700, fontSize: 18, textAlign: 'center', background: '#f8fafc', color: '#718096', cursor: 'not-allowed' }} />
+                </div>
+              </WizardField>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 18px' }}>
+                <WizardField label="School Name" required>
+                  <input value={form.name} onChange={on('name')} placeholder="e.g. Springfield High School" style={inp(false)} />
+                </WizardField>
+                <WizardField label="School Code" required hint="3–10 alphanumeric, auto-uppercase">
+                  <input value={form.code} onChange={e => set('code', e.target.value.toUpperCase())} placeholder="e.g. SPRHS" style={inp(false)} />
+                </WizardField>
+                <WizardField label="Board / Curriculum">
+                  <select value={form.board} onChange={on('board')} style={sel}>
+                    {['CBSE','ICSE','State Board','IB','IGCSE','Other'].map(b => <option key={b}>{b}</option>)}
+                  </select>
+                </WizardField>
+                <WizardField label="Academic Year" required>
+                  <input value={form.academicYear} onChange={on('academicYear')} placeholder="e.g. 2025-2026" style={inp(false)} />
+                </WizardField>
+              </div>
             </div>
           )}
 
-          {!loading && <>
-          {/* School ID */}
-          <EditField label="School ID">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <input type="number" min="1" name="schoolId" value={form.schoolId} onChange={on}
-                placeholder="e.g. 1" style={{ ...inp(false), width: 120, fontWeight: 700, fontSize: 18, textAlign: 'center' }} />
-              <span style={{ fontSize: 12, color: '#a0aec0' }}>Unique numeric identifier</span>
-            </div>
-          </EditField>
-
-          {/* Basic */}
-          <EditRow2>
-            <EditField label="School Name" required>
-              <input name="name" value={form.name} onChange={on} placeholder="School name" style={inp(false)} />
-            </EditField>
-            <EditField label="School Code" required>
-              <input name="code" value={form.code} onChange={e => on({ target: { name: 'code', value: e.target.value.toUpperCase() } })}
-                placeholder="e.g. GIS001" style={inp(false)} />
-            </EditField>
-          </EditRow2>
-          <EditRow2>
-            <EditField label="Board / Curriculum">
-              <select name="board" value={form.board} onChange={on}
-                style={{ ...inp(false), background: '#fff' }}>
-                {['', 'CBSE', 'ICSE', 'State Board', 'IB', 'IGCSE', 'Other'].map(b => <option key={b} value={b}>{b || '— Select —'}</option>)}
-              </select>
-            </EditField>
-            <EditField label="Academic Year">
-              <input name="academicYear" value={form.academicYear} onChange={on} placeholder="e.g. 2024-2025" style={inp(false)} />
-            </EditField>
-          </EditRow2>
-
-          {/* Address */}
-          <EditField label="Street Address">
-            <input name="address" value={form.address} onChange={on} placeholder="Street address" style={inp(false)} />
-          </EditField>
-          <EditRow2>
-            <EditField label="City"><input name="city" value={form.city} onChange={on} placeholder="City" style={inp(false)} /></EditField>
-            <EditField label="State"><input name="state" value={form.state} onChange={on} placeholder="State" style={inp(false)} /></EditField>
-          </EditRow2>
-          <EditRow2>
-            <EditField label="Pincode"><input name="pincode" value={form.pincode} onChange={on} placeholder="Pincode" style={inp(false)} /></EditField>
-            <EditField label="Country"><input name="country" value={form.country} onChange={on} placeholder="Country" style={inp(false)} /></EditField>
-          </EditRow2>
-
-          {/* Contact */}
-          <EditRow2>
-            <EditField label="Phone"><input name="phone" value={form.phone} onChange={on} placeholder="+91 9876543210" style={inp(false)} /></EditField>
-            <EditField label="School Email"><input name="email" value={form.email} onChange={on} placeholder="email@school.com" style={inp(false)} /></EditField>
-          </EditRow2>
-          <EditField label="Website">
-            <input name="website" value={form.website} onChange={on} placeholder="https://..." style={inp(false)} />
-          </EditField>
-
-          {/* Logo */}
-          <EditField label="School Logo">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-              {form.logoUrl && !logoFile && (
-                <img src={form.logoUrl} alt="Current logo"
-                  style={{ width: 48, height: 48, objectFit: 'contain', borderRadius: 8, border: '1.5px solid #e2e8f0' }} />
-              )}
-              {logoFile && (
-                <img src={URL.createObjectURL(logoFile)} alt="New logo"
-                  style={{ width: 48, height: 48, objectFit: 'contain', borderRadius: 8, border: '1.5px solid #276749' }} />
-              )}
-              <label style={{ cursor: 'pointer', padding: '7px 14px', borderRadius: 8, border: '1.5px dashed #cbd5e0', fontSize: 13, color: '#4a5568', background: '#f8fafc' }}>
-                {logoFile ? logoFile.name : (form.logoUrl ? 'Replace Logo' : 'Upload Logo')}
-                <input type="file" accept="image/*" style={{ display: 'none' }}
-                  onChange={e => setLogoFile(e.target.files[0] || null)} />
-              </label>
-              {logoFile && (
-                <button type="button" onClick={() => setLogoFile(null)}
-                  style={{ fontSize: 12, color: '#e53e3e', background: 'none', border: 'none', cursor: 'pointer' }}>Remove</button>
-              )}
-            </div>
-          </EditField>
-
-          {/* Academic Config */}
-          <div style={{ margin: '18px 0 8px', fontWeight: 700, fontSize: 13, color: '#4a5568', letterSpacing: '0.04em', textTransform: 'uppercase', borderTop: '1px solid #f0f4f8', paddingTop: 16 }}>
-            Academic Configuration
-          </div>
-          <EditRow2>
-            <EditField label="Total Classes / Grades">
-              <input name="totalClasses" type="number" min="1" value={form.totalClasses} onChange={on} placeholder="e.g. 10" style={inp(false)} />
-            </EditField>
-            <EditField label="Sections (comma-separated)">
-              <input name="sections" value={form.sections} onChange={on} placeholder="e.g. A,B,C,D" style={inp(false)} />
-            </EditField>
-          </EditRow2>
-
-          {/* Colors */}
-          <EditRow2>
-            <EditField label="Primary Color">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <input type="color" name="primaryColor" value={form.primaryColor} onChange={on}
-                  style={{ width: 40, height: 36, border: '1.5px solid #e2e8f0', borderRadius: 8, padding: 2, cursor: 'pointer' }} />
-                <span style={{ fontSize: 13, color: '#4a5568', fontWeight: 600 }}>{form.primaryColor}</span>
+          {/* ── Step 2: Address ── */}
+          {step === 2 && (
+            <div>
+              <WizardField label="Street Address" required>
+                <textarea value={form.address} onChange={on('address')} rows={2} placeholder="Building no, street name, area…" style={{ ...inp(false), resize: 'vertical' }} />
+              </WizardField>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 18px' }}>
+                <WizardField label="City" required><input value={form.city}    onChange={on('city')}    placeholder="e.g. Mumbai"      style={inp(false)} /></WizardField>
+                <WizardField label="State" required><input value={form.state}  onChange={on('state')}   placeholder="e.g. Maharashtra" style={inp(false)} /></WizardField>
+                <WizardField label="Pincode"><input value={form.pincode} onChange={on('pincode')} placeholder="e.g. 400001"       style={inp(false)} /></WizardField>
+                <WizardField label="Country">
+                  <select value={form.country} onChange={on('country')} style={sel}>
+                    {['India','USA','UAE','UK','Canada','Australia','Other'].map(c => <option key={c}>{c}</option>)}
+                  </select>
+                </WizardField>
               </div>
-            </EditField>
-            <EditField label="Secondary Color">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <input type="color" name="secondaryColor" value={form.secondaryColor} onChange={on}
-                  style={{ width: 40, height: 36, border: '1.5px solid #e2e8f0', borderRadius: 8, padding: 2, cursor: 'pointer' }} />
-                <span style={{ fontSize: 13, color: '#4a5568', fontWeight: 600 }}>{form.secondaryColor}</span>
-              </div>
-            </EditField>
-          </EditRow2>
+            </div>
+          )}
 
-          {/* Subscription */}
-          <div style={{ margin: '18px 0 8px', fontWeight: 700, fontSize: 13, color: '#4a5568', letterSpacing: '0.04em', textTransform: 'uppercase', borderTop: '1px solid #f0f4f8', paddingTop: 16 }}>
-            Subscription
-          </div>
-          <EditRow2>
-            <EditField label="Plan">
-              <select name="subscriptionPlan" value={form.subscriptionPlan} onChange={on}
-                style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: 14, outline: 'none', background: '#fff', boxSizing: 'border-box' }}>
-                {['BASIC', 'STANDARD', 'PREMIUM'].map(p => (
-                  <option key={p} value={p}>{p.charAt(0) + p.slice(1).toLowerCase()}</option>
+          {/* ── Step 3: Contact & Web ── */}
+          {step === 3 && (
+            <div>
+              <WizardField label="Phone Number" required hint="10-digit mobile number">
+                <input type="tel" value={form.phone}
+                  onChange={e => set('phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
+                  placeholder="e.g. 9876543210" maxLength={10} style={inp(false)} />
+              </WizardField>
+              <WizardField label="School Email" required>
+                <input type="email" value={form.schoolEmail} onChange={on('schoolEmail')} placeholder="e.g. info@springfield.edu" style={inp(false)} />
+              </WizardField>
+              <WizardField label="Website" hint="Optional">
+                <input value={form.website} onChange={on('website')} placeholder="e.g. https://springfield.edu" style={inp(false)} />
+              </WizardField>
+            </div>
+          )}
+
+          {/* ── Step 4: Branding ── */}
+          {step === 4 && (
+            <div>
+              <div style={{ padding: '10px 14px', background: '#f0fdf4', borderRadius: 8, borderLeft: '4px solid #16a34a', fontSize: 13, color: '#166534', marginBottom: 18 }}>
+                Update school logo and brand colors.
+              </div>
+              <WizardField label="School Logo" hint="PNG, JPG or SVG · max 2 MB">
+                {logoPreview ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <img src={logoPreview} alt="logo preview" style={{ width: 72, height: 72, objectFit: 'contain', borderRadius: 10, border: '1.5px solid #276749', background: '#f8fafc', padding: 4 }} />
+                    <div>
+                      <div style={{ fontSize: 12, color: '#374151', fontWeight: 600, marginBottom: 6 }}>{logoFile?.name}</div>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <label style={{ padding: '6px 14px', background: '#f0fdf4', color: '#16a34a', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1.5px solid #bbf7d0' }}>
+                          Change <input type="file" accept="image/*" onChange={e => handleLogoChange(e.target.files[0])} style={{ display: 'none' }} />
+                        </label>
+                        <button onClick={removeLogo} style={{ padding: '6px 14px', background: '#fff5f5', color: '#e53e3e', borderRadius: 7, fontSize: 12, fontWeight: 600, border: '1.5px solid #fed7d7', cursor: 'pointer' }}>Remove</button>
+                      </div>
+                    </div>
+                  </div>
+                ) : form.logoUrl ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <img src={form.logoUrl} alt="Current logo" style={{ width: 72, height: 72, objectFit: 'contain', borderRadius: 10, border: '1.5px solid #e2e8f0', background: '#f8fafc', padding: 4 }} />
+                    <div>
+                      <div style={{ fontSize: 12, color: '#374151', fontWeight: 600, marginBottom: 6 }}>Current logo</div>
+                      <label style={{ padding: '6px 14px', background: '#f0fdf4', color: '#16a34a', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1.5px solid #bbf7d0' }}>
+                        Replace <input type="file" accept="image/*" onChange={e => handleLogoChange(e.target.files[0])} style={{ display: 'none' }} />
+                      </label>
+                    </div>
+                  </div>
+                ) : (
+                  <label onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); handleLogoChange(e.dataTransfer.files[0]); }}
+                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '24px 16px', border: '2px dashed #e2e8f0', borderRadius: 10, cursor: 'pointer', background: '#fafbfc' }}
+                    onMouseEnter={e => e.currentTarget.style.borderColor = '#76C442'}
+                    onMouseLeave={e => e.currentTarget.style.borderColor = '#e2e8f0'}>
+                    <span className="material-icons" style={{ fontSize: 36, color: '#cbd5e0' }}>add_photo_alternate</span>
+                    <div style={{ fontSize: 13, color: '#4a5568', fontWeight: 600 }}>Click to upload or drag &amp; drop</div>
+                    <div style={{ fontSize: 11, color: '#a0aec0' }}>PNG, JPG, SVG · max 2 MB</div>
+                    <input type="file" accept="image/*" onChange={e => handleLogoChange(e.target.files[0])} style={{ display: 'none' }} />
+                  </label>
+                )}
+              </WizardField>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 18px' }}>
+                <WizardField label="Primary Color">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <input type="color" value={form.primaryColor} onChange={on('primaryColor')} style={{ width: 48, height: 40, padding: 2, border: '1.5px solid #e2e8f0', borderRadius: 8, cursor: 'pointer' }} />
+                    <input value={form.primaryColor} onChange={on('primaryColor')} style={{ ...inp(false), flex: 1, fontFamily: 'monospace' }} />
+                  </div>
+                </WizardField>
+                <WizardField label="Secondary Color">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <input type="color" value={form.secondaryColor} onChange={on('secondaryColor')} style={{ width: 48, height: 40, padding: 2, border: '1.5px solid #e2e8f0', borderRadius: 8, cursor: 'pointer' }} />
+                    <input value={form.secondaryColor} onChange={on('secondaryColor')} style={{ ...inp(false), flex: 1, fontFamily: 'monospace' }} />
+                  </div>
+                </WizardField>
+              </div>
+              <div style={{ marginTop: 4, padding: '14px 18px', borderRadius: 10, border: '1.5px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 14 }}>
+                {(logoPreview || form.logoUrl) ? (
+                  <img src={logoPreview || form.logoUrl} alt="logo" style={{ width: 40, height: 40, objectFit: 'contain', borderRadius: 8, background: '#f8fafc', padding: 3 }} />
+                ) : (
+                  <div style={{ width: 40, height: 40, borderRadius: 10, background: `linear-gradient(135deg, ${form.primaryColor}, ${form.secondaryColor})`, flexShrink: 0 }} />
+                )}
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 13, color: form.primaryColor }}>{form.name || 'School Name'}</div>
+                  <div style={{ fontSize: 11, color: '#718096' }}>Brand preview</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── Step 5: Academic Setup ── */}
+          {step === 5 && (
+            <div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 18px' }}>
+                <WizardField label="Total Classes" hint="Number of class grades">
+                  <input type="number" min={1} max={20} value={form.totalClasses} onChange={on('totalClasses')} placeholder="e.g. 12" style={inp(false)} />
+                </WizardField>
+                <WizardField label="Sections" hint="Comma-separated section names">
+                  <input value={form.sections} onChange={on('sections')} placeholder="e.g. A,B,C,D" style={inp(false)} />
+                </WizardField>
+              </div>
+            </div>
+          )}
+
+          {/* ── Step 6: Super Admin (read-only) ── */}
+          {step === 6 && (
+            <div>
+              <div style={{ padding: '10px 14px', background: '#f5f3ff', borderRadius: 8, borderLeft: '4px solid #7c3aed', fontSize: 13, color: '#5b21b6', marginBottom: 18 }}>
+                Super Admin account details are shown below for reference. To update credentials, use the Super Admin management panel.
+              </div>
+              <WizardField label="Full Name">
+                <input value={form.adminName} readOnly style={{ ...inp(false), background: '#f8fafc', color: '#718096', cursor: 'not-allowed' }} />
+              </WizardField>
+              <WizardField label="Email Address">
+                <input value={form.adminEmail} readOnly style={{ ...inp(false), background: '#f8fafc', color: '#718096', cursor: 'not-allowed' }} />
+              </WizardField>
+              <WizardField label="Mobile Number">
+                <input value={form.adminMobile || '—'} readOnly style={{ ...inp(false), background: '#f8fafc', color: '#718096', cursor: 'not-allowed' }} />
+              </WizardField>
+            </div>
+          )}
+
+          {/* ── Step 7: Subscription ── */}
+          {step === 7 && (
+            <div>
+              <WizardField label="Subscription Plan">
+                <select value={form.subscriptionPlan} onChange={on('subscriptionPlan')} style={sel}>
+                  {['BASIC','STANDARD','PREMIUM','ENTERPRISE'].map(p => <option key={p}>{p}</option>)}
+                </select>
+              </WizardField>
+              <WizardField label="Expiry Date" hint="Leave blank for no expiry">
+                <input type="date" value={form.subscriptionExpiry} onChange={on('subscriptionExpiry')} style={inp(false)} />
+              </WizardField>
+              {form.subscriptionExpiry && (() => {
+                const days = Math.ceil((new Date(form.subscriptionExpiry) - new Date()) / 86400000);
+                const color = days <= 5 ? '#c53030' : days <= 30 ? '#dd6b20' : '#276749';
+                return <div style={{ fontSize: 12, color, marginTop: 4, fontWeight: 600 }}>{days < 0 ? `Expired ${Math.abs(days)} days ago` : days === 0 ? 'Expires today' : `Expires in ${days} day${days !== 1 ? 's' : ''}`}</div>;
+              })()}
+              <div style={{ marginTop: 8, padding: '12px 14px', background: '#f8fafc', borderRadius: 8, fontSize: 12, color: '#718096' }}>
+                <strong>BASIC</strong> — Core modules · <strong>STANDARD</strong> — All modules · <strong>PREMIUM</strong> — Priority support · <strong>ENTERPRISE</strong> — Custom SLA
+              </div>
+            </div>
+          )}
+
+          {/* ── Step 8: Module Permissions ── */}
+          {step === 8 && (
+            <div>
+              <div style={{ padding: '10px 14px', background: '#f0fdf4', borderRadius: 8, borderLeft: '4px solid #16a34a', fontSize: 13, color: '#166534', marginBottom: 14 }}>
+                Enable or disable modules for this school.
+              </div>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                <button onClick={() => toggleAll(true)}  disabled={allEnabled}  style={{ padding: '6px 16px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: allEnabled  ? 'not-allowed' : 'pointer', background: allEnabled  ? '#f0fff4' : '#fff', color: allEnabled  ? '#276749' : '#374151' }}>Select All</button>
+                <button onClick={() => toggleAll(false)} disabled={noneEnabled} style={{ padding: '6px 16px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: noneEnabled ? 'not-allowed' : 'pointer', background: noneEnabled ? '#fff5f5' : '#fff', color: noneEnabled ? '#e53e3e' : '#374151' }}>Deselect All</button>
+                <span style={{ marginLeft: 'auto', fontSize: 12, color: '#7c3aed', fontWeight: 700, alignSelf: 'center' }}>{Object.values(perms).filter(Boolean).length} / {ALL_MODULES.length} enabled</span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+                {ALL_MODULES.map(m => (
+                  <label key={m.key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', border: `1.5px solid ${perms[m.key] ? '#276749' : '#e2e8f0'}`, borderRadius: 10, cursor: 'pointer', background: perms[m.key] ? '#f0fdf4' : '#fafafa' }}>
+                    <span className="material-icons" style={{ fontSize: 18, color: perms[m.key] ? '#276749' : '#a0aec0' }}>{m.icon}</span>
+                    <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: perms[m.key] ? '#14532d' : '#718096' }}>{m.label}</span>
+                    <div style={{ width: 36, height: 20, borderRadius: 10, background: perms[m.key] ? '#276749' : '#e2e8f0', position: 'relative', flexShrink: 0 }}>
+                      <div style={{ position: 'absolute', top: 2, left: perms[m.key] ? 18 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                    </div>
+                    <input type="checkbox" checked={!!perms[m.key]} onChange={() => setPerms(p => ({ ...p, [m.key]: !p[m.key] }))} style={{ display: 'none' }} />
+                  </label>
                 ))}
-              </select>
-            </EditField>
-            <EditField label="Expiry Date">
-              <input type="date" name="subscriptionExpiry" value={form.subscriptionExpiry}
-                onChange={on}
-                style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
-            </EditField>
-          </EditRow2>
-          {form.subscriptionExpiry && (() => {
-            const days = Math.ceil((new Date(form.subscriptionExpiry) - new Date()) / 86400000);
-            const color = days <= 5 ? '#c53030' : days <= 30 ? '#dd6b20' : '#276749';
-            return (
-              <div style={{ fontSize: 12, color, marginTop: -8, marginBottom: 8, fontWeight: 600 }}>
-                {days < 0 ? `Expired ${Math.abs(days)} days ago` : days === 0 ? 'Expires today' : `Expires in ${days} day${days !== 1 ? 's' : ''}`}
               </div>
-            );
-          })()}
+            </div>
+          )}
 
-          {/* Module Permissions */}
-          <div style={{ margin: '18px 0 8px', fontWeight: 700, fontSize: 13, color: '#4a5568', letterSpacing: '0.04em', textTransform: 'uppercase', borderTop: '1px solid #f0f4f8', paddingTop: 16 }}>
-            Module Permissions
-          </div>
-          <p style={{ fontSize: 12, color: '#718096', marginBottom: 14, marginTop: 0 }}>
-            Enable or disable modules for this school.
-          </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 10 }}>
-            {FEATURE_LIST.map(({ key, label, icon }) => (
-              <div key={key} onClick={() => setFeatures(f => ({ ...f, [key]: !f[key] }))}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
-                  borderRadius: 10, cursor: 'pointer', transition: 'all 0.2s',
-                  border: `1.5px solid ${features[key] ? '#9ae6b4' : '#e2e8f0'}`,
-                  background: features[key] ? '#f0fff4' : '#fafafa',
-                }}>
-                <div style={{ width: 34, height: 34, borderRadius: 8, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: features[key] ? '#dcfce7' : '#f0f4f8' }}>
-                  <span className="material-icons" style={{ fontSize: 18, color: features[key] ? '#276749' : '#a0aec0' }}>{icon}</span>
-                </div>
-                <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#2d3748' }}>{label}</span>
-                <div style={{ width: 38, height: 20, borderRadius: 10, background: features[key] ? '#276749' : '#cbd5e0', position: 'relative', flexShrink: 0, transition: 'background 0.2s' }}>
-                  <div style={{ position: 'absolute', top: 2, left: features[key] ? 20 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s' }} />
-                </div>
-              </div>
-            ))}
-          </div>
+          {/* Error */}
+          {error && (
+            <div style={{ marginTop: 14, padding: '10px 14px', background: '#fff5f5', border: '1px solid #feb2b2', borderRadius: 8, color: '#c53030', fontSize: 13 }}>
+              {error}
+            </div>
+          )}
           </>}
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '14px 24px', borderTop: '1px solid #f0f4f8', display: 'flex', justifyContent: 'flex-end', gap: 10, flexShrink: 0 }}>
-          <button onClick={onClose} disabled={saving}
-            style={{ padding: '9px 20px', borderRadius: 10, border: '1.5px solid #e2e8f0', background: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', color: '#4a5568' }}>
-            Cancel
-          </button>
-          <button onClick={handleSave} disabled={saving}
-            style={{ padding: '9px 22px', borderRadius: 10, border: 'none', background: saving ? '#a0aec0' : '#276749', color: '#fff', fontSize: 14, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-            {saving ? <><span className="material-icons" style={{ fontSize: 16, animation: 'spin 1s linear infinite' }}>sync</span>Saving…</> : <><span className="material-icons" style={{ fontSize: 16 }}>save</span>Save Changes</>}
-          </button>
+        <div style={{ padding: '14px 24px', borderTop: '1px solid #f0f4f8', display: 'flex', gap: 10, justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+          <div style={{ fontSize: 12, color: '#a0aec0' }}>{pct}% complete</div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            {step > 1 && (
+              <button onClick={back} style={{ padding: '9px 20px', border: '1.5px solid #e2e8f0', borderRadius: 8, background: '#fff', fontWeight: 600, fontSize: 14, cursor: 'pointer', color: '#374151' }}>
+                ← Back
+              </button>
+            )}
+            {step < 8 ? (
+              <button onClick={next} disabled={loading} style={{ padding: '9px 22px', background: loading ? '#a0aec0' : 'linear-gradient(135deg,#276749,#16a34a)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: loading ? 'not-allowed' : 'pointer' }}>
+                Next →
+              </button>
+            ) : (
+              <button onClick={handleSave} disabled={saving} style={{ padding: '9px 22px', background: saving ? '#a0aec0' : 'linear-gradient(135deg,#276749,#047857)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
+                {saving
+                  ? <><span className="material-icons" style={{ fontSize: 16, animation: 'spin 1s linear infinite' }}>autorenew</span> Saving…</>
+                  : <><span className="material-icons" style={{ fontSize: 16 }}>save</span> Save Changes</>}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
