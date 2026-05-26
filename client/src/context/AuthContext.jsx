@@ -94,6 +94,10 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const logout = useCallback(() => {
+    // Best-effort: revoke the token server-side so it can't be replayed
+    // even before its natural 2-hour expiry. Fire-and-forget — don't await.
+    try { api.post('/api/auth/logout').catch(() => {}); } catch {}
+
     setUser(null);
     setToken(null);
     clearAuthToken();

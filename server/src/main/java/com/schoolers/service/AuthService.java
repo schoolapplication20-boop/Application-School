@@ -425,6 +425,8 @@ public class AuthService {
             return ApiResponse.error("This endpoint is only for first-time login password setup.");
         if (!passwordEncoder.matches(currentPassword, user.getPassword()))
             return ApiResponse.error("Temporary password is incorrect.");
+        String pwdError = validatePasswordComplexity(newPassword);
+        if (pwdError != null) return ApiResponse.error(pwdError);
         user.setPassword(passwordEncoder.encode(newPassword));
         user.setFirstLogin(false);
         user.setTempPassword(null);
@@ -440,6 +442,8 @@ public class AuthService {
         if (user == null) return ApiResponse.error("User not found.");
         if (!passwordEncoder.matches(currentPassword, user.getPassword()))
             return ApiResponse.error("Current password is incorrect.");
+        String pwdError = validatePasswordComplexity(newPassword);
+        if (pwdError != null) return ApiResponse.error(pwdError);
         user.setPassword(passwordEncoder.encode(newPassword));
         user.setFirstLogin(false);
         user.setTempPassword(null);

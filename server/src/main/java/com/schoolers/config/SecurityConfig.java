@@ -85,6 +85,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // ── Public ────────────────────────────────────────────────────
                 .requestMatchers("/api/health").permitAll()
+                .requestMatchers("/api/auth/logout").authenticated()  // logout requires a valid token
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/applications").permitAll()   // public admission form
                 .requestMatchers("/api/marketing/**").permitAll()   // public marketing: demo booking, job applications

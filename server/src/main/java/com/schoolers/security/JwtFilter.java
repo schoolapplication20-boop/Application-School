@@ -20,11 +20,9 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 @Component
 public class JwtFilter extends OncePerRequestFilter {
 
-    @Autowired
-    private JwtUtil jwtUtil;
-
-    @Autowired
-    private UserDetailsServiceImpl userDetailsService;
+    @Autowired private JwtUtil jwtUtil;
+    @Autowired private UserDetailsServiceImpl userDetailsService;
+    @Autowired private com.schoolers.service.TokenBlacklistService tokenBlacklistService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -33,7 +31,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
         String token = extractTokenFromRequest(request);
 
-        if (token != null && jwtUtil.isValidToken(token)) {
+        if (token != null && jwtUtil.isValidToken(token) && !tokenBlacklistService.isRevoked(token)) {
             String username = jwtUtil.extractUsername(token);
 
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {

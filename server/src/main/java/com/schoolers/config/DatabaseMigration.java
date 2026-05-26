@@ -456,6 +456,16 @@ public class DatabaseMigration implements CommandLineRunner {
         exec("CREATE INDEX IF NOT EXISTS idx_idempotency_created ON idempotency_keys(created_at)");
         log.debug("idempotency_keys table ensured.");
 
+        // ── revoked_tokens table ──────────────────────────────────────────────
+        exec("CREATE TABLE IF NOT EXISTS revoked_tokens (" +
+             "id BIGSERIAL PRIMARY KEY, " +
+             "token_hash VARCHAR(64) NOT NULL UNIQUE, " +
+             "expires_at TIMESTAMP NOT NULL" +
+             ")");
+        exec("CREATE INDEX IF NOT EXISTS idx_revoked_tokens_hash    ON revoked_tokens(token_hash)");
+        exec("CREATE INDEX IF NOT EXISTS idx_revoked_tokens_expires ON revoked_tokens(expires_at)");
+        log.debug("revoked_tokens table ensured.");
+
         log.info("DB migrations complete.");
     }
 

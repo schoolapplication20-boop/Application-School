@@ -3,22 +3,29 @@ package com.schoolers.controller;
 import com.schoolers.dto.ApiResponse;
 import com.schoolers.dto.LoginRequest;
 import com.schoolers.dto.LoginResponse;
+import com.schoolers.security.JwtUtil;
 import com.schoolers.service.AuthService;
+import com.schoolers.service.TokenBlacklistService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
 
-    @Autowired
-    private AuthService authService;
+    @Autowired private AuthService authService;
+    @Autowired private TokenBlacklistService tokenBlacklistService;
+    @Autowired private JwtUtil jwtUtil;
 
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
@@ -94,6 +101,21 @@ public class AuthController {
             return ResponseEntity.ok(response);
         }
         return ResponseEntity.status(400).body(response);
+    }
+
+    /** Revokes the current JWT so it cannot be reused even before its natural expiry. */
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<String>> logout(HttpServletRequest request) {
+        String bearer = request.getHeader("Authorization");
+        if (StringUtils.hasText(bearer) && bearer.startsWith("Bearer ")) {
+            String token = bearer.substring(7);
+            Date expiry = jwtUtil.extractExpiration(token);
+            LocalDateTime expiresAt = expiry != null
+                    ? expiry.toInstant().atZone(java.time.ZoneOffset.UTC).toLocalDateTime()
+                    : LocalDateTime.now().plusHours(2);
+            tokenBlacklistService.revoke(token, expiresAt);
+        }
+        return ResponseEntity.ok(ApiResponse.success("Logged out successfully", null));
     }
 
     /** First-login password set — requires the temporary password for verification */

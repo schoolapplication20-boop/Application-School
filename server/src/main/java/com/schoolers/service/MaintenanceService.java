@@ -10,6 +10,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import com.schoolers.service.TokenBlacklistService;
 
 /**
  * Scheduled housekeeping tasks:
@@ -25,6 +26,7 @@ public class MaintenanceService {
 
     @Autowired private JdbcTemplate jdbc;
     @Autowired private RateLimitingInterceptor rateLimitingInterceptor;
+    @Autowired private TokenBlacklistService tokenBlacklistService;
 
     @Value("${whatsapp.cloud.app.secret:}") private String waAppSecret;
     @Value("${whatsapp.cloud.verify.token:}") private String waVerifyToken;
@@ -53,6 +55,14 @@ public class MaintenanceService {
     public void cleanStaleRateLimitBuckets() {
         int removed = rateLimitingInterceptor.evictStaleBuckets();
         if (removed > 0) log.info("[Maintenance] Evicted {} stale rate-limit buckets.", removed);
+    }
+
+    // ── Revoked token cleanup (every hour — remove naturally expired tokens) ──
+
+    @Scheduled(fixedDelay = 60 * 60 * 1000)
+    public void cleanRevokedTokens() {
+        int removed = tokenBlacklistService.purgeExpired();
+        if (removed > 0) log.info("[Maintenance] Purged {} expired revoked token(s).", removed);
     }
 
     // ── Idempotency key cleanup (every hour — remove keys older than 24 h) ────

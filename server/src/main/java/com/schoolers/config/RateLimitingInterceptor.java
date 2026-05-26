@@ -51,10 +51,11 @@ public class RateLimitingInterceptor implements HandlerInterceptor {
     }
 
     private Bucket selectBucket(String path, String ipAddress) {
-        // Auth endpoints that can be brute-forced get the strictest limit: 5/15min per IP
+        // Auth endpoints that can be brute-forced or spammed get the strictest limit: 5/15min per IP
         if (path.contains("/api/auth/login")
                 || path.contains("/api/auth/verify-otp")
-                || path.contains("/api/auth/forgot-password")) {
+                || path.contains("/api/auth/forgot-password")
+                || path.contains("/api/auth/register")) {
             return loginBuckets.computeIfAbsent(ipAddress, k -> Bucket4j.builder()
                     .addLimit(Refill.intervally(5, java.time.Duration.ofMinutes(15)))
                     .build());
