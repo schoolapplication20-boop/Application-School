@@ -53,7 +53,7 @@ jobs:
           retention-days: 7
 
   # ─────────────────────────────────────────────────────────────────────────────
-  # JOB 2 — Frontend: lint + test (Node 18 + Vitest)
+  # JOB 2 — Frontend: lint + test (Node 20 + Vitest)
   # ─────────────────────────────────────────────────────────────────────────────
   frontend:
     name: Frontend Tests
@@ -63,10 +63,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Node 18
+      - name: Set up Node 20
         uses: actions/setup-node@v4
         with:
-          node-version: "18"
+          node-version: "20"
           cache: npm
           cache-dependency-path: client/package-lock.json
 
@@ -101,10 +101,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Node 18
+      - name: Set up Node 20
         uses: actions/setup-node@v4
         with:
-          node-version: "18"
+          node-version: "20"
           cache: npm
           cache-dependency-path: client/package-lock.json
 
