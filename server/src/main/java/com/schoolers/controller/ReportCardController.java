@@ -78,17 +78,23 @@ public class ReportCardController {
                 a.getStatus() == Attendance.Status.PRESENT || a.getStatus() == Attendance.Status.LATE).count();
         double pct = total > 0 ? Math.round((present * 100.0 / total) * 10) / 10.0 : 0;
 
-        // School info
+        // School info — student.schoolId stores the human-assigned display number (School.schoolId),
+        // with a fallback to the DB primary key for older records that stored the PK instead.
         Map<String, Object> schoolInfo = new LinkedHashMap<>();
-        schoolRepository.findById(student.getSchoolId()).ifPresent(sc -> {
-            schoolInfo.put("name", sc.getName());
-            schoolInfo.put("address", sc.getAddress());
-            schoolInfo.put("phone", sc.getPhone());
-            schoolInfo.put("email", sc.getEmail());
-            schoolInfo.put("board", sc.getBoard());
-            schoolInfo.put("academicYear", sc.getAcademicYear());
-            schoolInfo.put("logoUrl", sc.getLogoUrl());
-        });
+        Long sid = student.getSchoolId();
+        if (sid != null) {
+            Optional<School> schoolOpt = schoolRepository.findBySchoolId(sid.intValue());
+            if (schoolOpt.isEmpty()) schoolOpt = schoolRepository.findById(sid);
+            schoolOpt.ifPresent(sc -> {
+                schoolInfo.put("name", sc.getName());
+                schoolInfo.put("address", sc.getAddress());
+                schoolInfo.put("phone", sc.getPhone());
+                schoolInfo.put("email", sc.getEmail());
+                schoolInfo.put("board", sc.getBoard());
+                schoolInfo.put("academicYear", sc.getAcademicYear());
+                schoolInfo.put("logoUrl", sc.getLogoUrl());
+            });
+        }
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("student", Map.of(
