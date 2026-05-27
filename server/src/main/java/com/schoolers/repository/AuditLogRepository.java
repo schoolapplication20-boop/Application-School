@@ -11,4 +11,5 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
     Page<AuditLog> findBySchoolIdOrderByCreatedAtDesc(Long schoolId, Pageable pageable);
     Page<AuditLog> findBySchoolIdAndEntityTypeOrderByCreatedAtDesc(Long schoolId, String entityType, Pageable pageable);
     Page<AuditLog> findByActorIdOrderByCreatedAtDesc(Long actorId, Pageable pageable);
+    void deleteBySchoolId(Long schoolId);
 }

@@ -66,6 +66,8 @@ public class SuperAdminService {
     @Autowired private TransportFeeRepository            transportFeeRepository;
     @Autowired private StudentTransportRepository        studentTransportRepository;
     @Autowired private ParentProfileRepository           parentProfileRepository;
+    @Autowired private AuditLogRepository                auditLogRepository;
+    @Autowired private IdempotencyKeyRepository          idempotencyKeyRepository;
     @Autowired private JdbcTemplate                      jdbcTemplate;
 
     private static final String CHARS = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#$!";
@@ -530,7 +532,12 @@ public class SuperAdminService {
         // ── 17. Remaining users (ADMIN, SUPER_ADMIN, any orphaned accounts) ───
         userRepository.deleteBySchoolId(sid);
 
-        // ── 18. Delete the school record itself (use DB primary key) ─────────
+        // ── 18. Audit logs and idempotency keys ──────────────────────────────
+        auditLogRepository.deleteBySchoolId(sid);
+        idempotencyKeyRepository.deleteBySchoolId(sid);
+        log.info("[deleteSchool] audit logs and idempotency keys deleted");
+
+        // ── 19. Delete the school record itself (use DB primary key) ─────────
         schoolRepository.deleteById(schoolDbPk);
         log.info("[deleteSchool] COMPLETE — school '" + schoolName + "' (dbPk=" + schoolDbPk + " sid=" + sid + ") fully removed");
 

@@ -7,4 +7,5 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface IdempotencyKeyRepository extends JpaRepository<IdempotencyKey, Long> {
     boolean existsByKeyAndSchoolId(String key, Long schoolId);
+    void deleteBySchoolId(Long schoolId);
 }
