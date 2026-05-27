@@ -215,7 +215,7 @@ public class AuthService {
 
         } catch (Exception e) {
             log.error("[login] Unexpected error: {}", e.getMessage());
-            return ApiResponse.error("Login failed: " + e.getMessage());
+            return ApiResponse.error("Login failed. Please try again.");
         }
     }
 

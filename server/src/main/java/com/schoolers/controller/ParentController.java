@@ -34,6 +34,16 @@ public class ParentController {
         return u.getId().equals(parentId) || u.getRole().name().equals("SUPER_ADMIN") || u.getRole().name().equals("ADMIN");
     }
 
+    /** Returns null for admins (bypass ownership check) or the caller's userId for parents. */
+    private Long resolveCallerParentId(Authentication auth) {
+        if (auth == null) return null;
+        var userOpt = userRepository.findByEmailIgnoreCase(auth.getName());
+        if (userOpt.isEmpty()) return null;
+        var u = userOpt.get();
+        String role = u.getRole().name();
+        return (role.equals("ADMIN") || role.equals("SUPER_ADMIN")) ? null : u.getId();
+    }
+
     /** Returns children for the currently authenticated parent (resolves from JWT — no path param needed). */
     @GetMapping("/me/children")
     public ResponseEntity<ApiResponse<List<Student>>> getMyChildren() {
@@ -65,29 +75,24 @@ public class ParentController {
             @PathVariable Long studentId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-        return ResponseEntity.ok(parentService.getChildAttendance(studentId, startDate, endDate));
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Long callerParentId = resolveCallerParentId(auth);
+        return ResponseEntity.ok(parentService.getChildAttendance(callerParentId, studentId, startDate, endDate));
     }
 
     // Assignments
     @GetMapping("/assignments/{studentId}")
     public ResponseEntity<ApiResponse<List<Assignment>>> getChildAssignments(@PathVariable Long studentId) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        Long callerParentId = null;
-        if (auth != null) {
-            var userOpt = userRepository.findByEmailIgnoreCase(auth.getName());
-            if (userOpt.isPresent()) {
-                var u = userOpt.get();
-                boolean isAdmin = u.getRole().name().equals("ADMIN") || u.getRole().name().equals("SUPER_ADMIN");
-                callerParentId = isAdmin ? null : u.getId();
-            }
-        }
-        return ResponseEntity.ok(parentService.getChildAssignments(callerParentId, studentId));
+        return ResponseEntity.ok(parentService.getChildAssignments(resolveCallerParentId(auth), studentId));
     }
 
     // Fees
     @GetMapping("/fees/{studentId}")
     public ResponseEntity<ApiResponse<List<Fee>>> getChildFees(@PathVariable Long studentId) {
-        return ResponseEntity.ok(parentService.getChildFees(studentId));
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Long callerParentId = resolveCallerParentId(auth);
+        return ResponseEntity.ok(parentService.getChildFees(callerParentId, studentId));
     }
 
     @PostMapping("/fees/pay")
@@ -111,7 +116,9 @@ public class ParentController {
     // Marks
     @GetMapping("/marks/{studentId}")
     public ResponseEntity<ApiResponse<List<Marks>>> getChildMarks(@PathVariable Long studentId) {
-        return ResponseEntity.ok(parentService.getChildMarks(studentId));
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Long callerParentId = resolveCallerParentId(auth);
+        return ResponseEntity.ok(parentService.getChildMarks(callerParentId, studentId));
     }
 
     // Messages - Simplified (in full implementation, would have a Message entity)

@@ -38,7 +38,12 @@ public class ParentService {
     }
 
     // Attendance
-    public ApiResponse<List<Attendance>> getChildAttendance(Long studentId, LocalDate startDate, LocalDate endDate) {
+    public ApiResponse<List<Attendance>> getChildAttendance(Long parentId, Long studentId, LocalDate startDate, LocalDate endDate) {
+        if (parentId != null) {
+            Student student = studentRepository.findById(studentId).orElse(null);
+            if (student == null) return ApiResponse.error("Student not found");
+            if (!parentId.equals(student.getParentId())) return ApiResponse.error("Access denied.");
+        }
         if (startDate == null) startDate = LocalDate.now().minusMonths(1);
         if (endDate == null) endDate = LocalDate.now();
         return ApiResponse.success(attendanceRepository.findByStudentIdAndDateBetween(studentId, startDate, endDate));
@@ -58,7 +63,12 @@ public class ParentService {
     }
 
     // Fees
-    public ApiResponse<List<Fee>> getChildFees(Long studentId) {
+    public ApiResponse<List<Fee>> getChildFees(Long parentId, Long studentId) {
+        if (parentId != null) {
+            Student student = studentRepository.findById(studentId).orElse(null);
+            if (student == null) return ApiResponse.error("Student not found");
+            if (!parentId.equals(student.getParentId())) return ApiResponse.error("Access denied.");
+        }
         return ApiResponse.success(feeRepository.findByStudentId(studentId));
     }
 
@@ -75,7 +85,12 @@ public class ParentService {
     }
 
     // Marks / Performance
-    public ApiResponse<List<Marks>> getChildMarks(Long studentId) {
+    public ApiResponse<List<Marks>> getChildMarks(Long parentId, Long studentId) {
+        if (parentId != null) {
+            Student student = studentRepository.findById(studentId).orElse(null);
+            if (student == null) return ApiResponse.error("Student not found");
+            if (!parentId.equals(student.getParentId())) return ApiResponse.error("Access denied.");
+        }
         return ApiResponse.success(marksRepository.findByStudentId(studentId));
     }
 }

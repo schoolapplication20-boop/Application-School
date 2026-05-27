@@ -7,6 +7,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import MarketingLayout from './components/MarketingLayout';
 import InstallPrompt from './components/InstallPrompt';
 import SessionTimeoutWarning from './components/SessionTimeoutWarning';
+import ErrorBoundary from './components/ErrorBoundary';
 // Marketing Pages
 import HomePage from './pages/marketing/HomePage';
 import SolutionsPage from './pages/marketing/SolutionsPage';
@@ -85,6 +86,7 @@ import NotFound              from './pages/NotFound';
 
 function App() {
   return (
+    <ErrorBoundary>
     <AuthProvider>
       <SchoolProvider>
       <NotificationProvider>
@@ -218,6 +220,7 @@ function App() {
       </NotificationProvider>
       </SchoolProvider>
     </AuthProvider>
+    </ErrorBoundary>
   );
 }
 

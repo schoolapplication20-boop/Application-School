@@ -272,8 +272,8 @@ public class AdminController {
     }
 
     @GetMapping("/student-fee-assignments/{assignmentId}/payments")
-    public ResponseEntity<?> getAssignmentPayments(@PathVariable Long assignmentId) {
-        return ResponseEntity.ok(adminService.getAssignmentPayments(assignmentId));
+    public ResponseEntity<?> getAssignmentPayments(@PathVariable Long assignmentId, Authentication auth) {
+        return ResponseEntity.ok(adminService.getAssignmentPayments(assignmentId, getCurrentSchoolId(auth)));
     }
 
     @GetMapping("/fee-payments")
@@ -288,7 +288,8 @@ public class AdminController {
     }
 
     @PostMapping("/student-fee-assignments")
-    public ResponseEntity<?> assignStudentFee(@RequestBody Map<String, Object> body) {
+    public ResponseEntity<?> assignStudentFee(@RequestBody Map<String, Object> body, Authentication auth) {
+        body.put("schoolId", getCurrentSchoolId(auth));
         var response = adminService.assignStudentFee(body);
         return response.isSuccess() ? ResponseEntity.status(201).body(response) : ResponseEntity.badRequest().body(response);
     }
@@ -299,15 +300,15 @@ public class AdminController {
         Long schoolId = getCurrentSchoolId(auth);
         ResponseEntity<?>[] out = new ResponseEntity[1];
         if (isDuplicate(request, schoolId, "/student-fee-assignments/" + assignmentId + "/collect", out)) return out[0];
-        var response = adminService.collectAssignmentFee(assignmentId, body);
+        var response = adminService.collectAssignmentFee(assignmentId, body, schoolId);
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
     // ===== Fee Installments =====
 
     @GetMapping("/student-fee-assignments/{assignmentId}/installments")
-    public ResponseEntity<?> getInstallments(@PathVariable Long assignmentId) {
-        return ResponseEntity.ok(adminService.getInstallments(assignmentId));
+    public ResponseEntity<?> getInstallments(@PathVariable Long assignmentId, Authentication auth) {
+        return ResponseEntity.ok(adminService.getInstallments(assignmentId, getCurrentSchoolId(auth)));
     }
 
     @PostMapping("/fee-installments/{installmentId}/pay")

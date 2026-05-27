@@ -231,6 +231,7 @@ public class AdminService {
     // ── Students ───────────────────────────────────────────────────────────
 
     public ApiResponse<Page<Student>> getStudents(Long schoolId, String search, int page, int size) {
+        size = Math.min(size, 100);
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         if (schoolId != null) {
             if (search != null && !search.isEmpty()) {
@@ -1530,7 +1531,15 @@ public class AdminService {
                 .orElse(ApiResponse.error("No fee assignment found for this student"));
     }
 
-    public ApiResponse<List<FeePayment>> getAssignmentPayments(Long assignmentId) {
+    public ApiResponse<List<FeePayment>> getAssignmentPayments(Long assignmentId, Long schoolId) {
+        if (schoolId != null) {
+            StudentFeeAssignment assignment = studentFeeAssignmentRepository.findById(assignmentId).orElse(null);
+            if (assignment != null) {
+                Student student = studentRepository.findById(assignment.getStudentId()).orElse(null);
+                if (student == null || schoolMismatch(schoolId, student.getSchoolId()))
+                    return ApiResponse.error("Unauthorized");
+            }
+        }
         return ApiResponse.success(
                 feePaymentRepository.findByAssignmentIdOrderByPaymentDateDescCreatedAtDesc(assignmentId));
     }
@@ -1569,6 +1578,15 @@ public class AdminService {
 
             Student student = studentRepository.findById(studentId).orElse(null);
             if (student == null) return ApiResponse.error("Student not found with ID: " + studentId);
+
+            Object scObj = body.get("schoolId");
+            if (scObj != null) {
+                try {
+                    Long schoolId = Long.parseLong(scObj.toString());
+                    if (schoolMismatch(schoolId, student.getSchoolId()))
+                        return ApiResponse.error("Student does not belong to your school");
+                } catch (Exception ignored) {}
+            }
 
             String academicYear = str(body, "academicYear", "2024-25");
             if (academicYear == null || academicYear.isBlank()) academicYear = "2024-25";
@@ -1656,14 +1674,19 @@ public class AdminService {
             return ApiResponse.success("Fee assigned", saved);
         } catch (Exception e) {
             log.severe("[assignStudentFee] Unexpected error: " + e.getMessage());
-            return ApiResponse.error("Failed to save assignment: " + e.getMessage());
+            return ApiResponse.error("Failed to save fee assignment. Please try again.");
         }
     }
 
     @Transactional
-    public ApiResponse<StudentFeeAssignment> collectAssignmentFee(Long assignmentId, Map<String, Object> body) {
+    public ApiResponse<StudentFeeAssignment> collectAssignmentFee(Long assignmentId, Map<String, Object> body, Long schoolId) {
         StudentFeeAssignment assignment = studentFeeAssignmentRepository.findById(assignmentId).orElse(null);
         if (assignment == null) return ApiResponse.error("Fee assignment not found");
+        if (schoolId != null) {
+            Student student = studentRepository.findById(assignment.getStudentId()).orElse(null);
+            if (student == null || schoolMismatch(schoolId, student.getSchoolId()))
+                return ApiResponse.error("Unauthorized");
+        }
 
         BigDecimal amountPaid;
         try {
@@ -1730,7 +1753,15 @@ public class AdminService {
 
     // ── Installment management ─────────────────────────────────────────────
 
-    public ApiResponse<List<FeeInstallment>> getInstallments(Long assignmentId) {
+    public ApiResponse<List<FeeInstallment>> getInstallments(Long assignmentId, Long schoolId) {
+        if (schoolId != null) {
+            StudentFeeAssignment assignment = studentFeeAssignmentRepository.findById(assignmentId).orElse(null);
+            if (assignment != null) {
+                Student student = studentRepository.findById(assignment.getStudentId()).orElse(null);
+                if (student == null || schoolMismatch(schoolId, student.getSchoolId()))
+                    return ApiResponse.error("Unauthorized");
+            }
+        }
         return ApiResponse.success(
                 feeInstallmentRepository.findByAssignmentIdOrderByDueDateAsc(assignmentId));
     }
