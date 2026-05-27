@@ -596,36 +596,6 @@ export const calendarAPI = {
 };
 
 // ============================================
-// MEETING SLOT APIs
-// ============================================
-export const meetingAPI = {
-  // Teacher
-  createSlot:    (data)   => api.post('/api/teacher/meeting-slots', data),
-  getTeacherSlots: ()     => api.get('/api/teacher/meeting-slots'),
-  deleteSlot:    (id)     => api.delete(`/api/teacher/meeting-slots/${id}`),
-  // Student
-  getAvailableSlots: ()   => api.get('/api/student/meeting-slots'),
-  bookSlot:    (slotId, data) => api.post(`/api/student/meeting-slots/${slotId}/book`, data || {}),
-  getMyBookings: ()       => api.get('/api/student/meeting-bookings'),
-  cancelBooking: (id)     => api.patch(`/api/student/meeting-bookings/${id}/cancel`),
-};
-
-// ============================================
-// APPOINTMENT APIs (parent-teacher, class-teacher direct requests)
-// ============================================
-export const appointmentAPI = {
-  // Student
-  studentRequest:          (data) => api.post('/api/student/appointments', data),
-  getStudentAppointments:  ()     => api.get('/api/student/appointments'),
-  studentCancel:           (id)   => api.patch(`/api/student/appointments/${id}/cancel`),
-  // Teacher
-  teacherRequest:          (data) => api.post('/api/teacher/appointments', data),
-  getTeacherAppointments:  ()     => api.get('/api/teacher/appointments'),
-  teacherRespond:          (id, data) => api.patch(`/api/teacher/appointments/${id}/respond`, data),
-  getClassStudents:        ()     => api.get('/api/teacher/appointment-students'),
-};
-
-// ============================================
 // EXAM TYPE APIs
 // ============================================
 export const examTypeAPI = {

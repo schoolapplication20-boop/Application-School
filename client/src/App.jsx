@@ -74,14 +74,6 @@ import StudentMessages       from './pages/student/StudentMessages';
 import StudentExams          from './pages/student/StudentExams';
 import StudentMarks          from './pages/student/StudentMarks';
 import ReportCard            from './pages/student/ReportCard';
-import MeetingBookings       from './pages/student/MeetingBookings';
-
-// Teacher new pages
-import TeacherMeetingSlots   from './pages/teacher/TeacherMeetingSlots';
-import TeacherAppointments   from './pages/teacher/TeacherAppointments';
-
-// Student new pages
-import StudentAppointments   from './pages/student/StudentAppointments';
 
 // Shared pages
 import SchoolCalendar        from './pages/shared/SchoolCalendar';
@@ -222,14 +214,6 @@ function App() {
             <Route path="/student/exams"      element={<ProtectedRoute allowedRoles={['STUDENT']} moduleKey="examination"><StudentExams /></ProtectedRoute>} />
             <Route path="/student/marks"            element={<ProtectedRoute allowedRoles={['STUDENT']} moduleKey="examination"><StudentMarks /></ProtectedRoute>} />
             <Route path="/student/report-card"      element={<ProtectedRoute allowedRoles={['STUDENT']} moduleKey="examination"><ReportCard /></ProtectedRoute>} />
-            <Route path="/student/meeting-bookings" element={<ProtectedRoute allowedRoles={['STUDENT']}><MeetingBookings /></ProtectedRoute>} />
-
-            {/* Teacher new routes */}
-            <Route path="/teacher/meeting-slots"    element={<ProtectedRoute allowedRoles={['TEACHER']}><TeacherMeetingSlots /></ProtectedRoute>} />
-            <Route path="/teacher/appointments"     element={<ProtectedRoute allowedRoles={['TEACHER']}><TeacherAppointments /></ProtectedRoute>} />
-
-            {/* Student appointment route */}
-            <Route path="/student/appointments"     element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentAppointments /></ProtectedRoute>} />
 
             {/* Shared routes (all authenticated roles) */}
             <Route path="/school/calendar"          element={<ProtectedRoute allowedRoles={['ADMIN','SUPER_ADMIN','TEACHER','STUDENT']}><SchoolCalendar /></ProtectedRoute>} />
