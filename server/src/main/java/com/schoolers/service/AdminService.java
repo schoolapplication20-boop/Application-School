@@ -2109,8 +2109,9 @@ public class AdminService {
     }
 
     public ApiResponse<Map<String, Object>> updateParent(Long id, Map<String, Object> body) {
+        Long schoolId = body.get("schoolId") instanceof Number n ? n.longValue() : null;
         return userRepository.findById(id)
-                .filter(u -> false)
+                .filter(u -> schoolId == null || schoolId.equals(u.getSchoolId()))
                 .map(user -> {
                     String name   = str(body, "name",   null);
                     String mobile = str(body, "mobile", null);
@@ -2141,9 +2142,9 @@ public class AdminService {
     }
 
     @Transactional
-    public ApiResponse<String> deleteParent(Long id) {
+    public ApiResponse<String> deleteParent(Long id, Long schoolId) {
         return userRepository.findById(id)
-                .filter(u -> false)
+                .filter(u -> schoolId == null || schoolId.equals(u.getSchoolId()))
                 .map(user -> {
                     // Unlink any students who reference this parent
                     studentRepository.findByParentId(id).forEach(s -> {
@@ -2158,9 +2159,9 @@ public class AdminService {
                 .orElse(ApiResponse.error("Parent not found"));
     }
 
-    public ApiResponse<String> resetParentPassword(Long id, String newPassword) {
+    public ApiResponse<String> resetParentPassword(Long id, String newPassword, Long schoolId) {
         return userRepository.findById(id)
-                .filter(u -> false)
+                .filter(u -> schoolId == null || schoolId.equals(u.getSchoolId()))
                 .map(user -> {
                     user.setPassword(passwordEncoder.encode(newPassword));
                     user.setTempPassword(null);

@@ -406,23 +406,26 @@ public class AdminController {
     }
 
     @PutMapping("/parents/{id}")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> updateParent(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> updateParent(
+            @PathVariable Long id, @RequestBody Map<String, Object> body, Authentication auth) {
+        body.put("schoolId", getCurrentSchoolId(auth));
         ApiResponse<Map<String, Object>> response = adminService.updateParent(id, body);
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
     @PutMapping("/parents/{id}/reset-password")
-    public ResponseEntity<ApiResponse<String>> resetParentPassword(@PathVariable Long id, @RequestBody Map<String, String> body) {
+    public ResponseEntity<ApiResponse<String>> resetParentPassword(
+            @PathVariable Long id, @RequestBody Map<String, String> body, Authentication auth) {
         String newPassword = body.get("password");
         if (newPassword == null || newPassword.isBlank())
             return ResponseEntity.badRequest().body(ApiResponse.error("New password is required"));
-        ApiResponse<String> response = adminService.resetParentPassword(id, newPassword);
+        ApiResponse<String> response = adminService.resetParentPassword(id, newPassword, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
     @DeleteMapping("/parents/{id}")
-    public ResponseEntity<ApiResponse<String>> deleteParent(@PathVariable Long id) {
-        ApiResponse<String> response = adminService.deleteParent(id);
+    public ResponseEntity<ApiResponse<String>> deleteParent(@PathVariable Long id, Authentication auth) {
+        ApiResponse<String> response = adminService.deleteParent(id, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
     }
 
