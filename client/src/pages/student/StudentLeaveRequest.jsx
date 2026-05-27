@@ -195,6 +195,7 @@ export default function StudentLeaveRequest() {
                   <th>To</th>
                   <th>Reason</th>
                   <th>Status</th>
+                  <th>Parent Ack</th>
                   <th>Remark</th>
                   <th>Reviewed By</th>
                   <th>Applied On</th>
@@ -211,6 +212,12 @@ export default function StudentLeaveRequest() {
                       <td style={{ fontSize: 12, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={l.reason}>{l.reason || '—'}</td>
                       <td>
                         <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: s.bg, color: s.color }}>{s.label}</span>
+                      </td>
+                      <td>
+                        {l.parentAcknowledged
+                          ? <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: '#f0fff4', color: '#276749' }}>✓ Acknowledged</span>
+                          : <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: '#fffbeb', color: '#b7791f' }}>Pending</span>
+                        }
                       </td>
                       <td style={{ fontSize: 12, color: '#718096', fontStyle: l.teacherRemark ? 'normal' : 'italic' }}>
                         {l.teacherRemark || (l.status === 'PENDING' ? 'Awaiting review' : '—')}

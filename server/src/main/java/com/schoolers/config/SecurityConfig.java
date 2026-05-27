@@ -90,6 +90,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/applications").permitAll()   // public admission form
                 .requestMatchers("/api/marketing/**").permitAll()   // public marketing: demo booking, job applications
                 .requestMatchers("/api/chatbot/**").permitAll()     // FAQ chatbot — no sensitive data
+                .requestMatchers("/api/leave/parent-ack").permitAll() // one-click parent ack link from email
                 .requestMatchers("/api/whatsapp/webhook").permitAll() // Meta webhook — must be public
                 .requestMatchers("/api/system/**").authenticated()  // system notices — all users read; write gated by @PreAuthorize
                 .requestMatchers("/actuator/**").permitAll()

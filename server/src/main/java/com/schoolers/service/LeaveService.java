@@ -4,6 +4,7 @@ import com.schoolers.dto.ApiResponse;
 import com.schoolers.model.*;
 import com.schoolers.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,6 +14,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Stream;
 
 @Service
@@ -24,6 +26,10 @@ public class LeaveService {
     @Autowired private StudentRepository         studentRepository;
     @Autowired private TeacherRepository         teacherRepository;
     @Autowired private ClassRoomRepository       classRoomRepository;
+    @Autowired private EmailService              emailService;
+
+    @Value("${app.base.url:https://my-skoolz.vercel.app}")
+    private String appBaseUrl;
 
     // ── Admin helpers ───────────────────────────────────────────────────────
 
@@ -110,7 +116,10 @@ public class LeaveService {
             classSection += "-" + student.getSection();
         }
 
-        // 4. Persist
+        // 4. Generate parent acknowledgement token
+        String parentToken = UUID.randomUUID().toString().replace("-", "");
+
+        // 5. Persist
         LeaveRequest leave = LeaveRequest.builder()
                 .requesterType(LeaveRequest.RequesterType.STUDENT)
                 .requesterId(student.getId())
@@ -121,13 +130,27 @@ public class LeaveService {
                 .toDate(toDate)
                 .reason(reason.trim())
                 .status(LeaveRequest.Status.PENDING)
+                .parentToken(parentToken)
                 .schoolId(student.getSchoolId())
                 .build();
 
         LeaveRequest saved = leaveRepository.save(leave);
 
-        // 5. Notify the class teacher (if assigned)
+        // 6. Notify the class teacher (if assigned)
         notifyClassTeacher(student, saved);
+
+        // 7. Email parent if parentEmail is set
+        if (student.getParentEmail() != null && !student.getParentEmail().isBlank()) {
+            emailService.sendParentLeaveAcknowledgement(
+                student.getParentEmail(),
+                student.getName(),
+                fromDate.toString(),
+                toDate.toString(),
+                parentToken,
+                "",  // school name fetched in email service; pass empty for now — school name not needed for token link
+                appBaseUrl
+            );
+        }
 
         return ApiResponse.success("Leave request submitted", saved);
     }

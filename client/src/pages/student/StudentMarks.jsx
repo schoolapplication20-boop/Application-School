@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import Layout from '../../components/Layout';
 import { studentAPI } from '../../services/api';
 
@@ -56,7 +57,7 @@ export default function StudentMarks() {
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState('');
   const [filterExam, setFilterExam] = useState('ALL');
-  const [view, setView]             = useState('subject'); // 'subject' | 'exam'
+  const [view, setView]             = useState('subject'); // 'subject' | 'exam' | 'trend'
 
   useEffect(() => {
     studentAPI.getMyMarks()
@@ -162,20 +163,19 @@ export default function StudentMarks() {
                 ))}
               </div>
               <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-                <button onClick={() => setView('subject')}
-                  style={{ padding: '6px 14px', borderRadius: 8, fontSize: 13, cursor: 'pointer', border: 'none',
-                    background: view === 'subject' ? '#2d3748' : '#edf2f7',
-                    color: view === 'subject' ? '#fff' : '#4a5568' }}>
-                  <span className="material-icons" style={{ fontSize: 16, verticalAlign: 'middle', marginRight: 4 }}>subject</span>
-                  By Subject
-                </button>
-                <button onClick={() => setView('exam')}
-                  style={{ padding: '6px 14px', borderRadius: 8, fontSize: 13, cursor: 'pointer', border: 'none',
-                    background: view === 'exam' ? '#2d3748' : '#edf2f7',
-                    color: view === 'exam' ? '#fff' : '#4a5568' }}>
-                  <span className="material-icons" style={{ fontSize: 16, verticalAlign: 'middle', marginRight: 4 }}>event</span>
-                  By Exam
-                </button>
+                {[
+                  { key: 'subject', icon: 'subject',     label: 'By Subject' },
+                  { key: 'exam',    icon: 'event',       label: 'By Exam' },
+                  { key: 'trend',   icon: 'show_chart',  label: 'Trend' },
+                ].map(v => (
+                  <button key={v.key} onClick={() => setView(v.key)}
+                    style={{ padding: '6px 14px', borderRadius: 8, fontSize: 13, cursor: 'pointer', border: 'none',
+                      background: view === v.key ? '#2d3748' : '#edf2f7',
+                      color: view === v.key ? '#fff' : '#4a5568' }}>
+                    <span className="material-icons" style={{ fontSize: 16, verticalAlign: 'middle', marginRight: 4 }}>{v.icon}</span>
+                    {v.label}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -348,6 +348,52 @@ export default function StudentMarks() {
                 })}
               </div>
             )}
+            {/* ── Trend View ── */}
+            {view === 'trend' && (() => {
+              const COLORS = ['#4299e1','#48bb78','#ed8936','#9f7aea','#f56565','#38b2ac','#dd6b20','#805ad5'];
+              const subjects = Object.keys(bySubject);
+              const examOrder = ['UNIT_TEST','QUARTERLY','MIDTERM','HALFYEARLY','FINAL','ANNUAL'];
+              const allExams = Array.from(new Set(marks.map(m => m.examType).filter(Boolean)))
+                .sort((a, b) => examOrder.indexOf(a) - examOrder.indexOf(b));
+
+              const chartData = allExams.map(et => {
+                const point = { exam: EXAM_TYPE_LABEL[et] || et };
+                subjects.forEach(sub => {
+                  const entry = marks.find(m => m.examType === et && m.subject === sub);
+                  point[sub] = entry ? pct(entry.marks, entry.maxMarks) : null;
+                });
+                return point;
+              });
+
+              return (
+                <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
+                  <div style={{ fontWeight: 700, fontSize: 16, color: '#2d3748', marginBottom: 20 }}>
+                    Academic Performance Trend
+                  </div>
+                  {chartData.length < 2 ? (
+                    <div style={{ textAlign: 'center', color: '#718096', padding: 40 }}>
+                      Not enough exam data to show a trend. You need marks from at least 2 different exam types.
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={340}>
+                      <LineChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                        <XAxis dataKey="exam" tick={{ fontSize: 13 }} />
+                        <YAxis domain={[0, 100]} tickFormatter={v => `${v}%`} tick={{ fontSize: 12 }} />
+                        <Tooltip formatter={(v) => v !== null ? `${v}%` : '—'} />
+                        <Legend />
+                        {subjects.map((sub, i) => (
+                          <Line key={sub} type="monotone" dataKey={sub}
+                            stroke={COLORS[i % COLORS.length]}
+                            strokeWidth={2} dot={{ r: 4 }}
+                            connectNulls={false} />
+                        ))}
+                      </LineChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+              );
+            })()}
           </>
         )}
       </div>

@@ -7,6 +7,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Long> {
@@ -34,6 +35,8 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Long
     /** School-scoped: a specific teacher's own leave history */
     List<LeaveRequest> findByRequesterIdAndRequesterTypeAndSchoolIdOrderByCreatedAtDesc(
             Long requesterId, LeaveRequest.RequesterType requesterType, Long schoolId);
+
+    Optional<LeaveRequest> findByParentToken(String parentToken);
 
     @Modifying @Transactional
     void deleteByClassSection(String classSection);

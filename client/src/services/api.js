@@ -584,4 +584,37 @@ export const teacherAttendanceAPI = {
 };
 
 // ============================================
+// SCHOOL CALENDAR APIs
+// ============================================
+export const calendarAPI = {
+  getEvents:    (params) => api.get('/api/school/calendar', { params }),
+  createEvent:  (data)   => api.post('/api/school/calendar', data),
+  updateEvent:  (id, data) => api.put(`/api/school/calendar/${id}`, data),
+  deleteEvent:  (id)     => api.delete(`/api/school/calendar/${id}`),
+};
+
+// ============================================
+// MEETING SLOT APIs
+// ============================================
+export const meetingAPI = {
+  // Teacher
+  createSlot:    (data)   => api.post('/api/teacher/meeting-slots', data),
+  getTeacherSlots: ()     => api.get('/api/teacher/meeting-slots'),
+  deleteSlot:    (id)     => api.delete(`/api/teacher/meeting-slots/${id}`),
+  // Student
+  getAvailableSlots: ()   => api.get('/api/student/meeting-slots'),
+  bookSlot:    (slotId, data) => api.post(`/api/student/meeting-slots/${slotId}/book`, data || {}),
+  getMyBookings: ()       => api.get('/api/student/meeting-bookings'),
+  cancelBooking: (id)     => api.patch(`/api/student/meeting-bookings/${id}/cancel`),
+};
+
+// ============================================
+// REPORT CARD APIs
+// ============================================
+export const reportCardAPI = {
+  getMyReportCard:      ()         => api.get('/api/student/report-card'),
+  getStudentReportCard: (studentId) => api.get(`/api/admin/students/${studentId}/report-card`),
+};
+
+// ============================================
 export default api;

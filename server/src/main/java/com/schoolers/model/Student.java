@@ -64,6 +64,9 @@ public class Student {
     @Column(name = "guardian_mobile", length = 15)
     private String guardianMobile;
 
+    @Column(name = "parent_email", length = 150)
+    private String parentEmail;
+
     @Column(name = "photo_url", columnDefinition = "TEXT")
     private String photoUrl;
 

@@ -66,6 +66,16 @@ public class LeaveRequest {
     @Column(name = "reviewed_by", length = 100)
     private String reviewedBy;
 
+    @Column(name = "parent_acknowledged")
+    @Builder.Default
+    private Boolean parentAcknowledged = false;
+
+    @Column(name = "parent_acknowledged_at")
+    private LocalDateTime parentAcknowledgedAt;
+
+    @Column(name = "parent_token", length = 64, unique = true)
+    private String parentToken;
+
     /** Multi-tenancy: which school this leave request belongs to. */
     @Column(name = "school_id")
     private Long schoolId;
