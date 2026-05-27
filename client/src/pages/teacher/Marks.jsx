@@ -2,9 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '../../components/Layout';
 import Toast from '../../components/Toast';
 import { useAuth } from '../../context/AuthContext';
-import { teacherAPI } from '../../services/api';
+import { teacherAPI, examTypeAPI } from '../../services/api';
 
-const EXAM_TYPES = ['Unit Test 1', 'Unit Test 2', 'Mid Term', 'Final Exam', 'Annual Exam'];
+const FALLBACK_EXAM_TYPES = ['Unit Test 1', 'Unit Test 2', 'Mid Term', 'Final Exam', 'Annual Exam'];
 const SUBJECTS = [
   'Mathematics', 'Science', 'English', 'Social Studies', 'Hindi',
   'Physics', 'Chemistry', 'Biology', 'Computer Science', 'Physical Education',
@@ -63,10 +63,22 @@ export default function Marks() {
   const [toast, setToast] = useState(null);
   const showToast = (message, type = 'success') => setToast({ message, type });
 
+  // ── Exam types (school-defined or fallback) ────────────────────────────────────
+  const [examTypes, setExamTypes] = useState(FALLBACK_EXAM_TYPES);
+
+  useEffect(() => {
+    examTypeAPI.listForTeacher()
+      .then(r => {
+        const types = (r.data?.data || []).map(et => et.name);
+        if (types.length > 0) setExamTypes(types);
+      })
+      .catch(() => {});
+  }, []);
+
   // ── Bulk modal state ──────────────────────────────────────────────────────────
   const [showModal, setShowModal]             = useState(false);
   const [bulkClassId, setBulkClassId]         = useState('');
-  const [bulkExamType, setBulkExamType]       = useState(EXAM_TYPES[0]);
+  const [bulkExamType, setBulkExamType]       = useState('');
   const [bulkDate, setBulkDate]               = useState('');
   const [bulkMaxMarks, setBulkMaxMarks]       = useState('100');
   const [bulkSubjects, setBulkSubjects]       = useState([SUBJECTS[0]]);
@@ -170,7 +182,7 @@ export default function Marks() {
   // ── Open modal ────────────────────────────────────────────────────────────────
   const openModal = () => {
     setBulkClassId(filterClassId || (classes[0] ? String(classes[0].id) : ''));
-    setBulkExamType(EXAM_TYPES[0]);
+    setBulkExamType(examTypes[0] || '');
     setBulkDate('');
     setBulkMaxMarks('100');
     setBulkSubjects([SUBJECTS[0]]);
@@ -335,7 +347,7 @@ export default function Marks() {
           </select>
           <select className="filter-select" value={filterExam} onChange={e => setFilterExam(e.target.value)}>
             <option value="">All Exams</option>
-            {EXAM_TYPES.map(et => <option key={et} value={et}>{et}</option>)}
+            {examTypes.map(et => <option key={et} value={et}>{et}</option>)}
           </select>
           <button className="btn-add" onClick={openModal}>
             <span className="material-icons">add</span> Add Marks
@@ -516,7 +528,8 @@ export default function Marks() {
               <div>
                 <label style={{ fontSize: 11, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Exam Type *</label>
                 <select value={bulkExamType} onChange={e => setBulkExamType(e.target.value)} style={sel({ width: 150 })}>
-                  {EXAM_TYPES.map(et => <option key={et} value={et}>{et}</option>)}
+                  <option value="">Select exam…</option>
+                  {examTypes.map(et => <option key={et} value={et}>{et}</option>)}
                 </select>
               </div>
               <div>

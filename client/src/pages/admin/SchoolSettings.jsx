@@ -1,7 +1,7 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useSchool } from '../../context/SchoolContext';
-import { schoolAPI, BASE_URL } from '../../services/api';
+import { schoolAPI, examTypeAPI, BASE_URL } from '../../services/api';
 import Layout from '../../components/Layout';
 
 const MAX_SIZE_MB = 5;
@@ -21,6 +21,66 @@ const SchoolSettings = () => {
   const inputRef = useRef(null);
 
   const canEdit = user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN';
+
+  // ── Exam type management ─────────────────────────────────────────────────────
+  const [examTypes,    setExamTypes]    = useState([]);
+  const [etLoading,    setEtLoading]    = useState(false);
+  const [newEtName,    setNewEtName]    = useState('');
+  const [newEtOrder,   setNewEtOrder]   = useState('');
+  const [etSaving,     setEtSaving]     = useState(false);
+  const [etError,      setEtError]      = useState('');
+  const [etSuccess,    setEtSuccess]    = useState('');
+  const [editingEt,    setEditingEt]    = useState(null); // {id, name, displayOrder}
+
+  const loadExamTypes = useCallback(async () => {
+    setEtLoading(true);
+    try {
+      const r = await examTypeAPI.list();
+      setExamTypes(r.data?.data || []);
+    } catch { setExamTypes([]); }
+    finally { setEtLoading(false); }
+  }, []);
+
+  useEffect(() => { if (canEdit) loadExamTypes(); }, [canEdit, loadExamTypes]);
+
+  const handleAddExamType = async (e) => {
+    e.preventDefault();
+    if (!newEtName.trim()) return;
+    setEtError(''); setEtSuccess(''); setEtSaving(true);
+    try {
+      await examTypeAPI.create({ name: newEtName.trim(), displayOrder: parseInt(newEtOrder) || 0 });
+      setNewEtName(''); setNewEtOrder('');
+      setEtSuccess('Exam type added.');
+      await loadExamTypes();
+    } catch (err) {
+      setEtError(err.response?.data?.message || 'Failed to add exam type.');
+    } finally { setEtSaving(false); }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingEt || !editingEt.name.trim()) return;
+    setEtError(''); setEtSuccess(''); setEtSaving(true);
+    try {
+      await examTypeAPI.update(editingEt.id, { name: editingEt.name.trim(), displayOrder: parseInt(editingEt.displayOrder) || 0, isActive: editingEt.isActive });
+      setEditingEt(null);
+      setEtSuccess('Updated.');
+      await loadExamTypes();
+    } catch (err) {
+      setEtError(err.response?.data?.message || 'Failed to update.');
+    } finally { setEtSaving(false); }
+  };
+
+  const handleDeleteExamType = async (id) => {
+    if (!window.confirm('Delete this exam type?')) return;
+    setEtError(''); setEtSuccess('');
+    try {
+      await examTypeAPI.remove(id);
+      setEtSuccess('Deleted.');
+      await loadExamTypes();
+    } catch (err) {
+      setEtError(err.response?.data?.message || 'Failed to delete.');
+    }
+  };
 
   const resetPreview = () => {
     if (preview) URL.revokeObjectURL(preview);
@@ -346,6 +406,84 @@ const SchoolSettings = () => {
             ))}
           </div>
         </div>
+
+        {/* ── Exam Types card ── */}
+        {canEdit && (
+          <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #e2e8f0', boxShadow: '0 1px 6px rgba(0,0,0,0.06)', marginTop: 20 }}>
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9' }}>
+              <h2 style={{ fontSize: 16, fontWeight: 700, color: '#1e293b', margin: 0 }}>Exam Types</h2>
+              <p style={{ fontSize: 13, color: '#64748b', margin: '4px 0 0' }}>
+                Define the exam types your school uses (Unit Test 1, Quarterly, Annual Exam, etc.). Teachers pick from this list when entering marks.
+              </p>
+            </div>
+            <div style={{ padding: '20px 24px' }}>
+              {etError   && <div style={{ background: '#FEF2F2', color: '#DC2626', borderRadius: 8, padding: '9px 12px', marginBottom: 12, fontSize: 13, border: '1px solid #FECACA' }}>{etError}</div>}
+              {etSuccess && <div style={{ background: '#F0FDF4', color: '#16A34A', borderRadius: 8, padding: '9px 12px', marginBottom: 12, fontSize: 13, border: '1px solid #BBF7D0' }}>{etSuccess}</div>}
+
+              {/* Add new */}
+              <form onSubmit={handleAddExamType} style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
+                <input value={newEtName} onChange={e => setNewEtName(e.target.value)}
+                  placeholder="Exam name, e.g. Unit Test 1" maxLength={100} required
+                  style={{ flex: 1, minWidth: 180, padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 9, fontSize: 13 }} />
+                <input value={newEtOrder} onChange={e => setNewEtOrder(e.target.value)}
+                  type="number" placeholder="Order (0=first)" min="0"
+                  style={{ width: 130, padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 9, fontSize: 13 }} />
+                <button type="submit" disabled={etSaving}
+                  style={{ padding: '9px 18px', background: etSaving ? '#a0aec0' : '#2563EB', color: '#fff', border: 'none', borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: etSaving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <span className="material-icons" style={{ fontSize: 16 }}>add</span>
+                  {etSaving ? 'Saving…' : 'Add'}
+                </button>
+              </form>
+
+              {/* List */}
+              {etLoading ? (
+                <div style={{ textAlign: 'center', padding: 30, color: '#94a3b8' }}>Loading…</div>
+              ) : examTypes.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: 30, color: '#94a3b8', fontSize: 13 }}>
+                  No exam types yet. Add one above — teachers will see them in the Marks page.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {examTypes.map(et => (
+                    <div key={et.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                      {editingEt?.id === et.id ? (
+                        <>
+                          <input value={editingEt.name} onChange={e => setEditingEt(p => ({ ...p, name: e.target.value }))}
+                            maxLength={100}
+                            style={{ flex: 1, padding: '6px 10px', border: '1.5px solid #2563EB', borderRadius: 7, fontSize: 13 }} />
+                          <input value={editingEt.displayOrder} onChange={e => setEditingEt(p => ({ ...p, displayOrder: e.target.value }))}
+                            type="number" min="0"
+                            style={{ width: 80, padding: '6px 10px', border: '1.5px solid #e2e8f0', borderRadius: 7, fontSize: 13 }} />
+                          <select value={String(editingEt.isActive)} onChange={e => setEditingEt(p => ({ ...p, isActive: e.target.value === 'true' }))}
+                            style={{ padding: '6px 10px', border: '1.5px solid #e2e8f0', borderRadius: 7, fontSize: 13 }}>
+                            <option value="true">Active</option>
+                            <option value="false">Inactive</option>
+                          </select>
+                          <button onClick={handleSaveEdit} disabled={etSaving}
+                            style={{ padding: '6px 12px', background: '#16A34A', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Save</button>
+                          <button onClick={() => setEditingEt(null)}
+                            style={{ padding: '6px 12px', background: '#edf2f7', color: '#4a5568', border: 'none', borderRadius: 7, fontSize: 12, cursor: 'pointer' }}>Cancel</button>
+                        </>
+                      ) : (
+                        <>
+                          <div style={{ flex: 1 }}>
+                            <span style={{ fontWeight: 600, fontSize: 14, color: '#1e293b' }}>{et.name}</span>
+                            {!et.isActive && <span style={{ marginLeft: 8, fontSize: 11, color: '#94a3b8', fontStyle: 'italic' }}>inactive</span>}
+                          </div>
+                          <span style={{ fontSize: 11, color: '#94a3b8' }}>Order: {et.displayOrder ?? 0}</span>
+                          <button onClick={() => setEditingEt({ id: et.id, name: et.name, displayOrder: et.displayOrder ?? 0, isActive: et.isActive !== false })}
+                            style={{ padding: '5px 10px', background: '#EFF6FF', color: '#2563EB', border: 'none', borderRadius: 7, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>Edit</button>
+                          <button onClick={() => handleDeleteExamType(et.id)}
+                            style={{ padding: '5px 10px', background: '#FEF2F2', color: '#DC2626', border: 'none', borderRadius: 7, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>Delete</button>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
       </div>
     </Layout>

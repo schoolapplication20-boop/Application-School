@@ -451,3 +451,92 @@ a {
     margin: 1cm;
   }
 }
+
+/* ── Report card print isolation ─────────────────────────────────────────────
+   Mirrors the hall-ticket pattern: adding .printing-report-card to <body>
+   makes everything invisible except #report-card, then @media print renders
+   only that node on paper. */
+body.printing-report-card * {
+  visibility: hidden;
+}
+body.printing-report-card #report-card,
+body.printing-report-card #report-card * {
+  visibility: visible;
+}
+body.printing-report-card #report-card {
+  position: fixed;
+  inset: 0;
+  margin: 0;
+  padding: 24px 32px;
+  z-index: 99999;
+  background: #fff;
+  overflow: auto;
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm 14mm;
+  }
+
+  body.printing-report-card > * {
+    display: none !important;
+  }
+
+  body.printing-report-card #report-card {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  body.printing-report-card #report-card * {
+    visibility: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+}
+
+/* ── Calendar responsive layout ──────────────────────────────────────────────
+   Stack calendar + sidebar vertically on small screens */
+.calendar-main-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+}
+.calendar-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+@media (max-width: 700px) {
+  .calendar-main-grid {
+    grid-template-columns: 1fr;
+  }
+  .calendar-form-grid {
+    grid-template-columns: 1fr;
+  }
+  .calendar-form-grid > div[style*="1/-1"] {
+    grid-column: 1;
+  }
+}
+
+/* ── General mobile helpers ────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  /* Appointment / report-card / meeting pages: reduce horizontal padding */
+  .page-mobile-pad {
+    padding: 12px !important;
+  }
+  /* Stat cards: 2-col on phones */
+  .stat-cards-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}

@@ -78,6 +78,10 @@ import MeetingBookings       from './pages/student/MeetingBookings';
 
 // Teacher new pages
 import TeacherMeetingSlots   from './pages/teacher/TeacherMeetingSlots';
+import TeacherAppointments   from './pages/teacher/TeacherAppointments';
+
+// Student new pages
+import StudentAppointments   from './pages/student/StudentAppointments';
 
 // Shared pages
 import SchoolCalendar        from './pages/shared/SchoolCalendar';
@@ -222,6 +226,10 @@ function App() {
 
             {/* Teacher new routes */}
             <Route path="/teacher/meeting-slots"    element={<ProtectedRoute allowedRoles={['TEACHER']}><TeacherMeetingSlots /></ProtectedRoute>} />
+            <Route path="/teacher/appointments"     element={<ProtectedRoute allowedRoles={['TEACHER']}><TeacherAppointments /></ProtectedRoute>} />
+
+            {/* Student appointment route */}
+            <Route path="/student/appointments"     element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentAppointments /></ProtectedRoute>} />
 
             {/* Shared routes (all authenticated roles) */}
             <Route path="/school/calendar"          element={<ProtectedRoute allowedRoles={['ADMIN','SUPER_ADMIN','TEACHER','STUDENT']}><SchoolCalendar /></ProtectedRoute>} />

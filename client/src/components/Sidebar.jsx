@@ -55,6 +55,7 @@ const teacherNavItems = [
   { path: '/teacher/my-attendance',   icon: 'co_present',     label: 'My Attendance',       moduleKey: 'attendance' },
   { path: '/teacher/examination',     icon: 'verified',       label: 'Exam & Certificates', moduleKey: 'examination' },
   { path: '/teacher/meeting-slots',   icon: 'groups',         label: 'Meeting Slots',       moduleKey: null },
+  { path: '/teacher/appointments',    icon: 'handshake',      label: 'Appointments',        moduleKey: null },
   { path: '/school/calendar',         icon: 'event',          label: 'School Calendar',     moduleKey: null },
 ];
 
@@ -69,6 +70,7 @@ const studentNavItems = [
   { path: '/student/marks',            icon: 'grade',              label: 'My Marks',         moduleKey: 'examination' },
   { path: '/student/report-card',      icon: 'description',        label: 'Report Card',      moduleKey: 'examination' },
   { path: '/student/meeting-bookings', icon: 'groups',             label: 'PT Meetings',      moduleKey: null },
+  { path: '/student/appointments',     icon: 'handshake',          label: 'Appointments',     moduleKey: null },
   { path: '/school/calendar',          icon: 'event',              label: 'School Calendar',  moduleKey: null },
 ];
 

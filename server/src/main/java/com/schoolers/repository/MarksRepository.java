@@ -19,8 +19,13 @@ public interface MarksRepository extends JpaRepository<Marks, Long> {
 
     // School-scoped queries
     List<Marks> findByStudentIdAndSchoolId(Long studentId, Long schoolId);
+    List<Marks> findByStudentIdAndSchoolIdAndExamType(Long studentId, Long schoolId, String examType);
     List<Marks> findByTeacherIdAndSchoolId(Long teacherId, Long schoolId);
     List<Marks> findBySchoolIdOrderByCreatedAtDesc(Long schoolId);
+
+    // Distinct exam types for a student (for report card filter dropdown)
+    @Query("SELECT DISTINCT m.examType FROM Marks m WHERE m.studentId = :studentId AND m.schoolId = :schoolId AND m.examType IS NOT NULL ORDER BY m.examType")
+    List<String> findDistinctExamTypesByStudentIdAndSchoolId(@Param("studentId") Long studentId, @Param("schoolId") Long schoolId);
 
     @Query("SELECT AVG((CAST(m.marks AS double) / m.maxMarks) * 100) FROM Marks m WHERE m.studentId = :sid AND m.maxMarks > 0")
     Double findAveragePercentageByStudentId(@Param("sid") Long studentId);

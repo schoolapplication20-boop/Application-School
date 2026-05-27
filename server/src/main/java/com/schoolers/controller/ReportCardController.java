@@ -22,37 +22,62 @@ public class ReportCardController {
     @Autowired private AttendanceRepository attendanceRepository;
     @Autowired private SchoolRepository     schoolRepository;
 
-    /** Student fetches their own report card */
+    /** Student fetches available exam filters (distinct exam types from their marks) */
+    @GetMapping("/api/student/report-card/filters")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<?> getMyFilters(Authentication auth) {
+        var userOpt = userRepository.findByEmailIgnoreCase(auth.getName());
+        if (userOpt.isEmpty()) return ResponseEntity.status(403).body(ApiResponse.error("User not found"));
+        var studentOpt = studentRepository.findByStudentUserId(userOpt.get().getId());
+        if (studentOpt.isEmpty()) return ResponseEntity.ok(ApiResponse.success(Map.of("examTypes", List.of())));
+        Student student = studentOpt.get();
+        List<String> examTypes = marksRepository.findDistinctExamTypesByStudentIdAndSchoolId(
+                student.getId(), student.getSchoolId());
+        return ResponseEntity.ok(ApiResponse.success(Map.of("examTypes", examTypes)));
+    }
+
+    /** Student fetches their own report card — optional ?examType=X filter */
     @GetMapping("/api/student/report-card")
     @PreAuthorize("hasRole('STUDENT')")
-    public ResponseEntity<?> getMyReportCard(Authentication auth) {
+    public ResponseEntity<?> getMyReportCard(
+            @RequestParam(required = false) String examType,
+            Authentication auth) {
         var userOpt = userRepository.findByEmailIgnoreCase(auth.getName());
         if (userOpt.isEmpty()) return ResponseEntity.status(403).body(ApiResponse.error("User not found"));
         var studentOpt = studentRepository.findByStudentUserId(userOpt.get().getId());
         if (studentOpt.isEmpty()) return ResponseEntity.status(403).body(ApiResponse.error("Student profile not found"));
-        return ResponseEntity.ok(buildReportCard(studentOpt.get()));
+        return ResponseEntity.ok(buildReportCard(studentOpt.get(), examType));
     }
 
-    /** Admin fetches any student's report card */
+    /** Admin fetches any student's report card — optional ?examType=X filter */
     @GetMapping("/api/admin/students/{studentId}/report-card")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
-    public ResponseEntity<?> getStudentReportCard(@PathVariable Long studentId, Authentication auth) {
+    public ResponseEntity<?> getStudentReportCard(
+            @PathVariable Long studentId,
+            @RequestParam(required = false) String examType,
+            Authentication auth) {
         Long adminSchoolId = userRepository.findByEmailIgnoreCase(auth.getName())
                 .map(User::getSchoolId).orElse(null);
         Student student = studentRepository.findById(studentId).orElse(null);
         if (student == null) return ResponseEntity.status(404).body(ApiResponse.error("Student not found"));
         if (adminSchoolId != null && !adminSchoolId.equals(student.getSchoolId()))
             return ResponseEntity.status(403).body(ApiResponse.error("Unauthorized"));
-        return ResponseEntity.ok(buildReportCard(student));
+        return ResponseEntity.ok(buildReportCard(student, examType));
     }
 
-    private Map<String, Object> buildReportCard(Student student) {
+    private Map<String, Object> buildReportCard(Student student, String examTypeFilter) {
         // Primary query: schoolId-scoped for multi-tenant safety.
-        // Fallback to student-only query for records saved before schoolId stamping was fixed
-        // (those records have schoolId = null and would otherwise be invisible).
-        List<Marks> marks = marksRepository.findByStudentIdAndSchoolId(student.getId(), student.getSchoolId());
-        if (marks.isEmpty()) {
-            marks = marksRepository.findByStudentId(student.getId());
+        // Fallback for records saved before schoolId stamping was fixed (schoolId = null).
+        List<Marks> marks;
+        if (examTypeFilter != null && !examTypeFilter.isBlank()) {
+            marks = marksRepository.findByStudentIdAndSchoolIdAndExamType(
+                    student.getId(), student.getSchoolId(), examTypeFilter);
+            if (marks.isEmpty())
+                marks = marksRepository.findByStudentIdAndExamType(student.getId(), examTypeFilter);
+        } else {
+            marks = marksRepository.findByStudentIdAndSchoolId(student.getId(), student.getSchoolId());
+            if (marks.isEmpty())
+                marks = marksRepository.findByStudentId(student.getId());
         }
 
         // Group by examType

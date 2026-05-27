@@ -33,6 +33,8 @@ public interface TeacherRepository extends JpaRepository<Teacher, Long> {
     @Query("SELECT t FROM Teacher t WHERE t.user.id = :userId")
     Optional<Teacher> findByUserId(@Param("userId") Long userId);
 
+    Optional<Teacher> findByPrimaryClassId(Long primaryClassId);
+
     List<Teacher> findBySubject(String subject);
     long countByIsActive(Boolean isActive);
 

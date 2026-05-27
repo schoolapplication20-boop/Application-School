@@ -610,11 +610,42 @@ export const meetingAPI = {
 };
 
 // ============================================
+// APPOINTMENT APIs (parent-teacher, class-teacher direct requests)
+// ============================================
+export const appointmentAPI = {
+  // Student
+  studentRequest:          (data) => api.post('/api/student/appointments', data),
+  getStudentAppointments:  ()     => api.get('/api/student/appointments'),
+  studentCancel:           (id)   => api.patch(`/api/student/appointments/${id}/cancel`),
+  // Teacher
+  teacherRequest:          (data) => api.post('/api/teacher/appointments', data),
+  getTeacherAppointments:  ()     => api.get('/api/teacher/appointments'),
+  teacherRespond:          (id, data) => api.patch(`/api/teacher/appointments/${id}/respond`, data),
+  getClassStudents:        ()     => api.get('/api/teacher/appointment-students'),
+};
+
+// ============================================
+// EXAM TYPE APIs
+// ============================================
+export const examTypeAPI = {
+  // Admin/super_admin
+  list:   ()         => api.get('/api/admin/exam-types'),
+  create: (data)     => api.post('/api/admin/exam-types', data),
+  update: (id, data) => api.put(`/api/admin/exam-types/${id}`, data),
+  remove: (id)       => api.delete(`/api/admin/exam-types/${id}`),
+  // Teacher
+  listForTeacher: () => api.get('/api/teacher/exam-types'),
+  // Student
+  listForStudent: () => api.get('/api/student/exam-types'),
+};
+
+// ============================================
 // REPORT CARD APIs
 // ============================================
 export const reportCardAPI = {
-  getMyReportCard:      ()         => api.get('/api/student/report-card'),
-  getStudentReportCard: (studentId) => api.get(`/api/admin/students/${studentId}/report-card`),
+  getMyReportCard:      (examType)  => api.get('/api/student/report-card', { params: examType ? { examType } : {} }),
+  getMyFilters:         ()          => api.get('/api/student/report-card/filters'),
+  getStudentReportCard: (studentId, examType) => api.get(`/api/admin/students/${studentId}/report-card`, { params: examType ? { examType } : {} }),
 };
 
 // ============================================

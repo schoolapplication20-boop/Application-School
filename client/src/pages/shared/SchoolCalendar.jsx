@@ -111,7 +111,7 @@ export default function SchoolCalendar() {
             <h3 style={{ margin: '0 0 16px', fontSize: 16, fontWeight: 700 }}>{editId ? 'Edit Event' : 'New Event'}</h3>
             {error && <div style={{ background: '#fff5f5', color: '#c53030', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: 13 }}>{error}</div>}
             <form onSubmit={handleSave}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+              <div className="calendar-form-grid">
                 <div style={{ gridColumn: '1/-1' }}>
                   <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 5 }}>Title *</label>
                   <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Event title" style={inp} />
@@ -145,7 +145,7 @@ export default function SchoolCalendar() {
           </div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20 }}>
+        <div className="calendar-main-grid">
 
           {/* Calendar grid */}
           <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
