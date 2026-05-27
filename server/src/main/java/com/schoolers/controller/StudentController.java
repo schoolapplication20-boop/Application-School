@@ -68,7 +68,7 @@ public class StudentController {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         Long studentId = resolveStudentId(auth);
         if (studentId == null) return ResponseEntity.status(403).body(ApiResponse.error("Student profile not found."));
-        return ResponseEntity.ok(parentService.getChildAttendance(studentId, startDate, endDate));
+        return ResponseEntity.ok(parentService.getChildAttendance(null, studentId, startDate, endDate));
     }
 
     @GetMapping("/marks")
@@ -76,7 +76,7 @@ public class StudentController {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         Long studentId = resolveStudentId(auth);
         if (studentId == null) return ResponseEntity.status(403).body(ApiResponse.error("Student profile not found."));
-        return ResponseEntity.ok(parentService.getChildMarks(studentId));
+        return ResponseEntity.ok(parentService.getChildMarks(null, studentId));
     }
 
     /**
