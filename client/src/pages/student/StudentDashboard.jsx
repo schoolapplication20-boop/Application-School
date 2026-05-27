@@ -228,12 +228,13 @@ export default function StudentDashboard() {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '8px 0' }}>
             {[
-              { label: 'View Attendance', icon: 'fact_check',    path: '/student/attendance',  color: '#0de1e8' },
-
-              { label: 'Pay Fees',        icon: 'payments',       path: '/student/fees',        color: '#e53e3e' },
-              { label: 'Leave Request',   icon: 'event_busy',     path: '/student/leave',       color: '#ed8936' },
-              { label: 'Hall Ticket',     icon: 'verified',       path: '/student/examination', color: '#3182ce' },
-              { label: 'Class Diary',     icon: 'photo_library',  path: '/student/diary',       color: '#38b2ac' },
+              { label: 'View Attendance', icon: 'fact_check',    path: '/student/attendance',   color: '#0de1e8' },
+              { label: 'My Marks',        icon: 'grade',          path: '/student/marks',        color: '#805ad5' },
+              { label: 'Report Card',     icon: 'description',    path: '/student/report-card',  color: '#276749' },
+              { label: 'Pay Fees',        icon: 'payments',       path: '/student/fees',         color: '#e53e3e' },
+              { label: 'Leave Request',   icon: 'event_busy',     path: '/student/leave',        color: '#ed8936' },
+              { label: 'Hall Ticket',     icon: 'verified',       path: '/student/examination',  color: '#3182ce' },
+              { label: 'Class Diary',     icon: 'photo_library',  path: '/student/diary',        color: '#38b2ac' },
             ].map(item => (
               <div key={item.path} onClick={() => navigate(item.path)} style={{
                 display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px',

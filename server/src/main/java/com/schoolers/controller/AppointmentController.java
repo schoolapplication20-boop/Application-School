@@ -1,5 +1,6 @@
 package com.schoolers.controller;
 
+import com.schoolers.dto.ApiResponse;
 import com.schoolers.repository.UserRepository;
 import com.schoolers.service.AppointmentService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,6 +10,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.Map;
 
 @RestController
@@ -19,7 +21,19 @@ public class AppointmentController {
 
     private Long userId(Authentication auth) {
         return userRepository.findByEmailIgnoreCase(auth.getName())
-                .map(u -> u.getId()).orElseThrow();
+                .map(u -> u.getId())
+                .orElseThrow(() -> new IllegalStateException("User not found"));
+    }
+
+    private LocalDate parseDate(Object val) {
+        if (val == null) return null;
+        try { return LocalDate.parse(val.toString()); }
+        catch (DateTimeParseException e) { return null; }
+    }
+
+    private String str(Map<String, Object> body, String key) {
+        Object v = body.get(key);
+        return (v instanceof String s && !s.isBlank()) ? s.trim() : null;
     }
 
     // ── Student endpoints ─────────────────────────────────────────────────────
@@ -27,13 +41,12 @@ public class AppointmentController {
     @PostMapping("/api/student/appointments")
     @PreAuthorize("hasRole('STUDENT')")
     public ResponseEntity<?> studentRequest(@RequestBody Map<String, Object> body, Authentication auth) {
-        String topic        = (String) body.get("topic");
-        String proposedTime = (String) body.get("proposedTime");
-        String studentNote  = (String) body.get("studentNote");
-        LocalDate proposedDate = body.get("proposedDate") != null
-                ? LocalDate.parse((String) body.get("proposedDate")) : null;
-
-        var result = appointmentService.requestByStudent(userId(auth), topic, proposedDate, proposedTime, studentNote);
+        var result = appointmentService.requestByStudent(
+                userId(auth),
+                str(body, "topic"),
+                parseDate(body.get("proposedDate")),
+                str(body, "proposedTime"),
+                str(body, "studentNote"));
         return result.isSuccess() ? ResponseEntity.status(201).body(result) : ResponseEntity.badRequest().body(result);
     }
 
@@ -55,14 +68,21 @@ public class AppointmentController {
     @PostMapping("/api/teacher/appointments")
     @PreAuthorize("hasRole('TEACHER')")
     public ResponseEntity<?> teacherRequest(@RequestBody Map<String, Object> body, Authentication auth) {
-        Long studentId      = body.get("studentId") != null ? Long.valueOf(body.get("studentId").toString()) : null;
-        String topic        = (String) body.get("topic");
-        String proposedTime = (String) body.get("proposedTime");
-        String teacherNote  = (String) body.get("teacherNote");
-        LocalDate proposedDate = body.get("proposedDate") != null
-                ? LocalDate.parse((String) body.get("proposedDate")) : null;
+        Object sidVal = body.get("studentId");
+        if (sidVal == null)
+            return ResponseEntity.badRequest().body(ApiResponse.error("studentId is required"));
+        Long studentId;
+        try { studentId = Long.valueOf(sidVal.toString()); }
+        catch (NumberFormatException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Invalid studentId"));
+        }
 
-        var result = appointmentService.requestByTeacher(userId(auth), studentId, topic, proposedDate, proposedTime, teacherNote);
+        var result = appointmentService.requestByTeacher(
+                userId(auth), studentId,
+                str(body, "topic"),
+                parseDate(body.get("proposedDate")),
+                str(body, "proposedTime"),
+                str(body, "teacherNote"));
         return result.isSuccess() ? ResponseEntity.status(201).body(result) : ResponseEntity.badRequest().body(result);
     }
 
@@ -76,13 +96,12 @@ public class AppointmentController {
     @PreAuthorize("hasRole('TEACHER')")
     public ResponseEntity<?> teacherRespond(@PathVariable Long id,
             @RequestBody Map<String, Object> body, Authentication auth) {
-        String status        = (String) body.get("status");
-        String teacherNote   = (String) body.get("teacherNote");
-        String confirmedTime = (String) body.get("confirmedTime");
-        LocalDate confirmedDate = body.get("confirmedDate") != null
-                ? LocalDate.parse((String) body.get("confirmedDate")) : null;
-
-        var result = appointmentService.teacherRespond(userId(auth), id, status, teacherNote, confirmedDate, confirmedTime);
+        var result = appointmentService.teacherRespond(
+                userId(auth), id,
+                str(body, "status"),
+                str(body, "teacherNote"),
+                parseDate(body.get("confirmedDate")),
+                str(body, "confirmedTime"));
         return result.isSuccess() ? ResponseEntity.ok(result) : ResponseEntity.badRequest().body(result);
     }
 

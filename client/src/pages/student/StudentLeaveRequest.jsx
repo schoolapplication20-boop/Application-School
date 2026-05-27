@@ -45,6 +45,8 @@ export default function StudentLeaveRequest() {
     const errs = {};
     if (!form.fromDate) errs.fromDate = 'From date is required';
     if (!form.toDate)   errs.toDate   = 'To date is required';
+    if (form.fromDate && form.fromDate < today())
+      errs.fromDate = 'Leave date cannot be in the past';
     if (form.toDate && form.fromDate && form.toDate < form.fromDate)
       errs.toDate = 'To date cannot be before from date';
     if (!form.reason.trim()) errs.reason = 'Reason is required';

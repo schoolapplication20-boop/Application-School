@@ -21,32 +21,35 @@ const handlePrint = () => {
 };
 
 export default function ReportCard() {
-  const [data,      setData]      = useState(null);
-  const [loading,   setLoading]   = useState(true);
-  const [error,     setError]     = useState('');
-  const [examTypes, setExamTypes] = useState([]);
-  const [selected,  setSelected]  = useState('');
+  const [data,          setData]          = useState(null);
+  const [loading,       setLoading]       = useState(true);
+  const [error,         setError]         = useState('');
+  const [examTypes,     setExamTypes]     = useState([]);
+  const [selected,      setSelected]      = useState(null); // null = not yet resolved
+  const [filtersLoaded, setFiltersLoaded] = useState(false);
 
-  // Load available exam types
+  // Load available exam types first
   useEffect(() => {
     reportCardAPI.getMyFilters()
       .then(r => {
         const types = r.data?.data?.examTypes || [];
         setExamTypes(types);
-        if (types.length > 0) setSelected(types[0]);
+        setSelected(types.length > 0 ? types[0] : '');
       })
-      .catch(() => {});
+      .catch(() => setSelected(''))
+      .finally(() => setFiltersLoaded(true));
   }, []);
 
-  // Load report card whenever exam type selection changes
+  // Load report card once filters are resolved
   useEffect(() => {
+    if (!filtersLoaded) return;
     setLoading(true);
     setError('');
     reportCardAPI.getMyReportCard(selected || null)
       .then(r => setData(r.data))
       .catch(() => setError('Failed to load report card. Please try again.'))
       .finally(() => setLoading(false));
-  }, [selected]);
+  }, [selected, filtersLoaded]);
 
   if (loading) return (
     <Layout pageTitle="Report Card">
@@ -83,7 +86,6 @@ export default function ReportCard() {
             {examTypes.length > 0 ? (
               <select value={selected} onChange={e => setSelected(e.target.value)}
                 style={{ padding: '8px 14px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, fontWeight: 600, color: '#2d3748', background: '#fff', cursor: 'pointer' }}>
-                <option value="">All Exams</option>
                 {examTypes.map(et => <option key={et} value={et}>{et}</option>)}
               </select>
             ) : (

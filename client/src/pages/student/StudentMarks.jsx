@@ -99,9 +99,19 @@ export default function StudentMarks() {
       <div style={{ padding: '24px', maxWidth: 1100, margin: '0 auto' }}>
 
         {/* Header */}
-        <div style={{ marginBottom: 24 }}>
+        <div style={{ marginBottom: 20 }}>
           <h1 style={{ fontSize: 26, fontWeight: 700, color: '#1a202c', margin: 0 }}>My Marks</h1>
           <p style={{ color: '#718096', marginTop: 4, fontSize: 14 }}>View your marks by subject and exam</p>
+        </div>
+
+        {/* Grade Scale Legend */}
+        <div style={{ background: '#f8fafc', borderRadius: 10, padding: '10px 16px', marginBottom: 20, display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#718096', marginRight: 4 }}>GRADE SCALE:</span>
+          {[['O','90%+'],['A+','80%+'],['A','70%+'],['B+','60%+'],['B','50%+'],['B-','40%+'],['C','33%+'],['F','<33%']].map(([g, r]) => (
+            <span key={g} style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 16, background: GRADE_COLOR[g]?.bg || '#f7fafc', color: GRADE_COLOR[g]?.color || '#4a5568' }}>
+              {g} <span style={{ fontWeight: 400, opacity: 0.8 }}>{r}</span>
+            </span>
+          ))}
         </div>
 
         {loading && (

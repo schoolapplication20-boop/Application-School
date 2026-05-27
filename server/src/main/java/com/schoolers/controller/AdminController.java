@@ -112,6 +112,18 @@ public class AdminController {
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
     }
 
+    @PostMapping("/students/promote")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> promoteStudents(
+            @RequestBody Map<String, Object> body, Authentication auth) {
+        String fromClass   = body.getOrDefault("fromClass",   "").toString().trim();
+        String fromSection = body.getOrDefault("fromSection", "").toString().trim();
+        String toClass     = body.getOrDefault("toClass",     "").toString().trim();
+        String toSection   = body.getOrDefault("toSection",   "").toString().trim();
+        ApiResponse<Map<String, Object>> response =
+                adminService.promoteStudents(getCurrentSchoolId(auth), fromClass, fromSection, toClass, toSection);
+        return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
+    }
+
     @GetMapping("/students/{id}/credentials")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getStudentCredentials(@PathVariable Long id, Authentication auth) {
         ApiResponse<Map<String, Object>> response = adminService.getStudentCredentials(id, getCurrentSchoolId(auth));

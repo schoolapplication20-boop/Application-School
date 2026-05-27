@@ -43,6 +43,7 @@ export default function MeetingBookings() {
     if (!confirm('Cancel this booking?')) return;
     try {
       await meetingAPI.cancelBooking(id);
+      setSuccess('Booking cancelled.');
       await loadSlots();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to cancel booking');

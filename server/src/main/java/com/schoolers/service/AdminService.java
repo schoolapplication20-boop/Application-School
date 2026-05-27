@@ -2485,6 +2485,39 @@ public class AdminService {
         }
     }
 
+    @Transactional(rollbackFor = Exception.class)
+    public ApiResponse<Map<String, Object>> promoteStudents(
+            Long schoolId, String fromClass, String fromSection, String toClass, String toSection) {
+
+        if (fromClass == null || fromClass.isBlank()) return ApiResponse.error("Source class is required");
+        if (toClass == null || toClass.isBlank())     return ApiResponse.error("Target class is required");
+
+        String src = resolveClassName(fromClass.trim());
+        String srcSec = fromSection != null ? normalizeSection(fromSection.trim()) : "";
+        String dst = resolveClassName(toClass.trim());
+        String dstSec = toSection != null ? normalizeSection(toSection.trim()) : "";
+
+        List<Student> batch = (schoolId != null)
+                ? studentRepository.findBySchoolIdAndClassNameIgnoreCaseAndSectionIgnoreCase(schoolId, src, srcSec)
+                : studentRepository.findByClassNameIgnoreCaseAndSectionIgnoreCase(src, srcSec);
+
+        if (batch.isEmpty()) {
+            return ApiResponse.error("No students found in " + src + (srcSec.isBlank() ? "" : "-" + srcSec));
+        }
+
+        batch.forEach(s -> {
+            s.setClassName(dst);
+            s.setSection(dstSec.isBlank() ? null : dstSec);
+        });
+        studentRepository.saveAll(batch);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("promoted", batch.size());
+        result.put("fromClass", src + (srcSec.isBlank() ? "" : "-" + srcSec));
+        result.put("toClass",   dst + (dstSec.isBlank() ? "" : "-" + dstSec));
+        return ApiResponse.success("Promoted " + batch.size() + " students to " + dst, result);
+    }
+
     private void removeClassFromTeacherClasses(Teacher teacher, String className, String section) {
         if (teacher.getClasses() == null || teacher.getClasses().isBlank()) return;
         String label = className + (section != null && !section.isBlank() ? " - " + section : "");

@@ -539,4 +539,17 @@ body.printing-report-card #report-card {
   .stat-cards-grid {
     grid-template-columns: repeat(2, 1fr) !important;
   }
+  /* Attendance calendar cells — ensure they're tap-friendly */
+  .attendance-calendar-day {
+    min-width: 32px !important;
+    min-height: 32px !important;
+    font-size: 11px !important;
+  }
+  /* Student page inner grids: single column on phones */
+  .grid-3-2 {
+    grid-template-columns: 1fr !important;
+  }
+  .grid-1-1 {
+    grid-template-columns: 1fr !important;
+  }
 }

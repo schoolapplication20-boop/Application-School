@@ -157,6 +157,7 @@ export const adminAPI = {
   updateStudent: (id, data) => api.put(`/api/admin/students/${id}`, data),
   deleteStudent: (id) => api.delete(`/api/admin/students/${id}`),
   getStudentCredentials: (id) => api.get(`/api/admin/students/${id}/credentials`),
+  promoteStudents: (data) => api.post('/api/admin/students/promote', data),
 
   // Bulk Import
   bulkImportStudents:  (data)  => api.post('/api/admin/students/bulk-import', data),

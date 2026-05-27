@@ -31,8 +31,11 @@ public class ReportCardController {
         var studentOpt = studentRepository.findByStudentUserId(userOpt.get().getId());
         if (studentOpt.isEmpty()) return ResponseEntity.ok(ApiResponse.success(Map.of("examTypes", List.of())));
         Student student = studentOpt.get();
-        List<String> examTypes = marksRepository.findDistinctExamTypesByStudentIdAndSchoolId(
-                student.getId(), student.getSchoolId());
+        // Merge schoolId-scoped + fallback (null schoolId = pre-fix records) to ensure all exam types appear
+        List<String> scoped   = marksRepository.findDistinctExamTypesByStudentIdAndSchoolId(student.getId(), student.getSchoolId());
+        List<String> all      = marksRepository.findDistinctExamTypesByStudentId(student.getId());
+        List<String> examTypes = all.stream().distinct().sorted().collect(Collectors.toList());
+        if (scoped.isEmpty() && examTypes.isEmpty()) examTypes = List.of();
         return ResponseEntity.ok(ApiResponse.success(Map.of("examTypes", examTypes)));
     }
 
