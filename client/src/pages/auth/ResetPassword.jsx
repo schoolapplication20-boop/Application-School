@@ -172,7 +172,7 @@ const ResetPassword = () => {
               type="submit"
               className="btn-auth-submit"
               disabled={isLoading}
-              style={{ borderRadius: '50px' }}
+              style={{ borderRadius: '50px', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', boxShadow: '0 6px 20px rgba(99,102,241,.45)' }}
             >
               {isLoading ? 'Resetting...' : 'RESET PASSWORD'}
             </button>
