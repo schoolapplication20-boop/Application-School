@@ -7,6 +7,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import MarketingLayout from './components/MarketingLayout';
 import InstallPrompt from './components/InstallPrompt';
 import SessionTimeoutWarning from './components/SessionTimeoutWarning';
+import ServerWakeModal from './components/ServerWakeModal';
 // Marketing Pages
 import HomePage from './pages/marketing/HomePage';
 import SolutionsPage from './pages/marketing/SolutionsPage';
@@ -89,6 +90,7 @@ function App() {
       <SchoolProvider>
       <NotificationProvider>
         <Router>
+          <ServerWakeModal />
           <InstallPrompt />
           <SessionTimeoutWarning />
           <Routes>

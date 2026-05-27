@@ -8,6 +8,23 @@ let _authToken = null;
 export const setAuthToken   = (token) => { _authToken = token; };
 export const clearAuthToken = ()       => { _authToken = null; };
 
+// ── Server wake-up retry (Render free plan cold starts) ──────────────────────
+let _isServerSleeping = false;
+let _retryAborted     = false;
+export const abortServerRetry = () => { _retryAborted = true; };
+
+const RETRY_DELAY_MS = 5000;
+const MAX_RETRIES    = 15;
+
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+const isNetworkError = (err) =>
+  !err.response && (
+    err.code === 'ERR_NETWORK' ||
+    err.code === 'ERR_CONNECTION_REFUSED' ||
+    err.message === 'Network Error'
+  );
+
 // Create axios instance
 const api = axios.create({
   baseURL: BASE_URL,
@@ -25,21 +42,63 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Response Interceptor - handle token expiry
+// Response Interceptor - handle token expiry + server wake-up retry
 api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    const isAuthEndpoint = error.config?.url?.includes('/api/auth/');
+  (response) => {
+    // Server came back online — hide wake modal if it was showing
+    if (_isServerSleeping) {
+      _isServerSleeping = false;
+      window.dispatchEvent(new CustomEvent('server-awake'));
+    }
+    return response;
+  },
+  async (error) => {
+    const config = error.config;
+
+    // 401: token expired (skip on auth endpoints to avoid redirect loops)
+    const isAuthEndpoint = config?.url?.includes('/api/auth/');
     if (error.response?.status === 401 && !isAuthEndpoint) {
-      // Token expired - clear in-memory token and redirect to login
       clearAuthToken();
       window.location.href = '/login';
+      return Promise.reject(error);
     }
+
+    // Network error: server sleeping / cold start — retry with countdown
+    if (isNetworkError(error) && config) {
+      config._retryCount = (config._retryCount || 0) + 1;
+
+      if (config._retryCount > MAX_RETRIES || _retryAborted) {
+        // Give up
+        _retryAborted = false;
+        if (_isServerSleeping) {
+          _isServerSleeping = false;
+          window.dispatchEvent(new CustomEvent('server-awake'));
+        }
+        return Promise.reject(error);
+      }
+
+      // Notify UI
+      _isServerSleeping = true;
+      window.dispatchEvent(new CustomEvent('server-sleeping', {
+        detail: { retryIn: RETRY_DELAY_MS / 1000 },
+      }));
+
+      await sleep(RETRY_DELAY_MS);
+
+      // User pressed Cancel while sleeping
+      if (_retryAborted) {
+        _retryAborted     = false;
+        _isServerSleeping = false;
+        window.dispatchEvent(new CustomEvent('server-awake'));
+        return Promise.reject(new Error('Request cancelled — server still waking up.'));
+      }
+
+      return api(config); // retry — interceptors run again naturally
+    }
+
     return Promise.reject(error);
   }
 );
