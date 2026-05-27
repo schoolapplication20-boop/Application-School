@@ -67,8 +67,13 @@ public class AuthService {
             }
 
             // ── Step 2: Status checks ──────────────────────────────────────
-            if (!Boolean.TRUE.equals(user.getIsActive()))
+            if (!Boolean.TRUE.equals(user.getIsActive())) {
+                // Self-registered SUPER_ADMIN whose email verification is still pending
+                if (user.getRole() == User.Role.SUPER_ADMIN && user.getResetOtp() != null) {
+                    return ApiResponse.error("Please verify your email before logging in. Check your inbox for the verification OTP.");
+                }
                 return ApiResponse.error("Your account has been deactivated. Please contact admin.");
+            }
 
             // ── Step 2b: Account lockout check ────────────────────────────
             // Account is locked when lockedUntil is set (permanently — cleared only on password reset).
@@ -268,7 +273,10 @@ public class AuthService {
         }
         log.info("[register] Created school id={} schoolId={} code={}", school.getId(), school.getSchoolId(), code);
 
-        // ── Create SUPER_ADMIN linked to the school ───────────────────────────
+        // ── Create SUPER_ADMIN (inactive until email is verified) ───────────────
+        String verifyOtp = String.format("%06d", 100000 + new SecureRandom().nextInt(900000));
+        LocalDateTime otpExpiry = LocalDateTime.now(ZoneOffset.UTC).plusMinutes(15);
+
         User superAdmin = User.builder()
                 .name(adminName.trim())
                 .email(normalizedEmail)
@@ -276,15 +284,53 @@ public class AuthService {
                 .password(passwordEncoder.encode(password))
                 .role(User.Role.SUPER_ADMIN)
                 .schoolId(school.getId())
-                .isActive(true)
+                .isActive(false)
                 .firstLogin(false)
+                .resetOtp(verifyOtp)
+                .otpExpiry(otpExpiry)
                 .build();
         userRepository.save(superAdmin);
-        log.info("[register] SUPER_ADMIN created schoolId={}", school.getId());
+        log.info("[register] SUPER_ADMIN created schoolId={} (pending email verification)", school.getId());
+
+        try {
+            emailService.sendRegistrationOtp(normalizedEmail, adminName.trim(), verifyOtp);
+        } catch (Exception e) {
+            log.warn("[register] Could not send verification email to {}: {}", normalizedEmail, e.getMessage());
+        }
 
         return ApiResponse.success(
-                "Registration successful. Please login to complete your school setup.",
+                "Registration successful! Please check your email for a 6-digit verification code.",
                 java.util.Map.of("schoolId", school.getId(), "email", normalizedEmail));
+    }
+
+    // ── Verify registration email ─────────────────────────────────────────────
+
+    public ApiResponse<String> verifyRegistrationEmail(String email, String otp) {
+        if (email == null || email.isBlank()) return ApiResponse.error("Email is required.");
+        if (otp == null || otp.isBlank()) return ApiResponse.error("OTP is required.");
+
+        User user = userRepository.findByEmailIgnoreCase(email.trim().toLowerCase()).orElse(null);
+        if (user == null) return ApiResponse.error("No account found with this email.");
+
+        if (Boolean.TRUE.equals(user.getIsActive())) {
+            return ApiResponse.success("Email already verified. Please login.", "already_verified");
+        }
+
+        String dbOtp = user.getResetOtp();
+        if (dbOtp == null || !constantTimeEquals(dbOtp.trim(), otp.trim()))
+            return ApiResponse.error("Invalid verification code.");
+
+        LocalDateTime expiry = user.getOtpExpiry();
+        if (expiry != null && LocalDateTime.now(ZoneOffset.UTC).isAfter(expiry))
+            return ApiResponse.error("Verification code has expired. Please contact support to resend.");
+
+        user.setIsActive(true);
+        user.setResetOtp(null);
+        user.setOtpExpiry(null);
+        userRepository.save(user);
+
+        log.info("[verifyRegistrationEmail] Email verified for {}", email);
+        return ApiResponse.success("Email verified successfully! You can now login.", "verified");
     }
 
     /** Generates a short unique code from the school name (e.g. "Springfield High" → "SPRHI"). */

@@ -594,10 +594,12 @@ public class TeacherService {
     }
 
     public ApiResponse<Assignment> createAssignment(Assignment assignment) {
-        // Stamp schoolId from the teacher record so the record is always school-scoped
+        // Stamp schoolId from the teacher record so the record is always school-scoped.
+        // Frontend sends user.id (User PK) as teacherId; fall back to findByUserId if needed.
         if (assignment.getTeacherId() != null && assignment.getSchoolId() == null) {
-            teacherRepository.findById(assignment.getTeacherId())
-                    .ifPresent(t -> assignment.setSchoolId(t.getSchoolId()));
+            Optional<Teacher> t = teacherRepository.findById(assignment.getTeacherId());
+            if (t.isEmpty()) t = teacherRepository.findByUserId(assignment.getTeacherId());
+            t.ifPresent(teacher -> assignment.setSchoolId(teacher.getSchoolId()));
         }
         Assignment saved = assignmentRepository.save(assignment);
         return ApiResponse.success("Assignment created", saved);
@@ -670,10 +672,12 @@ public class TeacherService {
     }
 
     public ApiResponse<Marks> addMarks(Marks marks) {
-        // Stamp schoolId from the teacher record so marks are always school-scoped
+        // Stamp schoolId from the teacher record so marks are always school-scoped.
+        // Frontend sends user.id (User PK) as teacherId; fall back to findByUserId if needed.
         if (marks.getTeacherId() != null && marks.getSchoolId() == null) {
-            teacherRepository.findById(marks.getTeacherId())
-                    .ifPresent(t -> marks.setSchoolId(t.getSchoolId()));
+            Optional<Teacher> t = teacherRepository.findById(marks.getTeacherId());
+            if (t.isEmpty()) t = teacherRepository.findByUserId(marks.getTeacherId());
+            t.ifPresent(teacher -> marks.setSchoolId(teacher.getSchoolId()));
         }
         Marks saved = marksRepository.save(marks);
         return ApiResponse.success("Marks saved", saved);

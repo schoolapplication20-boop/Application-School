@@ -27,6 +27,19 @@ public class AuthController {
     @Autowired private TokenBlacklistService tokenBlacklistService;
     @Autowired private JwtUtil jwtUtil;
 
+    @PostMapping("/register")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> register(@RequestBody Map<String, String> body) {
+        String adminName  = body.get("adminName");
+        String schoolName = body.get("schoolName");
+        String email      = body.get("email");
+        String password   = body.get("password");
+        String phone      = body.get("phone");
+        ApiResponse<Map<String, Object>> response = authService.register(adminName, schoolName, email, password, phone);
+        return response.isSuccess()
+            ? ResponseEntity.ok(response)
+            : ResponseEntity.status(400).body(response);
+    }
+
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
         ApiResponse<LoginResponse> response = authService.login(request);
@@ -116,6 +129,20 @@ public class AuthController {
             tokenBlacklistService.revoke(token, expiresAt);
         }
         return ResponseEntity.ok(ApiResponse.success("Logged out successfully", null));
+    }
+
+    /** Activates a self-registered account by verifying the emailed OTP. */
+    @PostMapping("/verify-email")
+    public ResponseEntity<ApiResponse<String>> verifyEmail(@RequestBody Map<String, String> body) {
+        String email = body.get("email");
+        String otp   = body.get("otp");
+        if (email == null || email.isBlank() || otp == null || otp.isBlank()) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Email and OTP are required"));
+        }
+        ApiResponse<String> response = authService.verifyRegistrationEmail(email, otp);
+        return response.isSuccess()
+            ? ResponseEntity.ok(response)
+            : ResponseEntity.status(400).body(response);
     }
 
     /** First-login password set — requires the temporary password for verification */

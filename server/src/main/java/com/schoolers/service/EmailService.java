@@ -40,6 +40,31 @@ public class EmailService {
         log.info("[EmailService] OTP email sent to: " + toEmail);
     }
 
+    // ── Registration email verification (re-throws on failure) ──────────────
+
+    public void sendRegistrationOtp(String toEmail, String name, String otp) {
+        requireApiKey();
+        send(toEmail, "Verify your My-Skoolz account", buildRegistrationOtpHtml(name, otp));
+        log.info("[EmailService] Registration OTP email sent to: " + toEmail);
+    }
+
+    private String buildRegistrationOtpHtml(String name, String otp) {
+        return "<!DOCTYPE html><html><body style='margin:0;padding:0;background:#f7fafc;font-family:Poppins,sans-serif;'>"
+            + "<div style='max-width:480px;margin:32px auto;background:#fff;border-radius:16px;padding:40px 36px;box-shadow:0 4px 24px rgba(0,0,0,0.08);'>"
+            + "<div style='text-align:center;margin-bottom:24px;'>"
+            + "<span style='font-size:36px;'>🏆</span>"
+            + "<h2 style='margin:8px 0 0;color:#0de1e8;font-size:22px;'>My-Skoolz</h2>"
+            + "</div>"
+            + "<h3 style='color:#2d3748;margin-bottom:8px;'>Verify Your Email</h3>"
+            + "<p style='color:#718096;font-size:14px;'>Hi <strong>" + name + "</strong>, welcome to My-Skoolz!</p>"
+            + "<p style='color:#718096;font-size:14px;'>Use the code below to verify your email address. It expires in <strong>15 minutes</strong>.</p>"
+            + "<div style='background:#f0fafa;border:2px dashed #0de1e8;border-radius:12px;padding:20px;text-align:center;margin:24px 0;'>"
+            + "<div style='font-size:36px;font-weight:800;letter-spacing:8px;color:#0de1e8;font-family:monospace;'>" + otp + "</div>"
+            + "</div>"
+            + "<p style='color:#a0aec0;font-size:12px;text-align:center;'>If you did not register on My-Skoolz, please ignore this email.</p>"
+            + "</div></body></html>";
+    }
+
     // ── Demo booking (fire-and-forget — email failure must not break the API) ─
 
     public void sendDemoBookingNotification(DemoBookingRequest req) {

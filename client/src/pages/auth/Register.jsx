@@ -15,6 +15,13 @@ const Register = () => {
   const [error,        setError]               = useState('');
   const [success,      setSuccess]             = useState(false);
 
+  // OTP verification step
+  const [step,         setStep]                = useState('form'); // 'form' | 'verify'
+  const [otp,          setOtp]                 = useState('');
+  const [otpLoading,   setOtpLoading]          = useState(false);
+  const [otpError,     setOtpError]            = useState('');
+  const [registeredEmail, setRegisteredEmail]  = useState('');
+
   const primary   = '#0de1e8';
   const secondary = '#0eb5da';
 
@@ -51,7 +58,8 @@ const Register = () => {
         phone:      form.phone.trim(),
       });
       if (res.data?.success) {
-        setSuccess(true);
+        setRegisteredEmail(form.email.trim().toLowerCase());
+        setStep('verify');
       } else {
         setError(res.data?.message || 'Registration failed. Please try again.');
       }
@@ -61,6 +69,102 @@ const Register = () => {
       setIsLoading(false);
     }
   };
+
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    if (!otp.trim() || otp.trim().length !== 6) {
+      setOtpError('Please enter the 6-digit code sent to your email.');
+      return;
+    }
+    setOtpLoading(true);
+    setOtpError('');
+    try {
+      const res = await authAPI.verifyEmail({ email: registeredEmail, otp: otp.trim() });
+      if (res.data?.success) {
+        setSuccess(true);
+      } else {
+        setOtpError(res.data?.message || 'Invalid code. Please try again.');
+      }
+    } catch (err) {
+      setOtpError(err.response?.data?.message || 'Verification failed. Please try again.');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  // ── OTP verification step ────────────────────────────────────────────────
+  if (step === 'verify' && !success) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f7fafc' }}>
+        <div style={{ background: '#fff', borderRadius: 20, padding: '48px 40px', maxWidth: 460, width: '100%', textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,0.1)' }}>
+          <div style={{ width: 72, height: 72, borderRadius: '50%', background: '#e0f7fa', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+            <span className="material-icons" style={{ fontSize: 40, color: '#0de1e8' }}>mark_email_read</span>
+          </div>
+          <h2 style={{ fontWeight: 800, color: '#2d3748', marginBottom: 8, fontFamily: 'Poppins, sans-serif' }}>
+            Verify Your Email
+          </h2>
+          <p style={{ color: '#718096', marginBottom: 4, fontFamily: 'Poppins, sans-serif', fontSize: 14 }}>
+            We sent a 6-digit code to
+          </p>
+          <p style={{ color: '#0de1e8', fontWeight: 700, marginBottom: 24, fontFamily: 'Poppins, sans-serif' }}>
+            {registeredEmail}
+          </p>
+
+          {otpError && (
+            <div className="alert-error" style={{ textAlign: 'left', marginBottom: 16 }}>
+              <span className="material-icons" style={{ fontSize: 16 }}>error_outline</span>
+              {otpError}
+            </div>
+          )}
+
+          <form onSubmit={handleVerifyOtp}>
+            <div className="form-group" style={{ textAlign: 'left' }}>
+              <label className="form-label">Verification Code</label>
+              <div className="input-wrapper">
+                <span className="material-icons input-icon-left">pin</span>
+                <input
+                  type="text"
+                  className="form-control has-left-icon"
+                  placeholder="Enter 6-digit code"
+                  value={otp}
+                  onChange={e => { setOtp(e.target.value.replace(/\D/g, '').slice(0, 6)); setOtpError(''); }}
+                  maxLength={6}
+                  style={{ letterSpacing: 6, fontSize: 20, textAlign: 'center' }}
+                  autoFocus
+                />
+              </div>
+              <div style={{ fontSize: 12, color: '#a0aec0', marginTop: 4 }}>Code expires in 15 minutes</div>
+            </div>
+
+            <button type="submit" className="btn-auth-submit" disabled={otpLoading}
+              style={{ background: `linear-gradient(135deg, ${primary}, ${secondary})`, marginTop: 8 }}>
+              {otpLoading ? (
+                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                  <span style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />
+                  Verifying...
+                </span>
+              ) : (
+                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                  <span className="material-icons" style={{ fontSize: 18 }}>verified</span>
+                  Verify Email
+                </span>
+              )}
+            </button>
+          </form>
+
+          <div style={{ textAlign: 'center', marginTop: 16, fontSize: 13, color: '#718096', fontFamily: 'Poppins, sans-serif' }}>
+            Didn't receive the code?{' '}
+            <span
+              style={{ color: primary, fontWeight: 700, cursor: 'pointer' }}
+              onClick={() => { setStep('form'); setOtp(''); setOtpError(''); }}
+            >
+              Go back
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // ── Success state ─────────────────────────────────────────────────────────
   if (success) {

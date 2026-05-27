@@ -763,7 +763,9 @@ function OwnerDashboard() {
                           <td style={{ padding: '10px 16px', color: '#a0aec0', fontSize: 12 }}>{idx + 1}</td>
                           <td style={{ padding: '10px 16px', fontWeight: 600, color: '#1a202c' }}>{u.name || '—'}</td>
                           <td style={{ padding: '10px 16px' }}>
-                            <span style={{ fontFamily: 'monospace', fontSize: 12, color: '#2563eb' }}>{u.email || u.username || '—'}</span>
+                            <span style={{ fontFamily: 'monospace', fontSize: 12, color: '#2563eb' }}>
+                              {u.email?.endsWith('@my-skoolz.com') ? u.email.split('@')[0] : (u.email || u.username || '—')}
+                            </span>
                             {u.mobile && <div style={{ fontSize: 11, color: '#a0aec0', marginTop: 2 }}>{u.mobile}</div>}
                           </td>
                           <td style={{ padding: '10px 16px' }}>
