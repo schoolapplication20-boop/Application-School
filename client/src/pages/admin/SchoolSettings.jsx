@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useSchool } from '../../context/SchoolContext';
-import { schoolAPI, examTypeAPI, BASE_URL } from '../../services/api';
+import { schoolAPI, examTypeAPI, gradeScaleAPI, BASE_URL } from '../../services/api';
 import Layout from '../../components/Layout';
 
 const MAX_SIZE_MB = 5;
@@ -80,6 +80,62 @@ const SchoolSettings = () => {
     } catch (err) {
       setEtError(err.response?.data?.message || 'Failed to delete.');
     }
+  };
+
+  // ── Grade scale management ───────────────────────────────────────────────────
+  const DEFAULT_SCALE = [
+    { grade: 'O',  minPercentage: 90, displayOrder: 1 },
+    { grade: 'A+', minPercentage: 80, displayOrder: 2 },
+    { grade: 'A',  minPercentage: 70, displayOrder: 3 },
+    { grade: 'B+', minPercentage: 60, displayOrder: 4 },
+    { grade: 'B',  minPercentage: 50, displayOrder: 5 },
+    { grade: 'B-', minPercentage: 40, displayOrder: 6 },
+    { grade: 'C',  minPercentage: 33, displayOrder: 7 },
+    { grade: 'F',  minPercentage:  0, displayOrder: 8 },
+  ];
+
+  const [gsRows,    setGsRows]    = useState([]);
+  const [gsLoading, setGsLoading] = useState(false);
+  const [gsSaving,  setGsSaving]  = useState(false);
+  const [gsError,   setGsError]   = useState('');
+  const [gsSuccess, setGsSuccess] = useState('');
+
+  const loadGradeScales = useCallback(async () => {
+    setGsLoading(true);
+    try {
+      const r = await gradeScaleAPI.list();
+      const data = r.data?.data || [];
+      setGsRows(data.length ? data.map(g => ({ grade: g.grade, minPercentage: g.minPercentage, displayOrder: g.displayOrder ?? 0 })) : DEFAULT_SCALE);
+    } catch { setGsRows(DEFAULT_SCALE); }
+    finally { setGsLoading(false); }
+  }, []); // eslint-disable-line
+
+  useEffect(() => { if (canEdit) loadGradeScales(); }, [canEdit, loadGradeScales]);
+
+  const updateGsRow = (idx, field, val) =>
+    setGsRows(rows => rows.map((r, i) => i === idx ? { ...r, [field]: val } : r));
+
+  const addGsRow = () =>
+    setGsRows(rows => [...rows, { grade: '', minPercentage: '', displayOrder: rows.length + 1 }]);
+
+  const removeGsRow = (idx) =>
+    setGsRows(rows => rows.filter((_, i) => i !== idx));
+
+  const handleSaveGradeScale = async () => {
+    setGsError(''); setGsSuccess(''); setGsSaving(true);
+    const items = gsRows.map((r, i) => ({
+      grade: r.grade.trim(),
+      minPercentage: parseFloat(r.minPercentage),
+      displayOrder: i + 1,
+    })).filter(r => r.grade);
+    if (!items.length) { setGsError('Add at least one grade.'); setGsSaving(false); return; }
+    try {
+      await gradeScaleAPI.save(items);
+      setGsSuccess('Grade scale saved successfully.');
+      await loadGradeScales();
+    } catch (err) {
+      setGsError(err.response?.data?.message || 'Failed to save grade scale.');
+    } finally { setGsSaving(false); }
   };
 
   const resetPreview = () => {
@@ -482,6 +538,83 @@ const SchoolSettings = () => {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* ── Grade Scale ─────────────────────────────────────────────────── */}
+        {canEdit && (
+          <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: '24px 28px', marginTop: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+              <span className="material-icons" style={{ color: '#d69e2e', fontSize: 22 }}>grade</span>
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: '#1e293b', margin: 0 }}>Grade Scale</h3>
+            </div>
+            <p style={{ fontSize: 13, color: '#718096', marginBottom: 20 }}>
+              Define the percentage ranges for each grade. Teachers enter marks and grades are auto-calculated using this scale.
+            </p>
+
+            {gsError   && <div style={{ background: '#fff5f5', color: '#c53030', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: 13 }}>{gsError}</div>}
+            {gsSuccess && <div style={{ background: '#f0fff4', color: '#276749', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: 13 }}>{gsSuccess}</div>}
+
+            {gsLoading ? (
+              <div style={{ color: '#a0aec0', fontSize: 13, padding: '20px 0' }}>Loading…</div>
+            ) : (
+              <>
+                {/* Column headers */}
+                <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr 1fr auto', gap: 8, marginBottom: 6 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Grade</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Min % (≥)</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Applies to</div>
+                  <div />
+                </div>
+
+                {gsRows.map((row, idx) => {
+                  // "Applies to" is the range: minPercentage → next row's minPercentage - 1 (or 100)
+                  const sorted = [...gsRows].sort((a, b) => b.minPercentage - a.minPercentage);
+                  const sortedIdx = sorted.findIndex((_, i) => sorted[i].grade === row.grade && sorted[i].minPercentage === row.minPercentage);
+                  const upper = sortedIdx === 0 ? 100 : (sorted[sortedIdx - 1].minPercentage - 1);
+                  const rangeText = row.minPercentage !== '' ? `${row.minPercentage}% – ${upper}%` : '—';
+
+                  return (
+                    <div key={idx} style={{ display: 'grid', gridTemplateColumns: '100px 1fr 1fr auto', gap: 8, marginBottom: 6, alignItems: 'center' }}>
+                      <input
+                        value={row.grade}
+                        onChange={e => updateGsRow(idx, 'grade', e.target.value)}
+                        placeholder="e.g. A+"
+                        maxLength={5}
+                        style={{ padding: '7px 10px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, fontWeight: 700, textAlign: 'center', outline: 'none' }}
+                      />
+                      <input
+                        type="number"
+                        min="0" max="100" step="0.5"
+                        value={row.minPercentage}
+                        onChange={e => updateGsRow(idx, 'minPercentage', e.target.value)}
+                        placeholder="0"
+                        style={{ padding: '7px 10px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none' }}
+                      />
+                      <div style={{ fontSize: 12, color: '#718096', fontStyle: 'italic' }}>{rangeText}</div>
+                      <button onClick={() => removeGsRow(idx)} style={{ padding: '6px 8px', background: '#fff5f5', color: '#e53e3e', border: '1px solid #fed7d7', borderRadius: 7, cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center' }}>
+                        <span className="material-icons" style={{ fontSize: 15 }}>delete</span>
+                      </button>
+                    </div>
+                  );
+                })}
+
+                <div style={{ display: 'flex', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
+                  <button onClick={addGsRow}
+                    style={{ padding: '8px 16px', background: '#EFF6FF', color: '#2563EB', border: '1.5px solid #bfdbfe', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                    + Add Grade
+                  </button>
+                  <button onClick={() => setGsRows(DEFAULT_SCALE)}
+                    style={{ padding: '8px 16px', background: '#f7fafc', color: '#718096', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, cursor: 'pointer' }}>
+                    Reset to Default
+                  </button>
+                  <button onClick={handleSaveGradeScale} disabled={gsSaving}
+                    style={{ padding: '8px 20px', background: gsSaving ? '#a0aec0' : '#16A34A', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: gsSaving ? 'not-allowed' : 'pointer' }}>
+                    {gsSaving ? 'Saving…' : 'Save Grade Scale'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
 

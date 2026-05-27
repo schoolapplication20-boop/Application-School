@@ -104,4 +104,16 @@ public class StudentController {
         Student student = studentOpt.get();
         return ResponseEntity.ok(classDiaryService.getForStudent(student.getClassName(), student.getSection(), student.getSchoolId()));
     }
+
+    @GetMapping("/grade-scales")
+    public ResponseEntity<?> getGradeScales() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) return ResponseEntity.status(401).body(ApiResponse.error("Not authenticated."));
+        var userOpt = userRepository.findByEmailIgnoreCase(auth.getName());
+        if (userOpt.isEmpty()) return ResponseEntity.status(403).body(ApiResponse.error("User not found."));
+        Long userId = userOpt.get().getId();
+        Long schoolId = studentRepository.findByStudentUserId(userId)
+                .map(Student::getSchoolId).orElse(null);
+        return ResponseEntity.ok(adminService.getGradeScales(schoolId));
+    }
 }

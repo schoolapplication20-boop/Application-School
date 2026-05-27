@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '../../components/Layout';
 import Toast from '../../components/Toast';
 import { useAuth } from '../../context/AuthContext';
-import { teacherAPI, examTypeAPI } from '../../services/api';
+import { teacherAPI, examTypeAPI, gradeScaleAPI } from '../../services/api';
 
 const FALLBACK_EXAM_TYPES = ['Unit Test 1', 'Unit Test 2', 'Mid Term', 'Final Exam', 'Annual Exam'];
 const SUBJECTS = [
@@ -11,27 +11,40 @@ const SUBJECTS = [
   'History', 'Geography', 'Economics',
 ];
 
-const getGrade = (marks, max) => {
-  const pct = (marks / max) * 100;
-  if (pct >= 90) return 'O';
-  if (pct >= 80) return 'A+';
-  if (pct >= 70) return 'A';
-  if (pct >= 60) return 'B+';
-  if (pct >= 50) return 'B';
-  if (pct >= 40) return 'B-';
-  if (pct >= 33) return 'C';
-  return 'F';
+const DEFAULT_SCALE = [
+  { grade: 'O',  minPercentage: 90 },
+  { grade: 'A+', minPercentage: 80 },
+  { grade: 'A',  minPercentage: 70 },
+  { grade: 'B+', minPercentage: 60 },
+  { grade: 'B',  minPercentage: 50 },
+  { grade: 'B-', minPercentage: 40 },
+  { grade: 'C',  minPercentage: 33 },
+  { grade: 'F',  minPercentage:  0 },
+];
+
+const buildGetGrade = (scale) => {
+  const sorted = [...scale].sort((a, b) => b.minPercentage - a.minPercentage);
+  return (marks, max) => {
+    if (!max || max <= 0) return '—';
+    const pct = (marks / max) * 100;
+    const entry = sorted.find(s => pct >= s.minPercentage);
+    return entry ? entry.grade : sorted[sorted.length - 1]?.grade || 'F';
+  };
 };
 
-const gradeColors = {
-  O: '#276749', 'A+': '#276749', A: '#276749',
-  'B+': '#2b6cb0', B: '#2b6cb0', 'B-': '#c05621',
-  C: '#c05621', F: '#c53030',
-};
-const gradeBg = {
-  O: '#f0fff4', 'A+': '#f0fff4', A: '#f0fff4',
-  'B+': '#ebf8ff', B: '#ebf8ff', 'B-': '#fffaf0',
-  C: '#fffaf0', F: '#fff5f5',
+// Initial fallback — replaced once API loads
+let getGrade = buildGetGrade(DEFAULT_SCALE);
+
+
+// Colours by tier: top 25% = green, middle 50% = blue/yellow, bottom 25% = red
+const getGradeColor = (grade, scale = DEFAULT_SCALE) => {
+  const sorted = [...scale].sort((a, b) => b.minPercentage - a.minPercentage);
+  const idx = sorted.findIndex(s => s.grade === grade);
+  const ratio = sorted.length > 1 ? idx / (sorted.length - 1) : 0;
+  if (ratio < 0.25) return { color: '#276749', bg: '#f0fff4' };
+  if (ratio < 0.5)  return { color: '#2b6cb0', bg: '#ebf8ff' };
+  if (ratio < 0.75) return { color: '#c05621', bg: '#fffaf0' };
+  return { color: '#c53030', bg: '#fff5f5' };
 };
 
 const fmt = (dateStr) => {
@@ -71,6 +84,21 @@ export default function Marks() {
       .then(r => {
         const types = (r.data?.data || []).map(et => et.name);
         if (types.length > 0) setExamTypes(types);
+      })
+      .catch(() => {});
+  }, []);
+
+  // ── Grade scale (school-defined or default) ───────────────────────────────────
+  const [gradeScale, setGradeScale] = useState(DEFAULT_SCALE);
+
+  useEffect(() => {
+    gradeScaleAPI.forTeacher()
+      .then(r => {
+        const data = r.data?.data || [];
+        if (data.length > 0) {
+          setGradeScale(data);
+          getGrade = buildGetGrade(data);
+        }
       })
       .catch(() => {});
   }, []);
@@ -419,7 +447,7 @@ export default function Marks() {
                           </div>
                         </td>
                         <td>
-                          <span style={{ padding: '4px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700, background: gradeBg[overallGrade] || '#f7fafc', color: gradeColors[overallGrade] || '#4a5568' }}>
+                          <span style={{ padding: '4px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700, background: getGradeColor(overallGrade, gradeScale).bg, color: getGradeColor(overallGrade, gradeScale).color }}>
                             {overallGrade}
                           </span>
                         </td>
@@ -463,7 +491,7 @@ export default function Marks() {
                               </div>
                             </td>
                             <td>
-                              <span style={{ padding: '4px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700, background: gradeBg[m.grade] || '#f7fafc', color: gradeColors[m.grade] || '#4a5568' }}>
+                              <span style={{ padding: '4px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700, background: getGradeColor(m.grade, gradeScale).bg, color: getGradeColor(m.grade, gradeScale).color }}>
                                 {m.grade}
                               </span>
                             </td>
@@ -648,7 +676,7 @@ export default function Marks() {
                                   }}
                                 />
                                 {grade && (
-                                  <div style={{ fontSize: 10, fontWeight: 700, marginTop: 3, color: gradeColors[grade] }}>
+                                  <div style={{ fontSize: 10, fontWeight: 700, marginTop: 3, color: getGradeColor(grade, gradeScale).color }}>
                                     {grade} · {Math.round((numVal / maxNum) * 100)}%
                                   </div>
                                 )}

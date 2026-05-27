@@ -63,6 +63,7 @@ public class AdminService {
     @Autowired private ClassDiaryRepository classDiaryRepository;
     @Autowired private MessageRepository messageRepository;
     @Autowired private SalaryPaymentRepository salaryPaymentRepository;
+    @Autowired private GradeScaleRepository gradeScaleRepository;
     private static final String CHARS = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#$!";
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final java.util.regex.Pattern EMAIL_PATTERN =
@@ -2516,6 +2517,61 @@ public class AdminService {
         result.put("fromClass", src + (srcSec.isBlank() ? "" : "-" + srcSec));
         result.put("toClass",   dst + (dstSec.isBlank() ? "" : "-" + dstSec));
         return ApiResponse.success("Promoted " + batch.size() + " students to " + dst, result);
+    }
+
+    // ── Grade Scales ──────────────────────────────────────────────────────────
+
+    private static final List<Map<String, Object>> DEFAULT_GRADE_SCALE = List.of(
+        Map.of("grade", "O",   "minPercentage", 90.0, "displayOrder", 1),
+        Map.of("grade", "A+",  "minPercentage", 80.0, "displayOrder", 2),
+        Map.of("grade", "A",   "minPercentage", 70.0, "displayOrder", 3),
+        Map.of("grade", "B+",  "minPercentage", 60.0, "displayOrder", 4),
+        Map.of("grade", "B",   "minPercentage", 50.0, "displayOrder", 5),
+        Map.of("grade", "B-",  "minPercentage", 40.0, "displayOrder", 6),
+        Map.of("grade", "C",   "minPercentage", 33.0, "displayOrder", 7),
+        Map.of("grade", "F",   "minPercentage",  0.0, "displayOrder", 8)
+    );
+
+    public ApiResponse<List<GradeScale>> getGradeScales(Long schoolId) {
+        if (schoolId == null) return ApiResponse.success(toDefaultEntities(null));
+        List<GradeScale> scales = gradeScaleRepository.findBySchoolIdOrderByMinPercentageDesc(schoolId);
+        return ApiResponse.success(scales.isEmpty() ? toDefaultEntities(schoolId) : scales);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public ApiResponse<List<GradeScale>> saveGradeScales(Long schoolId, List<Map<String, Object>> items) {
+        if (schoolId == null) return ApiResponse.error("School ID required");
+        if (items == null || items.isEmpty()) return ApiResponse.error("At least one grade entry is required");
+
+        List<GradeScale> scales = new ArrayList<>();
+        for (int i = 0; i < items.size(); i++) {
+            Map<String, Object> item = items.get(i);
+            Object gradeVal = item.get("grade");
+            Object pctVal   = item.get("minPercentage");
+            if (gradeVal == null || gradeVal.toString().isBlank()) continue;
+            double pct;
+            try { pct = Double.parseDouble(pctVal.toString()); }
+            catch (Exception e) { return ApiResponse.error("Invalid minPercentage at row " + (i + 1)); }
+            if (pct < 0 || pct > 100) return ApiResponse.error("Percentage must be 0–100 at row " + (i + 1));
+            int order = (item.get("displayOrder") != null)
+                    ? Integer.parseInt(item.get("displayOrder").toString()) : (i + 1);
+            scales.add(GradeScale.builder()
+                    .schoolId(schoolId).grade(gradeVal.toString().trim())
+                    .minPercentage(pct).displayOrder(order).build());
+        }
+        if (scales.isEmpty()) return ApiResponse.error("No valid grade entries provided");
+
+        gradeScaleRepository.deleteBySchoolId(schoolId);
+        return ApiResponse.success("Grade scale saved", gradeScaleRepository.saveAll(scales));
+    }
+
+    private List<GradeScale> toDefaultEntities(Long schoolId) {
+        return DEFAULT_GRADE_SCALE.stream().map(m -> GradeScale.builder()
+                .schoolId(schoolId)
+                .grade((String) m.get("grade"))
+                .minPercentage((Double) m.get("minPercentage"))
+                .displayOrder((Integer) m.get("displayOrder"))
+                .build()).collect(java.util.stream.Collectors.toList());
     }
 
     private void removeClassFromTeacherClasses(Teacher teacher, String className, String section) {

@@ -5,6 +5,7 @@ import com.schoolers.model.*;
 import com.schoolers.repository.ClassRoomRepository;
 import com.schoolers.repository.UserRepository;
 import com.schoolers.repository.TeacherRepository;
+import com.schoolers.service.AdminService;
 import com.schoolers.service.TeacherService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -27,6 +28,9 @@ public class TeacherController {
 
     @Autowired
     private TeacherService teacherService;
+
+    @Autowired
+    private AdminService adminService;
 
     @Autowired
     private UserRepository userRepository;
@@ -290,6 +294,14 @@ public class TeacherController {
     public ResponseEntity<ApiResponse<String>> deleteMarks(@PathVariable Long id) {
         ApiResponse<String> response = teacherService.deleteMarks(id);
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
+    }
+
+    @GetMapping("/grade-scales")
+    public ResponseEntity<?> getGradeScales(Authentication auth) {
+        if (auth == null) return ResponseEntity.status(401).body(ApiResponse.error("Not authenticated"));
+        Long schoolId = userRepository.findByEmailIgnoreCase(auth.getName())
+                .map(User::getSchoolId).orElse(null);
+        return ResponseEntity.ok(adminService.getGradeScales(schoolId));
     }
 
 }

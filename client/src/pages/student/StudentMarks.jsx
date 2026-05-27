@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import Layout from '../../components/Layout';
-import { studentAPI } from '../../services/api';
+import { studentAPI, gradeScaleAPI } from '../../services/api';
 
 const fmt = (d) => {
   if (!d) return '—';
@@ -9,6 +9,28 @@ const fmt = (d) => {
   catch { return d; }
 };
 
+const DEFAULT_SCALE = [
+  { grade: 'O',  minPercentage: 90 },
+  { grade: 'A+', minPercentage: 80 },
+  { grade: 'A',  minPercentage: 70 },
+  { grade: 'B+', minPercentage: 60 },
+  { grade: 'B',  minPercentage: 50 },
+  { grade: 'B-', minPercentage: 40 },
+  { grade: 'C',  minPercentage: 33 },
+  { grade: 'F',  minPercentage:  0 },
+];
+
+const gradeColor = (grade, scale = DEFAULT_SCALE) => {
+  const sorted = [...scale].sort((a, b) => b.minPercentage - a.minPercentage);
+  const idx = sorted.findIndex(s => s.grade === grade);
+  const ratio = sorted.length > 1 ? idx / (sorted.length - 1) : 0;
+  if (ratio < 0.25) return { bg: '#f0fff4', color: '#276749' };
+  if (ratio < 0.5)  return { bg: '#ebf8ff', color: '#2b6cb0' };
+  if (ratio < 0.75) return { bg: '#fffaf0', color: '#c05621' };
+  return { bg: '#fff5f5', color: '#c53030' };
+};
+
+// Keep old static map for non-scale-dependent lookups
 const GRADE_COLOR = {
   O:   { bg: '#f0fff4', color: '#276749' },
   'A+':{ bg: '#ebf8ff', color: '#2b6cb0' },
@@ -58,12 +80,16 @@ export default function StudentMarks() {
   const [error, setError]           = useState('');
   const [filterExam, setFilterExam] = useState('ALL');
   const [view, setView]             = useState('subject'); // 'subject' | 'exam' | 'trend'
+  const [scale, setScale]           = useState(DEFAULT_SCALE);
 
   useEffect(() => {
     studentAPI.getMyMarks()
       .then(r => setMarks(r.data?.data || r.data || []))
       .catch(() => setError('Failed to load marks. Please try again.'))
       .finally(() => setLoading(false));
+    gradeScaleAPI.forStudent()
+      .then(r => { const d = r.data?.data || []; if (d.length) setScale(d); })
+      .catch(() => {});
   }, []);
 
   const examTypes = ['ALL', ...Array.from(new Set(marks.map(m => m.examType).filter(Boolean)))];
@@ -104,14 +130,19 @@ export default function StudentMarks() {
           <p style={{ color: '#718096', marginTop: 4, fontSize: 14 }}>View your marks by subject and exam</p>
         </div>
 
-        {/* Grade Scale Legend */}
+        {/* Grade Scale Legend — uses school's configured scale */}
         <div style={{ background: '#f8fafc', borderRadius: 10, padding: '10px 16px', marginBottom: 20, display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
           <span style={{ fontSize: 11, fontWeight: 700, color: '#718096', marginRight: 4 }}>GRADE SCALE:</span>
-          {[['O','90%+'],['A+','80%+'],['A','70%+'],['B+','60%+'],['B','50%+'],['B-','40%+'],['C','33%+'],['F','<33%']].map(([g, r]) => (
-            <span key={g} style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 16, background: GRADE_COLOR[g]?.bg || '#f7fafc', color: GRADE_COLOR[g]?.color || '#4a5568' }}>
-              {g} <span style={{ fontWeight: 400, opacity: 0.8 }}>{r}</span>
-            </span>
-          ))}
+          {[...scale].sort((a, b) => b.minPercentage - a.minPercentage).map((s, i, arr) => {
+            const upper = i === 0 ? 100 : (arr[i - 1].minPercentage - 1);
+            const label = `${s.minPercentage}%–${upper}%`;
+            const gc = gradeColor(s.grade, scale);
+            return (
+              <span key={s.grade} style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 16, background: gc.bg, color: gc.color }}>
+                {s.grade} <span style={{ fontWeight: 400, opacity: 0.8 }}>{label}</span>
+              </span>
+            );
+          })}
         </div>
 
         {loading && (

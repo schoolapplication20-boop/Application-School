@@ -596,6 +596,18 @@ export const calendarAPI = {
 };
 
 // ============================================
+// GRADE SCALE APIs
+// ============================================
+export const gradeScaleAPI = {
+  // Admin: read + save (replace entire scale)
+  list:  ()      => api.get('/api/admin/grade-scales'),
+  save:  (items) => api.post('/api/admin/grade-scales', items),
+  // Teacher / Student: read school's scale
+  forTeacher: () => api.get('/api/teacher/grade-scales'),
+  forStudent: () => api.get('/api/student/grade-scales'),
+};
+
+// ============================================
 // EXAM TYPE APIs
 // ============================================
 export const examTypeAPI = {

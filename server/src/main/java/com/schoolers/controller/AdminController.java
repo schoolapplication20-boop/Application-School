@@ -112,6 +112,20 @@ public class AdminController {
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
     }
 
+    // ── Grade Scales ──────────────────────────────────────────────────────────
+    @GetMapping("/grade-scales")
+    public ResponseEntity<ApiResponse<List<com.schoolers.model.GradeScale>>> getGradeScales(Authentication auth) {
+        return ResponseEntity.ok(adminService.getGradeScales(getCurrentSchoolId(auth)));
+    }
+
+    @PostMapping("/grade-scales")
+    public ResponseEntity<ApiResponse<List<com.schoolers.model.GradeScale>>> saveGradeScales(
+            @RequestBody List<Map<String, Object>> items, Authentication auth) {
+        ApiResponse<List<com.schoolers.model.GradeScale>> response =
+                adminService.saveGradeScales(getCurrentSchoolId(auth), items);
+        return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
+    }
+
     @PostMapping("/students/promote")
     public ResponseEntity<ApiResponse<Map<String, Object>>> promoteStudents(
             @RequestBody Map<String, Object> body, Authentication auth) {
