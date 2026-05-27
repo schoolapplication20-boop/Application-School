@@ -47,7 +47,13 @@ public class ReportCardController {
     }
 
     private Map<String, Object> buildReportCard(Student student) {
+        // Primary query: schoolId-scoped for multi-tenant safety.
+        // Fallback to student-only query for records saved before schoolId stamping was fixed
+        // (those records have schoolId = null and would otherwise be invisible).
         List<Marks> marks = marksRepository.findByStudentIdAndSchoolId(student.getId(), student.getSchoolId());
+        if (marks.isEmpty()) {
+            marks = marksRepository.findByStudentId(student.getId());
+        }
 
         // Group by examType
         Map<String, List<Map<String, Object>>> byExam = marks.stream().collect(
