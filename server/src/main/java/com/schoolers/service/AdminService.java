@@ -45,6 +45,7 @@ public class AdminService {
     @Autowired private ParentProfileRepository parentProfileRepository;
     @Autowired private AttendanceRepository attendanceRepository;
     @Autowired private PasswordEncoder passwordEncoder;
+    @Autowired private EmailService emailService;
     @Autowired private SalaryRepository salaryRepository;
     @Autowired private LeaveRequestRepository leaveRequestRepository;
     @Autowired private TimetableRepository timetableRepository;
@@ -759,6 +760,8 @@ public class AdminService {
 
             log.info("[createTeacher] Saved teacher id=" + teacher.getId()
                     + " empId=" + empId + " email=" + normalizedEmail);
+
+            emailService.sendWelcomeEmail(normalizedEmail, req.getName().trim(), "TEACHER", rawPassword);
 
             Map<String, Object> result = new HashMap<>();
             result.put("id",                teacher.getId());

@@ -28,6 +28,7 @@ public class SuperAdminService {
     @Autowired private UserRepository                    userRepository;
     @Autowired private SchoolRepository                  schoolRepository;
     @Autowired private PasswordEncoder                   passwordEncoder;
+    @Autowired private EmailService                      emailService;
     @Autowired private AttendanceRepository              attendanceRepository;
     @Autowired private TeacherAttendanceRepository       teacherAttendanceRepository;
     @Autowired private MarksRepository                   marksRepository;
@@ -118,6 +119,8 @@ public class SuperAdminService {
                     .build());
 
             log.info("[createAdmin] Flushed admin id=" + user.getId() + " email=" + normalizedEmail);
+
+            emailService.sendWelcomeEmail(normalizedEmail, name.trim(), "ADMIN", rawPassword);
 
             AdminCreatedResponse response = AdminCreatedResponse.builder()
                     .id(user.getId())
@@ -263,6 +266,8 @@ public class SuperAdminService {
                     .build());
             log.info("[createSuperAdmin] Created super admin id=" + user.getId()
                     + " email=" + normalizedEmail + " displaySchoolId=" + displayIdAsLong);
+
+            emailService.sendWelcomeEmail(normalizedEmail, name.trim(), "SUPER_ADMIN", rawPassword);
 
             AdminCreatedResponse response = AdminCreatedResponse.builder()
                     .id(user.getId())

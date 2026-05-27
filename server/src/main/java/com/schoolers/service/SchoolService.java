@@ -30,6 +30,7 @@ public class SchoolService {
     @Autowired private UserRepository    userRepository;
     @Autowired private FileStorageService fileStorageService;
     @Autowired private PasswordEncoder   passwordEncoder;
+    @Autowired private EmailService      emailService;
     @Autowired private ObjectMapper      objectMapper;
 
     // ────────────────────────────────────────────────────────────────────────
@@ -162,6 +163,10 @@ public class SchoolService {
             result.put("adminEmail", adminEmail.trim().toLowerCase());
             result.put("adminTempPassword", tempPass);
             log.info("[createSchool] Created admin: " + adminEmail + " for schoolId=" + school.getId());
+
+            emailService.sendWelcomeEmail(adminEmail.trim().toLowerCase(),
+                adminName != null && !adminName.isBlank() ? adminName.trim() : "Admin",
+                "ADMIN", tempPass);
         }
 
         return ApiResponse.success("School created successfully", result);

@@ -27,6 +27,9 @@ public class EmailService {
     @Value("${resend.from.email:onboarding@resend.dev}")
     private String fromEmail;
 
+    @Value("${app.base.url:https://my-skoolz.vercel.app}")
+    private String appBaseUrl;
+
     private final RestTemplate restTemplate = new RestTemplate();
 
     // ── OTP email (critical — re-throws on failure so caller can handle) ──────
@@ -122,6 +125,20 @@ public class EmailService {
             log.info("[EmailService] Attendance alert sent for student: " + studentName);
         } catch (Exception e) {
             log.warning("[EmailService] Attendance alert email failed: " + e.getMessage());
+        }
+    }
+
+    // ── Welcome / account-created email (fire-and-forget) ────────────────────
+
+    public void sendWelcomeEmail(String toEmail, String name, String role, String tempPassword) {
+        try {
+            requireApiKey();
+            send(toEmail,
+                "Welcome to My-Skoolz — Your Account is Ready",
+                buildWelcomeHtml(name, role, toEmail, tempPassword));
+            log.info("[EmailService] Welcome email sent to: " + toEmail);
+        } catch (Exception e) {
+            log.warning("[EmailService] Welcome email failed for " + toEmail + ": " + e.getMessage());
         }
     }
 
@@ -251,6 +268,41 @@ public class EmailService {
             "<strong>" + req.getSubject() + "</strong> and will get back to you within 24 hours.</p>" +
             "<p>Warm regards,<br><strong>The My-Skoolz Team</strong><br>" +
             "<a href='mailto:" + notifyEmail + "'>" + notifyEmail + "</a></p></div>";
+    }
+
+    private String buildWelcomeHtml(String name, String role, String email, String tempPassword) {
+        String loginUrl = appBaseUrl + "/login";
+        String roleDisplay = switch (role) {
+            case "SUPER_ADMIN" -> "Super Admin";
+            case "ADMIN"       -> "School Admin";
+            case "TEACHER"     -> "Teacher";
+            default            -> role;
+        };
+        return "<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;color:#1a202c'>"
+            + "<div style='text-align:center;margin-bottom:28px'>"
+            + "<h1 style='color:#2563EB;margin:0;font-size:28px'>My-Skoolz</h1>"
+            + "<p style='color:#718096;margin:4px 0 0;font-size:14px'>Smart School Management</p>"
+            + "</div>"
+            + "<h2 style='color:#1a202c;font-size:20px;margin-bottom:8px'>Welcome, " + name + "!</h2>"
+            + "<p style='color:#4a5568;font-size:14px;margin-bottom:20px'>Your <strong>" + roleDisplay
+            + "</strong> account on My-Skoolz has been created. Use the credentials below to log in.</p>"
+            + "<div style='background:#f0f7ff;border:1px solid #bfdbfe;border-radius:10px;padding:20px;margin-bottom:24px'>"
+            + "<table style='width:100%;border-collapse:collapse;font-size:14px'>"
+            + row("Login URL",  "<a href='" + loginUrl + "' style='color:#2563EB'>" + loginUrl + "</a>")
+            + row("Email / Username", email)
+            + row("Temporary Password", "<code style='background:#e0e7ff;padding:2px 8px;border-radius:4px;font-size:15px;letter-spacing:1px'>"
+                + tempPassword + "</code>")
+            + "</table>"
+            + "</div>"
+            + "<div style='background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:14px;margin-bottom:24px;font-size:13px;color:#92400e'>"
+            + "<strong>&#9888; Action Required:</strong> You will be prompted to change your password when you first log in. "
+            + "Please do so immediately and do not share your credentials with anyone."
+            + "</div>"
+            + "<p style='font-size:13px;color:#718096'>If you did not expect this email, please contact your school administrator or "
+            + "reach out to us at <a href='mailto:" + notifyEmail + "' style='color:#2563EB'>" + notifyEmail + "</a>.</p>"
+            + "<hr style='border:none;border-top:1px solid #e2e8f0;margin:24px 0'>"
+            + "<p style='font-size:12px;color:#a0aec0;text-align:center'>Powered by My-Skoolz &mdash; Smart School Management</p>"
+            + "</div>";
     }
 
     private String row(String label, String value) {
