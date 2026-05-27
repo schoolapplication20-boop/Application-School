@@ -973,11 +973,30 @@ public class AdminService {
 
     // ── Classes ────────────────────────────────────────────────────────────
 
-    public ApiResponse<List<ClassRoom>> getClasses(Long schoolId) {
-        if (schoolId != null) {
-            return ApiResponse.success(classRoomRepository.findBySchoolId(schoolId));
-        }
-        return ApiResponse.success(classRoomRepository.findAll());
+    public ApiResponse<List<Map<String, Object>>> getClasses(Long schoolId) {
+        List<ClassRoom> rooms = (schoolId != null)
+                ? classRoomRepository.findBySchoolId(schoolId)
+                : classRoomRepository.findAll();
+
+        List<Map<String, Object>> result = rooms.stream().map(room -> {
+            Long sid = schoolId != null ? schoolId : room.getSchoolId();
+            long enrolled = (sid != null)
+                    ? studentRepository.countEnrolledForCapacity(sid, room.getName(), room.getSection() != null ? room.getSection() : "")
+                    : studentRepository.countByClassNameIgnoreCaseAndSectionIgnoreCase(room.getName(), room.getSection() != null ? room.getSection() : "");
+            Map<String, Object> dto = new java.util.LinkedHashMap<>();
+            dto.put("id",          room.getId());
+            dto.put("name",        room.getName());
+            dto.put("section",     room.getSection());
+            dto.put("teacherId",   room.getTeacherId());
+            dto.put("teacherName", room.getTeacherName());
+            dto.put("capacity",    room.getCapacity());
+            dto.put("isActive",    room.getIsActive());
+            dto.put("schoolId",    room.getSchoolId());
+            dto.put("enrolled",    enrolled);
+            return dto;
+        }).collect(Collectors.toList());
+
+        return ApiResponse.success(result);
     }
 
     public ApiResponse<Map<String, Object>> getClassCapacityInfo(String className, String section, Long schoolId) {

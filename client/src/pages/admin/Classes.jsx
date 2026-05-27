@@ -61,6 +61,7 @@ const Classes = () => {
     capacity:  c.capacity    || 40,
     category:  getCategory(c.name),
     isActive:  c.isActive,
+    enrolled:  c.enrolled    || 0,
   });
 
   const loadClasses = () => {
@@ -97,23 +98,8 @@ const Classes = () => {
     }).catch(() => {});
   }, []);
 
-  // ── Compute enrolled count per class from actual students ────────────────
-  const enrolledMap = useMemo(() => {
-    const map = {};
-    allStudents.forEach(s => {
-      const cn  = s.className || s.class || '';
-      const sec = s.section   || '';
-      // Backend class name is "Class 10", student className is "10"
-      const normalized = cn.match(/^\d+$/) ? `Class ${cn}` : cn;
-      const key = `${normalized}|${sec}`;
-      map[key] = (map[key] || 0) + 1;
-    });
-    return map;
-  }, [allStudents]);
-
-  const withEnrolled = useMemo(() =>
-    classes.map(c => ({ ...c, enrolled: enrolledMap[`${c.name}|${c.section}`] || 0 })),
-  [classes, enrolledMap]);
+  // Enrolled count comes directly from the backend getClasses() response.
+  const withEnrolled = useMemo(() => classes, [classes]);
 
   // ── Derived filter options from classes list ──────────────────────────────
   const classOptions   = useMemo(() => [...new Set(withEnrolled.map(c => c.name))].sort((a, b) => {
@@ -218,6 +204,7 @@ const Classes = () => {
       await adminAPI.deleteStudent(deleteStudentTarget.id);
       showToast(`${deleteStudentTarget.name} has been removed`, 'warning');
       loadStudents();
+      loadClasses();
     } catch {
       showToast('Failed to delete student. Please try again.', 'error');
     } finally {
@@ -293,7 +280,7 @@ const Classes = () => {
         {[
           { label: 'Total Classes',  value: withEnrolled.length,                                                       icon: 'class',     color: '#0de1e8' },
           { label: 'Total Capacity', value: withEnrolled.reduce((a, c) => a + (c.capacity || 0), 0),                   icon: 'people',    color: '#3182ce' },
-          { label: 'Total Enrolled', value: allStudents.length,                                                         icon: 'school',    color: '#805ad5' },
+          { label: 'Total Enrolled', value: withEnrolled.reduce((a, c) => a + (c.enrolled || 0), 0),                   icon: 'school',    color: '#805ad5' },
           { label: 'Avg Occupancy',  value: withEnrolled.length ? Math.round(withEnrolled.reduce((a, c) => a + (c.enrolled || 0) / (c.capacity || 1), 0) / withEnrolled.length * 100) + '%' : '0%', icon: 'bar_chart', color: '#ed8936' },
         ].map(s => (
           <div key={s.label} className="stat-card">

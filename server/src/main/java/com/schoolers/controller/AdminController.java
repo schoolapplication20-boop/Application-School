@@ -162,7 +162,7 @@ public class AdminController {
 
     // ===== Classes =====
     @GetMapping("/classes")
-    public ResponseEntity<ApiResponse<List<ClassRoom>>> getClasses(Authentication auth) {
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getClasses(Authentication auth) {
         return ResponseEntity.ok(adminService.getClasses(getCurrentSchoolId(auth)));
     }
 
