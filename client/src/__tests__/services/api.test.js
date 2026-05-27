@@ -11,6 +11,9 @@ let teacherAPI;
 let studentAPI;
 
 let transportAPI;
+let calendarAPI;
+let meetingAPI;
+let reportCardAPI;
 
 beforeEach(async () => {
   vi.resetModules();
@@ -22,8 +25,10 @@ beforeEach(async () => {
   adminAPI       = apiModule.adminAPI;
   teacherAPI     = apiModule.teacherAPI;
   studentAPI     = apiModule.studentAPI;
-
   transportAPI   = apiModule.transportAPI;
+  calendarAPI    = apiModule.calendarAPI;
+  meetingAPI     = apiModule.meetingAPI;
+  reportCardAPI  = apiModule.reportCardAPI;
 });
 
 describe('API Service — Base URL', () => {
@@ -151,6 +156,37 @@ describe('API Service — transportAPI exports', () => {
     expect(typeof transportAPI.getDrivers).toBe('function');
     expect(typeof transportAPI.getStops).toBe('function');
     expect(typeof transportAPI.getTransportFees).toBe('function');
+  });
+});
+
+describe('API Service — calendarAPI exports', () => {
+  it('exposes CRUD methods for school events', () => {
+    expect(typeof calendarAPI.getEvents).toBe('function');
+    expect(typeof calendarAPI.createEvent).toBe('function');
+    expect(typeof calendarAPI.updateEvent).toBe('function');
+    expect(typeof calendarAPI.deleteEvent).toBe('function');
+  });
+});
+
+describe('API Service — meetingAPI exports', () => {
+  it('exposes teacher slot management methods', () => {
+    expect(typeof meetingAPI.createSlot).toBe('function');
+    expect(typeof meetingAPI.getTeacherSlots).toBe('function');
+    expect(typeof meetingAPI.deleteSlot).toBe('function');
+  });
+
+  it('exposes student booking methods', () => {
+    expect(typeof meetingAPI.getAvailableSlots).toBe('function');
+    expect(typeof meetingAPI.bookSlot).toBe('function');
+    expect(typeof meetingAPI.getMyBookings).toBe('function');
+    expect(typeof meetingAPI.cancelBooking).toBe('function');
+  });
+});
+
+describe('API Service — reportCardAPI exports', () => {
+  it('exposes student and admin report card methods', () => {
+    expect(typeof reportCardAPI.getMyReportCard).toBe('function');
+    expect(typeof reportCardAPI.getStudentReportCard).toBe('function');
   });
 });
 
