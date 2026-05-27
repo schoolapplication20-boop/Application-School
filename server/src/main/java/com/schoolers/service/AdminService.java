@@ -994,7 +994,7 @@ public class AdminService {
             dto.put("schoolId",    room.getSchoolId());
             dto.put("enrolled",    enrolled);
             return dto;
-        }).collect(Collectors.toList());
+        }).collect(java.util.stream.Collectors.toList());
 
         return ApiResponse.success(result);
     }
