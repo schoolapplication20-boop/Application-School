@@ -314,12 +314,7 @@ export default function Students() {
       .finally(() => setCapacityChecking(false));
   }, [formData.class, formData.section, showModal, editStudent]);
 
-  // Auto-populate roll number for new student when capacity info loads
-  useEffect(() => {
-    if (!editStudent && showModal && capacityInfo && !capacityInfo.isFull) {
-      setFormData(fd => ({ ...fd, rollNo: String((capacityInfo.enrolled ?? 0) + 1) }));
-    }
-  }, [capacityInfo]);
+  // Roll number is entered manually by the admin — no auto-population.
 
   const photoRef    = useRef(null);
   const idProofRef  = useRef(null);
@@ -480,11 +475,31 @@ export default function Students() {
     try {
       if (editStudent) {
         const result = await apiUpdateStudent(editStudent.id, payload);
-        if (!result.success) { showToast(result.message || 'Failed to update student', 'error'); return; }
+        if (!result.success) {
+          const msg = result.message || 'Failed to update student';
+          const isRollError = msg.toLowerCase().includes('roll number') || msg.toLowerCase().includes('already exists') || msg.toLowerCase().includes('capacity');
+          if (isRollError) {
+            setErrors(prev => ({ ...prev, rollNo: msg }));
+            document.querySelector('.is-invalid')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          } else {
+            showToast(msg, 'error');
+          }
+          return;
+        }
         showToast('Student updated successfully');
       } else {
         const result = await apiCreateStudent(payload);
-        if (!result.success) { showToast(result.message || 'Failed to add student', 'error'); return; }
+        if (!result.success) {
+          const msg = result.message || 'Failed to add student';
+          const isRollError = msg.toLowerCase().includes('roll number') || msg.toLowerCase().includes('already exists') || msg.toLowerCase().includes('capacity');
+          if (isRollError) {
+            setErrors(prev => ({ ...prev, rollNo: msg }));
+            document.querySelector('.is-invalid')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          } else {
+            showToast(msg, 'error');
+          }
+          return;
+        }
         setShowModal(false);
         loadStudents();
         const d = result.data || {};
