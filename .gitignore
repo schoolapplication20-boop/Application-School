@@ -6,11 +6,16 @@ server/target/
 client/.env
 client/.env.local
 client/.env.production
+client/tests/.env
 server/src/main/resources/application.properties
 
 # Build output
 client/dist/
 client/coverage/
+
+# Playwright
+client/tests/playwright-report/
+client/test-results/
 
 # IDE / OS
 .DS_Store
