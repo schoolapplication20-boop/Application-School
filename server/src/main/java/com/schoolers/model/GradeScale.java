@@ -2,6 +2,7 @@ package com.schoolers.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "grade_scales")
@@ -22,8 +23,8 @@ public class GradeScale {
     private String grade;
 
     /** Minimum percentage (inclusive) required to earn this grade. */
-    @Column(name = "min_percentage", nullable = false)
-    private Double minPercentage;
+    @Column(name = "min_percentage", nullable = false, precision = 5, scale = 2)
+    private BigDecimal minPercentage;
 
     /** Lower display order = higher/better grade (shown first). */
     @Column(name = "display_order")

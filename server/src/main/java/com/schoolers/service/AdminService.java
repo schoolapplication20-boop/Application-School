@@ -2523,14 +2523,14 @@ public class AdminService {
     // ── Grade Scales ──────────────────────────────────────────────────────────
 
     private static final List<Map<String, Object>> DEFAULT_GRADE_SCALE = List.of(
-        Map.of("grade", "O",   "minPercentage", 90.0, "displayOrder", 1),
-        Map.of("grade", "A+",  "minPercentage", 80.0, "displayOrder", 2),
-        Map.of("grade", "A",   "minPercentage", 70.0, "displayOrder", 3),
-        Map.of("grade", "B+",  "minPercentage", 60.0, "displayOrder", 4),
-        Map.of("grade", "B",   "minPercentage", 50.0, "displayOrder", 5),
-        Map.of("grade", "B-",  "minPercentage", 40.0, "displayOrder", 6),
-        Map.of("grade", "C",   "minPercentage", 33.0, "displayOrder", 7),
-        Map.of("grade", "F",   "minPercentage",  0.0, "displayOrder", 8)
+        Map.of("grade", "O",   "minPercentage", new java.math.BigDecimal("90.00"), "displayOrder", 1),
+        Map.of("grade", "A+",  "minPercentage", new java.math.BigDecimal("80.00"), "displayOrder", 2),
+        Map.of("grade", "A",   "minPercentage", new java.math.BigDecimal("70.00"), "displayOrder", 3),
+        Map.of("grade", "B+",  "minPercentage", new java.math.BigDecimal("60.00"), "displayOrder", 4),
+        Map.of("grade", "B",   "minPercentage", new java.math.BigDecimal("50.00"), "displayOrder", 5),
+        Map.of("grade", "B-",  "minPercentage", new java.math.BigDecimal("40.00"), "displayOrder", 6),
+        Map.of("grade", "C",   "minPercentage", new java.math.BigDecimal("33.00"), "displayOrder", 7),
+        Map.of("grade", "F",   "minPercentage", new java.math.BigDecimal("0.00"),  "displayOrder", 8)
     );
 
     public ApiResponse<List<GradeScale>> getGradeScales(Long schoolId) {
@@ -2550,10 +2550,11 @@ public class AdminService {
             Object gradeVal = item.get("grade");
             Object pctVal   = item.get("minPercentage");
             if (gradeVal == null || gradeVal.toString().isBlank()) continue;
-            double pct;
-            try { pct = Double.parseDouble(pctVal.toString()); }
+            java.math.BigDecimal pct;
+            try { pct = new java.math.BigDecimal(pctVal.toString()); }
             catch (Exception e) { return ApiResponse.error("Invalid minPercentage at row " + (i + 1)); }
-            if (pct < 0 || pct > 100) return ApiResponse.error("Percentage must be 0–100 at row " + (i + 1));
+            if (pct.compareTo(java.math.BigDecimal.ZERO) < 0 || pct.compareTo(new java.math.BigDecimal("100")) > 0)
+                return ApiResponse.error("Percentage must be 0–100 at row " + (i + 1));
             int order = (item.get("displayOrder") != null)
                     ? Integer.parseInt(item.get("displayOrder").toString()) : (i + 1);
             scales.add(GradeScale.builder()
@@ -2570,7 +2571,7 @@ public class AdminService {
         return DEFAULT_GRADE_SCALE.stream().map(m -> GradeScale.builder()
                 .schoolId(schoolId)
                 .grade((String) m.get("grade"))
-                .minPercentage((Double) m.get("minPercentage"))
+                .minPercentage((java.math.BigDecimal) m.get("minPercentage"))
                 .displayOrder((Integer) m.get("displayOrder"))
                 .build()).collect(java.util.stream.Collectors.toList());
     }
