@@ -107,6 +107,8 @@ const STUDENTS = [
 
 // ── HTTP helpers ───────────────────────────────────────────────────────────
 
+import readline from 'readline';
+
 async function post(path, body, token) {
   const res = await fetch(`${API}${path}`, {
     method: 'POST',
@@ -125,10 +127,24 @@ function ok(msg)   { console.log(`  ✓ ${msg}`); }
 function skip(msg) { console.log(`  ⚠ ${msg}`); }
 function fail(msg) { console.error(`  ✗ ${msg}`); }
 
+function prompt(question) {
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  return new Promise(resolve => rl.question(question, ans => { rl.close(); resolve(ans.trim()); }));
+}
+
 async function login(email, password, role) {
-  const res = await post('/api/auth/login', {
-    email, password, selectedRole: role,
-  });
+  const res = await post('/api/auth/login', { email, password, selectedRole: role });
+
+  // APPLICATION_OWNER requires OTP 2FA — prompt for it interactively
+  if (res.data?.otpRequired) {
+    console.log(`\n  ⚡ OTP sent to the authorized security email for ${email}`);
+    const otp = await prompt('  Enter the 6-digit OTP: ');
+    const otpRes = await post('/api/auth/verify-owner-otp', { email, otp });
+    const token = otpRes.data?.token;
+    if (!token) throw new Error(`OTP verification failed: ${otpRes.message || JSON.stringify(otpRes)}`);
+    return token;
+  }
+
   const token = res.data?.token;
   if (!token) throw new Error(`Login failed for ${email}: ${res.message || JSON.stringify(res)}`);
   return token;
