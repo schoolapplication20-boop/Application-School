@@ -50,7 +50,6 @@ public class AdminService {
     @Autowired private SalaryRepository salaryRepository;
     @Autowired private LeaveRequestRepository leaveRequestRepository;
     @Autowired private TimetableRepository timetableRepository;
-    @Autowired private HomeworkRepository homeworkRepository;
     @Autowired private AssignmentRepository assignmentRepository;
     @Autowired private MarksRepository marksRepository;
     @Autowired private HallTicketRepository hallTicketRepository;
@@ -931,7 +930,6 @@ public class AdminService {
 
         // ── Step 1: Timetable, homework, assignments, marks ───────────────────
         timetableRepository.deleteByTeacherId(id);
-        homeworkRepository.deleteByTeacherId(id);
         assignmentRepository.deleteByTeacherId(id);
         marksRepository.deleteByTeacherId(id);
         classDiaryRepository.deleteByTeacherId(id);
@@ -1197,7 +1195,6 @@ public class AdminService {
         // ── Step 2: Class-level records ────────────────────────────────────────
         attendanceRepository.deleteByClassId(id);
         timetableRepository.deleteByClassSection(classSection);
-        homeworkRepository.deleteByClassSection(classSection);
         messageRepository.deleteByClassSection(classSection);
         leaveRequestRepository.deleteByClassSection(classSection);
         classDiaryRepository.deleteByClassNameAndSection(className, section);

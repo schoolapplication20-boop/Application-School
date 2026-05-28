@@ -377,7 +377,7 @@ public class DatabaseMigration implements CommandLineRunner {
         // are left unchanged (they will be corrected once the school is configured).
         String[] fkTables = {
             "users", "students", "teachers", "classrooms", "assignments",
-            "attendance", "homework", "leave_requests", "fee_payments",
+            "attendance", "leave_requests", "fee_payments",
             "student_fee_assignments", "transport_fees", "class_diary",
             "admission_applications", "salaries", "teacher_class_assignments",
             "holidays", "exam_schedules", "certificates", "hall_tickets",

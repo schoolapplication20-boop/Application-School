@@ -33,7 +33,7 @@ public class AiService {
     @Autowired private FeeRepository        feeRepository;
     @Autowired private SchoolRepository     schoolRepository;
     @Autowired private AttendanceRepository attendanceRepository;
-    @Autowired private HomeworkRepository   homeworkRepository;
+    @Autowired private ClassDiaryRepository classDiaryRepository;
     @Autowired private MarksRepository      marksRepository;
 
     private final RestTemplate restTemplate = new RestTemplate();
@@ -158,14 +158,17 @@ public class AiService {
 
                     // ── HOMEWORK / DIARY ──────────────────────────────────────
                     try {
-                        if (!classSection.isBlank() && studentSchoolId != null) {
-                            var hwList = homeworkRepository.findBySchoolIdAndClassSection(studentSchoolId, classSection);
-                            if (!hwList.isEmpty()) {
+                        if (!className.isBlank() && studentSchoolId != null) {
+                            var diaryList = classDiaryRepository.findBySchoolIdAndClassNameOrderByDiaryDateDesc(studentSchoolId, className);
+                            var withHw = diaryList.stream()
+                                    .filter(d -> d.getHomework() != null && !d.getHomework().isBlank())
+                                    .limit(5).collect(java.util.stream.Collectors.toList());
+                            if (!withHw.isEmpty()) {
                                 sb.append("HOMEWORK/DIARY (recent):\n");
-                                hwList.stream().limit(5).forEach(h -> {
-                                    sb.append("  * ").append(h.getSubject() != null ? h.getSubject() : "").append(": ").append(h.getTitle());
-                                    if (h.getDueDate() != null) sb.append(" (due: ").append(h.getDueDate()).append(")");
-                                    sb.append(" [").append(h.getStatus()).append("]\n");
+                                withHw.forEach(d -> {
+                                    sb.append("  * ").append(d.getSubject() != null ? d.getSubject() : "").append(": ").append(d.getHomework());
+                                    if (d.getDiaryDate() != null) sb.append(" (date: ").append(d.getDiaryDate()).append(")");
+                                    sb.append("\n");
                                 });
                             } else {
                                 sb.append("HOMEWORK: No homework assigned yet.\n");
@@ -223,16 +226,16 @@ public class AiService {
 
                         // Recent homework for this child
                         try {
-                            if (!childClassSection.isBlank() && childSchoolId != null) {
-                                var hwList = homeworkRepository.findBySchoolIdAndClassSection(childSchoolId, childClassSection);
-                                if (!hwList.isEmpty()) {
-                                    sb.append("  Pending homework:\n");
-                                    hwList.stream().limit(3).forEach(h ->
-                                        sb.append("    * ").append(h.getSubject() != null ? h.getSubject() : "")
-                                          .append(": ").append(h.getTitle())
-                                          .append(h.getDueDate() != null ? " (due: " + h.getDueDate() + ")" : "").append("\n")
-                                    );
-                                }
+                            if (!childClass.isBlank() && childSchoolId != null) {
+                                var diaryList = classDiaryRepository.findBySchoolIdAndClassNameOrderByDiaryDateDesc(childSchoolId, childClass);
+                                diaryList.stream()
+                                        .filter(d -> d.getHomework() != null && !d.getHomework().isBlank())
+                                        .limit(3)
+                                        .forEach(d -> sb.append("    * ")
+                                                .append(d.getSubject() != null ? d.getSubject() : "")
+                                                .append(": ").append(d.getHomework())
+                                                .append(d.getDiaryDate() != null ? " (" + d.getDiaryDate() + ")" : "")
+                                                .append("\n"));
                             }
                         } catch (Exception ignored) {}
 

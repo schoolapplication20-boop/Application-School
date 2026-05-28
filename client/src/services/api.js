@@ -381,17 +381,6 @@ export const announcementAPI = {
 };
 
 // ============================================
-// HOMEWORK APIs
-// ============================================
-
-export const homeworkAPI = {
-  getAll:        (params)    => api.get('/api/homework', { params }),
-  create:        (data)      => api.post('/api/homework', data),
-  update:        (id, data)  => api.put(`/api/homework/${id}`, data),
-  delete:        (id)        => api.delete(`/api/homework/${id}`),
-};
-
-// ============================================
 // MESSAGE APIs
 // ============================================
 
