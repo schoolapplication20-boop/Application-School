@@ -289,13 +289,24 @@ public class TeacherController {
 
     @GetMapping("/assignments/{id}/submissions")
     public ResponseEntity<?> getSubmissions(@PathVariable Long id) {
-        return ResponseEntity.ok(ApiResponse.success(submissionRepository.findByAssignmentIdOrderBySubmittedAtAsc(id)));
+        Long schoolId = resolveTeacherSchoolId();
+        return assignmentRepository.findById(id)
+                .filter(a -> schoolId == null || schoolId.equals(a.getSchoolId()))
+                .map(a -> ResponseEntity.ok(ApiResponse.success(submissionRepository.findByAssignmentIdOrderBySubmittedAtAsc(id))))
+                .orElseGet(() -> ResponseEntity.status(403).body(ApiResponse.error("Assignment not found or access denied")));
     }
 
     @PutMapping("/assignments/{id}/submissions/{subId}/grade")
     public ResponseEntity<?> gradeSubmission(
             @PathVariable Long id, @PathVariable Long subId,
             @RequestBody Map<String, Object> body) {
+        Long schoolId = resolveTeacherSchoolId();
+        boolean assignmentOwned = assignmentRepository.findById(id)
+                .map(a -> schoolId == null || schoolId.equals(a.getSchoolId()))
+                .orElse(false);
+        if (!assignmentOwned) {
+            return ResponseEntity.status(403).body(ApiResponse.error("Assignment not found or access denied"));
+        }
         return submissionRepository.findById(subId)
                 .filter(s -> s.getAssignmentId().equals(id))
                 .map(s -> {
@@ -310,7 +321,7 @@ public class TeacherController {
 
     @GetMapping("/marks/{studentId}")
     public ResponseEntity<ApiResponse<List<Marks>>> getMarksByStudent(@PathVariable Long studentId) {
-        return ResponseEntity.ok(teacherService.getMarksByStudent(studentId));
+        return ResponseEntity.ok(teacherService.getMarksByStudent(studentId, resolveTeacherSchoolId()));
     }
 
     @PostMapping("/marks")

@@ -661,10 +661,17 @@ public class TeacherService {
 
     // ── Marks ──────────────────────────────────────────────────────────────────
 
-    public ApiResponse<List<Marks>> getMarksByStudent(Long studentId) {
+    public ApiResponse<List<Marks>> getMarksByStudent(Long studentId, Long authSchoolId) {
         Student student = studentRepository.findById(studentId).orElse(null);
-        if (student != null && student.getSchoolId() != null) {
-            return ApiResponse.success(marksRepository.findByStudentIdAndSchoolId(studentId, student.getSchoolId()));
+        if (student == null) return ApiResponse.error("Student not found");
+        Long studentSchoolId = student.getSchoolId();
+        // Enforce school isolation: non-owner callers may only access students in their own school
+        if (authSchoolId != null && studentSchoolId != null && !authSchoolId.equals(studentSchoolId)) {
+            return ApiResponse.error("Access denied");
+        }
+        Long scopedSchoolId = authSchoolId != null ? authSchoolId : studentSchoolId;
+        if (scopedSchoolId != null) {
+            return ApiResponse.success(marksRepository.findByStudentIdAndSchoolId(studentId, scopedSchoolId));
         }
         return ApiResponse.success(marksRepository.findByStudentId(studentId));
     }
