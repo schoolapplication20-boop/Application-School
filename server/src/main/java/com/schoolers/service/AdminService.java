@@ -276,6 +276,10 @@ public class AdminService {
         if (userRepository.existsByEmailIgnoreCase(studentEmailRaw.trim()))
             return ApiResponse.<Map<String, Object>>error("Email '" + studentEmailRaw.trim().toLowerCase() + "' is already registered. Use a different email.");
 
+        String parentMobileRaw = str(body, "parentMobile", str(body, "fatherPhone", str(body, "mobile", null)));
+        if (parentMobileRaw == null || parentMobileRaw.isBlank())
+            return ApiResponse.<Map<String, Object>>error("Father's phone number is required");
+
         // Extract schoolId injected by AdminController from authenticated user
         Long schoolId = body.get("schoolId") != null
                 ? Long.parseLong(body.get("schoolId").toString()) : null;
