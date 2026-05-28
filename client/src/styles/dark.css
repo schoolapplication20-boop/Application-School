@@ -1,0 +1,168 @@
+/* ============================================================
+   SKOOLZ — Design Tokens + Dark Mode
+   All CSS classes reference these variables so that switching
+   [data-theme="dark"] on <html> is the only toggle needed.
+   ============================================================ */
+
+:root {
+  --surface:         #ffffff;
+  --surface-alt:     #f7fafc;
+  --surface-input:   #fafafa;
+  --border:          #f0f4f8;
+  --border-strong:   #e2e8f0;
+  --text-primary:    #1a202c;
+  --text-secondary:  #4a5568;
+  --text-muted:      #a0aec0;
+  --page-bg:         #f8fafc;
+  --shadow-card:     0 2px 14px rgba(0,0,0,0.07);
+  --shadow-dropdown: 0 10px 40px rgba(0,0,0,0.13);
+}
+
+[data-theme="dark"] {
+  --surface:         #1e293b;
+  --surface-alt:     #1a2332;
+  --surface-input:   #0f172a;
+  --border:          #2d3748;
+  --border-strong:   #374151;
+  --text-primary:    #f1f5f9;
+  --text-secondary:  #cbd5e0;
+  --text-muted:      #64748b;
+  --page-bg:         #0f172a;
+  --shadow-card:     0 2px 14px rgba(0,0,0,0.35);
+  --shadow-dropdown: 0 10px 40px rgba(0,0,0,0.45);
+}
+
+/* ── App background ───────────────────────────────────────── */
+[data-theme="dark"] .app-layout {
+  background-color: var(--page-bg) !important;
+  /* Only applied when BgPicker hasn't set an inline style */
+}
+
+/* ── Navbar ────────────────────────────────────────────────── */
+[data-theme="dark"] .top-navbar {
+  background: #1e293b !important;
+  border-bottom-color: #2d3748 !important;
+}
+[data-theme="dark"] .navbar-icon-btn {
+  background: #2d3748 !important;
+  color: #94a3b8 !important;
+}
+[data-theme="dark"] .navbar-icon-btn:hover {
+  background: rgba(13,225,232,0.15) !important;
+  color: #0de1e8 !important;
+}
+[data-theme="dark"] .navbar-search input {
+  background: #2d3748 !important;
+  border-color: #374151 !important;
+  color: #f1f5f9 !important;
+}
+[data-theme="dark"] .navbar-search input::placeholder { color: #64748b !important; }
+
+/* ── CSS-class cards ──────────────────────────────────────── */
+[data-theme="dark"] .chart-card {
+  background: var(--surface) !important;
+  border-color: var(--border) !important;
+  box-shadow: var(--shadow-card) !important;
+}
+[data-theme="dark"] .chart-card-title  { color: var(--text-primary)   !important; }
+[data-theme="dark"] .chart-card-subtitle { color: var(--text-muted)   !important; }
+
+[data-theme="dark"] .data-table-card {
+  background: var(--surface) !important;
+  border-color: var(--border) !important;
+  box-shadow: var(--shadow-card) !important;
+}
+[data-theme="dark"] .data-table-title { color: var(--text-primary) !important; }
+
+/* ── Tables ────────────────────────────────────────────────── */
+[data-theme="dark"] .data-table th {
+  background: var(--surface-alt) !important;
+  color: var(--text-muted)       !important;
+  border-bottom-color: var(--border) !important;
+}
+[data-theme="dark"] .data-table td {
+  color: var(--text-secondary)       !important;
+  border-bottom-color: var(--border) !important;
+}
+[data-theme="dark"] .data-table tr:hover td { background: var(--surface-alt) !important; }
+
+/* ── Modal ─────────────────────────────────────────────────── */
+[data-theme="dark"] .modal-container {
+  background: var(--surface) !important;
+}
+[data-theme="dark"] .modal-header,
+[data-theme="dark"] .modal-footer {
+  border-color: var(--border) !important;
+}
+[data-theme="dark"] .modal-title  { color: var(--text-primary) !important; }
+[data-theme="dark"] .modal-close  {
+  background: var(--surface-alt) !important;
+  color: var(--text-muted) !important;
+}
+
+/* ── Form inputs ───────────────────────────────────────────── */
+[data-theme="dark"] .search-input,
+[data-theme="dark"] .filter-select {
+  background: var(--surface-input) !important;
+  border-color: var(--border-strong) !important;
+  color: var(--text-primary) !important;
+}
+[data-theme="dark"] .search-input::placeholder { color: var(--text-muted) !important; }
+
+/* ── Stat card (CSS class on StatCard wrapper) ─────────────── */
+[data-theme="dark"] .stat-card {
+  background: var(--surface) !important;
+  border-color: var(--border) !important;
+  box-shadow: var(--shadow-card) !important;
+}
+
+/* ── Pagination ────────────────────────────────────────────── */
+[data-theme="dark"] .pagination-bar { border-top-color: var(--border) !important; }
+[data-theme="dark"] .page-btn {
+  background: var(--surface) !important;
+  border-color: var(--border-strong) !important;
+  color: var(--text-secondary) !important;
+}
+
+/* ── Empty state ────────────────────────────────────────────── */
+[data-theme="dark"] .empty-state h3,
+[data-theme="dark"] .empty-state p  { color: var(--text-muted) !important; }
+
+/* ── Status badges — lighten for dark bg ────────────────────── */
+[data-theme="dark"] .status-paid    { background: rgba(39,103,73,0.25)  !important; color: #6ee7b7 !important; }
+[data-theme="dark"] .status-pending { background: rgba(192,86,33,0.25)  !important; color: #fcd34d !important; }
+[data-theme="dark"] .status-overdue { background: rgba(197,48,48,0.25)  !important; color: #fca5a5 !important; }
+[data-theme="dark"] .status-present { background: rgba(39,103,73,0.25)  !important; color: #6ee7b7 !important; }
+[data-theme="dark"] .status-absent  { background: rgba(197,48,48,0.25)  !important; color: #fca5a5 !important; }
+[data-theme="dark"] .status-late    { background: rgba(192,86,33,0.25)  !important; color: #fcd34d !important; }
+
+/* ── Scrollbar (webkit) ─────────────────────────────────────── */
+[data-theme="dark"] ::-webkit-scrollbar-track { background: #1a2332; }
+[data-theme="dark"] ::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+
+/* ── Inline-style white surface override (page content cards) ─ */
+/* The dashboard cards use background: #fff inline.              */
+/* This rule targets them via the wrapper class added to Layout. */
+[data-theme="dark"] .dk-surface {
+  background: var(--surface) !important;
+  border-color: var(--border) !important;
+  color: var(--text-primary) !important;
+}
+[data-theme="dark"] .dk-surface-alt {
+  background: var(--surface-alt) !important;
+  border-color: var(--border) !important;
+}
+
+/* ── Progress bar track ─────────────────────────────────────── */
+[data-theme="dark"] .progress-bar-custom { background: #374151 !important; }
+
+/* ── Btn-add ─────────────────────────────────────────────────── */
+[data-theme="dark"] .btn-add { /* brand colors, no change needed */ }
+
+/* ── chart-period-btn ────────────────────────────────────────── */
+[data-theme="dark"] .chart-period-btn {
+  border-color: var(--border-strong) !important;
+  color: var(--text-muted) !important;
+  background: var(--surface-alt) !important;
+}

@@ -4,6 +4,7 @@ import Navbar from './Navbar';
 import AiChat from './AiChat';
 import MaintenanceBanner from './MaintenanceBanner';
 import BgPicker, { loadSavedBg } from './BgPicker';
+import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { schoolAPI } from '../services/api';
 import '../styles/sidebar.css';
@@ -14,8 +15,19 @@ const Layout = ({ children, pageTitle }) => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [schoolInactive, setSchoolInactive]       = useState(false);
   const [inactiveSchoolName, setInactiveSchoolName] = useState('');
+  const { isDark } = useTheme();
   const [appBg, setAppBg] = useState(() => loadSavedBg());
   const { user } = useAuth();
+
+  // When dark mode is toggled, auto-switch the page background
+  useEffect(() => {
+    const savedId = localStorage.getItem('skoolz_bg_v1') || 'default';
+    if (isDark && savedId === 'default') {
+      setAppBg('#0f172a');
+    } else if (!isDark && savedId === 'default') {
+      setAppBg('#f8fafc');
+    }
+  }, [isDark]);
 
   const showAi = !!user;
 

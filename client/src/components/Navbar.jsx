@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-
+import { useTheme } from '../context/ThemeContext';
 import { useNotifications } from '../context/NotificationContext';
 import '../styles/sidebar.css';
 
 const Navbar = ({ onMenuToggle }) => {
   const { user, updateUser, logout } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
   const { notifications, unreadCount, markRead, markAllRead, removeNotification, loadFromServer } = useNotifications();
 
   // Load server notifications on mount and poll every 30 seconds
@@ -130,6 +131,18 @@ const Navbar = ({ onMenuToggle }) => {
           />
         </div>
 
+        {/* Dark Mode Toggle */}
+        <button
+          onClick={toggleTheme}
+          title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+          className="navbar-icon-btn"
+          style={{ position: 'relative' }}
+        >
+          <span className="material-icons" style={{ fontSize: 20 }}>
+            {isDark ? 'light_mode' : 'dark_mode'}
+          </span>
+        </button>
+
         {/* Notifications */}
         <div style={{ position: 'relative' }}>
           <button
@@ -149,12 +162,12 @@ const Navbar = ({ onMenuToggle }) => {
           </button>
           {showNotif && (
             <div style={{
-              position: 'absolute', right: 0, top: '50px', width: '340px', background: '#fff',
-              borderRadius: '14px', boxShadow: '0 10px 40px rgba(0,0,0,0.15)', zIndex: 1000,
-              border: '1px solid #f0f4f8', overflow: 'hidden', maxHeight: '420px', display: 'flex', flexDirection: 'column'
+              position: 'absolute', right: 0, top: '50px', width: '340px', background: 'var(--surface)',
+              borderRadius: '14px', boxShadow: 'var(--shadow-dropdown)', zIndex: 1000,
+              border: '1px solid var(--border)', overflow: 'hidden', maxHeight: '420px', display: 'flex', flexDirection: 'column'
             }}>
-              <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f4f8', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
-                <span style={{ fontWeight: 700, fontSize: '15px', color: '#2d3748' }}>
+              <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+                <span style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text-primary)' }}>
                   Notifications {unreadCount > 0 && <span style={{ background: '#e53e3e', color: '#fff', borderRadius: '12px', padding: '1px 7px', fontSize: '11px', marginLeft: 6 }}>{unreadCount}</span>}
                 </span>
                 {unreadCount > 0 && (
@@ -251,13 +264,13 @@ const Navbar = ({ onMenuToggle }) => {
 
           {showDropdown && (
             <div style={{
-              position: 'absolute', right: 0, top: '50px', width: '220px', background: '#fff',
-              borderRadius: '14px', boxShadow: '0 10px 40px rgba(0,0,0,0.15)', zIndex: 1000,
-              border: '1px solid #f0f4f8', overflow: 'hidden'
+              position: 'absolute', right: 0, top: '50px', width: '220px', background: 'var(--surface)',
+              borderRadius: '14px', boxShadow: 'var(--shadow-dropdown)', zIndex: 1000,
+              border: '1px solid var(--border)', overflow: 'hidden'
             }}>
-              <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f4f8' }}>
-                <div style={{ fontSize: '14px', fontWeight: 700, color: '#2d3748' }}>{user?.name}</div>
-                <div style={{ fontSize: '12px', color: '#a0aec0' }}>
+              <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
+                <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>{user?.name}</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                   {user?.email?.endsWith('@my-skoolz.com') ? user.email.split('@')[0] : user?.email}
                 </div>
               </div>
@@ -287,8 +300,8 @@ const Navbar = ({ onMenuToggle }) => {
       {/* Profile Edit Modal */}
       {showProfile && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: '#fff', borderRadius: '16px', width: '420px', maxWidth: '95vw', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
-            <div style={{ padding: '20px 24px', borderBottom: '1px solid #f0f4f8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ background: 'var(--surface)', borderRadius: '16px', width: '420px', maxWidth: '95vw', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h5 style={{ margin: 0, fontWeight: 700, fontSize: '16px' }}>My Profile</h5>
               <button onClick={() => setShowProfile(false)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '20px', color: '#a0aec0' }}>×</button>
             </div>

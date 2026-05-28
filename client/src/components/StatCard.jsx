@@ -5,11 +5,11 @@ const StatCard = ({ title, value, icon, color = '#0de1e8', prefix = '', suffix =
     <div
       className="stat-card card-hover"
       style={{
-        background: '#fff',
+        background: 'var(--surface, #fff)',
         borderRadius: 18,
         padding: '22px 20px 18px',
-        boxShadow: '0 2px 14px rgba(0,0,0,0.07)',
-        border: '1px solid #f0f4f8',
+        boxShadow: 'var(--shadow-card, 0 2px 14px rgba(0,0,0,0.07))',
+        border: '1px solid var(--border, #f0f4f8)',
         position: 'relative',
         overflow: 'hidden',
         cursor: 'default',
@@ -49,7 +49,7 @@ const StatCard = ({ title, value, icon, color = '#0de1e8', prefix = '', suffix =
 
       {/* Value */}
       <div style={{
-        fontSize: 30, fontWeight: 900, color: '#1a202c',
+        fontSize: 30, fontWeight: 900, color: 'var(--text-primary, #1a202c)',
         lineHeight: 1, marginBottom: 6, letterSpacing: '-0.5px',
         fontFamily: 'Poppins, sans-serif',
       }}>
@@ -57,7 +57,7 @@ const StatCard = ({ title, value, icon, color = '#0de1e8', prefix = '', suffix =
       </div>
 
       {/* Label */}
-      <div style={{ fontSize: 12.5, fontWeight: 600, color: '#8a99b0', letterSpacing: '0.02em' }}>
+      <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-muted, #8a99b0)', letterSpacing: '0.02em' }}>
         {title}
       </div>
 

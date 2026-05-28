@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './context/AuthContext';
 import { SchoolProvider } from './context/SchoolContext';
 import { NotificationProvider } from './context/NotificationContext';
+import { ThemeProvider } from './context/ThemeContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import MarketingLayout from './components/MarketingLayout';
 import InstallPrompt from './components/InstallPrompt';
@@ -104,6 +105,7 @@ import NotFound              from './pages/NotFound';
 function App() {
   return (
     <ErrorBoundary>
+    <ThemeProvider>
     <AuthProvider>
       <SchoolProvider>
       <NotificationProvider>
@@ -258,6 +260,7 @@ function App() {
       </NotificationProvider>
       </SchoolProvider>
     </AuthProvider>
+    </ThemeProvider>
     </ErrorBoundary>
   );
 }
