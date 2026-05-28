@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
+import StatCard from '../../components/StatCard';
 import LineChartComponent from '../../components/Charts/LineChartComponent';
 import { useAuth } from '../../context/AuthContext';
 import { studentAPI } from '../../services/api';
@@ -95,54 +96,106 @@ export default function StudentDashboard() {
     );
   }
 
+  const greeting = () => {
+    const h = new Date().getHours();
+    if (h < 12) return 'Good Morning';
+    if (h < 17) return 'Good Afternoon';
+    return 'Good Evening';
+  };
+
+  const gradeGrad = {
+    'A+': 'linear-gradient(135deg,#134e4a,#0d9488)',
+    'A':  'linear-gradient(135deg,#14532d,#16a34a)',
+    'B+': 'linear-gradient(135deg,#1e3a8a,#2563eb)',
+    'B':  'linear-gradient(135deg,#1e40af,#3b82f6)',
+    'C':  'linear-gradient(135deg,#78350f,#d97706)',
+    '—':  'linear-gradient(135deg,#1e293b,#475569)',
+  };
+
   return (
     <Layout pageTitle="Student Dashboard">
       <SEOMeta title="Student Dashboard" description="View your attendance, marks, fees and schedule." />
-      {/* Student Info Card */}
-      <div className="child-info-card">
-        <div className="child-photo">{getInitials(displayName)}</div>
-        <div className="child-details">
-          <h2>{displayName}</h2>
-          <div className="child-class">
-            {classSection !== '—' ? `Class ${classSection}` : 'Class not assigned'}
+
+      {/* Welcome Banner */}
+      <div style={{
+        background: 'linear-gradient(135deg, #0c1445 0%, #1e3a8a 50%, #1d4ed8 100%)',
+        borderRadius: 18, padding: '28px 32px', marginBottom: 24, color: '#fff',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.18)', position: 'relative', overflow: 'hidden',
+      }}>
+        <div style={{ position: 'absolute', top: -40, right: -40, width: 200, height: 200, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', bottom: -60, right: 120, width: 140, height: 140, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }} />
+
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+            <div style={{ width: 64, height: 64, borderRadius: 18, background: 'rgba(255,255,255,0.15)', border: '2px solid rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, fontWeight: 800, color: '#fff', flexShrink: 0 }}>
+              {getInitials(displayName)}
+            </div>
+            <div>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
+                {greeting()}
+              </div>
+              <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, color: '#fff', lineHeight: 1.2 }}>{displayName}</h1>
+              <div style={{ marginTop: 6, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <span style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', borderRadius: 20, padding: '3px 12px', fontSize: 12, fontWeight: 600 }}>
+                  {classSection !== '—' ? `Class ${classSection}` : 'Class not assigned'}
+                </span>
+                {profile?.bloodGroup && (
+                  <span style={{ background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.85)', borderRadius: 20, padding: '3px 12px', fontSize: 12 }}>
+                    Blood: {profile.bloodGroup}
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
-          <div className="child-tags">
-            {profile?.bloodGroup && <span className="child-tag">Blood: {profile.bloodGroup}</span>}
+
+          {/* Overall grade badge */}
+          <div style={{ background: gradeGrad[overallGrade] || gradeGrad['—'], borderRadius: 16, padding: '16px 24px', textAlign: 'center', border: '2px solid rgba(255,255,255,0.2)', flexShrink: 0 }}>
+            <div style={{ fontSize: 42, fontWeight: 900, color: '#fff', lineHeight: 1 }}>{overallGrade}</div>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', marginTop: 4, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Overall Grade</div>
           </div>
         </div>
-        <div style={{ marginLeft: 'auto', textAlign: 'center', background: 'rgba(255,255,255,0.2)', borderRadius: '16px', padding: '16px 24px' }}>
-          <div style={{ fontSize: '42px', fontWeight: 800, lineHeight: 1 }}>{overallGrade}</div>
-          <div style={{ fontSize: '12px', opacity: 0.85, marginTop: '4px' }}>Overall Grade</div>
+
+        {/* Banner stats row */}
+        <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.15)', display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+          {[
+            { label: 'Attendance', value: `${attendancePct}%`, icon: 'fact_check', color: '#67e8f9' },
+            { label: 'Days Present', value: presentDays, icon: 'check_circle', color: '#86efac' },
+            { label: 'Fee Due', value: `₹${pendingFee.toLocaleString()}`, icon: 'payments', color: '#fca5a5' },
+          ].map(b => (
+            <div key={b.label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span className="material-icons" style={{ fontSize: 16, color: b.color }}>{b.icon}</span>
+              <span style={{ fontSize: 14, fontWeight: 800, color: '#fff' }}>{b.value}</span>
+              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)' }}>{b.label}</span>
+            </div>
+          ))}
         </div>
       </div>
 
       {/* Stats */}
       <div className="stats-grid" style={{ marginBottom: '24px' }}>
-        {[
-          { title: 'Attendance',   value: `${attendancePct}%`, icon: 'fact_check',   color: '#0de1e8' },
-          { title: 'Days Present', value: presentDays,          icon: 'check_circle', color: '#3182ce' },
-          { title: 'Fee Due',      value: `₹${pendingFee.toLocaleString()}`, icon: 'payments', color: '#e53e3e' },
-          { title: 'Total Marks',  value: marks.length > 0 ? `${marks.reduce((s,m)=>s+m.marks,0)}/${marks.reduce((s,m)=>s+m.maxMarks,0)}` : '—', icon: 'grade', color: '#805ad5' },
-        ].map((s, i) => (
-          <div key={i} className="stat-card card-hover">
-            <div className="stat-icon" style={{ backgroundColor: s.color + '15' }}>
-              <span className="material-icons" style={{ color: s.color }}>{s.icon}</span>
-            </div>
-            <div className="stat-value">{s.value}</div>
-            <div className="stat-label">{s.title}</div>
-          </div>
-        ))}
+        <StatCard title="Attendance" value={attendancePct} suffix="%" icon="fact_check" color="#0de1e8" />
+        <StatCard title="Days Present" value={presentDays} icon="check_circle" color="#3182ce" />
+        <StatCard title="Fee Due" value={pendingFee} prefix="₹" icon="payments" color="#e53e3e" />
+        <StatCard
+          title="Total Marks"
+          value={marks.length > 0 ? `${marks.reduce((s,m)=>s+m.marks,0)}/${marks.reduce((s,m)=>s+m.maxMarks,0)}` : '—'}
+          icon="grade"
+          color="#805ad5"
+        />
       </div>
 
       <div className="grid-3-2">
         {/* Attendance Chart */}
-        <div className="chart-card">
-          <div className="chart-card-header">
-            <div>
-              <div className="chart-card-title">Attendance Trend</div>
-              <div className="chart-card-subtitle">Monthly attendance percentage</div>
+        <div style={{ background: '#fff', borderRadius: 18, padding: '22px 24px', boxShadow: '0 2px 14px rgba(0,0,0,0.07)', border: '1px solid #f0f4f8' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ width: 4, height: 20, background: 'linear-gradient(180deg,#0de1e8,#3182ce)', borderRadius: 2 }} />
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#1a202c' }}>Attendance Trend</div>
+                <div style={{ fontSize: 12, color: '#a0aec0', marginTop: 1 }}>Monthly attendance percentage</div>
+              </div>
             </div>
-            <span style={{ padding: '4px 12px', background: '#0de1e820', color: '#0de1e8', borderRadius: '20px', fontSize: '12px', fontWeight: 600 }}>
+            <span style={{ padding: '4px 12px', background: '#0de1e818', color: '#0891b2', borderRadius: '20px', fontSize: '12px', fontWeight: 600 }}>
               {attendancePct}% Avg
             </span>
           </div>
@@ -154,62 +207,75 @@ export default function StudentDashboard() {
 
         {/* Fee Summary */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div className="fee-summary">
-            <h3>Fee Summary</h3>
-            <div className="amount">₹{totalFee.toLocaleString()}</div>
-            <div className="due-date">Total Fees</div>
-            <div style={{ marginTop: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '12px' }}>
-                <span>Paid</span>
-                <span style={{ fontWeight: 700 }}>₹{paidFee.toLocaleString()}</span>
-              </div>
-              <div className="progress-bar-custom" style={{ background: 'rgba(255,255,255,0.2)' }}>
-                <div style={{ height: '6px', borderRadius: '3px', background: '#fff', width: `${totalFee > 0 ? Math.min((paidFee / totalFee) * 100, 100) : 0}%` }} />
-              </div>
+          {/* Fee card */}
+          <div style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)', borderRadius: 18, padding: '22px 24px', color: '#fff', boxShadow: '0 4px 20px rgba(124,58,237,0.3)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <span className="material-icons" style={{ fontSize: 20, color: '#c4b5fd' }}>receipt_long</span>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.85)' }}>Fee Summary</div>
+            </div>
+            <div style={{ fontSize: 32, fontWeight: 900, color: '#fff', lineHeight: 1 }}>₹{totalFee.toLocaleString()}</div>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 4, marginBottom: 14, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Fees</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 12, color: 'rgba(255,255,255,0.8)' }}>
+              <span>Paid</span>
+              <span style={{ fontWeight: 700 }}>₹{paidFee.toLocaleString()}</span>
+            </div>
+            <div style={{ height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.2)' }}>
+              <div style={{ height: '100%', borderRadius: 3, background: '#fff', width: `${totalFee > 0 ? Math.min((paidFee / totalFee) * 100, 100) : 0}%` }} />
             </div>
           </div>
-          <div className="chart-card" style={{ padding: '20px' }}>
-            <div style={{ fontSize: '14px', fontWeight: 600, color: '#2d3748', marginBottom: '12px' }}>Next Payment Due</div>
+
+          {/* Next due */}
+          <div style={{ background: '#fff', borderRadius: 18, padding: '20px 24px', boxShadow: '0 2px 14px rgba(0,0,0,0.07)', border: '1px solid #f0f4f8' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <div style={{ width: 4, height: 18, background: 'linear-gradient(180deg,#e53e3e,#fc8181)', borderRadius: 2 }} />
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#2d3748' }}>Next Payment Due</div>
+            </div>
             {nextDue ? (
               <>
-                <div style={{ fontSize: '28px', fontWeight: 800, color: '#e53e3e', marginBottom: '4px' }}>₹{nextDue.amount?.toLocaleString()}</div>
-                <div style={{ fontSize: '13px', color: '#718096', marginBottom: '16px' }}>Due: {nextDue.dueDate || '—'}</div>
+                <div style={{ fontSize: 28, fontWeight: 900, color: '#e53e3e', marginBottom: 4 }}>₹{nextDue.amount?.toLocaleString()}</div>
+                <div style={{ fontSize: 13, color: '#718096', marginBottom: 16 }}>Due: {nextDue.dueDate || '—'}</div>
               </>
             ) : (
-              <div style={{ fontSize: '14px', fontWeight: 600, color: '#0de1e8', marginBottom: '16px' }}>All fees paid!</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                <span className="material-icons" style={{ color: '#16a34a', fontSize: 20 }}>check_circle</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: '#16a34a' }}>All fees paid!</span>
+              </div>
             )}
-            <button onClick={() => navigate('/student/fees')} style={{ display: 'block', width: '100%', padding: '10px', background: '#0de1e8', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: 600, cursor: 'pointer' }}>
+            <button onClick={() => navigate('/student/fees')} style={{ display: 'block', width: '100%', padding: '10px', background: 'linear-gradient(135deg,#0de1e8,#0369a1)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
               {nextDue ? 'Pay Now' : 'View Fees'}
             </button>
           </div>
         </div>
       </div>
 
-      <div className="grid-1-1">
+      <div className="grid-1-1" style={{ marginTop: 24 }}>
         {/* Recent Marks */}
-        <div className="data-table-card">
-          <div className="data-table-header">
-            <span className="data-table-title">Recent Marks</span>
+        <div style={{ background: '#fff', borderRadius: 18, boxShadow: '0 2px 14px rgba(0,0,0,0.07)', border: '1px solid #f0f4f8', overflow: 'hidden' }}>
+          <div style={{ padding: '20px 24px', borderBottom: '1px solid #f0f4f8', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 4, height: 20, background: 'linear-gradient(180deg,#805ad5,#4361ee)', borderRadius: 2 }} />
+            <span style={{ fontSize: 15, fontWeight: 700, color: '#1a202c' }}>Recent Marks</span>
           </div>
           {recentMarks.length === 0 ? (
-            <div style={{ padding: '32px 0', textAlign: 'center', color: '#a0aec0', fontSize: 13 }}>No marks recorded yet</div>
+            <div style={{ padding: '40px 0', textAlign: 'center', color: '#a0aec0', fontSize: 13 }}>
+              <span className="material-icons" style={{ fontSize: 36, display: 'block', marginBottom: 8 }}>grade</span>
+              No marks recorded yet
+            </div>
           ) : (
-            <table className="data-table">
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
-                <tr>
-                  <th>Subject</th>
-                  <th>Exam</th>
-                  <th>Score</th>
-                  <th>Grade</th>
+                <tr style={{ background: '#f7fafc' }}>
+                  {['Subject', 'Exam', 'Score', 'Grade'].map(h => (
+                    <th key={h} style={{ padding: '11px 16px', textAlign: 'left', fontWeight: 700, color: '#4a5568', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {recentMarks.map(m => (
-                  <tr key={m.id}>
-                    <td style={{ fontSize: '13px', fontWeight: 600 }}>{m.subject}</td>
-                    <td style={{ fontSize: '12px', color: '#718096' }}>{m.examType || '—'}</td>
-                    <td style={{ fontSize: '13px', fontWeight: 700 }}>{m.marks}/{m.maxMarks}</td>
-                    <td>
+                {recentMarks.map((m, i) => (
+                  <tr key={m.id} style={{ borderBottom: '1px solid #f0f4f8', background: i % 2 === 0 ? '#fff' : '#fafbfc' }}>
+                    <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 600, color: '#2d3748' }}>{m.subject}</td>
+                    <td style={{ padding: '12px 16px', fontSize: 12, color: '#718096' }}>{m.examType || '—'}</td>
+                    <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#1a202c' }}>{m.marks}/{m.maxMarks}</td>
+                    <td style={{ padding: '12px 16px' }}>
                       <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: 700, background: gradeBg[m.grade] || '#f7fafc', color: gradeColor[m.grade] || '#4a5568' }}>
                         {m.grade || '—'}
                       </span>
@@ -222,11 +288,12 @@ export default function StudentDashboard() {
         </div>
 
         {/* Quick Links */}
-        <div className="data-table-card">
-          <div className="data-table-header">
-            <span className="data-table-title">Quick Access</span>
+        <div style={{ background: '#fff', borderRadius: 18, boxShadow: '0 2px 14px rgba(0,0,0,0.07)', border: '1px solid #f0f4f8', overflow: 'hidden' }}>
+          <div style={{ padding: '20px 24px', borderBottom: '1px solid #f0f4f8', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 4, height: 20, background: 'linear-gradient(180deg,#0de1e8,#3182ce)', borderRadius: 2 }} />
+            <span style={{ fontSize: 15, fontWeight: 700, color: '#1a202c' }}>Quick Access</span>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '8px 0' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
             {[
               { label: 'View Attendance', icon: 'fact_check',    path: '/student/attendance',   color: '#0de1e8' },
               { label: 'My Marks',        icon: 'grade',          path: '/student/marks',        color: '#805ad5' },
@@ -235,19 +302,19 @@ export default function StudentDashboard() {
               { label: 'Leave Request',   icon: 'event_busy',     path: '/student/leave',        color: '#ed8936' },
               { label: 'Hall Ticket',     icon: 'verified',       path: '/student/examination',  color: '#3182ce' },
               { label: 'Class Diary',     icon: 'photo_library',  path: '/student/diary',        color: '#38b2ac' },
-            ].map(item => (
+            ].map((item, i) => (
               <div key={item.path} onClick={() => navigate(item.path)} style={{
-                display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px',
-                borderRadius: 10, border: '1px solid #f0f4f8', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: 14, padding: '12px 20px',
+                borderBottom: i < 6 ? '1px solid #f0f4f8' : 'none', cursor: 'pointer', transition: 'background 0.15s',
               }}
-                onMouseEnter={e => e.currentTarget.style.background = '#f7fafc'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                onMouseEnter={e => { e.currentTarget.style.background = item.color + '08'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
               >
-                <div style={{ width: 36, height: 36, borderRadius: 9, background: item.color + '15', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <div style={{ width: 38, height: 38, borderRadius: 10, background: `linear-gradient(135deg,${item.color}20,${item.color}38)`, border: `1.5px solid ${item.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <span className="material-icons" style={{ fontSize: 18, color: item.color }}>{item.icon}</span>
                 </div>
-                <span style={{ fontSize: 13, fontWeight: 600, color: '#2d3748' }}>{item.label}</span>
-                <span className="material-icons" style={{ fontSize: 16, color: '#cbd5e0', marginLeft: 'auto' }}>chevron_right</span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#2d3748', flex: 1 }}>{item.label}</span>
+                <span className="material-icons" style={{ fontSize: 16, color: '#cbd5e0' }}>chevron_right</span>
               </div>
             ))}
           </div>

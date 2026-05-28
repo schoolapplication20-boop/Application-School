@@ -241,140 +241,142 @@ export default function TeacherDashboard() {
     return map;
   }, [assignedClasses, classStudents]);
 
+  const greeting = () => {
+    const h = new Date().getHours();
+    if (h < 12) return 'Good Morning';
+    if (h < 17) return 'Good Afternoon';
+    return 'Good Evening';
+  };
+
+  const QUICK_ACTIONS = [
+    { label: 'Mark Attendance', icon: 'fact_check',     path: '/teacher/attendance', color: '#0de1e8', grad: 'linear-gradient(135deg,#0de1e822,#0de1e840)' },
+    { label: 'My Schedule',     icon: 'calendar_today', path: '/teacher/schedule',   color: '#4361ee', grad: 'linear-gradient(135deg,#4361ee22,#4361ee40)' },
+    { label: 'Student Marks',   icon: 'grade',           path: '/teacher/marks',      color: '#805ad5', grad: 'linear-gradient(135deg,#805ad522,#805ad540)' },
+    { label: 'Homework',        icon: 'menu_book',       path: '/teacher/homework',   color: '#ed8936', grad: 'linear-gradient(135deg,#ed893622,#ed893640)' },
+    { label: 'Leave Request',   icon: 'event_busy',      path: '/teacher/leave',      color: '#e53e3e', grad: 'linear-gradient(135deg,#e53e3e22,#e53e3e40)' },
+    { label: 'Class Diary',     icon: 'photo_library',   path: '/teacher/diary',      color: '#38b2ac', grad: 'linear-gradient(135deg,#38b2ac22,#38b2ac40)' },
+  ];
+
+  const bannerGrad = isClassTeacher && primaryClassLabel
+    ? 'linear-gradient(135deg, #134e4a 0%, #0f766e 50%, #0d9488 100%)'
+    : isSubjectTeacherOnly
+      ? 'linear-gradient(135deg, #2e1065 0%, #4c1d95 50%, #5b21b6 100%)'
+      : 'linear-gradient(135deg, #0c1445 0%, #1e3a8a 50%, #1d4ed8 100%)';
+
+  const bannerAccent = isClassTeacher && primaryClassLabel ? '#5eead4'
+    : isSubjectTeacherOnly ? '#c4b5fd'
+    : '#93c5fd';
+
   return (
     <Layout pageTitle="Teacher Dashboard">
       <SEOMeta title="Teacher Dashboard" description="Your daily schedule, class attendance, and student overview." />
-      {/* Page Header */}
-      <div className="page-header">
-      </div>
 
-      {/* Role Banner — shows class teacher info or subject teacher badge */}
-      {classTeacherInfo !== null && (
-        isClassTeacher && primaryClassLabel ? (
-          <div style={{
-            background: 'linear-gradient(135deg, #276749 0%, #38a169 100%)',
-            borderRadius: 14, padding: '18px 24px', marginBottom: 24,
-            display: 'flex', alignItems: 'center', gap: 16,
-            boxShadow: '0 4px 16px rgba(39,103,73,0.25)',
-          }}>
-            <div style={{ width: 52, height: 52, borderRadius: 12, background: 'rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <span className="material-icons" style={{ fontSize: 28, color: '#fff' }}>assignment_ind</span>
+      {/* Welcome Banner */}
+      <div style={{
+        background: bannerGrad,
+        borderRadius: 18, padding: '28px 32px', marginBottom: 24, color: '#fff',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.18)', position: 'relative', overflow: 'hidden',
+      }}>
+        {/* Decorative blobs */}
+        <div style={{ position: 'absolute', top: -40, right: -40, width: 200, height: 200, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', bottom: -60, right: 80, width: 140, height: 140, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }} />
+
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+          <div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+              {greeting()}
             </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', fontWeight: 600, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                Class Teacher Responsibility
-              </div>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.65)', marginBottom: 2 }}>Class Teacher Of</div>
-              <div style={{ fontSize: 24, fontWeight: 800, color: '#fff', lineHeight: 1.2 }}>
-                {classTeacherInfo.className}
-                {classTeacherInfo.section && (
-                  <span style={{ fontSize: 20, marginLeft: 6 }}>– Section {classTeacherInfo.section}</span>
-                )}
-              </div>
-            </div>
-            <div style={{ textAlign: 'right', flexShrink: 0 }}>
-              <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', borderRadius: 20, padding: '4px 14px', fontSize: 12, fontWeight: 700 }}>
-                ⭐ {roleLabel}
+            <h1 style={{ margin: 0, fontSize: 26, fontWeight: 900, color: '#fff', lineHeight: 1.2 }}>
+              {teacherProfile?.name || user?.name || 'Teacher'}
+            </h1>
+            <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <span style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', borderRadius: 20, padding: '3px 12px', fontSize: 12, fontWeight: 600 }}>
+                {roleLabel}
               </span>
-              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', marginTop: 8, fontWeight: 600 }}>
-                {primaryClassStudents.filter(s => s.status !== 'Inactive').length} students
-              </div>
-            </div>
-          </div>
-        ) : isSubjectTeacherOnly ? (
-          <div style={{
-            background: 'linear-gradient(135deg, #553c9a 0%, #805ad5 100%)',
-            borderRadius: 14, padding: '18px 24px', marginBottom: 24,
-            display: 'flex', alignItems: 'center', gap: 16,
-            boxShadow: '0 4px 16px rgba(128,90,213,0.25)',
-          }}>
-            <div style={{ width: 52, height: 52, borderRadius: 12, background: 'rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <span className="material-icons" style={{ fontSize: 28, color: '#fff' }}>menu_book</span>
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', fontWeight: 600, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                Role
-              </div>
-              <div style={{ fontSize: 24, fontWeight: 800, color: '#fff', lineHeight: 1.2 }}>
-                Subject Teacher
-              </div>
               {(teacherProfile?.subject || user?.subject) && (
-                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', marginTop: 4 }}>
+                <span style={{ background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.85)', borderRadius: 20, padding: '3px 12px', fontSize: 12 }}>
                   {teacherProfile?.subject || user?.subject}
-                </div>
+                </span>
               )}
             </div>
-            <div style={{ textAlign: 'right', flexShrink: 0 }}>
-              <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', borderRadius: 20, padding: '4px 14px', fontSize: 12, fontWeight: 700 }}>
-                Subject Teacher
+          </div>
+
+          {/* Banner stats */}
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            {[
+              { label: "Today's Classes", value: todaySchedule.length, icon: 'today' },
+              { label: 'My Students', value: classStudents.filter(s => s.status !== 'Inactive').length, icon: 'school' },
+              { label: 'Assigned Classes', value: assignedClasses.length, icon: 'class' },
+            ].map(b => (
+              <div key={b.label} style={{ background: 'rgba(255,255,255,0.12)', borderRadius: 12, padding: '12px 18px', textAlign: 'center', minWidth: 80, border: '1px solid rgba(255,255,255,0.15)' }}>
+                <span className="material-icons" style={{ fontSize: 18, color: bannerAccent, display: 'block', marginBottom: 4 }}>{b.icon}</span>
+                <div style={{ fontSize: 22, fontWeight: 900, color: '#fff', lineHeight: 1 }}>{b.value}</div>
+                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', marginTop: 3, fontWeight: 600 }}>{b.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Class teacher / subject teacher tag line */}
+        {classTeacherInfo !== null && isClassTeacher && primaryClassLabel && (
+          <div style={{ marginTop: 18, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span className="material-icons" style={{ fontSize: 18, color: bannerAccent }}>assignment_ind</span>
+            <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.85)', fontWeight: 600 }}>
+              Class Teacher of{' '}
+              <span style={{ color: '#fff', fontWeight: 800 }}>
+                {classTeacherInfo.className}{classTeacherInfo.section ? ` – Section ${classTeacherInfo.section}` : ''}
               </span>
-              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', marginTop: 8, fontWeight: 600 }}>
-                {assignedClasses.length} class{assignedClasses.length !== 1 ? 'es' : ''} assigned
-              </div>
-            </div>
+              {' '}·{' '}
+              <span style={{ color: bannerAccent }}>{primaryClassStudents.filter(s => s.status !== 'Inactive').length} active students</span>
+            </span>
           </div>
-        ) : (
-          <div style={{
-            background: '#f7fafc', border: '1.5px solid #e2e8f0',
-            borderRadius: 14, padding: '16px 22px', marginBottom: 24,
-            display: 'flex', alignItems: 'center', gap: 14,
-          }}>
-            <div style={{ width: 44, height: 44, borderRadius: 10, background: '#edf2f7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <span className="material-icons" style={{ fontSize: 22, color: '#a0aec0' }}>assignment_ind</span>
-            </div>
-            <div>
-              <div style={{ fontSize: 12, color: '#a0aec0', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>
-                Class Teacher Responsibility
-              </div>
-              <div style={{ fontSize: 14, color: '#718096', fontWeight: 500 }}>
-                No primary class assigned yet
-              </div>
-            </div>
-          </div>
-        )
-      )}
+        )}
+      </div>
 
       {/* Stats */}
-      <div className="stats-grid">
+      <div className="stats-grid" style={{ marginBottom: 24 }}>
         {stats.map((s, i) => (
-          s.isText
-            ? (
-              <div key={i} style={{ background: '#fff', borderRadius: 14, padding: '20px 22px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 14 }}>
-                <div style={{ width: 50, height: 50, borderRadius: 12, background: s.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span className="material-icons" style={{ color: s.color, fontSize: 24 }}>{s.icon}</span>
-                </div>
-                <div>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: '#1a202c', lineHeight: 1.2 }}>{s.value}</div>
-                  <div style={{ fontSize: 12, color: '#a0aec0', marginTop: 3 }}>{s.title}</div>
-                </div>
+          s.isText ? (
+            <div key={i} style={{
+              background: '#fff', borderRadius: 18, padding: '22px 20px 18px',
+              boxShadow: '0 2px 14px rgba(0,0,0,0.07)', border: '1px solid #f0f4f8',
+              position: 'relative', overflow: 'hidden',
+            }}>
+              <div style={{ position: 'absolute', top: -24, right: -24, width: 90, height: 90, borderRadius: '50%', background: s.color + '14', pointerEvents: 'none' }} />
+              <div style={{ width: 50, height: 50, borderRadius: 14, background: `linear-gradient(135deg,${s.color}22,${s.color}40)`, border: `1.5px solid ${s.color}35`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+                <span className="material-icons" style={{ color: s.color, fontSize: 26 }}>{s.icon}</span>
               </div>
-            )
-            : <StatCard key={i} {...s} />
+              <div style={{ fontSize: 17, fontWeight: 800, color: '#1a202c', lineHeight: 1.2, marginBottom: 6, letterSpacing: '-0.3px', fontFamily: 'Poppins,sans-serif' }}>{s.value}</div>
+              <div style={{ fontSize: 12.5, fontWeight: 600, color: '#8a99b0', letterSpacing: '0.02em' }}>{s.title}</div>
+              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 4, background: `linear-gradient(90deg,${s.color},${s.color}50)`, borderRadius: '0 0 18px 18px' }} />
+            </div>
+          ) : (
+            <StatCard key={i} {...s} />
+          )
         ))}
       </div>
 
       {/* Quick Actions */}
-      <div className="card border-0 shadow-sm mb-4">
-        <div className="card-body p-3">
-          <h6 className="fw-bold mb-3">Quick Actions</h6>
-          <div className="d-flex gap-2 flex-wrap">
-            {[
-              { label: 'Mark Attendance', icon: 'fact_check',    path: '/teacher/attendance', color: '#0de1e8' },
-              { label: 'My Schedule',     icon: 'calendar_today', path: '/teacher/schedule',   color: '#4361ee' },
-              { label: 'Student Marks',   icon: 'grade',          path: '/teacher/marks',      color: '#805ad5' },
-              { label: 'Homework',        icon: 'menu_book',      path: '/teacher/homework',   color: '#ed8936' },
-            ].map(action => (
-              <button
-                key={action.label}
-                className="btn btn-light btn-sm d-flex align-items-center gap-2"
-                onClick={() => navigate(action.path)}
-                style={{ borderRadius: 8, padding: '8px 14px' }}
-              >
-                <span className="material-icons" style={{ fontSize: 18, color: action.color }}>{action.icon}</span>
-                <span className="fw-medium" style={{ fontSize: 13 }}>{action.label}</span>
-              </button>
-            ))}
-          </div>
+      <div style={{ background: '#fff', borderRadius: 18, padding: '22px 24px', boxShadow: '0 2px 14px rgba(0,0,0,0.07)', border: '1px solid #f0f4f8', marginBottom: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18 }}>
+          <div style={{ width: 4, height: 20, background: 'linear-gradient(180deg,#0de1e8,#4361ee)', borderRadius: 2 }} />
+          <span style={{ fontSize: 15, fontWeight: 700, color: '#1a202c' }}>Quick Actions</span>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 12 }}>
+          {QUICK_ACTIONS.map(action => (
+            <div
+              key={action.label}
+              onClick={() => navigate(action.path)}
+              style={{ borderRadius: 14, padding: '16px 12px', cursor: 'pointer', background: '#fafbfc', border: '1.5px solid #f0f4f8', textAlign: 'center', transition: 'transform 0.15s, box-shadow 0.15s' }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 8px 24px ${action.color}28`; e.currentTarget.style.borderColor = action.color + '50'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = '#f0f4f8'; }}
+            >
+              <div style={{ width: 48, height: 48, borderRadius: 13, background: action.grad, border: `1.5px solid ${action.color}35`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px' }}>
+                <span className="material-icons" style={{ fontSize: 24, color: action.color }}>{action.icon}</span>
+              </div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#2d3748', lineHeight: 1.3 }}>{action.label}</div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -382,15 +384,16 @@ export default function TeacherDashboard() {
       <div className="grid-1-1" style={{ marginBottom: '24px' }}>
 
         {/* Today's Schedule */}
-        <div className="chart-card">
-          <div className="chart-card-header">
-            <div>
-              <div className="chart-card-title">Today's Schedule</div>
-              <div className="chart-card-subtitle">
-                {todayName} · {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long' })}
+        <div style={{ background: '#fff', borderRadius: 18, padding: '22px 24px', boxShadow: '0 2px 14px rgba(0,0,0,0.07)', border: '1px solid #f0f4f8' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ width: 4, height: 20, background: 'linear-gradient(180deg,#4361ee,#0de1e8)', borderRadius: 2 }} />
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#1a202c' }}>Today's Schedule</div>
+                <div style={{ fontSize: 12, color: '#a0aec0', marginTop: 1 }}>{todayName} · {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long' })}</div>
               </div>
             </div>
-            <span style={{ padding: '4px 12px', background: '#0de1e820', color: '#0de1e8', borderRadius: '20px', fontSize: '12px', fontWeight: 600 }}>
+            <span style={{ padding: '4px 12px', background: '#4361ee18', color: '#4361ee', borderRadius: '20px', fontSize: '12px', fontWeight: 600 }}>
               {todaySchedule.length} {todaySchedule.length === 1 ? 'Class' : 'Classes'}
             </span>
           </div>
@@ -446,11 +449,12 @@ export default function TeacherDashboard() {
         </div>
 
         {/* Attendance Trend */}
-        <div className="chart-card">
-          <div className="chart-card-header">
+        <div style={{ background: '#fff', borderRadius: 18, padding: '22px 24px', boxShadow: '0 2px 14px rgba(0,0,0,0.07)', border: '1px solid #f0f4f8' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18 }}>
+            <div style={{ width: 4, height: 20, background: 'linear-gradient(180deg,#0de1e8,#38b2ac)', borderRadius: 2 }} />
             <div>
-              <div className="chart-card-title">Attendance Trend</div>
-              <div className="chart-card-subtitle">Weekly attendance overview</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#1a202c' }}>Attendance Trend</div>
+              <div style={{ fontSize: 12, color: '#a0aec0', marginTop: 1 }}>Weekly attendance overview</div>
             </div>
           </div>
           <LineChartComponent
@@ -462,19 +466,23 @@ export default function TeacherDashboard() {
       </div>
 
       {/* Assigned Classes */}
-      <div style={{ background: '#fff', borderRadius: 14, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', marginBottom: 24 }}>
-        <div style={{ padding: '18px 22px', borderBottom: '1px solid #f0f4f8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: '#1a202c' }}>My Assigned Classes</div>
-            <div style={{ fontSize: 12, color: '#a0aec0', marginTop: 2 }}>
-              {assignedClasses.length > 0
-                ? `${assignedClasses.length} class${assignedClasses.length > 1 ? 'es' : ''} · ${classStudents.filter(s => s.status !== 'Inactive').length} active students`
-                : 'No classes assigned yet'}
+      <div style={{ background: '#fff', borderRadius: 18, boxShadow: '0 2px 14px rgba(0,0,0,0.07)', border: '1px solid #f0f4f8', marginBottom: 24 }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid #f0f4f8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 4, height: 20, background: 'linear-gradient(180deg,#276749,#38a169)', borderRadius: 2 }} />
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#1a202c' }}>My Assigned Classes</div>
+              <div style={{ fontSize: 12, color: '#a0aec0', marginTop: 2 }}>
+                {assignedClasses.length > 0
+                  ? `${assignedClasses.length} class${assignedClasses.length > 1 ? 'es' : ''} · ${classStudents.filter(s => s.status !== 'Inactive').length} active students`
+                  : 'No classes assigned yet'}
+              </div>
             </div>
           </div>
           <button onClick={() => navigate('/teacher/attendance')}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0de1e8', fontWeight: 600, fontSize: 13 }}>
-            Mark Attendance →
+            style={{ background: 'linear-gradient(135deg,#0de1e822,#0de1e840)', border: '1.5px solid #0de1e835', borderRadius: 8, cursor: 'pointer', color: '#0891b2', fontWeight: 700, fontSize: 12, padding: '7px 14px', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span className="material-icons" style={{ fontSize: 15 }}>fact_check</span>
+            Mark Attendance
           </button>
         </div>
 
@@ -537,11 +545,14 @@ export default function TeacherDashboard() {
 
       {/* Students Table (first 8) */}
       {classStudents.length > 0 && (
-        <div style={{ background: '#fff', borderRadius: 14, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-          <div style={{ padding: '18px 22px', borderBottom: '1px solid #f0f4f8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: '#1a202c' }}>My Students</div>
-              <div style={{ fontSize: 12, color: '#a0aec0', marginTop: 2 }}>Students in your assigned classes</div>
+        <div style={{ background: '#fff', borderRadius: 18, boxShadow: '0 2px 14px rgba(0,0,0,0.07)', border: '1px solid #f0f4f8' }}>
+          <div style={{ padding: '20px 24px', borderBottom: '1px solid #f0f4f8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ width: 4, height: 20, background: 'linear-gradient(180deg,#3182ce,#0de1e8)', borderRadius: 2 }} />
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#1a202c' }}>My Students</div>
+                <div style={{ fontSize: 12, color: '#a0aec0', marginTop: 2 }}>Students in your assigned classes</div>
+              </div>
             </div>
             <button onClick={() => navigate('/teacher/attendance')}
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0de1e8', fontWeight: 600, fontSize: 13 }}>

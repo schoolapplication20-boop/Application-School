@@ -533,9 +533,12 @@ function OwnerDashboard() {
       {/* ── Demo Booking Leads ──────────────────────────────────────────────── */}
       <div style={{ marginTop: 32 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-          <div>
-            <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#1a202c' }}>Demo Booking Leads</h2>
-            <p style={{ margin: '2px 0 0', fontSize: 12, color: '#718096' }}>Schools that submitted the "Book Free Demo" form on the website</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 4, height: 24, background: 'linear-gradient(180deg,#7c3aed,#a78bfa)', borderRadius: 2 }} />
+            <div>
+              <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#1a202c' }}>Demo Booking Leads</h2>
+              <p style={{ margin: '2px 0 0', fontSize: 12, color: '#718096' }}>Schools that submitted the "Book Free Demo" form on the website</p>
+            </div>
           </div>
           <span style={{ background: '#ede9fe', color: '#5b21b6', borderRadius: 20, padding: '2px 12px', fontSize: 12, fontWeight: 700 }}>
             {demoBookings.filter(b => b.status === 'NEW').length} new
@@ -605,15 +608,16 @@ function OwnerDashboard() {
       {/* ── System Maintenance Notice ──────────────────────────────────────── */}
       <div className="data-table-card" style={{ marginTop: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+          <div style={{ width: 4, height: 20, background: 'linear-gradient(180deg,#d97706,#fbbf24)', borderRadius: 2, flexShrink: 0 }} />
           <span className="material-icons" style={{ color: '#d97706', fontSize: 22 }}>announcement</span>
-          <div>
+          <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 700, fontSize: 15, color: '#2d3748' }}>System Maintenance Notice</div>
             <div style={{ fontSize: 12, color: '#718096', marginTop: 2 }}>
               This message will appear as a banner on every user's dashboard
             </div>
           </div>
           {activeNotice && (
-            <span style={{ marginLeft: 'auto', background: '#fef3c7', color: '#92400e', border: '1.5px solid #fcd34d', padding: '3px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>
+            <span style={{ background: '#fef3c7', color: '#92400e', border: '1.5px solid #fcd34d', padding: '3px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>
               ACTIVE
             </span>
           )}

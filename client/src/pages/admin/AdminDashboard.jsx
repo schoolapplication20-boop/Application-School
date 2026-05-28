@@ -11,33 +11,21 @@ import { getLogs } from '../../services/activityLog';
 import SEOMeta from '../../components/SEOMeta';
 
 const revenueData = [
-  { name: 'Jan', revenue: 0, expenses: 0 },
-  { name: 'Feb', revenue: 0, expenses: 0 },
-  { name: 'Mar', revenue: 0, expenses: 0 },
-  { name: 'Apr', revenue: 0, expenses: 0 },
-  { name: 'May', revenue: 0, expenses: 0 },
-  { name: 'Jun', revenue: 0, expenses: 0 },
-  { name: 'Jul', revenue: 0, expenses: 0 },
-  { name: 'Aug', revenue: 0, expenses: 0 },
-  { name: 'Sep', revenue: 0, expenses: 0 },
-  { name: 'Oct', revenue: 0, expenses: 0 },
-  { name: 'Nov', revenue: 0, expenses: 0 },
-  { name: 'Dec', revenue: 0, expenses: 0 },
+  { name: 'Jan', revenue: 0, expenses: 0 }, { name: 'Feb', revenue: 0, expenses: 0 },
+  { name: 'Mar', revenue: 0, expenses: 0 }, { name: 'Apr', revenue: 0, expenses: 0 },
+  { name: 'May', revenue: 0, expenses: 0 }, { name: 'Jun', revenue: 0, expenses: 0 },
+  { name: 'Jul', revenue: 0, expenses: 0 }, { name: 'Aug', revenue: 0, expenses: 0 },
+  { name: 'Sep', revenue: 0, expenses: 0 }, { name: 'Oct', revenue: 0, expenses: 0 },
+  { name: 'Nov', revenue: 0, expenses: 0 }, { name: 'Dec', revenue: 0, expenses: 0 },
 ];
 
 const attendanceData = [
-  { name: 'Jan', attendance: 88 },
-  { name: 'Feb', attendance: 85 },
-  { name: 'Mar', attendance: 90 },
-  { name: 'Apr', attendance: 87 },
-  { name: 'May', attendance: 92 },
-  { name: 'Jun', attendance: 89 },
-  { name: 'Jul', attendance: 86 },
-  { name: 'Aug', attendance: 91 },
-  { name: 'Sep', attendance: 94 },
-  { name: 'Oct', attendance: 93 },
-  { name: 'Nov', attendance: 90 },
-  { name: 'Dec', attendance: 88 },
+  { name: 'Jan', attendance: 88 }, { name: 'Feb', attendance: 85 },
+  { name: 'Mar', attendance: 90 }, { name: 'Apr', attendance: 87 },
+  { name: 'May', attendance: 92 }, { name: 'Jun', attendance: 89 },
+  { name: 'Jul', attendance: 86 }, { name: 'Aug', attendance: 91 },
+  { name: 'Sep', attendance: 94 }, { name: 'Oct', attendance: 93 },
+  { name: 'Nov', attendance: 90 }, { name: 'Dec', attendance: 88 },
 ];
 
 const fmtDate = (d) => {
@@ -48,6 +36,22 @@ const fmtDate = (d) => {
 
 const getInitials = (name) => name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
+const greeting = () => {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good Morning';
+  if (h < 17) return 'Good Afternoon';
+  return 'Good Evening';
+};
+
+const QUICK_ACTIONS = [
+  { label: 'Add Student',   icon: 'person_add',            path: '/admin/students',     grad: 'linear-gradient(135deg,#0de1e8,#0369a1)' },
+  { label: 'Add Teacher',   icon: 'school',                path: '/admin/teachers',     grad: 'linear-gradient(135deg,#667eea,#764ba2)' },
+  { label: 'Collect Fee',   icon: 'point_of_sale',         path: '/admin/collect-fee',  grad: 'linear-gradient(135deg,#f6ad55,#dd6b20)' },
+  { label: 'Applications',  icon: 'assignment_ind',        path: '/admin/applications', grad: 'linear-gradient(135deg,#805ad5,#553c9a)' },
+  { label: 'View Reports',  icon: 'bar_chart',             path: '/admin/fees',         grad: 'linear-gradient(135deg,#17a2b8,#0f6674)' },
+  { label: 'Pay Salaries',  icon: 'account_balance_wallet',path: '/admin/salaries',     grad: 'linear-gradient(135deg,#38a169,#276749)' },
+];
+
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -55,86 +59,62 @@ export default function AdminDashboard() {
 
   const [chartPeriod, setChartPeriod] = useState('12M');
   const [toast, setToast] = useState(null);
-
-  // ── Recent Applications (real DB) ──
   const [applications,     setApplications]     = useState([]);
   const [appsLoading,      setAppsLoading]      = useState(true);
-
-  // ── Recent Fee Payments (real DB) ──
   const [recentFees,       setRecentFees]       = useState([]);
   const [feesLoading,      setFeesLoading]      = useState(true);
-
-  // ── Real-time dashboard counts from backend ──
-  const [dbStats,    setDbStats]    = useState(null);
-  const [statsLoading, setStatsLoading] = useState(true);
-  const [statsError,   setStatsError]   = useState(null);
-  const [lastRefresh,  setLastRefresh]  = useState(null);
-  const [refreshing,   setRefreshing]   = useState(false);
+  const [dbStats,          setDbStats]          = useState(null);
+  const [statsLoading,     setStatsLoading]     = useState(true);
+  const [statsError,       setStatsError]       = useState(null);
+  const [lastRefresh,      setLastRefresh]      = useState(null);
+  const [refreshing,       setRefreshing]       = useState(false);
 
   const fetchDashboardStats = useCallback(async (silent = false) => {
-    if (silent) setRefreshing(true);
-    else setStatsLoading(true);
+    if (silent) setRefreshing(true); else setStatsLoading(true);
     setStatsError(null);
     try {
       const res = await adminAPI.getDashboardStats();
-      const data = res.data?.data ?? res.data ?? {};
-      setDbStats(data);
+      setDbStats(res.data?.data ?? res.data ?? {});
       setLastRefresh(new Date());
     } catch (err) {
       setStatsError(err?.response?.data?.message || 'Failed to load dashboard data');
-    } finally {
-      setStatsLoading(false);
-      setRefreshing(false);
-    }
+    } finally { setStatsLoading(false); setRefreshing(false); }
   }, []);
 
   useEffect(() => {
     fetchDashboardStats();
-    // Auto-refresh every 60 s
-    const timer = setInterval(() => fetchDashboardStats(true), 60000);
-    return () => clearInterval(timer);
+    const t = setInterval(() => fetchDashboardStats(true), 60000);
+    return () => clearInterval(t);
   }, [fetchDashboardStats]);
 
-  // ── Fetch recent applications ──────────────────────────────────────────────
   useEffect(() => {
     setAppsLoading(true);
     applicationAPI.getAll()
       .then(res => {
         const list = res.data?.data ?? res.data ?? [];
-        // Sort by createdAt descending, take latest 5
-        const sorted = [...(Array.isArray(list) ? list : [])]
-          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-          .slice(0, 5);
-        setApplications(sorted);
+        setApplications([...(Array.isArray(list) ? list : [])].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5));
       })
       .catch(() => setApplications([]))
       .finally(() => setAppsLoading(false));
   }, []);
 
-  // ── Fetch recent fee payments ──────────────────────────────────────────────
   useEffect(() => {
     setFeesLoading(true);
     adminAPI.getAllFeePayments()
       .then(res => {
         const list = res.data?.data ?? res.data ?? [];
-        const sorted = [...(Array.isArray(list) ? list : [])]
-          .sort((a, b) => new Date(b.createdAt || b.paymentDate) - new Date(a.createdAt || a.paymentDate))
-          .slice(0, 5);
-        setRecentFees(sorted);
+        setRecentFees([...(Array.isArray(list) ? list : [])].sort((a, b) => new Date(b.createdAt || b.paymentDate) - new Date(a.createdAt || a.paymentDate)).slice(0, 5));
       })
       .catch(() => setRecentFees([]))
       .finally(() => setFeesLoading(false));
   }, []);
 
-  // Super Admin only state
   const [admins, setAdmins] = useState([]);
   const [logs,   setLogs]   = useState([]);
 
   useEffect(() => {
     if (!isSuperAdmin) return;
-    superAdminAPI.getAdmins()
-      .then(res => setAdmins(res.data?.data ?? []))
-      .catch(() => setAdmins([]));
+    superAdminAPI.getAdmins().then(res => setAdmins(res.data?.data ?? [])).catch(() => setAdmins([]));
     setLogs(getLogs().slice(0, 8));
   }, [isSuperAdmin]);
 
@@ -154,7 +134,7 @@ export default function AdminDashboard() {
     try {
       await applicationAPI.updateStatus(id, { status: 'APPROVED' });
       setApplications(prev => prev.map(a => a.id === id ? { ...a, status: 'APPROVED' } : a));
-      fetchDashboardStats(true); // refresh pending count
+      fetchDashboardStats(true);
       showToast('Application approved successfully');
     } catch { showToast('Failed to approve application', 'error'); }
   };
@@ -169,134 +149,144 @@ export default function AdminDashboard() {
   };
 
   const stats = [
-    {
-      title: 'Total Students',
-      value: statsLoading ? '…' : (dbStats?.totalStudents ?? 0),
-      icon: 'school', color: '#0de1e8',
-    },
-    {
-      title: 'Total Teachers',
-      value: statsLoading ? '…' : (dbStats?.totalTeachers ?? 0),
-      icon: 'person', color: '#3182ce',
-    },
-    {
-      title: 'Total Classes',
-      value: statsLoading ? '…' : (dbStats?.totalClasses ?? 0),
-      icon: 'class', color: '#805ad5',
-    },
-    {
-      title: 'Total Exams',
-      value: statsLoading ? '…' : (dbStats?.totalExams ?? 0),
-      icon: 'event_note', color: '#dd6b20',
-    },
-    {
-      title: 'Total Revenue',
-      value: statsLoading ? '…' : Math.round(Number(dbStats?.totalRevenue ?? 0)),
-      icon: 'payments', color: '#38a169',
-      prefix: '₹',
-    },
-    {
-      title: 'Total Expenses',
-      value: statsLoading ? '…' : Math.round(Number(dbStats?.totalExpenses ?? 0)),
-      icon: 'receipt_long', color: '#e53e3e',
-      prefix: '₹',
-    },
+    { title: 'Total Students', value: statsLoading ? '…' : (dbStats?.totalStudents ?? 0),                        icon: 'school',          color: '#0de1e8' },
+    { title: 'Total Teachers', value: statsLoading ? '…' : (dbStats?.totalTeachers ?? 0),                        icon: 'person',          color: '#667eea' },
+    { title: 'Total Classes',  value: statsLoading ? '…' : (dbStats?.totalClasses ?? 0),                         icon: 'class',           color: '#805ad5' },
+    { title: 'Total Exams',    value: statsLoading ? '…' : (dbStats?.totalExams ?? 0),                           icon: 'event_note',      color: '#f6ad55' },
+    { title: 'Total Revenue',  value: statsLoading ? '…' : Math.round(Number(dbStats?.totalRevenue ?? 0)),        icon: 'payments',        color: '#38a169', prefix: '₹' },
+    { title: 'Total Expenses', value: statsLoading ? '…' : Math.round(Number(dbStats?.totalExpenses ?? 0)),       icon: 'receipt_long',    color: '#e53e3e', prefix: '₹' },
   ];
 
   const statusBadge = (status) => {
-    const map = { APPROVED: 'success', PENDING: 'warning', REJECTED: 'danger', Approved: 'success', Pending: 'warning', Rejected: 'danger' };
-    const label = { APPROVED: 'Approved', PENDING: 'Pending', REJECTED: 'Rejected' };
-    return <span className={`badge bg-${map[status] || 'secondary'}`}>{label[status] || status}</span>;
+    const cfg = { APPROVED: ['#f0fff4','#276749'], PENDING: ['#fffaf0','#c05621'], REJECTED: ['#fff5f5','#c53030'] };
+    const [bg, clr] = cfg[status] || ['#f7fafc','#4a5568'];
+    return <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: bg, color: clr }}>{status}</span>;
   };
 
+  const today = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
   return (
-    <Layout pageTitle="Admin Dashboard">
+    <Layout pageTitle="Dashboard">
       <SEOMeta title="Admin Dashboard" description="School administration overview — students, teachers, fees and attendance at a glance." />
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-      <div className="page-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+      {/* ── Welcome Banner ─────────────────────────────────────────────────────── */}
+      <div style={{
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 55%, #312e81 100%)',
+        borderRadius: 20, padding: '28px 32px', marginBottom: 28,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
+        color: '#fff', position: 'relative', overflow: 'hidden',
+        boxShadow: '0 8px 32px rgba(30,58,138,0.35)',
+      }}>
+        <div style={{ position: 'absolute', top: -40, right: -40, width: 200, height: 200, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', bottom: -50, right: 80, width: 140, height: 140, borderRadius: '50%', background: 'rgba(255,255,255,0.03)', pointerEvents: 'none' }} />
         <div>
-          <h1>Dashboard Overview</h1>
-          <p>
-            Welcome back! Here's what's happening with your school today.
-            {lastRefresh && (
-              <span style={{ marginLeft: 10, fontSize: 11, color: '#a0aec0', fontWeight: 400 }}>
-                Last updated: {lastRefresh.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-              </span>
-            )}
-          </p>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+            {today}
+          </div>
+          <div style={{ fontSize: 26, fontWeight: 800, lineHeight: 1.2, marginBottom: 6 }}>
+            {greeting()}, {user?.name?.split(' ')[0] || 'Admin'}! 👋
+          </div>
+          <div style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.7)' }}>
+            Here's what's happening in your school today.
+            {lastRefresh && <span style={{ marginLeft: 10, fontSize: 11, opacity: 0.6 }}>Updated {lastRefresh.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>}
+          </div>
         </div>
-        <button
-          onClick={() => fetchDashboardStats(true)}
-          disabled={refreshing || statsLoading}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 9, border: '1px solid #e2e8f0', background: '#fff', color: '#4a5568', cursor: (refreshing || statsLoading) ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap' }}>
-          <span className="material-icons" style={{ fontSize: 16, transition: 'transform 0.3s', transform: refreshing ? 'rotate(360deg)' : 'none' }}>refresh</span>
-          {refreshing ? 'Refreshing…' : 'Refresh'}
-        </button>
+        <div style={{ display: 'flex', gap: 20, flexShrink: 0 }}>
+          {[
+            { label: 'Students', val: dbStats?.totalStudents ?? '—', icon: 'school' },
+            { label: 'Teachers', val: dbStats?.totalTeachers ?? '—', icon: 'person' },
+            { label: 'Pending', val: dbStats?.pendingApplications ?? '—', icon: 'pending_actions' },
+          ].map(b => (
+            <div key={b.label} style={{ textAlign: 'center', background: 'rgba(255,255,255,0.1)', borderRadius: 14, padding: '14px 20px', backdropFilter: 'blur(4px)' }}>
+              <span className="material-icons" style={{ fontSize: 20, color: 'rgba(255,255,255,0.7)', display: 'block', marginBottom: 4 }}>{b.icon}</span>
+              <div style={{ fontSize: 22, fontWeight: 800, lineHeight: 1 }}>{statsLoading ? '…' : b.val}</div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.65)', marginTop: 3 }}>{b.label}</div>
+            </div>
+          ))}
+          <button onClick={() => fetchDashboardStats(true)} disabled={refreshing || statsLoading}
+            style={{ alignSelf: 'center', display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 10, border: '1.5px solid rgba(255,255,255,0.25)', background: 'rgba(255,255,255,0.1)', color: '#fff', cursor: (refreshing || statsLoading) ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: 13, backdropFilter: 'blur(4px)' }}>
+            <span className="material-icons" style={{ fontSize: 16, transition: 'transform 0.4s', transform: refreshing ? 'rotate(360deg)' : 'none' }}>refresh</span>
+            {refreshing ? 'Refreshing…' : 'Refresh'}
+          </button>
+        </div>
       </div>
 
       {/* API Error Banner */}
       {statsError && (
-        <div style={{ background: '#fff5f5', border: '1px solid #feb2b2', borderRadius: 10, padding: '12px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ background: '#fff5f5', border: '1px solid #feb2b2', borderRadius: 12, padding: '12px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
           <span className="material-icons" style={{ color: '#c53030', fontSize: 20 }}>error_outline</span>
           <span style={{ color: '#c53030', fontSize: 13, fontWeight: 600, flex: 1 }}>{statsError}</span>
-          <button onClick={() => fetchDashboardStats()} style={{ padding: '5px 14px', borderRadius: 8, border: 'none', background: '#c53030', color: '#fff', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>
-            Retry
-          </button>
+          <button onClick={() => fetchDashboardStats()} style={{ padding: '5px 14px', borderRadius: 8, border: 'none', background: '#c53030', color: '#fff', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>Retry</button>
         </div>
       )}
 
-      {/* Stats Cards */}
-      <div className="stats-grid">
-        {stats.map((stat, i) => (
-          <StatCard key={i} {...stat} />
-        ))}
+      {/* ── Stat Cards ────────────────────────────────────────────────────────── */}
+      <div className="stats-grid" style={{ marginBottom: 28 }}>
+        {stats.map((s, i) => <StatCard key={i} {...s} />)}
       </div>
 
-      {/* Super Admin: Admin Overview + Activity Log */}
+      {/* ── Quick Actions ─────────────────────────────────────────────────────── */}
+      <div style={{ marginBottom: 28 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+          <div style={{ width: 4, height: 20, borderRadius: 4, background: 'linear-gradient(180deg,#0de1e8,#0369a1)' }} />
+          <span style={{ fontSize: 15, fontWeight: 700, color: '#1a202c' }}>Quick Actions</span>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 14 }}>
+          {QUICK_ACTIONS.map(action => (
+            <div key={action.label} onClick={() => navigate(action.path)}
+              style={{ background: '#fff', borderRadius: 16, padding: '18px 12px', textAlign: 'center', cursor: 'pointer', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', border: '1px solid #f0f4f8', transition: 'all 0.2s' }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 12px 28px rgba(0,0,0,0.12)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 10px rgba(0,0,0,0.06)'; }}
+            >
+              <div style={{ width: 48, height: 48, borderRadius: 14, background: action.grad, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
+                <span className="material-icons" style={{ color: '#fff', fontSize: 24 }}>{action.icon}</span>
+              </div>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: '#2d3748', lineHeight: 1.3 }}>{action.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Super Admin: Admin Overview + Activity Log ────────────────────────── */}
       {isSuperAdmin && (
-        <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: '24px', marginBottom: '24px' }}>
-          {/* Admin Overview */}
-          <div className="data-table-card">
-            <div style={{ fontWeight: 700, fontSize: '15px', color: '#2d3748', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span className="material-icons" style={{ color: '#0de1e8', fontSize: '20px' }}>manage_accounts</span>
-              Admin Overview
-              <span style={{ marginLeft: 'auto', background: '#0de1e820', color: '#276749', padding: '2px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 700 }}>{admins.length} admins</span>
+        <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: 24, marginBottom: 28 }}>
+          <div style={{ background: '#fff', borderRadius: 18, boxShadow: '0 2px 14px rgba(0,0,0,0.07)', overflow: 'hidden' }}>
+            <div style={{ padding: '18px 22px', borderBottom: '1px solid #f0f4f8', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ width: 4, height: 20, borderRadius: 4, background: 'linear-gradient(180deg,#0de1e8,#0369a1)' }} />
+              <span style={{ fontSize: 15, fontWeight: 700, color: '#1a202c', flex: 1 }}>Admin Overview</span>
+              <span style={{ background: '#0de1e820', color: '#0369a1', padding: '3px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>{admins.length} admins</span>
             </div>
             {admins.length === 0 ? (
-              <div style={{ padding: '32px', textAlign: 'center' }}>
-                <span className="material-icons" style={{ fontSize: 40, color: '#e2e8f0', display: 'block', marginBottom: 8 }}>manage_accounts</span>
-                <p style={{ color: '#a0aec0', margin: 0 }}>No admins yet. Click "Add Admin" to create one.</p>
+              <div style={{ padding: '40px', textAlign: 'center', color: '#a0aec0' }}>
+                <span className="material-icons" style={{ fontSize: 40, display: 'block', marginBottom: 8, opacity: 0.4 }}>manage_accounts</span>
+                No admins yet.
               </div>
             ) : (
               <div style={{ overflowX: 'auto' }}>
                 <table className="data-table">
-                  <thead>
-                    <tr><th>Admin</th><th>Status</th><th>Permissions</th></tr>
-                  </thead>
+                  <thead><tr><th>Admin</th><th>Status</th><th>Permissions</th></tr></thead>
                   <tbody>
                     {admins.map(a => (
                       <tr key={a.id}>
                         <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#0de1e8,#0eb5da)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '11px', fontWeight: 700, flexShrink: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#0de1e8,#0369a1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
                               {a.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                             </div>
                             <div>
-                              <div style={{ fontWeight: 700, fontSize: '13px' }}>{a.name}</div>
-                              <div style={{ fontSize: '11px', color: '#a0aec0' }}>{a.email}</div>
+                              <div style={{ fontWeight: 700, fontSize: 13 }}>{a.name}</div>
+                              <div style={{ fontSize: 11, color: '#a0aec0' }}>{a.email}</div>
                             </div>
                           </div>
                         </td>
                         <td>
-                          <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 700, background: !(a.isActive ?? true) ? '#fff5f5' : '#f0fff4', color: !(a.isActive ?? true) ? '#e53e3e' : '#0de1e8' }}>
+                          <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: (a.isActive ?? true) ? '#f0fff4' : '#fff5f5', color: (a.isActive ?? true) ? '#276749' : '#e53e3e' }}>
                             {(a.isActive ?? true) ? 'Active' : 'Inactive'}
                           </span>
                         </td>
-                        <td style={{ fontSize: '12px', color: '#718096' }}>
-                          {a.permissions
-                            ? `${Object.values(a.permissions).filter(Boolean).length} modules`
-                            : 'Full Access'}
+                        <td style={{ fontSize: 12, color: '#718096' }}>
+                          {a.permissions ? `${Object.values(a.permissions).filter(Boolean).length} modules` : 'Full Access'}
                         </td>
                       </tr>
                     ))}
@@ -306,28 +296,27 @@ export default function AdminDashboard() {
             )}
           </div>
 
-          {/* Activity Log */}
-          <div className="data-table-card">
-            <div style={{ fontWeight: 700, fontSize: '15px', color: '#2d3748', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span className="material-icons" style={{ color: '#3182ce', fontSize: '20px' }}>timeline</span>
-              Recent Activity
+          <div style={{ background: '#fff', borderRadius: 18, boxShadow: '0 2px 14px rgba(0,0,0,0.07)', overflow: 'hidden' }}>
+            <div style={{ padding: '18px 22px', borderBottom: '1px solid #f0f4f8', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ width: 4, height: 20, borderRadius: 4, background: 'linear-gradient(180deg,#667eea,#764ba2)' }} />
+              <span style={{ fontSize: 15, fontWeight: 700, color: '#1a202c' }}>Recent Activity</span>
             </div>
             {logs.length === 0 ? (
-              <div style={{ padding: '32px', textAlign: 'center' }}>
-                <span className="material-icons" style={{ fontSize: 40, color: '#e2e8f0', display: 'block', marginBottom: 8 }}>timeline</span>
-                <p style={{ color: '#a0aec0', margin: 0 }}>No recent activity yet. Actions like creating or updating admins will appear here.</p>
+              <div style={{ padding: '40px', textAlign: 'center', color: '#a0aec0' }}>
+                <span className="material-icons" style={{ fontSize: 40, display: 'block', marginBottom: 8, opacity: 0.4 }}>timeline</span>
+                No recent activity
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <div style={{ padding: '8px 0' }}>
                 {logs.map((log, i) => (
-                  <div key={log.id} style={{ display: 'flex', gap: '12px', padding: '10px 0', borderBottom: i < logs.length - 1 ? '1px solid #f7fafc' : 'none' }}>
-                    <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#3182ce18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <span className="material-icons" style={{ fontSize: '14px', color: '#3182ce' }}>history</span>
+                  <div key={log.id} style={{ display: 'flex', gap: 12, padding: '10px 22px', borderBottom: i < logs.length - 1 ? '1px solid #f7fafc' : 'none' }}>
+                    <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#667eea18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <span className="material-icons" style={{ fontSize: 14, color: '#667eea' }}>history</span>
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '12px', color: '#2d3748', fontWeight: 500, lineHeight: 1.4 }}>{log.action}</div>
-                      <div style={{ fontSize: '10px', color: '#a0aec0', marginTop: '2px', display: 'flex', gap: '6px' }}>
-                        <span style={{ background: '#f7fafc', padding: '1px 6px', borderRadius: '8px' }}>{log.module}</span>
+                      <div style={{ fontSize: 12, color: '#2d3748', fontWeight: 500, lineHeight: 1.4 }}>{log.action}</div>
+                      <div style={{ fontSize: 10, color: '#a0aec0', marginTop: 2, display: 'flex', gap: 6 }}>
+                        <span style={{ background: '#f7fafc', padding: '1px 6px', borderRadius: 8 }}>{log.module}</span>
                         <span>{log.timestamp}</span>
                       </div>
                     </div>
@@ -339,136 +328,95 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Quick Actions */}
-      <div className="card border-0 shadow-sm mb-4">
-        <div className="card-body p-3">
-          <h6 className="fw-bold mb-3">Quick Actions</h6>
-          <div className="d-flex gap-2 flex-wrap">
-            {[
-              { label: 'Add Student', icon: 'person_add', path: '/admin/students', color: '#0de1e8' },
-              { label: 'Add Teacher', icon: 'person', path: '/admin/teachers', color: '#4361ee' },
-              { label: 'Collect Fee', icon: 'point_of_sale', path: '/admin/collect-fee', color: '#dd6b20' },
-              { label: 'Applications', icon: 'assignment_ind', path: '/admin/applications', color: '#805ad5' },
-              { label: 'View Reports', icon: 'bar_chart', path: '/admin/fees', color: '#17a2b8' },
-              { label: 'Pay Salaries', icon: 'account_balance_wallet', path: '/admin/salaries', color: '#38a169' },
-            ].map(action => (
-              <button
-                key={action.label}
-                className="btn btn-light btn-sm d-flex align-items-center gap-2"
-                onClick={() => navigate(action.path)}
-                style={{ borderRadius: 8, padding: '8px 14px' }}
-              >
-                <span className="material-icons" style={{ fontSize: 18, color: action.color }}>{action.icon}</span>
-                <span className="fw-medium" style={{ fontSize: 13 }}>{action.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Charts Section */}
-      <div className="charts-section">
-        <div className="chart-card">
-          <div className="chart-card-header">
+      {/* ── Charts Section ─────────────────────────────────────────────────────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24, marginBottom: 28, alignItems: 'start' }}>
+        <div style={{ background: '#fff', borderRadius: 18, boxShadow: '0 2px 14px rgba(0,0,0,0.07)', overflow: 'hidden' }}>
+          <div style={{ padding: '18px 22px', borderBottom: '1px solid #f0f4f8', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <div className="chart-card-title">Revenue vs Expenses</div>
-              <div className="chart-card-subtitle">Monthly financial overview</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                <div style={{ width: 4, height: 18, borderRadius: 4, background: 'linear-gradient(180deg,#38a169,#0de1e8)' }} />
+                <span style={{ fontSize: 15, fontWeight: 700, color: '#1a202c' }}>Revenue vs Expenses</span>
+              </div>
+              <div style={{ fontSize: 12, color: '#a0aec0', marginLeft: 12 }}>Monthly financial overview</div>
             </div>
-            <div className="chart-card-actions">
-              {['3M', '6M', '12M'].map(p => (
-                <button
-                  key={p}
-                  className={`chart-period-btn ${chartPeriod === p ? 'active' : ''}`}
-                  onClick={() => setChartPeriod(p)}
-                >
+            <div style={{ display: 'flex', gap: 6 }}>
+              {['3M','6M','12M'].map(p => (
+                <button key={p} onClick={() => setChartPeriod(p)}
+                  style={{ padding: '4px 12px', borderRadius: 8, border: `1.5px solid ${chartPeriod === p ? '#0de1e8' : '#e2e8f0'}`, background: chartPeriod === p ? '#0de1e8' : '#fff', color: chartPeriod === p ? '#fff' : '#718096', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>
                   {p}
                 </button>
               ))}
             </div>
           </div>
-          <BarChartComponent
-            data={chartPeriod === '3M' ? revenueData.slice(-3) : chartPeriod === '6M' ? revenueData.slice(-6) : revenueData}
-            bars={[
-              { key: 'revenue', name: 'Revenue', color: '#0de1e8' },
-              { key: 'expenses', name: 'Expenses', color: '#e53e3e' },
-            ]}
-            height={280}
-          />
+          <div style={{ padding: '16px 8px 8px' }}>
+            <BarChartComponent
+              data={chartPeriod === '3M' ? revenueData.slice(-3) : chartPeriod === '6M' ? revenueData.slice(-6) : revenueData}
+              bars={[{ key: 'revenue', name: 'Revenue', color: '#0de1e8' }, { key: 'expenses', name: 'Expenses', color: '#e53e3e' }]}
+              height={260}
+            />
+          </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {[
-            { title: 'Total Classes',   value: statsLoading ? '…' : (dbStats?.totalClasses ?? 0),             icon: 'class',          color: '#0de1e8', desc: 'Active classrooms' },
-            { title: 'Total Exams',     value: statsLoading ? '…' : (dbStats?.totalExams ?? 0),               icon: 'event_note',     color: '#3182ce', desc: 'Exam schedules' },
-            { title: 'Pending Apps',    value: statsLoading ? '…' : (dbStats?.pendingApplications ?? 0),      icon: 'pending_actions',color: '#e53e3e', desc: 'Awaiting review' },
-            { title: 'Hall Tickets',    value: statsLoading ? '…' : (dbStats?.totalHallTickets ?? 0),         icon: 'confirmation_number', color: '#805ad5', desc: 'Generated' },
+            { title: 'Active Classes',    value: statsLoading ? '…' : (dbStats?.totalClasses ?? 0),        icon: 'class',              grad: 'linear-gradient(135deg,#0de1e8,#0369a1)',  light: '#ebf8ff' },
+            { title: 'Exams Scheduled',   value: statsLoading ? '…' : (dbStats?.totalExams ?? 0),          icon: 'event_note',         grad: 'linear-gradient(135deg,#667eea,#764ba2)',  light: '#e9d8fd' },
+            { title: 'Pending Apps',      value: statsLoading ? '…' : (dbStats?.pendingApplications ?? 0), icon: 'pending_actions',    grad: 'linear-gradient(135deg,#f6ad55,#e53e3e)',  light: '#fff5f5' },
+            { title: 'Hall Tickets',      value: statsLoading ? '…' : (dbStats?.totalHallTickets ?? 0),    icon: 'confirmation_number',grad: 'linear-gradient(135deg,#805ad5,#553c9a)',  light: '#faf5ff' },
           ].map(item => (
-            <div key={item.title} className="chart-card" style={{ padding: '16px 20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                <div style={{
-                  width: '44px', height: '44px', borderRadius: '12px',
-                  background: item.color + '15', display: 'flex', alignItems: 'center', justifyContent: 'center'
-                }}>
-                  <span className="material-icons" style={{ color: item.color, fontSize: '22px' }}>{item.icon}</span>
+            <div key={item.title} style={{ background: '#fff', borderRadius: 16, padding: '16px 18px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 14, border: '1px solid #f0f4f8' }}>
+              <div style={{ width: 46, height: 46, borderRadius: 13, background: item.grad, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 10px rgba(0,0,0,0.12)' }}>
+                <span className="material-icons" style={{ color: '#fff', fontSize: 22 }}>{item.icon}</span>
+              </div>
+              <div>
+                <div style={{ fontSize: 24, fontWeight: 800, color: '#1a202c', lineHeight: 1 }}>
+                  {typeof item.value === 'number' ? item.value.toLocaleString('en-IN') : item.value}
                 </div>
-                <div>
-                  <div style={{ fontSize: '20px', fontWeight: 700, color: '#2d3748' }}>
-                    {typeof item.value === 'number' ? item.value.toLocaleString('en-IN') : item.value}
-                  </div>
-                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#4a5568' }}>{item.title}</div>
-                  <div style={{ fontSize: '11px', color: '#a0aec0' }}>{item.desc}</div>
-                </div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: '#718096', marginTop: 3 }}>{item.title}</div>
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Attendance Chart */}
-      <div className="chart-card" style={{ marginBottom: '24px' }}>
-        <div className="chart-card-header">
+      {/* ── Attendance Chart ──────────────────────────────────────────────────── */}
+      <div style={{ background: '#fff', borderRadius: 18, boxShadow: '0 2px 14px rgba(0,0,0,0.07)', overflow: 'hidden', marginBottom: 28 }}>
+        <div style={{ padding: '18px 22px', borderBottom: '1px solid #f0f4f8', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ width: 4, height: 20, borderRadius: 4, background: 'linear-gradient(180deg,#38b2ac,#0de1e8)' }} />
           <div>
-            <div className="chart-card-title">Student Attendance Trend</div>
-            <div className="chart-card-subtitle">Monthly attendance percentage</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#1a202c' }}>Student Attendance Trend</div>
+            <div style={{ fontSize: 12, color: '#a0aec0' }}>Monthly attendance percentage</div>
           </div>
         </div>
-        <LineChartComponent
-          data={attendanceData}
-          lines={[{ key: 'attendance', name: 'Attendance %', color: '#0de1e8' }]}
-          height={220}
-        />
+        <div style={{ padding: '16px 8px 8px' }}>
+          <LineChartComponent data={attendanceData} lines={[{ key: 'attendance', name: 'Attendance %', color: '#0de1e8' }]} height={220} />
+        </div>
       </div>
 
-      {/* Bottom Tables */}
+      {/* ── Bottom Tables ────────────────────────────────────────────────────── */}
       <div className="tables-section">
-        {/* Recent Applications — real DB data */}
-        <div className="data-table-card">
-          <div className="data-table-header">
-            <span className="data-table-title">Recent Applications</span>
-            <button className="btn-view-all" onClick={() => navigate('/admin/applications')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0de1e8', fontWeight: 600 }}>View All →</button>
+        <div style={{ background: '#fff', borderRadius: 18, boxShadow: '0 2px 14px rgba(0,0,0,0.07)', overflow: 'hidden' }}>
+          <div style={{ padding: '18px 22px', borderBottom: '1px solid #f0f4f8', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ width: 4, height: 20, borderRadius: 4, background: 'linear-gradient(180deg,#805ad5,#553c9a)' }} />
+              <span style={{ fontSize: 15, fontWeight: 700, color: '#1a202c' }}>Recent Applications</span>
+            </div>
+            <button onClick={() => navigate('/admin/applications')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#805ad5', fontWeight: 700, fontSize: 13 }}>View All →</button>
           </div>
           <div style={{ overflowX: 'auto' }}>
             {appsLoading ? (
-              <div style={{ textAlign: 'center', padding: '32px 0', color: '#a0aec0', fontSize: 13 }}>
+              <div style={{ textAlign: 'center', padding: '40px 0', color: '#a0aec0', fontSize: 13 }}>
                 <span className="material-icons" style={{ fontSize: 28, display: 'block', marginBottom: 6, opacity: 0.4 }}>hourglass_top</span>
-                Loading applications…
+                Loading…
               </div>
             ) : applications.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '32px 0', color: '#a0aec0', fontSize: 13 }}>
+              <div style={{ textAlign: 'center', padding: '40px 0', color: '#a0aec0', fontSize: 13 }}>
                 <span className="material-icons" style={{ fontSize: 32, display: 'block', marginBottom: 6, color: '#e2e8f0' }}>assignment_ind</span>
                 No applications yet
               </div>
             ) : (
               <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Student</th>
-                    <th>Class</th>
-                    <th>Parent</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
+                <thead><tr><th>Student</th><th>Class</th><th>Parent</th><th>Status</th><th>Actions</th></tr></thead>
                 <tbody>
                   {applications.map(a => (
                     <tr key={a.id}>
@@ -486,9 +434,9 @@ export default function AdminDashboard() {
                       <td>{statusBadge(a.status)}</td>
                       <td>
                         {(a.status === 'PENDING' || a.status === 'Pending') && (
-                          <div className="d-flex gap-1">
-                            <button className="btn btn-success btn-sm py-0 px-2" style={{ fontSize: 11 }} onClick={() => handleApprove(a.id)}>Approve</button>
-                            <button className="btn btn-danger btn-sm py-0 px-2" style={{ fontSize: 11 }} onClick={() => handleReject(a.id)}>Reject</button>
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <button onClick={() => handleApprove(a.id)} style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: '#f0fff4', color: '#276749', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>Approve</button>
+                            <button onClick={() => handleReject(a.id)} style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: '#fff5f5', color: '#c53030', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>Reject</button>
                           </div>
                         )}
                       </td>
@@ -500,33 +448,28 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Recent Fee Collections — real DB data */}
-        <div className="data-table-card">
-          <div className="data-table-header">
-            <span className="data-table-title">Recent Fee Collections</span>
-            <button className="btn-view-all" onClick={() => navigate('/admin/collect-fee')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0de1e8', fontWeight: 600 }}>Collect Fee →</button>
+        <div style={{ background: '#fff', borderRadius: 18, boxShadow: '0 2px 14px rgba(0,0,0,0.07)', overflow: 'hidden' }}>
+          <div style={{ padding: '18px 22px', borderBottom: '1px solid #f0f4f8', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ width: 4, height: 20, borderRadius: 4, background: 'linear-gradient(180deg,#38a169,#0de1e8)' }} />
+              <span style={{ fontSize: 15, fontWeight: 700, color: '#1a202c' }}>Recent Fee Collections</span>
+            </div>
+            <button onClick={() => navigate('/admin/collect-fee')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#38a169', fontWeight: 700, fontSize: 13 }}>Collect Fee →</button>
           </div>
           <div style={{ overflowX: 'auto' }}>
             {feesLoading ? (
-              <div style={{ textAlign: 'center', padding: '32px 0', color: '#a0aec0', fontSize: 13 }}>
+              <div style={{ textAlign: 'center', padding: '40px 0', color: '#a0aec0', fontSize: 13 }}>
                 <span className="material-icons" style={{ fontSize: 28, display: 'block', marginBottom: 6, opacity: 0.4 }}>hourglass_top</span>
-                Loading payments…
+                Loading…
               </div>
             ) : recentFees.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '32px 0', color: '#a0aec0', fontSize: 13 }}>
+              <div style={{ textAlign: 'center', padding: '40px 0', color: '#a0aec0', fontSize: 13 }}>
                 <span className="material-icons" style={{ fontSize: 32, display: 'block', marginBottom: 6, color: '#e2e8f0' }}>payments</span>
                 No fee collections yet
               </div>
             ) : (
               <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Student</th>
-                    <th>Amount</th>
-                    <th>Method</th>
-                    <th>Type</th>
-                  </tr>
-                </thead>
+                <thead><tr><th>Student</th><th>Amount</th><th>Method</th><th>Type</th></tr></thead>
                 <tbody>
                   {recentFees.map(f => (
                     <tr key={f.id}>
@@ -539,12 +482,8 @@ export default function AdminDashboard() {
                           </div>
                         </div>
                       </td>
-                      <td style={{ fontWeight: 700, color: '#2d3748' }}>
-                        ₹{Number(f.amountPaid || 0).toLocaleString('en-IN')}
-                      </td>
-                      <td>
-                        <span className="badge bg-light text-dark" style={{ fontSize: 11 }}>{f.paymentMode || '—'}</span>
-                      </td>
+                      <td style={{ fontWeight: 700, color: '#276749', fontSize: 14 }}>₹{Number(f.amountPaid || 0).toLocaleString('en-IN')}</td>
+                      <td><span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: '#e8f4fd', color: '#2c5282' }}>{f.paymentMode || '—'}</span></td>
                       <td style={{ fontSize: 13, color: '#718096' }}>{f.feeType || '—'}</td>
                     </tr>
                   ))}
