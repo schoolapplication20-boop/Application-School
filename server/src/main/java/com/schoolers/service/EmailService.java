@@ -56,6 +56,31 @@ public class EmailService {
         log.info("[EmailService] Registration OTP email sent to: " + toEmail);
     }
 
+    // ── Onboarding email verification (verify email before account creation) ─
+
+    public void sendOnboardingOtpEmail(String toEmail, String otp) {
+        requireApiKey();
+        send(toEmail, "My-Skoolz — Verify your email address", buildOnboardingOtpHtml(toEmail, otp));
+        log.info("[EmailService] Onboarding OTP sent to: " + toEmail);
+    }
+
+    private String buildOnboardingOtpHtml(String email, String otp) {
+        return "<!DOCTYPE html><html><body style='margin:0;padding:0;background:#f7fafc;font-family:Poppins,sans-serif;'>"
+            + "<div style='max-width:480px;margin:32px auto;background:#fff;border-radius:16px;padding:40px 36px;box-shadow:0 4px 24px rgba(0,0,0,0.08);'>"
+            + "<div style='text-align:center;margin-bottom:24px;'>"
+            + "<h2 style='margin:8px 0 0;color:#0de1e8;font-size:22px;'>My-Skoolz</h2>"
+            + "<p style='color:#718096;font-size:13px;margin:4px 0 0;'>Smart School Management</p>"
+            + "</div>"
+            + "<h3 style='color:#2d3748;margin-bottom:8px;'>Verify Your Email</h3>"
+            + "<p style='color:#718096;font-size:14px;'>An account is being created for <strong>" + email + "</strong> on My-Skoolz.</p>"
+            + "<p style='color:#718096;font-size:14px;'>Enter the verification code below to confirm your email address. It expires in <strong>10 minutes</strong>.</p>"
+            + "<div style='background:#f0fafa;border:2px dashed #0de1e8;border-radius:12px;padding:20px;text-align:center;margin:24px 0;'>"
+            + "<div style='font-size:36px;font-weight:800;letter-spacing:8px;color:#0de1e8;font-family:monospace;'>" + otp + "</div>"
+            + "</div>"
+            + "<p style='color:#a0aec0;font-size:12px;text-align:center;'>If you were not expecting this email, please ignore it. No account will be created without this code.</p>"
+            + "</div></body></html>";
+    }
+
     private String buildRegistrationOtpHtml(String name, String otp) {
         return "<!DOCTYPE html><html><body style='margin:0;padding:0;background:#f7fafc;font-family:Poppins,sans-serif;'>"
             + "<div style='max-width:480px;margin:32px auto;background:#fff;border-radius:16px;padding:40px 36px;box-shadow:0 4px 24px rgba(0,0,0,0.08);'>"

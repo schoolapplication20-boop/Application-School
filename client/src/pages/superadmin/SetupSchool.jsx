@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useSchool } from '../../context/SchoolContext';
-import api from '../../services/api';
+import api, { onboardingVerifyAPI } from '../../services/api';
 
 // ── Section Step Labels ───────────────────────────────────────────────────────
 const STEPS = [
@@ -123,6 +123,39 @@ const SetupSchool = () => {
   const [done,        setDone]        = useState(null); // success result
   const logoInputRef = useRef(null);
 
+  // ── Admin email OTP verification ─────────────────────────────────────────
+  const [adminOtp, setAdminOtp] = useState({ sent: false, verified: false, sending: false, verifying: false, value: '', error: '' });
+  const resetAdminOtp = () => setAdminOtp({ sent: false, verified: false, sending: false, verifying: false, value: '', error: '' });
+
+  const handleAdminSendOtp = async () => {
+    const email = form.adminEmail?.trim();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setAdminOtp(s => ({ ...s, error: 'Enter a valid admin email first' }));
+      return;
+    }
+    setAdminOtp(s => ({ ...s, sending: true, error: '' }));
+    try {
+      await onboardingVerifyAPI.sendOtp(email.toLowerCase());
+      setAdminOtp(s => ({ ...s, sending: false, sent: true, verified: false, value: '', error: '' }));
+    } catch (err) {
+      setAdminOtp(s => ({ ...s, sending: false, error: err.response?.data?.message || 'Failed to send OTP' }));
+    }
+  };
+
+  const handleAdminVerifyOtp = async () => {
+    if (!adminOtp.value || adminOtp.value.length < 6) {
+      setAdminOtp(s => ({ ...s, error: 'Enter the 6-digit OTP' }));
+      return;
+    }
+    setAdminOtp(s => ({ ...s, verifying: true, error: '' }));
+    try {
+      await onboardingVerifyAPI.verifyOtp(form.adminEmail.trim().toLowerCase(), adminOtp.value.trim());
+      setAdminOtp(s => ({ ...s, verifying: false, verified: true, error: '' }));
+    } catch (err) {
+      setAdminOtp(s => ({ ...s, verifying: false, error: err.response?.data?.message || 'Incorrect OTP' }));
+    }
+  };
+
   const stepId = STEPS[currentStep].id;
 
   // ── Field change ──────────────────────────────────────────────────────────
@@ -161,6 +194,8 @@ const SetupSchool = () => {
   // ── Navigation ────────────────────────────────────────────────────────────
   const goNext = () => {
     const errs = validate(stepId, form);
+    if (stepId === 'admin' && form.adminEmail?.trim() && !adminOtp.verified)
+      errs.adminEmail = 'Please verify the admin email with OTP before continuing.';
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
     setErrors({});
     setCurrentStep(s => Math.min(s + 1, STEPS.length - 1));
@@ -566,12 +601,41 @@ const SetupSchool = () => {
                     onFocus={e => e.target.style.borderColor = '#0de1e8'}
                     onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
                 </Field>
-                <Field label="Admin Email" error={errors.adminEmail}>
-                  <input name="adminEmail" type="email" value={form.adminEmail} onChange={onChange}
-                    placeholder="admin@school.edu"
-                    style={inputStyle(!!errors.adminEmail)}
-                    onFocus={e => e.target.style.borderColor = '#0de1e8'}
-                    onBlur={e => e.target.style.borderColor = errors.adminEmail ? '#fc8181' : '#e2e8f0'} />
+                <Field label="Admin Email" error={errors.adminEmail || adminOtp.error}>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <input name="adminEmail" type="email" value={form.adminEmail}
+                      placeholder="admin@school.edu"
+                      disabled={adminOtp.verified}
+                      style={{ ...inputStyle(!!errors.adminEmail), flex: 1 }}
+                      onFocus={e => e.target.style.borderColor = '#0de1e8'}
+                      onBlur={e => e.target.style.borderColor = errors.adminEmail ? '#fc8181' : '#e2e8f0'}
+                      onChange={e => { onChange(e); resetAdminOtp(); }} />
+                    {!adminOtp.verified && form.adminEmail?.trim() && (
+                      <button type="button" disabled={adminOtp.sending}
+                        onClick={handleAdminSendOtp}
+                        style={{ padding: '0 14px', background: '#0de1e8', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                        {adminOtp.sending ? 'Sending…' : adminOtp.sent ? 'Resend' : 'Send OTP'}
+                      </button>
+                    )}
+                    {adminOtp.verified && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#38a169', fontSize: 13, fontWeight: 700 }}>
+                        <span className="material-icons" style={{ fontSize: 18 }}>verified</span> Verified
+                      </div>
+                    )}
+                  </div>
+                  {adminOtp.sent && !adminOtp.verified && (
+                    <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                      <input placeholder="Enter 6-digit OTP" maxLength={6}
+                        style={{ ...inputStyle(!!adminOtp.error), flex: 1, fontFamily: 'monospace', letterSpacing: 4 }}
+                        value={adminOtp.value}
+                        onChange={e => setAdminOtp(s => ({ ...s, value: e.target.value.replace(/\D/g, '').slice(0, 6), error: '' }))} />
+                      <button type="button" disabled={adminOtp.verifying}
+                        onClick={handleAdminVerifyOtp}
+                        style={{ padding: '0 14px', background: '#38a169', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                        {adminOtp.verifying ? 'Verifying…' : 'Verify'}
+                      </button>
+                    </div>
+                  )}
                 </Field>
                 <Field label="Admin Mobile" error={errors.adminMobile}>
                   <input name="adminMobile" type="text" inputMode="numeric"

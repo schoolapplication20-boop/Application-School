@@ -3,8 +3,11 @@ package com.schoolers.controller;
 import com.schoolers.dto.ApiResponse;
 import com.schoolers.dto.LoginRequest;
 import com.schoolers.dto.LoginResponse;
+import com.schoolers.model.EmailVerification;
+import com.schoolers.repository.EmailVerificationRepository;
 import com.schoolers.security.JwtUtil;
 import com.schoolers.service.AuthService;
+import com.schoolers.service.EmailService;
 import com.schoolers.service.TokenBlacklistService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -15,9 +18,12 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.MessageDigest;
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -26,6 +32,12 @@ public class AuthController {
     @Autowired private AuthService authService;
     @Autowired private TokenBlacklistService tokenBlacklistService;
     @Autowired private JwtUtil jwtUtil;
+    @Autowired private EmailService emailService;
+    @Autowired private EmailVerificationRepository emailVerificationRepository;
+
+    private static final Pattern EMAIL_RE =
+            Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<Map<String, Object>>> register(@RequestBody Map<String, String> body) {
@@ -157,6 +169,72 @@ public class AuthController {
         return response.isSuccess()
             ? ResponseEntity.ok(response)
             : ResponseEntity.status(400).body(response);
+    }
+
+    // ── Onboarding email OTP — send ───────────────────────────────────────────
+    // Public: no auth required. Sends a 6-digit OTP to verify an email address
+    // before an account is created for that email.
+
+    @PostMapping("/onboarding/send-otp")
+    public ResponseEntity<ApiResponse<String>> sendOnboardingOtp(@RequestBody Map<String, String> body) {
+        String email = body.get("email");
+        if (email == null || !EMAIL_RE.matcher(email.trim()).matches())
+            return ResponseEntity.badRequest().body(ApiResponse.error("Valid email is required"));
+
+        email = email.trim().toLowerCase();
+
+        // Delete any existing (possibly expired) record for this email
+        emailVerificationRepository.deleteByEmail(email);
+
+        String otp    = String.format("%06d", 100000 + SECURE_RANDOM.nextInt(900000));
+        LocalDateTime expiry = LocalDateTime.now().plusMinutes(10);
+
+        emailVerificationRepository.save(EmailVerification.builder()
+                .email(email).otp(otp).expiry(expiry).build());
+
+        emailService.sendOnboardingOtpEmail(email, otp);
+        return ResponseEntity.ok(ApiResponse.success("OTP sent to " + email, null));
+    }
+
+    // ── Onboarding email OTP — verify ────────────────────────────────────────
+
+    @PostMapping("/onboarding/verify-otp")
+    public ResponseEntity<ApiResponse<String>> verifyOnboardingOtp(@RequestBody Map<String, String> body) {
+        String email = body.get("email");
+        String otp   = body.get("otp");
+        if (email == null || otp == null || otp.isBlank())
+            return ResponseEntity.badRequest().body(ApiResponse.error("Email and OTP are required"));
+
+        email = email.trim().toLowerCase();
+
+        EmailVerification ev = emailVerificationRepository.findByEmail(email).orElse(null);
+        if (ev == null)
+            return ResponseEntity.badRequest().body(ApiResponse.error("No OTP was sent to this email. Please request a new one."));
+
+        if (ev.getExpiry().isBefore(LocalDateTime.now())) {
+            emailVerificationRepository.delete(ev);
+            return ResponseEntity.badRequest().body(ApiResponse.error("OTP has expired. Please request a new one."));
+        }
+
+        if (ev.getAttempts() >= 5) {
+            emailVerificationRepository.delete(ev);
+            return ResponseEntity.badRequest().body(ApiResponse.error("Too many incorrect attempts. Please request a new OTP."));
+        }
+
+        boolean match = MessageDigest.isEqual(ev.getOtp().getBytes(), otp.trim().getBytes());
+        if (!match) {
+            ev.setAttempts(ev.getAttempts() + 1);
+            emailVerificationRepository.save(ev);
+            int remaining = 5 - ev.getAttempts();
+            return ResponseEntity.badRequest().body(ApiResponse.error(
+                    "Incorrect OTP. " + remaining + " attempt" + (remaining == 1 ? "" : "s") + " remaining."));
+        }
+
+        ev.setVerified(true);
+        // Extend window to 30 minutes so the form can be filled out
+        ev.setExpiry(LocalDateTime.now().plusMinutes(30));
+        emailVerificationRepository.save(ev);
+        return ResponseEntity.ok(ApiResponse.success("Email verified successfully", null));
     }
 
     /** First-login password set — requires the temporary password for verification */

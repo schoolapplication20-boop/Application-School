@@ -3,6 +3,7 @@ package com.schoolers.controller;
 import com.schoolers.dto.AdminCreatedResponse;
 import com.schoolers.dto.ApiResponse;
 import com.schoolers.model.User;
+import com.schoolers.repository.EmailVerificationRepository;
 import com.schoolers.repository.UserRepository;
 import com.schoolers.service.SuperAdminService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,11 +24,9 @@ public class SuperAdminController {
     private static final java.util.regex.Pattern EMAIL_PATTERN =
         java.util.regex.Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
 
-    @Autowired
-    private SuperAdminService superAdminService;
-
-    @Autowired
-    private UserRepository userRepository;
+    @Autowired private SuperAdminService superAdminService;
+    @Autowired private UserRepository userRepository;
+    @Autowired private EmailVerificationRepository emailVerificationRepository;
 
     /**
      * Extracts the schoolId from JWT claims stored in auth details by JwtFilter.
@@ -81,11 +80,14 @@ public class SuperAdminController {
             return ResponseEntity.badRequest().body(ApiResponse.error("Name is required"));
         if (!EMAIL_PATTERN.matcher(email).matches())
             return ResponseEntity.badRequest().body(ApiResponse.error("Valid email is required"));
+        if (!emailVerificationRepository.existsByEmailAndVerifiedTrue(email))
+            return ResponseEntity.badRequest().body(ApiResponse.error("Email must be verified with OTP before creating an account."));
 
         Long schoolId = getCurrentSchoolId(auth);
         ApiResponse<AdminCreatedResponse> response =
                 superAdminService.createAdmin(name, email, mobile.isEmpty() ? null : mobile, permissions, schoolId);
 
+        if (response.isSuccess()) emailVerificationRepository.deleteByEmail(email);
         return response.isSuccess()
                 ? ResponseEntity.status(201).body(response)
                 : ResponseEntity.badRequest().body(response);
@@ -121,6 +123,8 @@ public class SuperAdminController {
             return ResponseEntity.badRequest().body(ApiResponse.error("Name is required"));
         if (!EMAIL_PATTERN.matcher(email).matches())
             return ResponseEntity.badRequest().body(ApiResponse.error("Valid email is required"));
+        if (!emailVerificationRepository.existsByEmailAndVerifiedTrue(email))
+            return ResponseEntity.badRequest().body(ApiResponse.error("Email must be verified with OTP before creating an account."));
         if (schoolName.isEmpty())
             return ResponseEntity.badRequest().body(ApiResponse.error("School name is required"));
         if (schoolCode.isEmpty())
@@ -133,6 +137,7 @@ public class SuperAdminController {
                 name, email, mobile.isEmpty() ? null : mobile,
                 schoolName, schoolCode, permissions, schoolNumber, callerSchoolId);
 
+        if (response.isSuccess()) emailVerificationRepository.deleteByEmail(email);
         return response.isSuccess()
                 ? ResponseEntity.status(201).body(response)
                 : ResponseEntity.badRequest().body(response);

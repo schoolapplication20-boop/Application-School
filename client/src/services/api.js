@@ -107,6 +107,11 @@ api.interceptors.response.use(
 // AUTH APIs
 // ============================================
 
+export const onboardingVerifyAPI = {
+  sendOtp:   (email)       => api.post('/api/auth/onboarding/send-otp',   { email }),
+  verifyOtp: (email, otp)  => api.post('/api/auth/onboarding/verify-otp', { email, otp }),
+};
+
 export const authAPI = {
   login:          (data) => api.post('/api/auth/login', data),
   register:       (data) => api.post('/api/auth/register', data),

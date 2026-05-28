@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import Layout from '../../components/Layout';
 import Toast from '../../components/Toast';
-import { superAdminAPI } from '../../services/api';
+import { superAdminAPI, onboardingVerifyAPI } from '../../services/api';
 import { addLog } from '../../services/activityLog';
 import { useAuth } from '../../context/AuthContext';
 
@@ -49,6 +49,13 @@ export default function AdminManagement() {
   // Credentials viewer modal (key icon)
   const [credModal,     setCredModal]     = useState(null); // { name, email, tempPassword }
   const [showCredPwd,   setShowCredPwd]   = useState(false);
+
+  // ── Email OTP verification state (shared for both admin + super-admin modals) ─
+  const [otpState,       setOtpState]       = useState({ sent: false, verified: false, sending: false, verifying: false, value: '', error: '' });
+  const [saOtpState,     setSaOtpState]     = useState({ sent: false, verified: false, sending: false, verifying: false, value: '', error: '' });
+
+  const resetOtp    = () => setOtpState(   { sent: false, verified: false, sending: false, verifying: false, value: '', error: '' });
+  const resetSaOtp  = () => setSaOtpState( { sent: false, verified: false, sending: false, verifying: false, value: '', error: '' });
 
   // ── Super Admin management (visible only to platform Application Owner) ────
   const [activeTab,      setActiveTab]      = useState('admins'); // 'admins' | 'superadmins'
@@ -131,6 +138,8 @@ export default function AdminManagement() {
     if (!formData.name.trim()) errs.name = 'Required';
     if (!formData.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email))
       errs.email = 'Valid email required';
+    else if (!editAdmin && !otpState.verified)
+      errs.email = 'Please verify the email with OTP before saving';
     if (!formData.mobile.trim()) errs.mobile = 'Required';
     else if (!/^\d{10}$/.test(formData.mobile)) errs.mobile = 'Must be 10 digits';
     setFormErrors(errs);
@@ -181,6 +190,7 @@ export default function AdminManagement() {
         setFormData(emptyForm);
         setFormErrors({});
         setShowPassword(false);
+        resetOtp();
         setSuccessModal({
           name:     result.name,
           email:    result.email,
@@ -244,11 +254,43 @@ export default function AdminManagement() {
     } catch { return MODULES.length; }
   };
 
+  // ── OTP helpers for Admin email verification ─────────────────────────────
+
+  const handleSendOtp = async (email, setOtp) => {
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setOtp(s => ({ ...s, error: 'Enter a valid email first' }));
+      return;
+    }
+    setOtp(s => ({ ...s, sending: true, error: '' }));
+    try {
+      await onboardingVerifyAPI.sendOtp(email.trim().toLowerCase());
+      setOtp(s => ({ ...s, sending: false, sent: true, verified: false, value: '', error: '' }));
+    } catch (err) {
+      setOtp(s => ({ ...s, sending: false, error: err.response?.data?.message || 'Failed to send OTP' }));
+    }
+  };
+
+  const handleVerifyOtp = async (email, setOtp, otpVal) => {
+    if (!otpVal || otpVal.length < 6) {
+      setOtp(s => ({ ...s, error: 'Enter the 6-digit OTP' }));
+      return;
+    }
+    setOtp(s => ({ ...s, verifying: true, error: '' }));
+    try {
+      await onboardingVerifyAPI.verifyOtp(email.trim().toLowerCase(), otpVal.trim());
+      setOtp(s => ({ ...s, verifying: false, verified: true, error: '' }));
+    } catch (err) {
+      setOtp(s => ({ ...s, verifying: false, error: err.response?.data?.message || 'Incorrect OTP' }));
+    }
+  };
+
   const validateSaForm = () => {
     const errs = {};
     if (!saForm.name.trim())        errs.name       = 'Required';
     if (!saForm.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(saForm.email))
       errs.email = 'Valid email required';
+    else if (!saOtpState.verified)
+      errs.email = 'Please verify the email with OTP before saving';
     if (!saForm.mobile.trim())      errs.mobile     = 'Required';
     else if (!/^\d{10}$/.test(saForm.mobile)) errs.mobile = 'Must be 10 digits';
     if (!saForm.schoolName.trim())  errs.schoolName = 'School name is required';
@@ -279,6 +321,7 @@ export default function AdminManagement() {
       setSaForm({ name: '', email: '', mobile: '', schoolName: '', schoolCode: '' });
       setSaErrors({});
       setShowSaPassword(false);
+      resetSaOtp();
       setSaSuccessModal({
         name:       result.name,
         email:      result.email,
@@ -593,10 +636,46 @@ export default function AdminManagement() {
                     <label style={{ fontSize: '13px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '4px' }}>
                       Email Address {editAdmin ? '' : '*'}
                     </label>
-                    <input type="email" style={iStyle(formErrors.email)} placeholder="admin@school.com"
-                      value={formData.email} disabled={!!editAdmin}
-                      onChange={e => setFormData({ ...formData, email: e.target.value })} />
-                    {formErrors.email && <p style={errStyle}>{formErrors.email}</p>}
+                    {!editAdmin ? (
+                      <>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <input type="email" style={{ ...iStyle(formErrors.email), flex: 1 }}
+                            placeholder="admin@school.com"
+                            value={formData.email}
+                            disabled={otpState.verified}
+                            onChange={e => { setFormData({ ...formData, email: e.target.value }); resetOtp(); }} />
+                          {!otpState.verified && (
+                            <button type="button" disabled={otpState.sending}
+                              onClick={() => handleSendOtp(formData.email, setOtpState)}
+                              style={{ padding: '0 14px', background: '#0de1e8', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                              {otpState.sending ? 'Sending…' : otpState.sent ? 'Resend OTP' : 'Send OTP'}
+                            </button>
+                          )}
+                          {otpState.verified && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#38a169', fontSize: 13, fontWeight: 700 }}>
+                              <span className="material-icons" style={{ fontSize: 18 }}>verified</span> Verified
+                            </div>
+                          )}
+                        </div>
+                        {otpState.sent && !otpState.verified && (
+                          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                            <input placeholder="Enter 6-digit OTP" maxLength={6}
+                              style={{ ...iStyle(!!otpState.error), flex: 1, fontFamily: 'monospace', letterSpacing: 4 }}
+                              value={otpState.value}
+                              onChange={e => setOtpState(s => ({ ...s, value: e.target.value.replace(/\D/g, '').slice(0, 6), error: '' }))} />
+                            <button type="button" disabled={otpState.verifying}
+                              onClick={() => handleVerifyOtp(formData.email, setOtpState, otpState.value)}
+                              style={{ padding: '0 14px', background: '#38a169', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                              {otpState.verifying ? 'Verifying…' : 'Verify'}
+                            </button>
+                          </div>
+                        )}
+                        {otpState.error && <p style={errStyle}>{otpState.error}</p>}
+                        {formErrors.email && <p style={errStyle}>{formErrors.email}</p>}
+                      </>
+                    ) : (
+                      <input type="email" style={iStyle(false)} value={formData.email} disabled />
+                    )}
                   </div>
                   <div>
                     <label style={{ fontSize: '13px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '4px' }}>
@@ -961,8 +1040,38 @@ export default function AdminManagement() {
                 </div>
                 <div>
                   <label style={{ fontSize: '13px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '4px' }}>Email Address *</label>
-                  <input type="email" style={iStyle(saErrors.email)} placeholder="superadmin@school.com" value={saForm.email}
-                    onChange={e => { setSaForm(f => ({ ...f, email: e.target.value })); setSaErrors(p => ({ ...p, email: undefined })); }} />
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <input type="email" style={{ ...iStyle(saErrors.email), flex: 1 }}
+                      placeholder="superadmin@school.com" value={saForm.email}
+                      disabled={saOtpState.verified}
+                      onChange={e => { setSaForm(f => ({ ...f, email: e.target.value })); setSaErrors(p => ({ ...p, email: undefined })); resetSaOtp(); }} />
+                    {!saOtpState.verified && (
+                      <button type="button" disabled={saOtpState.sending}
+                        onClick={() => handleSendOtp(saForm.email, setSaOtpState)}
+                        style={{ padding: '0 14px', background: '#0de1e8', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                        {saOtpState.sending ? 'Sending…' : saOtpState.sent ? 'Resend OTP' : 'Send OTP'}
+                      </button>
+                    )}
+                    {saOtpState.verified && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#38a169', fontSize: 13, fontWeight: 700 }}>
+                        <span className="material-icons" style={{ fontSize: 18 }}>verified</span> Verified
+                      </div>
+                    )}
+                  </div>
+                  {saOtpState.sent && !saOtpState.verified && (
+                    <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                      <input placeholder="Enter 6-digit OTP" maxLength={6}
+                        style={{ ...iStyle(!!saOtpState.error), flex: 1, fontFamily: 'monospace', letterSpacing: 4 }}
+                        value={saOtpState.value}
+                        onChange={e => setSaOtpState(s => ({ ...s, value: e.target.value.replace(/\D/g, '').slice(0, 6), error: '' }))} />
+                      <button type="button" disabled={saOtpState.verifying}
+                        onClick={() => handleVerifyOtp(saForm.email, setSaOtpState, saOtpState.value)}
+                        style={{ padding: '0 14px', background: '#38a169', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                        {saOtpState.verifying ? 'Verifying…' : 'Verify'}
+                      </button>
+                    </div>
+                  )}
+                  {saOtpState.error && <p style={errStyle}>{saOtpState.error}</p>}
                   {saErrors.email && <p style={errStyle}>{saErrors.email}</p>}
                 </div>
                 <div>
