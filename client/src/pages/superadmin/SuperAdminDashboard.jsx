@@ -112,7 +112,7 @@ function OwnerDashboard() {
 
   // ── System notice ────────────────────────────────────────────────────────────
   const [activeNotice,  setActiveNotice]  = useState(null);
-  const [noticeForm,    setNoticeForm]    = useState({ message: '', severity: 'WARNING', scheduledAt: '', durationMinutes: '' });
+  const [noticeForm,    setNoticeForm]    = useState({ message: '', severity: 'WARNING', scheduledAt: '', endTime: '' });
   const [noticeSaving,  setNoticeSaving]  = useState(false);
   const [noticeClearing, setNoticeClearing] = useState(false);
 
@@ -145,11 +145,16 @@ function OwnerDashboard() {
       const n = res.data?.data;
       setActiveNotice(n || null);
       if (n) {
+        const startIso = n.scheduledAt ? n.scheduledAt.slice(0, 16) : '';
+        const endIso   = (startIso && n.durationMinutes)
+          ? new Date(new Date(n.scheduledAt).getTime() + n.durationMinutes * 60000)
+              .toISOString().slice(0, 16)
+          : '';
         setNoticeForm({
-          message: n.message || '',
-          severity: n.severity || 'WARNING',
-          scheduledAt: n.scheduledAt ? n.scheduledAt.slice(0, 16) : '',
-          durationMinutes: n.durationMinutes ?? '',
+          message:   n.message  || '',
+          severity:  n.severity || 'WARNING',
+          scheduledAt: startIso,
+          endTime:     endIso,
         });
       }
     } catch { setActiveNotice(null); }
@@ -159,11 +164,14 @@ function OwnerDashboard() {
     if (!noticeForm.message.trim()) return;
     setNoticeSaving(true);
     try {
+      const durationMinutes = (noticeForm.scheduledAt && noticeForm.endTime)
+        ? Math.round((new Date(noticeForm.endTime) - new Date(noticeForm.scheduledAt)) / 60000)
+        : null;
       await systemAPI.setNotice({
         message: noticeForm.message.trim(),
         severity: noticeForm.severity,
         scheduledAt: noticeForm.scheduledAt || null,
-        durationMinutes: noticeForm.durationMinutes ? parseInt(noticeForm.durationMinutes) : null,
+        durationMinutes: durationMinutes && durationMinutes > 0 ? durationMinutes : null,
       });
       await loadNotice();
     } catch (err) {
@@ -616,8 +624,16 @@ function OwnerDashboard() {
               <div style={{ fontSize: 13, fontWeight: 600, color: '#2d3748' }}>{activeNotice.message}</div>
               {activeNotice.scheduledAt && (
                 <div style={{ fontSize: 11, color: '#718096', marginTop: 4 }}>
-                  Scheduled: {new Date(activeNotice.scheduledAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}
-                  {activeNotice.durationMinutes ? ` · ~${activeNotice.durationMinutes} min` : ''}
+                  {(() => {
+                    const start = new Date(activeNotice.scheduledAt);
+                    const fmt   = d => d.toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+                    const fmtT  = d => d.toLocaleString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+                    if (activeNotice.durationMinutes) {
+                      const end = new Date(start.getTime() + activeNotice.durationMinutes * 60000);
+                      return `Planned outage: ${fmt(start)} – ${fmtT(end)}`;
+                    }
+                    return `Scheduled: ${fmt(start)}`;
+                  })()}
                 </div>
               )}
             </div>
@@ -659,13 +675,12 @@ function OwnerDashboard() {
             </div>
 
             <div>
-              <label style={{ fontSize: 11, color: '#718096', fontWeight: 600, display: 'block', marginBottom: 4 }}>Duration (minutes)</label>
+              <label style={{ fontSize: 11, color: '#718096', fontWeight: 600, display: 'block', marginBottom: 4 }}>End Time</label>
               <input
-                type="number"
-                min="1"
-                value={noticeForm.durationMinutes}
-                onChange={e => setNoticeForm(f => ({ ...f, durationMinutes: e.target.value }))}
-                placeholder="e.g. 120"
+                type="datetime-local"
+                value={noticeForm.endTime}
+                min={noticeForm.scheduledAt || undefined}
+                onChange={e => setNoticeForm(f => ({ ...f, endTime: e.target.value }))}
                 style={{ width: '100%', border: '1.5px solid #e2e8f0', borderRadius: 8, padding: '8px 10px', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
               />
             </div>
