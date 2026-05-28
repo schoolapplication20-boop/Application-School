@@ -9,7 +9,7 @@ import {
   resetTeacherPassword as apiResetTeacherPassword,
   deleteTeacher as apiDeleteTeacher,
 } from '../../services/teacherService';
-import { adminAPI } from '../../services/api';
+import { adminAPI, onboardingVerifyAPI } from '../../services/api';
 import { generateRandomPassword } from '../../utils/passwordGenerator';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -283,6 +283,39 @@ export default function Teachers() {
   const [toast,     setToast]     = useState(null);
   const [classList, setClassList] = useState([]);
 
+  // email OTP verification
+  const [teacherOtp, setTeacherOtp] = useState({ sent: false, verified: false, sending: false, verifying: false, value: '', error: '' });
+  const resetTeacherOtp = () => setTeacherOtp({ sent: false, verified: false, sending: false, verifying: false, value: '', error: '' });
+
+  const handleTeacherSendOtp = async () => {
+    const email = form.email?.trim();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setTeacherOtp(s => ({ ...s, error: 'Enter a valid email first' }));
+      return;
+    }
+    setTeacherOtp(s => ({ ...s, sending: true, error: '' }));
+    try {
+      await onboardingVerifyAPI.sendOtp(email.toLowerCase());
+      setTeacherOtp(s => ({ ...s, sending: false, sent: true, verified: false, value: '', error: '' }));
+    } catch (err) {
+      setTeacherOtp(s => ({ ...s, sending: false, error: err.response?.data?.message || 'Failed to send OTP' }));
+    }
+  };
+
+  const handleTeacherVerifyOtp = async () => {
+    if (!teacherOtp.value || teacherOtp.value.length < 6) {
+      setTeacherOtp(s => ({ ...s, error: 'Enter the 6-digit OTP' }));
+      return;
+    }
+    setTeacherOtp(s => ({ ...s, verifying: true, error: '' }));
+    try {
+      await onboardingVerifyAPI.verifyOtp(form.email.trim().toLowerCase(), teacherOtp.value.trim());
+      setTeacherOtp(s => ({ ...s, verifying: false, verified: true, error: '' }));
+    } catch (err) {
+      setTeacherOtp(s => ({ ...s, verifying: false, error: err.response?.data?.message || 'Incorrect OTP' }));
+    }
+  };
+
   const showToast = useCallback((message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
@@ -329,6 +362,8 @@ export default function Teachers() {
       e.email = 'Email is required';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
       e.email = 'Enter a valid email address';
+    } else if (!editTeacher && !teacherOtp.verified) {
+      e.email = 'Please verify the email with OTP before saving';
     }
 
     if (form.mobile && !/^\d{10}$/.test(form.mobile))
@@ -707,11 +742,11 @@ export default function Teachers() {
           ADD / EDIT MODAL
       ═══════════════════════════════════════════════════════════════════ */}
       {showModal && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowModal(false)}>
+        <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) { setShowModal(false); resetTeacherOtp(); } }}>
           <div className="modal-container" style={{ maxWidth: 640 }}>
             <div className="modal-header">
               <span className="modal-title">{editTeacher ? 'Edit Teacher' : 'Add New Teacher'}</span>
-              <button className="modal-close" onClick={() => setShowModal(false)}>
+              <button className="modal-close" onClick={() => { setShowModal(false); resetTeacherOtp(); }}>
                 <span className="material-icons">close</span>
               </button>
             </div>
@@ -768,9 +803,52 @@ export default function Teachers() {
                       </p>
                     )}
                   </Field>
-                  <Field label="Email (Login ID)" required error={errors.email}>
-                    <input type="email" style={inputStyle(errors.email)} placeholder="teacher@school.com" value={form.email}
-                      onChange={e => setForm({ ...form, email: e.target.value })} />
+                  <Field label="Email (Login ID)" required error={errors.email || (!editTeacher && teacherOtp.error)}>
+                    {editTeacher ? (
+                      <input type="email" style={inputStyle(errors.email)} placeholder="teacher@school.com" value={form.email}
+                        onChange={e => setForm({ ...form, email: e.target.value })} />
+                    ) : (
+                      <>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <input
+                            type="email"
+                            style={{ ...inputStyle(errors.email), flex: 1 }}
+                            placeholder="teacher@school.com"
+                            value={form.email}
+                            onChange={e => { setForm({ ...form, email: e.target.value }); resetTeacherOtp(); }}
+                          />
+                          {!teacherOtp.verified && (
+                            <button type="button" onClick={handleTeacherSendOtp} disabled={teacherOtp.sending}
+                              style={{ flexShrink: 0, padding: '8px 12px', background: '#0de1e815', border: '1.5px solid #0de1e840', borderRadius: 8, cursor: teacherOtp.sending ? 'not-allowed' : 'pointer', color: '#276749', fontSize: 12, fontWeight: 600, fontFamily: 'Poppins, sans-serif', whiteSpace: 'nowrap' }}>
+                              {teacherOtp.sending ? 'Sending…' : teacherOtp.sent ? 'Resend OTP' : 'Send OTP'}
+                            </button>
+                          )}
+                          {teacherOtp.verified && (
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#276749', fontWeight: 600, fontSize: 13, flexShrink: 0 }}>
+                              <span className="material-icons" style={{ fontSize: 18, color: '#38a169' }}>verified</span>
+                              Verified
+                            </span>
+                          )}
+                        </div>
+                        {teacherOtp.sent && !teacherOtp.verified && (
+                          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              maxLength={6}
+                              placeholder="Enter 6-digit OTP"
+                              value={teacherOtp.value}
+                              onChange={e => setTeacherOtp(s => ({ ...s, value: e.target.value.replace(/\D/g, '').slice(0, 6), error: '' }))}
+                              style={{ ...inputStyle(false), flex: 1, letterSpacing: 4, fontWeight: 700 }}
+                            />
+                            <button type="button" onClick={handleTeacherVerifyOtp} disabled={teacherOtp.verifying}
+                              style={{ flexShrink: 0, padding: '8px 14px', background: '#276749', border: 'none', borderRadius: 8, cursor: teacherOtp.verifying ? 'not-allowed' : 'pointer', color: '#fff', fontSize: 12, fontWeight: 600, fontFamily: 'Poppins, sans-serif', whiteSpace: 'nowrap' }}>
+                              {teacherOtp.verifying ? 'Verifying…' : 'Verify'}
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    )}
                   </Field>
                   <Field label="Mobile Number" error={errors.mobile}>
                     <input type="tel" style={inputStyle(errors.mobile)} placeholder="10-digit mobile" maxLength={10} value={form.mobile}
@@ -940,7 +1018,7 @@ export default function Teachers() {
               </div>
 
               <div className="modal-footer">
-                <button type="button" onClick={() => setShowModal(false)}
+                <button type="button" onClick={() => { setShowModal(false); resetTeacherOtp(); }}
                   style={{ padding: '10px 20px', border: '1.5px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: 'pointer', fontWeight: 600, fontFamily: 'Poppins, sans-serif' }}>
                   Cancel
                 </button>

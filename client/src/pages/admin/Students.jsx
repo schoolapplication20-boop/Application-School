@@ -9,7 +9,7 @@ import {
   updateStudent as apiUpdateStudent,
   deleteStudent as apiDeleteStudent,
 } from '../../services/studentService';
-import { adminAPI } from '../../services/api';
+import { adminAPI, onboardingVerifyAPI } from '../../services/api';
 
 const mockStudents = [
   {
@@ -127,6 +127,7 @@ const mockStudents = [
 
 const EMPTY_FORM = {
   name: '', rollNo: '', admissionNumber: '', class: '', section: '', dob: '', status: 'Active', photo: null,
+  studentEmail: '',
   fatherName: '', fatherPhone: '',
   motherName: '', motherPhone: '',
   guardianName: '', guardianPhone: '',
@@ -259,6 +260,39 @@ export default function Students() {
   const [promoteForm, setPromoteForm]     = useState({ fromClass: '', fromSection: '', toClass: '', toSection: '' });
   const [promoting, setPromoting]         = useState(false);
 
+  // email OTP verification for new students
+  const [studentOtp, setStudentOtp] = useState({ sent: false, verified: false, sending: false, verifying: false, value: '', error: '' });
+  const resetStudentOtp = () => setStudentOtp({ sent: false, verified: false, sending: false, verifying: false, value: '', error: '' });
+
+  const handleStudentSendOtp = async () => {
+    const email = formData.studentEmail?.trim();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setStudentOtp(s => ({ ...s, error: 'Enter a valid email first' }));
+      return;
+    }
+    setStudentOtp(s => ({ ...s, sending: true, error: '' }));
+    try {
+      await onboardingVerifyAPI.sendOtp(email.toLowerCase());
+      setStudentOtp(s => ({ ...s, sending: false, sent: true, verified: false, value: '', error: '' }));
+    } catch (err) {
+      setStudentOtp(s => ({ ...s, sending: false, error: err.response?.data?.message || 'Failed to send OTP' }));
+    }
+  };
+
+  const handleStudentVerifyOtp = async () => {
+    if (!studentOtp.value || studentOtp.value.length < 6) {
+      setStudentOtp(s => ({ ...s, error: 'Enter the 6-digit OTP' }));
+      return;
+    }
+    setStudentOtp(s => ({ ...s, verifying: true, error: '' }));
+    try {
+      await onboardingVerifyAPI.verifyOtp(formData.studentEmail.trim().toLowerCase(), studentOtp.value.trim());
+      setStudentOtp(s => ({ ...s, verifying: false, verified: true, error: '' }));
+    } catch (err) {
+      setStudentOtp(s => ({ ...s, verifying: false, error: err.response?.data?.message || 'Incorrect OTP' }));
+    }
+  };
+
   const exitSelectionMode = () => { setSelectionMode(false); setSelectedIds(new Set()); };
 
   // Load from API — called on mount and after every mutation
@@ -373,6 +407,8 @@ export default function Students() {
     if (formData.guardianPhone && !/^\d{10}$/.test(formData.guardianPhone)) e.guardianPhone = 'Must be exactly 10 digits';
     if (!formData.permanentAddress.trim()) e.permanentAddress = 'Permanent address is required';
     if (!formData.idProofName)            e.idProof     = 'ID proof document is required';
+    if (!editStudent && formData.studentEmail?.trim() && !studentOtp.verified)
+      e.studentEmail = 'Please verify the email with OTP before saving';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -383,6 +419,7 @@ export default function Students() {
     setFormData(EMPTY_FORM);
     setPhotoPreview(null);
     setErrors({});
+    resetStudentOtp();
     setShowModal(true);
   };
 
@@ -470,6 +507,7 @@ export default function Students() {
       tcDocumentName:       formData.tcDocumentName,
       bonafideDocument:     formData.bonafideDocument,
       bonafideDocumentName: formData.bonafideDocumentName,
+      studentEmail:         formData.studentEmail?.trim() || null,
       // backend field aliases
       parent:  formData.fatherName,
       mobile:  formData.fatherPhone,
@@ -504,6 +542,7 @@ export default function Students() {
           return;
         }
         setShowModal(false);
+        resetStudentOtp();
         loadStudents();
         const d = result.data || {};
         setNewCredential({
@@ -910,7 +949,7 @@ export default function Students() {
                   </span>
                   {editStudent ? 'Edit Student' : 'Add New Student'}
                 </h5>
-                <button className="btn-close" onClick={() => setShowModal(false)} />
+                <button className="btn-close" onClick={() => { setShowModal(false); resetStudentOtp(); }} />
               </div>
 
               <form onSubmit={handleSave}>
@@ -1031,6 +1070,66 @@ export default function Students() {
                         <option>Active</option>
                         <option>Inactive</option>
                       </select>
+                    </div>
+                    {/* Student email (optional, OTP required if provided) */}
+                    <div className="col-12">
+                      <label className="form-label fw-medium small">
+                        Student Email <span style={{ color: '#a0aec0', fontWeight: 400 }}>(optional — required for student login)</span>
+                      </label>
+                      {editStudent ? (
+                        <input type="email"
+                          className={`form-control form-control-sm ${errors.studentEmail ? 'is-invalid' : ''}`}
+                          placeholder="student@example.com"
+                          value={formData.studentEmail || ''}
+                          onChange={e => setFormData(fd => ({ ...fd, studentEmail: e.target.value }))}
+                        />
+                      ) : (
+                        <>
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <input type="email"
+                              className={`form-control form-control-sm ${errors.studentEmail ? 'is-invalid' : ''}`}
+                              placeholder="student@example.com"
+                              value={formData.studentEmail || ''}
+                              onChange={e => { setFormData(fd => ({ ...fd, studentEmail: e.target.value })); resetStudentOtp(); }}
+                            />
+                            {formData.studentEmail?.trim() && !studentOtp.verified && (
+                              <button type="button" onClick={handleStudentSendOtp} disabled={studentOtp.sending}
+                                style={{ flexShrink: 0, padding: '6px 12px', background: '#0de1e815', border: '1.5px solid #0de1e840', borderRadius: 6, cursor: studentOtp.sending ? 'not-allowed' : 'pointer', color: '#276749', fontSize: 12, fontWeight: 600, fontFamily: 'Poppins, sans-serif', whiteSpace: 'nowrap' }}>
+                                {studentOtp.sending ? 'Sending…' : studentOtp.sent ? 'Resend OTP' : 'Send OTP'}
+                              </button>
+                            )}
+                            {studentOtp.verified && (
+                              <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#276749', fontWeight: 600, fontSize: 13, flexShrink: 0 }}>
+                                <span className="material-icons" style={{ fontSize: 18, color: '#38a169' }}>verified</span>
+                                Verified
+                              </span>
+                            )}
+                          </div>
+                          {studentOtp.sent && !studentOtp.verified && (
+                            <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+                              <input type="text" inputMode="numeric" maxLength={6}
+                                placeholder="Enter 6-digit OTP"
+                                value={studentOtp.value}
+                                onChange={e => setStudentOtp(s => ({ ...s, value: e.target.value.replace(/\D/g, '').slice(0, 6), error: '' }))}
+                                className="form-control form-control-sm"
+                                style={{ letterSpacing: 4, fontWeight: 700, flex: 1 }}
+                              />
+                              <button type="button" onClick={handleStudentVerifyOtp} disabled={studentOtp.verifying}
+                                style={{ flexShrink: 0, padding: '6px 14px', background: '#276749', border: 'none', borderRadius: 6, cursor: studentOtp.verifying ? 'not-allowed' : 'pointer', color: '#fff', fontSize: 12, fontWeight: 600, fontFamily: 'Poppins, sans-serif', whiteSpace: 'nowrap' }}>
+                                {studentOtp.verifying ? 'Verifying…' : 'Verify'}
+                              </button>
+                            </div>
+                          )}
+                          {(studentOtp.error || errors.studentEmail) && (
+                            <div style={{ fontSize: 12, color: '#e53e3e', marginTop: 4 }}>
+                              {studentOtp.error || errors.studentEmail}
+                            </div>
+                          )}
+                        </>
+                      )}
+                      {editStudent && errors.studentEmail && (
+                        <div className="invalid-feedback">{errors.studentEmail}</div>
+                      )}
                     </div>
                   </div>
 
@@ -1172,7 +1271,7 @@ export default function Students() {
                 </div>{/* end modal-body */}
 
                 <div className="modal-footer">
-                  <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)} disabled={saving}>Cancel</button>
+                  <button type="button" className="btn btn-secondary" onClick={() => { setShowModal(false); resetStudentOtp(); }} disabled={saving}>Cancel</button>
                   <button
                     type="submit"
                     className="btn btn-primary"

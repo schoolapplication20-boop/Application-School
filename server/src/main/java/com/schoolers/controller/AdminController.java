@@ -3,6 +3,7 @@ package com.schoolers.controller;
 import com.schoolers.dto.ApiResponse;
 import com.schoolers.dto.CreateTeacherRequest;
 import com.schoolers.model.*;
+import com.schoolers.repository.EmailVerificationRepository;
 import com.schoolers.repository.IdempotencyKeyRepository;
 import com.schoolers.repository.UserRepository;
 import com.schoolers.service.AdminService;
@@ -28,6 +29,10 @@ public class AdminController {
     @Autowired private AdminService adminService;
     @Autowired private UserRepository userRepository;
     @Autowired private IdempotencyKeyRepository idempotencyKeyRepository;
+    @Autowired private EmailVerificationRepository emailVerificationRepository;
+
+    private static final java.util.regex.Pattern EMAIL_RE =
+            java.util.regex.Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
 
     /**
      * Extracts the schoolId embedded in the JWT claims (stored in auth details by JwtFilter).
@@ -103,8 +108,19 @@ public class AdminController {
     @PostMapping("/students")
     public ResponseEntity<ApiResponse<Map<String, Object>>> createStudent(
             @RequestBody Map<String, Object> body, Authentication auth) {
+        // If a real studentEmail was provided, it must have been OTP-verified
+        Object rawEmail = body.get("studentEmail");
+        if (rawEmail != null && !rawEmail.toString().isBlank()) {
+            String email = rawEmail.toString().trim().toLowerCase();
+            if (!EMAIL_RE.matcher(email).matches())
+                return ResponseEntity.badRequest().body(ApiResponse.error("Invalid student email address."));
+            if (!emailVerificationRepository.existsByEmailAndVerifiedTrue(email))
+                return ResponseEntity.badRequest().body(ApiResponse.error("Student email must be verified with OTP before creating the account."));
+        }
         body.put("schoolId", getCurrentSchoolId(auth));
         ApiResponse<Map<String, Object>> response = adminService.createStudent(body);
+        if (response.isSuccess() && rawEmail != null && !rawEmail.toString().isBlank())
+            emailVerificationRepository.deleteByEmail(rawEmail.toString().trim().toLowerCase());
         return response.isSuccess() ? ResponseEntity.status(201).body(response) : ResponseEntity.badRequest().body(response);
     }
 
@@ -166,8 +182,14 @@ public class AdminController {
 
     @PostMapping("/teachers")
     public ResponseEntity<?> createTeacher(@RequestBody CreateTeacherRequest req, Authentication auth) {
+        String email = req.getEmail() != null ? req.getEmail().trim().toLowerCase() : "";
+        if (email.isBlank())
+            return ResponseEntity.badRequest().body(ApiResponse.error("Teacher email is required."));
+        if (!emailVerificationRepository.existsByEmailAndVerifiedTrue(email))
+            return ResponseEntity.badRequest().body(ApiResponse.error("Teacher email must be verified with OTP before creating the account."));
         req.setSchoolId(getCurrentSchoolId(auth));
         var response = adminService.createTeacher(req);
+        if (response.isSuccess()) emailVerificationRepository.deleteByEmail(email);
         return response.isSuccess() ? ResponseEntity.status(201).body(response) : ResponseEntity.badRequest().body(response);
     }
 
