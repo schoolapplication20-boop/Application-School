@@ -20,11 +20,15 @@ jobs:
 
       # ── 2. Dump the database ─────────────────────────────────────────────────
       #
-      # Supabase direct connection host:
-      #   db.<PROJECT_REF>.supabase.co  (port 5432)
+      # Use Supabase's SESSION pooler (IPv4, pg_dump-compatible):
+      #   DB_HOST     = aws-0-ap-southeast-1.pooler.supabase.com
+      #   DB_PORT     = 5432
+      #   DB_USERNAME = postgres.<PROJECT_REF>   ← note: includes project ref
+      #   DB_NAME     = postgres
       #
-      # Do NOT use the pooler host (aws-0-*.pooler.supabase.com) for pg_dump —
-      # it breaks prepared statements.  Use the direct host.
+      # The direct host (db.*.supabase.co) resolves to IPv6 in ap-southeast-1
+      # which GitHub Actions runners cannot reach.
+      # The TRANSACTION pooler (port 6543) breaks pg_dump — use SESSION (5432).
       #
       - name: Create compressed backup
         env:
