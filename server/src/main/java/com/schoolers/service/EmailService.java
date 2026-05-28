@@ -27,7 +27,7 @@ public class EmailService {
     @Value("${resend.from.email:onboarding@resend.dev}")
     private String fromEmail;
 
-    @Value("${app.base.url:https://my-skoolz.vercel.app}")
+    @Value("${app.base.url:https://my-skoolz.com}")
     private String appBaseUrl;
 
     private final RestTemplate restTemplate = new RestTemplate();

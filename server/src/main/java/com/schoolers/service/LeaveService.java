@@ -28,7 +28,7 @@ public class LeaveService {
     @Autowired private ClassRoomRepository       classRoomRepository;
     @Autowired private EmailService              emailService;
 
-    @Value("${app.base.url:https://my-skoolz.vercel.app}")
+    @Value("${app.base.url:https://my-skoolz.com}")
     private String appBaseUrl;
 
     // ── Admin helpers ───────────────────────────────────────────────────────
