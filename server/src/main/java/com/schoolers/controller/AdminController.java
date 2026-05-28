@@ -29,9 +29,17 @@ public class AdminController {
     @Autowired private UserRepository userRepository;
     @Autowired private IdempotencyKeyRepository idempotencyKeyRepository;
 
-    /** Returns the school_id of the currently authenticated user */
+    /**
+     * Extracts the schoolId embedded in the JWT claims (stored in auth details by JwtFilter).
+     * Falls back to a DB lookup only when the details map is absent (e.g., tests / mock auth).
+     */
+    @SuppressWarnings("unchecked")
     private Long getCurrentSchoolId(Authentication auth) {
         if (auth == null) return null;
+        if (auth.getDetails() instanceof java.util.Map) {
+            Object v = ((java.util.Map<?, ?>) auth.getDetails()).get("schoolId");
+            if (v != null) return v instanceof Long ? (Long) v : Long.parseLong(v.toString());
+        }
         return userRepository.findByEmailIgnoreCase(auth.getName())
                 .map(com.schoolers.model.User::getSchoolId)
                 .orElse(null);
@@ -65,7 +73,7 @@ public class AdminController {
     public ResponseEntity<ApiResponse<String>> getPermissions() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String email = auth.getName();
-        return userRepository.findByEmail(email)
+        return userRepository.findByEmailIgnoreCase(email)
                 .map(user -> ResponseEntity.ok(ApiResponse.success("Permissions retrieved", user.getPermissions())))
                 .orElse(ResponseEntity.status(404).body(ApiResponse.error("User not found")));
     }
@@ -250,7 +258,8 @@ public class AdminController {
     }
 
     @PostMapping("/fees")
-    public ResponseEntity<ApiResponse<Fee>> createFee(@RequestBody Fee fee) {
+    public ResponseEntity<ApiResponse<Fee>> createFee(@RequestBody Fee fee, Authentication auth) {
+        fee.setSchoolId(getCurrentSchoolId(auth));
         return ResponseEntity.status(201).body(adminService.createFee(fee));
     }
 

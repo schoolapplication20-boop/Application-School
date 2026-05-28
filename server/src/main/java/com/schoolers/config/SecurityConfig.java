@@ -18,6 +18,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 
 @Configuration
 @EnableWebSecurity
@@ -59,14 +60,28 @@ public class SecurityConfig {
 
             // ── HTTP security headers ────────────────────────────────────────────
             .headers(headers -> headers
-                .frameOptions(f -> f.deny())                          // X-Frame-Options: DENY (clickjacking)
-                .xssProtection(x -> x.disable())                      // X-XSS-Protection: handled by CSP
+                .frameOptions(f -> f.deny())
+                .xssProtection(x -> x.disable())                      // X-XSS-Protection deprecated; CSP handles XSS
                 .contentTypeOptions(c -> {})                           // X-Content-Type-Options: nosniff
-                .httpStrictTransportSecurity(hsts -> hsts             // HSTS: force HTTPS for 1 year
+                .httpStrictTransportSecurity(hsts -> hsts
                     .maxAgeInSeconds(31536000)
-                    .includeSubDomains(true))
+                    .includeSubDomains(true)
+                    .preload(true))
                 .contentSecurityPolicy(csp -> csp
-                    .policyDirectives("default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'"))
+                    .policyDirectives(
+                        "default-src 'self'; " +
+                        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://storage.googleapis.com; " +
+                        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; " +
+                        "img-src 'self' data: https: blob:; " +
+                        "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; " +
+                        "connect-src 'self' https: wss:; " +
+                        "frame-ancestors 'none'; " +
+                        "base-uri 'self'; " +
+                        "form-action 'self';"))
+                .referrerPolicy(r -> r
+                    .policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
+                .permissionsPolicy(p -> p
+                    .policy("camera=(), microphone=(), geolocation=(), payment=()"))
             )
 
             // Session management - stateless (JWT)
@@ -93,7 +108,6 @@ public class SecurityConfig {
                 .requestMatchers("/api/leave/parent-ack").permitAll() // one-click parent ack link from email
                 .requestMatchers("/api/whatsapp/webhook").permitAll() // Meta webhook — must be public
                 .requestMatchers("/api/system/**").authenticated()  // system notices — all users read; write gated by @PreAuthorize
-                .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/error").permitAll()
                 .requestMatchers("/uploads/logos/**").permitAll()    // school logos — public
                 .requestMatchers("/uploads/**").authenticated()      // docs/receipts/slips require auth

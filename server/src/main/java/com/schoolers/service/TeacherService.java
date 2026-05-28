@@ -669,20 +669,33 @@ public class TeacherService {
         return ApiResponse.success(marksRepository.findByStudentId(studentId));
     }
 
-    public ApiResponse<Marks> addMarks(Marks marks) {
-        // The frontend sends user.id (User table PK) as teacherId, not Teacher profile PK.
-        // Always resolve via the user→teacher relationship to guarantee correct school scoping.
+    public ApiResponse<Marks> addMarks(Marks marks, Long authSchoolId) {
+        // Resolve school from teacher profile if not already set
         if (marks.getTeacherId() != null && marks.getSchoolId() == null) {
             teacherRepository.findByUserId(marks.getTeacherId())
                     .ifPresent(t -> marks.setSchoolId(t.getSchoolId()));
         }
+        // Prefer the school resolved from the authenticated teacher over any client-supplied value
+        if (authSchoolId != null) marks.setSchoolId(authSchoolId);
+
+        // Tenant isolation: reject if the target student is from a different school
+        if (authSchoolId != null && marks.getStudentId() != null) {
+            Student student = studentRepository.findById(marks.getStudentId()).orElse(null);
+            if (student == null || !authSchoolId.equals(student.getSchoolId()))
+                return ApiResponse.error("Student not found");
+        }
+
         Marks saved = marksRepository.save(marks);
         return ApiResponse.success("Marks saved", saved);
     }
 
-    public ApiResponse<Marks> updateMarks(Long id, Marks updated) {
+    public ApiResponse<Marks> updateMarks(Long id, Marks updated, Long authSchoolId) {
         return marksRepository.findById(id)
                 .map(m -> {
+                    // Tenant isolation: prevent cross-school edits
+                    if (authSchoolId != null && m.getSchoolId() != null
+                            && !authSchoolId.equals(m.getSchoolId()))
+                        return ApiResponse.<Marks>error("Marks record not found");
                     m.setMarks(updated.getMarks());
                     m.setMaxMarks(updated.getMaxMarks());
                     m.setGrade(updated.getGrade());
@@ -691,8 +704,12 @@ public class TeacherService {
                 .orElse(ApiResponse.error("Marks record not found"));
     }
 
-    public ApiResponse<String> deleteMarks(Long id) {
-        if (!marksRepository.existsById(id)) return ApiResponse.error("Marks record not found");
+    public ApiResponse<String> deleteMarks(Long id, Long authSchoolId) {
+        Marks m = marksRepository.findById(id).orElse(null);
+        if (m == null) return ApiResponse.error("Marks record not found");
+        // Tenant isolation: prevent cross-school deletes
+        if (authSchoolId != null && m.getSchoolId() != null && !authSchoolId.equals(m.getSchoolId()))
+            return ApiResponse.error("Marks record not found");
         marksRepository.deleteById(id);
         return ApiResponse.success("Marks deleted", "Deleted");
     }

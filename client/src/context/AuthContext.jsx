@@ -133,9 +133,7 @@ export const AuthProvider = ({ children }) => {
     setIsLoading(true);
     const candidates = [
       '/api/admin/permissions',   // dedicated permissions endpoint
-      '/api/admin/me',            // admin own profile
-      '/api/user/profile',        // generic profile
-      '/api/user/me',             // alternative profile
+      '/api/user/profile',        // generic profile fallback
     ];
 
     try {

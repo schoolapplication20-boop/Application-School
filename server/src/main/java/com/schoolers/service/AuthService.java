@@ -252,13 +252,35 @@ public class AuthService {
             if (user == null || user.getRole() != User.Role.APPLICATION_OWNER)
                 return ApiResponse.error("Invalid request.");
 
-            String dbOtp = user.getResetOtp();
-            if (dbOtp == null || !constantTimeEquals(dbOtp.trim(), otp.trim()))
-                return ApiResponse.error("Invalid OTP.");
+            // Expire the OTP after 5 wrong attempts to prevent brute-force (900k combinations)
+            int attempts = user.getFailedLoginAttempts() == null ? 0 : user.getFailedLoginAttempts();
+            if (attempts >= 5) {
+                user.setResetOtp(null);
+                user.setOtpExpiry(null);
+                user.setFailedLoginAttempts(0);
+                userRepository.save(user);
+                log.warn("[verifyOwnerOtp] OTP invalidated after 5 failed attempts: {}", user.getEmail());
+                return ApiResponse.error("Too many incorrect attempts. Please log in again to receive a new OTP.");
+            }
 
+            String dbOtp = user.getResetOtp();
             LocalDateTime expiry = user.getOtpExpiry();
-            if (expiry != null && LocalDateTime.now(ZoneOffset.UTC).isAfter(expiry))
+
+            if (expiry != null && LocalDateTime.now(ZoneOffset.UTC).isAfter(expiry)) {
+                user.setResetOtp(null);
+                user.setOtpExpiry(null);
+                user.setFailedLoginAttempts(0);
+                userRepository.save(user);
                 return ApiResponse.error("OTP has expired. Please log in again.");
+            }
+
+            if (dbOtp == null || !constantTimeEquals(dbOtp.trim(), otp.trim())) {
+                user.setFailedLoginAttempts(attempts + 1);
+                userRepository.save(user);
+                int remaining = 5 - (attempts + 1);
+                log.warn("[verifyOwnerOtp] Wrong OTP attempt {}/5 for {}", attempts + 1, user.getEmail());
+                return ApiResponse.error("Invalid OTP. " + remaining + " attempt(s) remaining.");
+            }
 
             user.setResetOtp(null);
             user.setOtpExpiry(null);
@@ -464,8 +486,8 @@ public class AuthService {
                     return ApiResponse.error("Failed to send OTP email. Please check your email configuration.");
                 }
             } else {
-                log.info("[DEV] OTP sent via SMS");
-                return ApiResponse.success("OTP sent successfully to " + identifier, otp);
+                log.info("[forgotPassword] Mobile OTP issued (SMS delivery not configured)");
+                return ApiResponse.success("If this account exists, an OTP has been sent.", null);
             }
         } catch (Exception e) {
             log.error("[forgotPassword] Unexpected error: {}", e.getMessage());
@@ -496,9 +518,10 @@ public class AuthService {
         if (expiry != null && LocalDateTime.now(ZoneOffset.UTC).isAfter(expiry))
             return ApiResponse.error("OTP has expired. Please request a new one.");
 
-        // Mark OTP as verified — resetPassword() checks for this sentinel before allowing reset
+        // Mark OTP as verified — resetPassword() checks for this sentinel before allowing reset.
+        // 15-minute window: prevents the verified state from persisting indefinitely.
         user.setResetOtp("VERIFIED");
-        user.setOtpExpiry(null);
+        user.setOtpExpiry(LocalDateTime.now(ZoneOffset.UTC).plusMinutes(15));
         userRepository.save(user);
 
         return ApiResponse.success("OTP verified successfully", "OTP verified");
@@ -521,6 +544,15 @@ public class AuthService {
 
         if (!"VERIFIED".equals(user.getResetOtp()))
             return ApiResponse.error("OTP verification required before resetting password.");
+
+        // Enforce the 15-minute verification window
+        LocalDateTime verifiedExpiry = user.getOtpExpiry();
+        if (verifiedExpiry != null && LocalDateTime.now(ZoneOffset.UTC).isAfter(verifiedExpiry)) {
+            user.setResetOtp(null);
+            user.setOtpExpiry(null);
+            userRepository.save(user);
+            return ApiResponse.error("Verification has expired. Please request a new OTP.");
+        }
 
         String pwdError = validatePasswordComplexity(newPassword);
         if (pwdError != null) return ApiResponse.error(pwdError);

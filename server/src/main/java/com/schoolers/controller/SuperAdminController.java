@@ -29,9 +29,17 @@ public class SuperAdminController {
     @Autowired
     private UserRepository userRepository;
 
-    /** Resolve the school_id of the currently authenticated SUPER_ADMIN */
+    /**
+     * Extracts the schoolId from JWT claims stored in auth details by JwtFilter.
+     * Falls back to DB lookup for test contexts where details may not be present.
+     */
+    @SuppressWarnings("unchecked")
     private Long getCurrentSchoolId(Authentication auth) {
         if (auth == null) return null;
+        if (auth.getDetails() instanceof java.util.Map) {
+            Object v = ((java.util.Map<?, ?>) auth.getDetails()).get("schoolId");
+            if (v != null) return v instanceof Long ? (Long) v : Long.parseLong(v.toString());
+        }
         return userRepository.findByEmailIgnoreCase(auth.getName())
                 .map(User::getSchoolId)
                 .orElse(null);

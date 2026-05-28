@@ -14,6 +14,8 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
@@ -45,7 +47,12 @@ public class JwtFilter extends OncePerRequestFilter {
                                         null,
                                         userDetails.getAuthorities()
                                 );
-                        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                        // Embed JWT claims (schoolId, role) in the details map so controllers
+                        // can read them without an extra DB round-trip on every request.
+                        Map<String, Object> details = new HashMap<>();
+                        details.put("schoolId", jwtUtil.extractSchoolId(token));
+                        details.put("role",     jwtUtil.extractRole(token));
+                        authToken.setDetails(details);
                         SecurityContextHolder.getContext().setAuthentication(authToken);
                     }
                 } catch (UsernameNotFoundException ignored) {

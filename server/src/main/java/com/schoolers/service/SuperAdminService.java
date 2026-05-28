@@ -18,12 +18,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.stream.Collectors;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 public class SuperAdminService {
 
-    private static final Logger log = Logger.getLogger(SuperAdminService.class.getName());
+    private static final Logger log = LoggerFactory.getLogger(SuperAdminService.class);
 
     @Autowired private UserRepository                    userRepository;
     @Autowired private SchoolRepository                  schoolRepository;
@@ -142,16 +143,16 @@ public class SuperAdminService {
             } else {
                 userMessage = "A data conflict occurred (duplicate entry). Please verify the email and mobile are unique.";
             }
-            log.warning("[createAdmin] Constraint violation — email=" + normalizedEmail + " | " + e.getMessage());
+            log.warn("[createAdmin] Constraint violation — email=" + normalizedEmail + " | " + e.getMessage());
             return ApiResponse.error(userMessage);
 
         } catch (DataAccessException e) {
-            log.severe("[createAdmin] Database access failure — email=" + normalizedEmail
+            log.error("[createAdmin] Database access failure — email=" + normalizedEmail
                     + " | " + e.getClass().getSimpleName() + ": " + e.getMessage());
             return ApiResponse.error("A database error occurred while creating the admin. Please try again in a moment.");
 
         } catch (Exception e) {
-            log.severe("[createAdmin] Unexpected error — email=" + normalizedEmail
+            log.error("[createAdmin] Unexpected error — email=" + normalizedEmail
                     + " | " + e.getClass().getName() + ": " + e.getMessage());
             return ApiResponse.error("An unexpected error occurred. Please contact your system administrator.");
         }
@@ -290,7 +291,7 @@ public class SuperAdminService {
                 return ApiResponse.error("School code '" + normalizedCode + "' conflicts with an existing school.");
             return ApiResponse.error("A data conflict occurred. Verify email, mobile, and school code are unique.");
         } catch (Exception e) {
-            log.severe("[createSuperAdmin] Error — email=" + normalizedEmail + " | " + e.getMessage());
+            log.error("[createSuperAdmin] Error — email=" + normalizedEmail + " | " + e.getMessage());
             return ApiResponse.error("An error occurred while creating the Super Admin.");
         }
     }

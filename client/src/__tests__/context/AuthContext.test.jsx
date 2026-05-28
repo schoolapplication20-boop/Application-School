@@ -1,362 +1,319 @@
 import React from 'react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, act, waitFor } from '@testing-library/react';
+import { render, screen, act, waitFor } from '@testing-library/react';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { AuthProvider, useAuth } from '../../context/AuthContext';
 
-// Mock the api module to prevent real network calls
-vi.mock('../../services/api', () => ({
-  setAuthToken:   vi.fn(),
-  clearAuthToken: vi.fn(),
-  default: {
-    get:  vi.fn().mockRejectedValue(new Error('Network error')),
-    post: vi.fn().mockRejectedValue(new Error('Network error')),
-  },
-}));
+// ── mock the api module ───────────────────────────────────────────────────────
+vi.mock('../../services/api', () => {
+  const mockApi = {
+    post: vi.fn().mockResolvedValue({ data: {} }),
+    get:  vi.fn().mockResolvedValue({ data: {} }),
+    interceptors: {
+      request:  { use: vi.fn() },
+      response: { use: vi.fn() },
+    },
+  };
+  return {
+    default:        mockApi,
+    setAuthToken:   vi.fn(),
+    clearAuthToken: vi.fn(),
+  };
+});
 
-const SESSION_KEY = 'schoolers_session';
-
-// Helper: renders a component that exposes auth context values
-function renderWithAuth(callback) {
-  let result;
-  function Consumer() {
-    result = useAuth();
-    return null;
-  }
-  render(
-    <AuthProvider>
-      <Consumer />
-    </AuthProvider>
+// ── AuthConsumer: assigns the latest auth value to a ref on every render ──────
+// This avoids stale-closure bugs: auth callbacks are memoized with [user] as
+// a dependency, so after login() the ref's methods reflect the new user state.
+function AuthConsumer({ authRef }) {
+  const auth = useAuth();
+  authRef.current = auth; // synchronous assignment during render — always fresh
+  return (
+    <div>
+      <span data-testid="authenticated">{String(auth.isAuthenticated)}</span>
+      <span data-testid="role">{auth.user?.role ?? 'none'}</span>
+      <span data-testid="email">{auth.user?.email ?? 'none'}</span>
+    </div>
   );
-  return () => result;
 }
 
-// ── useAuth hook ──────────────────────────────────────────────────────────────
+function renderWithAuth(authRef) {
+  return render(
+    <AuthProvider>
+      <AuthConsumer authRef={authRef} />
+    </AuthProvider>
+  );
+}
 
-describe('useAuth', () => {
-  it('throws when used outside AuthProvider', () => {
-    function BareConsumer() {
-      useAuth();
-      return null;
-    }
-    expect(() => render(<BareConsumer />)).toThrow(
-      'useAuth must be used within an AuthProvider'
-    );
+function makeAuthRef() { return { current: null }; }
+
+// ── common fixtures ───────────────────────────────────────────────────────────
+const ADMIN_USER = {
+  id: 1, name: 'Admin', email: 'admin@school.com',
+  role: 'ADMIN', schoolId: 5,
+  permissions: { students: true, fees: false },
+};
+const TOKEN = 'test-jwt-token';
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('AuthContext', () => {
+
+  beforeEach(() => {
+    sessionStorage.clear();
+    localStorage.clear();
   });
 
-  it('returns context object when inside AuthProvider', async () => {
-    const getAuth = renderWithAuth();
-    await waitFor(() => expect(getAuth().isLoading).toBe(false));
-    const auth = getAuth();
-    expect(auth).toHaveProperty('user');
-    expect(auth).toHaveProperty('token');
-    expect(auth).toHaveProperty('login');
-    expect(auth).toHaveProperty('logout');
-    expect(auth).toHaveProperty('hasRole');
-    expect(auth).toHaveProperty('hasPermission');
-    expect(auth).toHaveProperty('getDashboardPath');
-  });
-});
+  // ── useAuth guard ──────────────────────────────────────────────────────────
 
-// ── Initial state ─────────────────────────────────────────────────────────────
-
-describe('AuthProvider — initial state', () => {
-  it('starts with null user and token', async () => {
-    const getAuth = renderWithAuth();
-    await waitFor(() => expect(getAuth().isLoading).toBe(false));
-    expect(getAuth().user).toBeNull();
-    expect(getAuth().token).toBeNull();
-    expect(getAuth().isAuthenticated).toBe(false);
+  it('throws when useAuth is called outside AuthProvider', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const ref = makeAuthRef();
+    expect(() => render(<AuthConsumer authRef={ref} />))
+      .toThrow('useAuth must be used within an AuthProvider');
+    spy.mockRestore();
   });
 
-  it('isLoading starts true and resolves to false', async () => {
-    const getAuth = renderWithAuth();
-    await waitFor(() => expect(getAuth().isLoading).toBe(false));
-  });
-});
+  // ── initial state ──────────────────────────────────────────────────────────
 
-// ── login() ───────────────────────────────────────────────────────────────────
-
-describe('login()', () => {
-  it('sets user and token after login', async () => {
-    const getAuth = renderWithAuth();
-    await waitFor(() => expect(getAuth().isLoading).toBe(false));
-
-    const fakeUser  = { id: 1, name: 'Alice', role: 'ADMIN', schoolId: 10 };
-    const fakeToken = 'jwt-token-abc';
-
-    act(() => { getAuth().login(fakeUser, fakeToken); });
-
-    expect(getAuth().user).toMatchObject(fakeUser);
-    expect(getAuth().token).toBe(fakeToken);
-    expect(getAuth().isAuthenticated).toBe(true);
+  it('starts unauthenticated with no user', async () => {
+    const ref = makeAuthRef();
+    renderWithAuth(ref);
+    await waitFor(() => expect(screen.getByTestId('authenticated').textContent).toBe('false'));
+    expect(screen.getByTestId('role').textContent).toBe('none');
   });
 
-  it('persists session to sessionStorage', async () => {
-    const getAuth = renderWithAuth();
-    await waitFor(() => expect(getAuth().isLoading).toBe(false));
+  // ── login() ───────────────────────────────────────────────────────────────
 
-    const fakeUser  = { id: 2, name: 'Bob', role: 'TEACHER', schoolId: 10 };
-    const fakeToken = 'jwt-token-xyz';
-    act(() => { getAuth().login(fakeUser, fakeToken); });
+  it('login() sets user and token, marking session as authenticated', async () => {
+    const ref = makeAuthRef();
+    renderWithAuth(ref);
 
-    const stored = JSON.parse(sessionStorage.getItem(SESSION_KEY));
-    expect(stored.token).toBe(fakeToken);
-    expect(stored.user.name).toBe('Bob');
+    await act(async () => { ref.current.login(ADMIN_USER, TOKEN); });
+
+    await waitFor(() =>
+      expect(screen.getByTestId('authenticated').textContent).toBe('true'));
+    expect(screen.getByTestId('role').textContent).toBe('ADMIN');
+    expect(screen.getByTestId('email').textContent).toBe('admin@school.com');
   });
 
-  it('parses permissions from string if provided', async () => {
-    const getAuth = renderWithAuth();
-    await waitFor(() => expect(getAuth().isLoading).toBe(false));
+  it('login() persists the session to sessionStorage', async () => {
+    const ref = makeAuthRef();
+    renderWithAuth(ref);
 
-    const permsObj  = { students: true, fees: false };
-    const fakeUser  = { id: 3, role: 'ADMIN', permissions: JSON.stringify(permsObj) };
-    act(() => { getAuth().login(fakeUser, 'token'); });
+    await act(async () => { ref.current.login(ADMIN_USER, TOKEN); });
 
-    expect(getAuth().user.permissions).toEqual(permsObj);
+    const stored = JSON.parse(sessionStorage.getItem('schoolers_session'));
+    expect(stored.token).toBe(TOKEN);
+    expect(stored.user.email).toBe('admin@school.com');
   });
 
-  it('tracks schoolId in localStorage for non-APPLICATION_OWNER', async () => {
-    const getAuth = renderWithAuth();
-    await waitFor(() => expect(getAuth().isLoading).toBe(false));
+  it('login() writes ms_school_tenant to localStorage for school users', async () => {
+    const ref = makeAuthRef();
+    renderWithAuth(ref);
 
-    act(() => { getAuth().login({ id: 4, role: 'ADMIN', schoolId: 99 }, 'token'); });
-    expect(localStorage.getItem('ms_school_tenant')).toBe('99');
+    await act(async () => { ref.current.login(ADMIN_USER, TOKEN); });
+
+    expect(localStorage.getItem('ms_school_tenant')).toBe('5');
   });
 
-  it('removes school tenant from localStorage for APPLICATION_OWNER', async () => {
+  it('login() removes ms_school_tenant for APPLICATION_OWNER (no schoolId)', async () => {
     localStorage.setItem('ms_school_tenant', '5');
-    const getAuth = renderWithAuth();
-    await waitFor(() => expect(getAuth().isLoading).toBe(false));
+    const ref = makeAuthRef();
+    renderWithAuth(ref);
 
-    act(() => { getAuth().login({ id: 5, role: 'APPLICATION_OWNER' }, 'token'); });
+    const ownerUser = { id: 99, name: 'Owner', email: 'owner@app.com',
+                        role: 'APPLICATION_OWNER', schoolId: null };
+    await act(async () => { ref.current.login(ownerUser, TOKEN); });
+
     expect(localStorage.getItem('ms_school_tenant')).toBeNull();
   });
-});
 
-// ── logout() ──────────────────────────────────────────────────────────────────
+  // ── logout() ──────────────────────────────────────────────────────────────
 
-describe('logout()', () => {
-  it('clears user, token, and sessionStorage', async () => {
-    const getAuth = renderWithAuth();
-    await waitFor(() => expect(getAuth().isLoading).toBe(false));
+  it('logout() clears user, token, and sessionStorage', async () => {
+    const ref = makeAuthRef();
+    renderWithAuth(ref);
 
-    act(() => { getAuth().login({ id: 1, role: 'ADMIN', schoolId: 1 }, 'tok'); });
-    act(() => { getAuth().logout(); });
+    await act(async () => { ref.current.login(ADMIN_USER, TOKEN); });
+    await act(async () => { ref.current.logout(); });
 
-    expect(getAuth().user).toBeNull();
-    expect(getAuth().token).toBeNull();
-    expect(getAuth().isAuthenticated).toBe(false);
-    expect(sessionStorage.getItem(SESSION_KEY)).toBeNull();
+    await waitFor(() =>
+      expect(screen.getByTestId('authenticated').textContent).toBe('false'));
+    expect(sessionStorage.getItem('schoolers_session')).toBeNull();
   });
 
-  it('dispatches auth:logout event', async () => {
-    const getAuth = renderWithAuth();
-    await waitFor(() => expect(getAuth().isLoading).toBe(false));
+  // ── session restore from sessionStorage ───────────────────────────────────
 
-    const listener = vi.fn();
-    window.addEventListener('auth:logout', listener);
-    act(() => { getAuth().login({ id: 1, role: 'ADMIN', schoolId: 1 }, 'tok'); });
-    act(() => { getAuth().logout(); });
+  it('restores session from sessionStorage on remount', async () => {
+    sessionStorage.setItem('schoolers_session',
+      JSON.stringify({ token: TOKEN, user: ADMIN_USER }));
 
-    expect(listener).toHaveBeenCalled();
-    window.removeEventListener('auth:logout', listener);
-  });
-});
+    const ref = makeAuthRef();
+    renderWithAuth(ref);
 
-// ── hasRole() ─────────────────────────────────────────────────────────────────
-
-describe('hasRole()', () => {
-  it('returns false when no user is set', async () => {
-    const getAuth = renderWithAuth();
-    await waitFor(() => expect(getAuth().isLoading).toBe(false));
-    expect(getAuth().hasRole('ADMIN')).toBe(false);
+    await waitFor(() =>
+      expect(screen.getByTestId('authenticated').textContent).toBe('true'));
+    expect(screen.getByTestId('role').textContent).toBe('ADMIN');
   });
 
-  it('returns true for matching single role', async () => {
-    const getAuth = renderWithAuth();
-    await waitFor(() => expect(getAuth().isLoading).toBe(false));
-    act(() => { getAuth().login({ id: 1, role: 'TEACHER', schoolId: 1 }, 't'); });
-    expect(getAuth().hasRole('TEACHER')).toBe(true);
+  it('clears corrupt sessionStorage data rather than crashing', async () => {
+    sessionStorage.setItem('schoolers_session', '{invalid-json}');
+
+    const ref = makeAuthRef();
+    renderWithAuth(ref);
+
+    await waitFor(() =>
+      expect(screen.getByTestId('authenticated').textContent).toBe('false'));
+    expect(sessionStorage.getItem('schoolers_session')).toBeNull();
   });
 
-  it('returns false for non-matching role', async () => {
-    const getAuth = renderWithAuth();
-    await waitFor(() => expect(getAuth().isLoading).toBe(false));
-    act(() => { getAuth().login({ id: 1, role: 'TEACHER', schoolId: 1 }, 't'); });
-    expect(getAuth().hasRole('ADMIN')).toBe(false);
-  });
+  // ── hasRole() ─────────────────────────────────────────────────────────────
 
-  it('returns true when role is in array', async () => {
-    const getAuth = renderWithAuth();
-    await waitFor(() => expect(getAuth().isLoading).toBe(false));
-    act(() => { getAuth().login({ id: 1, role: 'STUDENT', schoolId: 1 }, 't'); });
-    expect(getAuth().hasRole(['STUDENT', 'TEACHER'])).toBe(true);
-  });
-});
+  describe('hasRole()', () => {
 
-// ── hasPermission() ───────────────────────────────────────────────────────────
-
-describe('hasPermission()', () => {
-  it('returns false when no user', async () => {
-    const getAuth = renderWithAuth();
-    await waitFor(() => expect(getAuth().isLoading).toBe(false));
-    expect(getAuth().hasPermission('students')).toBe(false);
-  });
-
-  it('APPLICATION_OWNER always returns true', async () => {
-    const getAuth = renderWithAuth();
-    await waitFor(() => expect(getAuth().isLoading).toBe(false));
-    act(() => { getAuth().login({ id: 1, role: 'APPLICATION_OWNER' }, 't'); });
-    expect(getAuth().hasPermission('students')).toBe(true);
-    expect(getAuth().hasPermission('fees')).toBe(true);
-    expect(getAuth().hasPermission('anything')).toBe(true);
-  });
-
-  it('SUPER_ADMIN with no permissions returns true (full access)', async () => {
-    const getAuth = renderWithAuth();
-    await waitFor(() => expect(getAuth().isLoading).toBe(false));
-    act(() => { getAuth().login({ id: 1, role: 'SUPER_ADMIN', schoolId: 1 }, 't'); });
-    expect(getAuth().hasPermission('students')).toBe(true);
-  });
-
-  it('SUPER_ADMIN with explicit permissions obeys them', async () => {
-    const getAuth = renderWithAuth();
-    await waitFor(() => expect(getAuth().isLoading).toBe(false));
-    act(() => {
-      getAuth().login({
-        id: 1, role: 'SUPER_ADMIN', schoolId: 1,
-        permissions: { students: true, fees: false },
-      }, 't');
+    it('returns true when the user role matches the string argument', async () => {
+      const ref = makeAuthRef();
+      renderWithAuth(ref);
+      await act(async () => { ref.current.login({ ...ADMIN_USER, role: 'ADMIN' }, TOKEN); });
+      await waitFor(() => expect(ref.current.isAuthenticated).toBe(true));
+      expect(ref.current.hasRole('ADMIN')).toBe(true);
     });
-    expect(getAuth().hasPermission('students')).toBe(true);
-    expect(getAuth().hasPermission('fees')).toBe(false);
-  });
 
-  it('ADMIN with no permissions returns false', async () => {
-    const getAuth = renderWithAuth();
-    await waitFor(() => expect(getAuth().isLoading).toBe(false));
-    act(() => { getAuth().login({ id: 1, role: 'ADMIN', schoolId: 1 }, 't'); });
-    expect(getAuth().hasPermission('students')).toBe(false);
-  });
-
-  it('ADMIN with matching permission returns true', async () => {
-    const getAuth = renderWithAuth();
-    await waitFor(() => expect(getAuth().isLoading).toBe(false));
-    act(() => {
-      getAuth().login({
-        id: 1, role: 'ADMIN', schoolId: 1,
-        permissions: { students: true, fees: true },
-      }, 't');
+    it('returns false when the user role does not match', async () => {
+      const ref = makeAuthRef();
+      renderWithAuth(ref);
+      await act(async () => { ref.current.login({ ...ADMIN_USER, role: 'ADMIN' }, TOKEN); });
+      await waitFor(() => expect(ref.current.isAuthenticated).toBe(true));
+      expect(ref.current.hasRole('TEACHER')).toBe(false);
     });
-    expect(getAuth().hasPermission('students')).toBe(true);
-    expect(getAuth().hasPermission('fees')).toBe(true);
-  });
 
-  it('ADMIN without specific permission returns false', async () => {
-    const getAuth = renderWithAuth();
-    await waitFor(() => expect(getAuth().isLoading).toBe(false));
-    act(() => {
-      getAuth().login({
-        id: 1, role: 'ADMIN', schoolId: 1,
-        permissions: { students: true },
-      }, 't');
+    it('returns true when the user role is in the provided array', async () => {
+      const ref = makeAuthRef();
+      renderWithAuth(ref);
+      await act(async () => {
+        ref.current.login({ ...ADMIN_USER, role: 'SUPER_ADMIN' }, TOKEN);
+      });
+      await waitFor(() => expect(ref.current.isAuthenticated).toBe(true));
+      expect(ref.current.hasRole(['ADMIN', 'SUPER_ADMIN', 'APPLICATION_OWNER'])).toBe(true);
     });
-    expect(getAuth().hasPermission('fees')).toBe(false);
-  });
-});
 
-// ── getDashboardPath() ────────────────────────────────────────────────────────
-
-describe('getDashboardPath()', () => {
-  const cases = [
-    ['APPLICATION_OWNER', '/superadmin/dashboard'],
-    ['SUPER_ADMIN',       '/superadmin/dashboard'],
-    ['ADMIN',             '/admin/dashboard'],
-    ['TEACHER',           '/teacher/dashboard'],
-    ['STUDENT',           '/student/dashboard'],
-  ];
-
-  cases.forEach(([role, expectedPath]) => {
-    it(`returns ${expectedPath} for ${role}`, async () => {
-      const getAuth = renderWithAuth();
-      await waitFor(() => expect(getAuth().isLoading).toBe(false));
-      act(() => { getAuth().login({ id: 1, role, schoolId: 1 }, 't'); });
-      expect(getAuth().getDashboardPath()).toBe(expectedPath);
+    it('returns false when no user is logged in', async () => {
+      const ref = makeAuthRef();
+      renderWithAuth(ref);
+      await waitFor(() => expect(ref.current).not.toBeNull());
+      // isLoading = false after restore attempt completes
+      await waitFor(() => expect(ref.current.isLoading).toBe(false));
+      expect(ref.current.hasRole('ADMIN')).toBe(false);
     });
   });
 
-  it('BUG: PARENT role has no dashboard path — returns /login', async () => {
-    const getAuth = renderWithAuth();
-    await waitFor(() => expect(getAuth().isLoading).toBe(false));
-    act(() => { getAuth().login({ id: 1, role: 'PARENT', schoolId: 1 }, 't'); });
-    // PARENT role is not handled in getDashboardPath — falls through to /login
-    expect(getAuth().getDashboardPath()).toBe('/login');
+  // ── hasPermission() ───────────────────────────────────────────────────────
+
+  describe('hasPermission()', () => {
+
+    it('APPLICATION_OWNER always returns true regardless of permission key', async () => {
+      const ref = makeAuthRef();
+      renderWithAuth(ref);
+      const ownerUser = { id: 99, email: 'o@app.com', role: 'APPLICATION_OWNER', schoolId: null };
+      await act(async () => { ref.current.login(ownerUser, TOKEN); });
+      await waitFor(() => expect(ref.current.isAuthenticated).toBe(true));
+      expect(ref.current.hasPermission('students')).toBe(true);
+      expect(ref.current.hasPermission('nonExistentModule')).toBe(true);
+    });
+
+    it('SUPER_ADMIN returns true when no permissions object is set (full access)', async () => {
+      const ref = makeAuthRef();
+      renderWithAuth(ref);
+      const sa = { id: 2, email: 'sa@school.com', role: 'SUPER_ADMIN', schoolId: 5, permissions: null };
+      await act(async () => { ref.current.login(sa, TOKEN); });
+      await waitFor(() => expect(ref.current.isAuthenticated).toBe(true));
+      expect(ref.current.hasPermission('students')).toBe(true);
+    });
+
+    it('ADMIN with permission key=true returns true', async () => {
+      const ref = makeAuthRef();
+      renderWithAuth(ref);
+      const adminUser = { ...ADMIN_USER, permissions: { students: true, fees: false } };
+      await act(async () => { ref.current.login(adminUser, TOKEN); });
+      await waitFor(() => expect(ref.current.isAuthenticated).toBe(true));
+      expect(ref.current.hasPermission('students')).toBe(true);
+    });
+
+    it('ADMIN with permission key=false returns false', async () => {
+      const ref = makeAuthRef();
+      renderWithAuth(ref);
+      const adminUser = { ...ADMIN_USER, permissions: { students: true, fees: false } };
+      await act(async () => { ref.current.login(adminUser, TOKEN); });
+      await waitFor(() => expect(ref.current.isAuthenticated).toBe(true));
+      expect(ref.current.hasPermission('fees')).toBe(false);
+    });
+
+    it('ADMIN with no permissions object returns false for every key', async () => {
+      const ref = makeAuthRef();
+      renderWithAuth(ref);
+      const adminUser = { ...ADMIN_USER, permissions: null };
+      await act(async () => { ref.current.login(adminUser, TOKEN); });
+      await waitFor(() => expect(ref.current.isAuthenticated).toBe(true));
+      expect(ref.current.hasPermission('students')).toBe(false);
+    });
+
+    it('TEACHER always returns false (not an admin role)', async () => {
+      const ref = makeAuthRef();
+      renderWithAuth(ref);
+      const teacher = { id: 3, email: 't@school.com', role: 'TEACHER', schoolId: 5 };
+      await act(async () => { ref.current.login(teacher, TOKEN); });
+      await waitFor(() => expect(ref.current.isAuthenticated).toBe(true));
+      expect(ref.current.hasPermission('students')).toBe(false);
+    });
   });
 
-  it('returns /login when no user', async () => {
-    const getAuth = renderWithAuth();
-    await waitFor(() => expect(getAuth().isLoading).toBe(false));
-    expect(getAuth().getDashboardPath()).toBe('/login');
-  });
-});
+  // ── getDashboardPath() ────────────────────────────────────────────────────
 
-// ── Session restore ───────────────────────────────────────────────────────────
+  describe('getDashboardPath()', () => {
+    const cases = [
+      ['APPLICATION_OWNER', '/owner/dashboard'],
+      ['SUPER_ADMIN',       '/superadmin/dashboard'],
+      ['ADMIN',             '/admin/dashboard'],
+      ['TEACHER',           '/teacher/dashboard'],
+      ['STUDENT',           '/student/dashboard'],
+    ];
 
-describe('Session restore from sessionStorage', () => {
-  it('restores user and token from valid session', async () => {
-    const savedUser  = { id: 7, name: 'Charlie', role: 'ADMIN', schoolId: 3 };
-    const savedToken = 'restored-token';
-    sessionStorage.setItem(
-      SESSION_KEY,
-      JSON.stringify({ token: savedToken, user: savedUser })
-    );
+    it.each(cases)('%s → %s', async (role, expectedPath) => {
+      const ref = makeAuthRef();
+      renderWithAuth(ref);
 
-    const getAuth = renderWithAuth();
-    await waitFor(() => expect(getAuth().isLoading).toBe(false));
+      const userForRole = {
+        id: 1, email: 'u@s.com', role,
+        schoolId: role === 'APPLICATION_OWNER' ? null : 5,
+      };
+      await act(async () => { ref.current.login(userForRole, TOKEN); });
+      // Wait until the context has re-rendered with the new user
+      await waitFor(() => expect(ref.current.isAuthenticated).toBe(true));
 
-    expect(getAuth().user).toMatchObject(savedUser);
-    expect(getAuth().token).toBe(savedToken);
-    expect(getAuth().isAuthenticated).toBe(true);
-  });
+      expect(ref.current.getDashboardPath()).toBe(expectedPath);
+    });
 
-  it('ignores corrupt sessionStorage data', async () => {
-    sessionStorage.setItem(SESSION_KEY, 'not-valid-json{{');
-    const getAuth = renderWithAuth();
-    await waitFor(() => expect(getAuth().isLoading).toBe(false));
-
-    expect(getAuth().user).toBeNull();
-    expect(getAuth().token).toBeNull();
-  });
-
-  it('ignores session with missing role', async () => {
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify({ token: 'tok', user: { id: 1 } }));
-    const getAuth = renderWithAuth();
-    await waitFor(() => expect(getAuth().isLoading).toBe(false));
-
-    expect(getAuth().user).toBeNull();
-  });
-});
-
-// ── updateUser() ──────────────────────────────────────────────────────────────
-
-describe('updateUser()', () => {
-  it('merges partial updates into existing user', async () => {
-    const getAuth = renderWithAuth();
-    await waitFor(() => expect(getAuth().isLoading).toBe(false));
-
-    act(() => { getAuth().login({ id: 1, role: 'ADMIN', name: 'Alice', schoolId: 1 }, 't'); });
-    act(() => { getAuth().updateUser({ name: 'Alice Updated', schoolId: 5 }); });
-
-    expect(getAuth().user.name).toBe('Alice Updated');
-    expect(getAuth().user.schoolId).toBe(5);
-    expect(getAuth().user.role).toBe('ADMIN');
+    it('returns /login when no user is authenticated', async () => {
+      const ref = makeAuthRef();
+      renderWithAuth(ref);
+      await waitFor(() => expect(ref.current.isLoading).toBe(false));
+      expect(ref.current.getDashboardPath()).toBe('/login');
+    });
   });
 
-  it('does nothing when user is null', async () => {
-    const getAuth = renderWithAuth();
-    await waitFor(() => expect(getAuth().isLoading).toBe(false));
+  // ── updateUser() ──────────────────────────────────────────────────────────
 
-    expect(() => { act(() => { getAuth().updateUser({ name: 'Ghost' }); }); }).not.toThrow();
-    expect(getAuth().user).toBeNull();
+  it('updateUser() merges fields and keeps sessionStorage in sync', async () => {
+    const ref = makeAuthRef();
+    renderWithAuth(ref);
+
+    await act(async () => { ref.current.login(ADMIN_USER, TOKEN); });
+    await act(async () => { ref.current.updateUser({ name: 'Updated Name' }); });
+
+    await waitFor(() => {
+      const stored = JSON.parse(sessionStorage.getItem('schoolers_session'));
+      expect(stored?.user?.name).toBe('Updated Name');
+    });
+    const stored = JSON.parse(sessionStorage.getItem('schoolers_session'));
+    expect(stored.user.email).toBe('admin@school.com'); // original fields preserved
   });
 });

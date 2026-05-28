@@ -26,14 +26,15 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.util.List;
 import java.util.Map;
 
 @Service
 public class AdminService {
 
-    private static final Logger log = Logger.getLogger(AdminService.class.getName());
+    private static final Logger log = LoggerFactory.getLogger(AdminService.class);
 
     @Autowired private StudentRepository studentRepository;
     @Autowired private TeacherRepository teacherRepository;
@@ -386,13 +387,13 @@ public class AdminService {
             } else {
                 msg = "Database error: " + detail;
             }
-            log.severe("[createStudent] DataIntegrity error: " + detail);
+            log.error("[createStudent] DataIntegrity error: " + detail);
             return ApiResponse.<Map<String, Object>>error(msg);
 
         } catch (Exception e) {
             TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
             String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
-            log.severe("[createStudent] Unexpected error: " + msg);
+            log.error("[createStudent] Unexpected error: " + msg);
             return ApiResponse.<Map<String, Object>>error("Failed to save student: " + msg);
         }
     }
@@ -529,11 +530,11 @@ public class AdminService {
     public ApiResponse<String> deleteStudent(Long id, Long schoolId) {
         Student student = studentRepository.findById(id).orElse(null);
         if (student == null) {
-            log.warning("[deleteStudent] Student not found id=" + id);
+            log.warn("[deleteStudent] Student not found id=" + id);
             return ApiResponse.error("Student not found with id: " + id);
         }
         if (schoolMismatch(schoolId, student.getSchoolId())) {
-            log.warning("[deleteStudent] Cross-school access denied id=" + id + " authSchool=" + schoolId);
+            log.warn("[deleteStudent] Cross-school access denied id=" + id + " authSchool=" + schoolId);
             return ApiResponse.error("Student not found with id: " + id);
         }
 
@@ -607,7 +608,7 @@ public class AdminService {
             userRepository.flush();
             log.info("[deleteStudent] login account deleted userId=" + userId + " email=" + email);
         } else {
-            log.warning("[deleteStudent] No login account found for studentId=" + id
+            log.warn("[deleteStudent] No login account found for studentId=" + id
                     + " (studentUserId=" + linkedUserId + ") — skipping user deletion");
         }
 
@@ -797,19 +798,19 @@ public class AdminService {
             } else {
                 userMessage = "A data conflict occurred (duplicate entry). Please verify the email, mobile, and employee ID are unique.";
             }
-            log.warning("[createTeacher] Constraint violation — email=" + normalizedEmail
+            log.warn("[createTeacher] Constraint violation — email=" + normalizedEmail
                     + " empId=" + empId + " | " + e.getMessage());
             return ApiResponse.error(userMessage);
 
         } catch (DataAccessException e) {
             cleanupOrphanUser(user);
-            log.severe("[createTeacher] Database access failure — email=" + normalizedEmail
+            log.error("[createTeacher] Database access failure — email=" + normalizedEmail
                     + " | " + e.getClass().getSimpleName() + ": " + e.getMessage());
             return ApiResponse.error("A database error occurred while creating the teacher. Please try again in a moment.");
 
         } catch (Exception e) {
             cleanupOrphanUser(user);
-            log.severe("[createTeacher] Unexpected error — email=" + normalizedEmail
+            log.error("[createTeacher] Unexpected error — email=" + normalizedEmail
                     + " | " + e.getClass().getName() + ": " + e.getMessage());
             return ApiResponse.error("An unexpected error occurred: " + e.getMessage());
         }
@@ -1248,11 +1249,15 @@ public class AdminService {
         Student student = studentRepository.findById(fee.getStudentId()).orElse(null);
         if (student == null) return ApiResponse.error("Student not found");
 
+        // Tenant isolation: reject if the student belongs to a different school
+        if (fee.getSchoolId() != null && student.getSchoolId() != null
+                && !fee.getSchoolId().equals(student.getSchoolId()))
+            return ApiResponse.error("Student not found");
+
         fee.setStudentName(student.getName());
         fee.setRollNumber(student.getRollNumber());
         fee.setClassName(student.getClassName());
-        // Inherit school from student for multi-tenant isolation
-        if (fee.getSchoolId() == null) fee.setSchoolId(student.getSchoolId());
+        fee.setSchoolId(student.getSchoolId());
 
         BigDecimal paidAmount = fee.getPaidAmount() != null ? fee.getPaidAmount() : BigDecimal.ZERO;
         if (paidAmount.compareTo(BigDecimal.ZERO) < 0) {
@@ -1677,7 +1682,7 @@ public class AdminService {
 
             return ApiResponse.success("Fee assigned", saved);
         } catch (Exception e) {
-            log.severe("[assignStudentFee] Unexpected error: " + e.getMessage());
+            log.error("[assignStudentFee] Unexpected error: " + e.getMessage());
             return ApiResponse.error("Failed to save fee assignment. Please try again.");
         }
     }

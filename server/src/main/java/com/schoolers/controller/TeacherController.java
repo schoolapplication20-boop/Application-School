@@ -70,6 +70,13 @@ public class TeacherController {
         return userRepository.findByEmailIgnoreCase(auth.getName()).map(User::getId).orElse(null);
     }
 
+    /** Returns the school ID of the authenticated teacher (or admin acting on behalf of one). */
+    private Long resolveTeacherSchoolId() {
+        Long teacherId = resolveTeacherId(null);
+        if (teacherId == null) return null;
+        return teacherRepository.findById(teacherId).map(Teacher::getSchoolId).orElse(null);
+    }
+
     // ── Classes ────────────────────────────────────────────────────────────────
 
     @GetMapping("/classes")
@@ -280,19 +287,19 @@ public class TeacherController {
 
     @PostMapping("/marks")
     public ResponseEntity<ApiResponse<Marks>> addMarks(@RequestBody Marks marks) {
-        return ResponseEntity.status(201).body(teacherService.addMarks(marks));
+        return ResponseEntity.status(201).body(teacherService.addMarks(marks, resolveTeacherSchoolId()));
     }
 
     @PutMapping("/marks/{id}")
     public ResponseEntity<ApiResponse<Marks>> updateMarks(
             @PathVariable Long id, @RequestBody Marks marks) {
-        ApiResponse<Marks> response = teacherService.updateMarks(id, marks);
+        ApiResponse<Marks> response = teacherService.updateMarks(id, marks, resolveTeacherSchoolId());
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
     }
 
     @DeleteMapping("/marks/{id}")
     public ResponseEntity<ApiResponse<String>> deleteMarks(@PathVariable Long id) {
-        ApiResponse<String> response = teacherService.deleteMarks(id);
+        ApiResponse<String> response = teacherService.deleteMarks(id, resolveTeacherSchoolId());
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
     }
 

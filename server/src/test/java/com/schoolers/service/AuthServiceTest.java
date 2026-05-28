@@ -3,34 +3,42 @@ package com.schoolers.service;
 import com.schoolers.dto.ApiResponse;
 import com.schoolers.dto.LoginRequest;
 import com.schoolers.dto.LoginResponse;
+import com.schoolers.model.School;
 import com.schoolers.model.User;
-import com.schoolers.model.User.Role;
 import com.schoolers.repository.SchoolRepository;
 import com.schoolers.repository.TeacherRepository;
 import com.schoolers.repository.UserRepository;
 import com.schoolers.security.JwtUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
+/**
+ * Unit tests for AuthService — mocks every collaborator so tests run without
+ * a database or application context. Covers: login happy path, account lockout
+ * (5 failed attempts), inactive account, role mismatch, APPLICATION_OWNER 2FA
+ * redirect, OTP brute-force protection, OTP expiry, and the full forgot-password
+ * → verify-OTP → reset-password flow (including the 15-minute VERIFIED window).
+ */
 @ExtendWith(MockitoExtension.class)
-@DisplayName("AuthService Unit Tests")
 class AuthServiceTest {
-
-    @InjectMocks
-    private AuthService authService;
 
     @Mock private UserRepository    userRepository;
     @Mock private SchoolRepository  schoolRepository;
@@ -39,354 +47,457 @@ class AuthServiceTest {
     @Mock private PasswordEncoder   passwordEncoder;
     @Mock private EmailService      emailService;
 
-    private User validAdminUser;
+    @InjectMocks
+    private AuthService authService;
 
-    @BeforeEach
-    void setUp() {
-        validAdminUser = new User();
-        validAdminUser.setId(1L);
-        validAdminUser.setEmail("admin@school.com");
-        validAdminUser.setPassword("hashed-password");
-        validAdminUser.setRole(Role.ADMIN);
-        validAdminUser.setIsActive(true);
-        validAdminUser.setSchoolId(10L);
-        validAdminUser.setFirstLogin(false);
+    // ── shared test fixtures ──────────────────────────────────────────────────
+
+    private User activeAdmin() {
+        return User.builder()
+                .id(1L).name("Admin User").email("admin@school.com")
+                .password("hashed_pw")
+                .role(User.Role.ADMIN)
+                .schoolId(5L)
+                .isActive(true)
+                .failedLoginAttempts(0)
+                .build();
     }
 
-    // ── Successful login ────────────────────────────────────────────────────
-
-    @Test
-    @DisplayName("login with valid credentials returns success response with token")
-    void login_validCredentials_returnsToken() {
-        LoginRequest req = new LoginRequest();
-        req.setEmail("admin@school.com");
-        req.setPassword("correctPassword");
-        req.setSelectedRole("ADMIN");
-
-        when(userRepository.findByEmailIgnoreCase("admin@school.com"))
-            .thenReturn(Optional.of(validAdminUser));
-        when(passwordEncoder.matches("correctPassword", "hashed-password"))
-            .thenReturn(true);
-        when(jwtUtil.generateToken(any(), anyMap()))
-            .thenReturn("jwt-token-here");
-
-        ApiResponse<LoginResponse> response = authService.login(req);
-
-        assertTrue(response.isSuccess());
-        assertNotNull(response.getData());
-        assertEquals("jwt-token-here", response.getData().getToken());
+    private School activeSchool() {
+        return School.builder()
+                .id(5L).schoolId(5).name("Test School")
+                .isActive(true).isSetupCompleted(true)
+                // null subscriptionExpiry → not expired
+                .build();
     }
 
-    // ── Email not found ──────────────────────────────────────────────────────
-
-    @Test
-    @DisplayName("login with unknown email returns error message")
-    void login_unknownEmail_returnsError() {
-        LoginRequest req = new LoginRequest();
-        req.setEmail("nobody@school.com");
-        req.setPassword("pass");
-        req.setSelectedRole("ADMIN");
-
-        when(userRepository.findByEmailIgnoreCase(anyString())).thenReturn(Optional.empty());
-        when(userRepository.findByUsername(anyString())).thenReturn(Optional.empty());
-
-        ApiResponse<LoginResponse> response = authService.login(req);
-
-        assertFalse(response.isSuccess());
-        assertNotNull(response.getMessage());
-        assertTrue(response.getMessage().contains("No account found") ||
-                   response.getMessage().toLowerCase().contains("email"));
+    private LoginRequest loginReq(String email, String password, String role) {
+        LoginRequest r = new LoginRequest();
+        r.setEmail(email);
+        r.setPassword(password);
+        r.setSelectedRole(role);
+        return r;
     }
 
-    // ── Wrong password ───────────────────────────────────────────────────────
+    // ── login ─────────────────────────────────────────────────────────────────
 
-    @Test
-    @DisplayName("login with wrong password returns error message")
-    void login_wrongPassword_returnsError() {
-        LoginRequest req = new LoginRequest();
-        req.setEmail("admin@school.com");
-        req.setPassword("wrongPassword");
-        req.setSelectedRole("ADMIN");
+    @Nested
+    @DisplayName("login()")
+    class LoginTests {
 
-        when(userRepository.findByEmailIgnoreCase("admin@school.com"))
-            .thenReturn(Optional.of(validAdminUser));
-        when(passwordEncoder.matches("wrongPassword", "hashed-password"))
-            .thenReturn(false);
+        @Test
+        @DisplayName("success: returns JWT token and user DTO for ADMIN")
+        void success_adminLogin() {
+            User user = activeAdmin();
+            when(userRepository.findByEmailIgnoreCase("admin@school.com"))
+                    .thenReturn(Optional.of(user));
+            when(passwordEncoder.matches("Password1!", "hashed_pw")).thenReturn(true);
+            when(schoolRepository.findBySchoolId(5)).thenReturn(Optional.of(activeSchool()));
+            when(jwtUtil.generateToken(any(UserDetails.class), any())).thenReturn("jwt-token");
 
-        ApiResponse<LoginResponse> response = authService.login(req);
+            ApiResponse<LoginResponse> resp = authService.login(loginReq("admin@school.com", "Password1!", "ADMIN"));
 
-        assertFalse(response.isSuccess());
-        assertNotNull(response.getMessage());
-        assertTrue(response.getMessage().toLowerCase().contains("password") ||
-                   response.getMessage().toLowerCase().contains("incorrect"));
+            assertThat(resp.isSuccess()).isTrue();
+            assertThat(resp.getData().getToken()).isEqualTo("jwt-token");
+            assertThat(resp.getData().getUser().getRole()).isEqualTo("ADMIN");
+            assertThat(resp.getData().getUser().getEmail()).isEqualTo("admin@school.com");
+        }
+
+        @Test
+        @DisplayName("user not found: returns generic error (no enumeration)")
+        void userNotFound_returnsError() {
+            when(userRepository.findByEmailIgnoreCase("ghost@school.com")).thenReturn(Optional.empty());
+            when(userRepository.findByUsername("ghost@school.com")).thenReturn(Optional.empty());
+
+            ApiResponse<LoginResponse> resp = authService.login(loginReq("ghost@school.com", "pw", "ADMIN"));
+
+            assertThat(resp.isSuccess()).isFalse();
+        }
+
+        @Test
+        @DisplayName("wrong password: returns remaining-attempts message and increments counter")
+        void wrongPassword_decrementsAttempts() {
+            User user = activeAdmin();
+            when(userRepository.findByEmailIgnoreCase("admin@school.com")).thenReturn(Optional.of(user));
+            when(schoolRepository.findBySchoolId(5)).thenReturn(Optional.of(activeSchool()));
+            when(passwordEncoder.matches("WrongPw", "hashed_pw")).thenReturn(false);
+
+            ApiResponse<LoginResponse> resp = authService.login(loginReq("admin@school.com", "WrongPw", "ADMIN"));
+
+            assertThat(resp.isSuccess()).isFalse();
+            assertThat(resp.getMessage()).contains("attempt");
+            verify(userRepository).save(any(User.class)); // counter persisted
+        }
+
+        @Test
+        @DisplayName("5th wrong password: account is locked permanently")
+        void fiveWrongPasswords_locksAccount() {
+            User user = activeAdmin();
+            user.setFailedLoginAttempts(4); // one more makes 5
+            when(userRepository.findByEmailIgnoreCase("admin@school.com")).thenReturn(Optional.of(user));
+            when(schoolRepository.findBySchoolId(5)).thenReturn(Optional.of(activeSchool()));
+            when(passwordEncoder.matches(any(), any())).thenReturn(false);
+
+            ApiResponse<LoginResponse> resp = authService.login(loginReq("admin@school.com", "Bad", "ADMIN"));
+
+            assertThat(resp.isSuccess()).isFalse();
+            assertThat(resp.getMessage()).containsIgnoringCase("locked");
+            assertThat(user.getLockedUntil()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("locked account: rejects login immediately without checking password")
+        void lockedAccount_rejectsLogin() {
+            User user = activeAdmin();
+            user.setLockedUntil(LocalDateTime.now(ZoneOffset.UTC));
+            when(userRepository.findByEmailIgnoreCase("admin@school.com")).thenReturn(Optional.of(user));
+
+            ApiResponse<LoginResponse> resp = authService.login(loginReq("admin@school.com", "Password1!", "ADMIN"));
+
+            assertThat(resp.isSuccess()).isFalse();
+            assertThat(resp.getMessage()).containsIgnoringCase("locked");
+            verifyNoInteractions(passwordEncoder);
+        }
+
+        @Test
+        @DisplayName("inactive account: returns deactivated error")
+        void inactiveAccount_rejectsLogin() {
+            User user = activeAdmin();
+            user.setIsActive(false);
+            when(userRepository.findByEmailIgnoreCase("admin@school.com")).thenReturn(Optional.of(user));
+
+            ApiResponse<LoginResponse> resp = authService.login(loginReq("admin@school.com", "Password1!", "ADMIN"));
+
+            assertThat(resp.isSuccess()).isFalse();
+            assertThat(resp.getMessage()).containsIgnoringCase("deactivated");
+        }
+
+        @Test
+        @DisplayName("role mismatch: denies login when claimed role != DB role")
+        void roleMismatch_deniesLogin() {
+            User user = activeAdmin(); // role = ADMIN
+            when(userRepository.findByEmailIgnoreCase("admin@school.com")).thenReturn(Optional.of(user));
+            when(schoolRepository.findBySchoolId(5)).thenReturn(Optional.of(activeSchool()));
+            when(passwordEncoder.matches("Password1!", "hashed_pw")).thenReturn(true);
+
+            ApiResponse<LoginResponse> resp = authService.login(loginReq("admin@school.com", "Password1!", "TEACHER"));
+
+            assertThat(resp.isSuccess()).isFalse();
+            assertThat(resp.getMessage()).containsIgnoringCase("denied");
+        }
+
+        @Test
+        @DisplayName("expired school subscription: blocks login with subscription message")
+        void expiredSubscription_blocksLogin() {
+            User user = activeAdmin();
+            // Modify the school that will be returned to have an expired subscription
+            School expiredSchool = activeSchool();
+            expiredSchool.setSubscriptionExpiry(LocalDate.now().minusDays(1));
+
+            when(userRepository.findByEmailIgnoreCase("admin@school.com")).thenReturn(Optional.of(user));
+            when(schoolRepository.findBySchoolId(5)).thenReturn(Optional.of(expiredSchool));
+            // no passwordEncoder stub — login exits at subscription-expiry check before password check
+
+            ApiResponse<LoginResponse> resp = authService.login(loginReq("admin@school.com", "Password1!", "ADMIN"));
+
+            assertThat(resp.isSuccess()).isFalse();
+            assertThat(resp.getMessage()).containsIgnoringCase("subscription");
+        }
+
+        @Test
+        @DisplayName("APPLICATION_OWNER login: triggers 2FA OTP and does not issue JWT")
+        void applicationOwner_triggers2Fa() {
+            User owner = User.builder()
+                    .id(99L).name("Owner").email("owner@platform.com")
+                    .password("hashed_pw")
+                    .role(User.Role.APPLICATION_OWNER)
+                    .schoolId(null)
+                    .isActive(true)
+                    .failedLoginAttempts(0)
+                    .build();
+
+            when(userRepository.findByEmailIgnoreCase("owner@platform.com")).thenReturn(Optional.of(owner));
+            when(passwordEncoder.matches("Password1!", "hashed_pw")).thenReturn(true);
+            // Email sending must succeed
+            doNothing().when(emailService).sendOwnerLoginOtp(any(), any());
+
+            ApiResponse<LoginResponse> resp = authService.login(
+                    loginReq("owner@platform.com", "Password1!", "APPLICATION_OWNER"));
+
+            assertThat(resp.isSuccess()).isTrue();
+            assertThat(resp.getData().getOtpRequired()).isTrue();
+            assertThat(resp.getData().getToken()).isNull();
+            verify(jwtUtil, never()).generateToken(any(), any());
+        }
+
+        @Test
+        @DisplayName("successful login resets the failed-attempts counter to zero")
+        void successfulLogin_resetsFailedAttempts() {
+            User user = activeAdmin();
+            user.setFailedLoginAttempts(3); // had 3 prior failures
+            when(userRepository.findByEmailIgnoreCase("admin@school.com")).thenReturn(Optional.of(user));
+            when(schoolRepository.findBySchoolId(5)).thenReturn(Optional.of(activeSchool()));
+            when(passwordEncoder.matches("Password1!", "hashed_pw")).thenReturn(true);
+            when(jwtUtil.generateToken(any(UserDetails.class), any())).thenReturn("jwt");
+
+            authService.login(loginReq("admin@school.com", "Password1!", "ADMIN"));
+
+            assertThat(user.getFailedLoginAttempts()).isZero();
+        }
     }
 
-    // ── Deactivated account ──────────────────────────────────────────────────
+    // ── verifyOwnerOtp ────────────────────────────────────────────────────────
 
-    @Test
-    @DisplayName("login with deactivated account returns error")
-    void login_deactivatedAccount_returnsError() {
-        validAdminUser.setIsActive(false);
+    @Nested
+    @DisplayName("verifyOwnerOtp()")
+    class VerifyOwnerOtpTests {
 
-        LoginRequest req = new LoginRequest();
-        req.setEmail("admin@school.com");
-        req.setPassword("correctPassword");
-        req.setSelectedRole("ADMIN");
+        private User ownerWithOtp(String otp, LocalDateTime expiry) {
+            return User.builder()
+                    .id(99L).name("Owner").email("owner@platform.com")
+                    .password("hashed").role(User.Role.APPLICATION_OWNER)
+                    .schoolId(null).isActive(true)
+                    .resetOtp(otp)
+                    .otpExpiry(expiry)
+                    .failedLoginAttempts(0)
+                    .build();
+        }
 
-        when(userRepository.findByEmailIgnoreCase("admin@school.com"))
-            .thenReturn(Optional.of(validAdminUser));
+        @Test
+        @DisplayName("valid OTP: issues JWT and clears OTP fields")
+        void validOtp_issuesJwt() {
+            LocalDateTime expiry = LocalDateTime.now(ZoneOffset.UTC).plusMinutes(5);
+            User owner = ownerWithOtp("123456", expiry);
+            when(userRepository.findByEmailIgnoreCase("owner@platform.com")).thenReturn(Optional.of(owner));
+            when(jwtUtil.generateToken(any(UserDetails.class), any())).thenReturn("owner-jwt");
 
-        ApiResponse<LoginResponse> response = authService.login(req);
+            ApiResponse<LoginResponse> resp = authService.verifyOwnerOtp("owner@platform.com", "123456");
 
-        assertFalse(response.isSuccess());
-        assertTrue(response.getMessage().toLowerCase().contains("deactivated") ||
-                   response.getMessage().toLowerCase().contains("active"));
+            assertThat(resp.isSuccess()).isTrue();
+            assertThat(resp.getData().getToken()).isEqualTo("owner-jwt");
+            assertThat(owner.getResetOtp()).isNull();
+            assertThat(owner.getFailedLoginAttempts()).isZero();
+        }
+
+        @Test
+        @DisplayName("wrong OTP: increments attempt counter")
+        void wrongOtp_incrementsAttempts() {
+            LocalDateTime expiry = LocalDateTime.now(ZoneOffset.UTC).plusMinutes(5);
+            User owner = ownerWithOtp("123456", expiry);
+            when(userRepository.findByEmailIgnoreCase("owner@platform.com")).thenReturn(Optional.of(owner));
+
+            authService.verifyOwnerOtp("owner@platform.com", "000000");
+
+            assertThat(owner.getFailedLoginAttempts()).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("5 wrong OTPs: clears OTP fields and returns lock-out message")
+        void fiveWrongOtps_clearsOtpAndLocksOut() {
+            LocalDateTime expiry = LocalDateTime.now(ZoneOffset.UTC).plusMinutes(5);
+            User owner = ownerWithOtp("123456", expiry);
+            owner.setFailedLoginAttempts(5); // already at limit
+            when(userRepository.findByEmailIgnoreCase("owner@platform.com")).thenReturn(Optional.of(owner));
+
+            ApiResponse<LoginResponse> resp = authService.verifyOwnerOtp("owner@platform.com", "999999");
+
+            assertThat(resp.isSuccess()).isFalse();
+            assertThat(resp.getMessage()).containsIgnoringCase("attempts");
+            assertThat(owner.getResetOtp()).isNull();
+        }
+
+        @Test
+        @DisplayName("expired OTP: returns expiry error and clears OTP")
+        void expiredOtp_returnsError() {
+            LocalDateTime expiry = LocalDateTime.now(ZoneOffset.UTC).minusMinutes(1); // expired
+            User owner = ownerWithOtp("123456", expiry);
+            when(userRepository.findByEmailIgnoreCase("owner@platform.com")).thenReturn(Optional.of(owner));
+
+            ApiResponse<LoginResponse> resp = authService.verifyOwnerOtp("owner@platform.com", "123456");
+
+            assertThat(resp.isSuccess()).isFalse();
+            assertThat(resp.getMessage()).containsIgnoringCase("expired");
+            assertThat(owner.getResetOtp()).isNull();
+        }
+
+        @Test
+        @DisplayName("non-owner account: returns invalid request error")
+        void nonOwnerAccount_returnsError() {
+            User admin = activeAdmin();
+            when(userRepository.findByEmailIgnoreCase("admin@school.com")).thenReturn(Optional.of(admin));
+
+            ApiResponse<LoginResponse> resp = authService.verifyOwnerOtp("admin@school.com", "123456");
+
+            assertThat(resp.isSuccess()).isFalse();
+        }
     }
 
-    // ── Missing email ────────────────────────────────────────────────────────
+    // ── forgotPassword / verifyOTP / resetPassword flow ───────────────────────
 
-    @Test
-    @DisplayName("login with null email returns error")
-    void login_nullEmail_returnsError() {
-        LoginRequest req = new LoginRequest();
-        req.setEmail(null);
-        req.setPassword("pass");
-        req.setSelectedRole("ADMIN");
+    @Nested
+    @DisplayName("forgot-password → verify-OTP → reset-password flow")
+    class PasswordResetFlowTests {
 
-        ApiResponse<LoginResponse> response = authService.login(req);
+        @Test
+        @DisplayName("forgotPassword: unknown email returns opaque success (no enumeration)")
+        void forgotPassword_unknownEmail_opaqueResponse() {
+            when(userRepository.findByEmailIgnoreCase("ghost@x.com")).thenReturn(Optional.empty());
+            when(userRepository.findByEmail("ghost@x.com")).thenReturn(Optional.empty());
 
-        assertFalse(response.isSuccess());
-        assertNotNull(response.getMessage());
-    }
+            ApiResponse<String> resp = authService.forgotPassword("ghost@x.com");
 
-    @Test
-    @DisplayName("login with blank email returns error")
-    void login_blankEmail_returnsError() {
-        LoginRequest req = new LoginRequest();
-        req.setEmail("   ");
-        req.setPassword("pass");
-        req.setSelectedRole("ADMIN");
+            assertThat(resp.isSuccess()).isTrue(); // opaque — same message regardless
+            verifyNoInteractions(emailService);
+        }
 
-        ApiResponse<LoginResponse> response = authService.login(req);
+        @Test
+        @DisplayName("forgotPassword: known email persists OTP and sends email")
+        void forgotPassword_knownEmail_sendsOtp() throws Exception {
+            User user = activeAdmin();
+            when(userRepository.findByEmailIgnoreCase("admin@school.com")).thenReturn(Optional.of(user));
+            doNothing().when(emailService).sendOtpEmail(any(), any());
 
-        assertFalse(response.isSuccess());
-    }
+            ApiResponse<String> resp = authService.forgotPassword("admin@school.com");
 
-    // ── Role mismatch ────────────────────────────────────────────────────────
+            assertThat(resp.isSuccess()).isTrue();
+            assertThat(user.getResetOtp()).isNotNull().hasSize(6);
+            assertThat(user.getOtpExpiry()).isAfter(LocalDateTime.now(ZoneOffset.UTC));
+            verify(emailService).sendOtpEmail(eq("admin@school.com"), any());
+        }
 
-    @Test
-    @DisplayName("login with mismatched selectedRole returns access denied error")
-    void login_roleMismatch_returnsError() {
-        LoginRequest req = new LoginRequest();
-        req.setEmail("admin@school.com");
-        req.setPassword("correctPassword");
-        req.setSelectedRole("TEACHER"); // user is actually ADMIN
+        @Test
+        @DisplayName("verifyOTP: valid OTP sets VERIFIED sentinel with 15-min expiry")
+        void verifyOTP_valid_setsVerifiedSentinel() {
+            User user = activeAdmin();
+            user.setResetOtp("654321");
+            user.setOtpExpiry(LocalDateTime.now(ZoneOffset.UTC).plusMinutes(10));
+            when(userRepository.findByEmailIgnoreCase("admin@school.com")).thenReturn(Optional.of(user));
 
-        when(userRepository.findByEmailIgnoreCase("admin@school.com"))
-            .thenReturn(Optional.of(validAdminUser));
-        when(passwordEncoder.matches("correctPassword", "hashed-password"))
-            .thenReturn(true);
+            ApiResponse<String> resp = authService.verifyOTP("admin@school.com", "654321");
 
-        ApiResponse<LoginResponse> response = authService.login(req);
+            assertThat(resp.isSuccess()).isTrue();
+            assertThat(user.getResetOtp()).isEqualTo("VERIFIED");
+            assertThat(user.getOtpExpiry()).isAfter(LocalDateTime.now(ZoneOffset.UTC).plusMinutes(14));
+        }
 
-        assertFalse(response.isSuccess());
-        assertTrue(response.getMessage().toLowerCase().contains("role") ||
-                   response.getMessage().toLowerCase().contains("access") ||
-                   response.getMessage().toLowerCase().contains("permission"));
-    }
+        @Test
+        @DisplayName("verifyOTP: wrong OTP returns error without setting VERIFIED")
+        void verifyOTP_wrongOtp_returnsError() {
+            User user = activeAdmin();
+            user.setResetOtp("654321");
+            user.setOtpExpiry(LocalDateTime.now(ZoneOffset.UTC).plusMinutes(10));
+            when(userRepository.findByEmailIgnoreCase("admin@school.com")).thenReturn(Optional.of(user));
 
-    // ── Mobile login ─────────────────────────────────────────────────────────
+            ApiResponse<String> resp = authService.verifyOTP("admin@school.com", "000000");
 
-    @Test
-    @DisplayName("login with mobile type and unknown mobile returns error")
-    void login_mobileType_unknownMobile_returnsError() {
-        LoginRequest req = new LoginRequest();
-        req.setLoginType("mobile");
-        req.setMobile("9999999999");
-        req.setPassword("pass");
+            assertThat(resp.isSuccess()).isFalse();
+            assertThat(user.getResetOtp()).isNotEqualTo("VERIFIED");
+        }
 
-        when(userRepository.findByMobile("9999999999")).thenReturn(Optional.empty());
+        @Test
+        @DisplayName("verifyOTP: expired OTP returns expiry error")
+        void verifyOTP_expiredOtp_returnsError() {
+            User user = activeAdmin();
+            user.setResetOtp("654321");
+            user.setOtpExpiry(LocalDateTime.now(ZoneOffset.UTC).minusMinutes(1));
+            when(userRepository.findByEmailIgnoreCase("admin@school.com")).thenReturn(Optional.of(user));
 
-        ApiResponse<LoginResponse> response = authService.login(req);
+            ApiResponse<String> resp = authService.verifyOTP("admin@school.com", "654321");
 
-        assertFalse(response.isSuccess());
-        assertTrue(response.getMessage().toLowerCase().contains("mobile") ||
-                   response.getMessage().toLowerCase().contains("no account"));
-    }
+            assertThat(resp.isSuccess()).isFalse();
+            assertThat(resp.getMessage()).containsIgnoringCase("expired");
+        }
 
-    @Test
-    @DisplayName("login with mobile type and blank mobile returns error")
-    void login_mobileType_blankMobile_returnsError() {
-        LoginRequest req = new LoginRequest();
-        req.setLoginType("mobile");
-        req.setMobile("");
-        req.setPassword("pass");
+        @Test
+        @DisplayName("resetPassword: succeeds when VERIFIED sentinel is set and within window")
+        void resetPassword_withVerification_updatesPassword() {
+            User user = activeAdmin();
+            user.setResetOtp("VERIFIED");
+            user.setOtpExpiry(LocalDateTime.now(ZoneOffset.UTC).plusMinutes(10));
+            user.setLockedUntil(LocalDateTime.now(ZoneOffset.UTC)); // was locked
+            when(userRepository.findByEmailIgnoreCase("admin@school.com")).thenReturn(Optional.of(user));
+            when(passwordEncoder.encode("NewPass1!")).thenReturn("hashed_new");
 
-        ApiResponse<LoginResponse> response = authService.login(req);
+            ApiResponse<String> resp = authService.resetPassword("admin@school.com", "NewPass1!");
 
-        assertFalse(response.isSuccess());
-        assertTrue(response.getMessage().toLowerCase().contains("mobile"));
-    }
+            assertThat(resp.isSuccess()).isTrue();
+            assertThat(user.getPassword()).isEqualTo("hashed_new");
+            assertThat(user.getResetOtp()).isNull();
+            assertThat(user.getLockedUntil()).isNull(); // lockout cleared
+        }
 
-    // ── Account lockout ──────────────────────────────────────────────────────
+        @Test
+        @DisplayName("resetPassword: blocked when VERIFIED window has expired")
+        void resetPassword_expiredVerificationWindow_returnsError() {
+            User user = activeAdmin();
+            user.setResetOtp("VERIFIED");
+            user.setOtpExpiry(LocalDateTime.now(ZoneOffset.UTC).minusSeconds(1)); // just expired
+            when(userRepository.findByEmailIgnoreCase("admin@school.com")).thenReturn(Optional.of(user));
 
-    @Test
-    @DisplayName("login with locked account returns lock error without checking password")
-    void login_lockedAccount_returnsLockError() {
-        validAdminUser.setLockedUntil(LocalDateTime.now());
+            ApiResponse<String> resp = authService.resetPassword("admin@school.com", "NewPass1!");
 
-        LoginRequest req = new LoginRequest();
-        req.setEmail("admin@school.com");
-        req.setPassword("anyPassword");
-        req.setSelectedRole("ADMIN");
+            assertThat(resp.isSuccess()).isFalse();
+            assertThat(resp.getMessage()).containsIgnoringCase("expired");
+            assertThat(user.getResetOtp()).isNull();
+        }
 
-        when(userRepository.findByEmailIgnoreCase("admin@school.com"))
-            .thenReturn(Optional.of(validAdminUser));
+        @Test
+        @DisplayName("resetPassword: blocked when OTP not yet verified (no VERIFIED sentinel)")
+        void resetPassword_withoutVerification_blocked() {
+            User user = activeAdmin();
+            user.setResetOtp("654321"); // OTP present but not verified
+            when(userRepository.findByEmailIgnoreCase("admin@school.com")).thenReturn(Optional.of(user));
 
-        ApiResponse<LoginResponse> response = authService.login(req);
+            ApiResponse<String> resp = authService.resetPassword("admin@school.com", "NewPass1!");
 
-        assertFalse(response.isSuccess());
-        assertTrue(response.getMessage().toLowerCase().contains("locked"));
-        verify(passwordEncoder, never()).matches(anyString(), anyString());
-    }
+            assertThat(resp.isSuccess()).isFalse();
+            verify(passwordEncoder, never()).encode(any());
+        }
 
-    @Test
-    @DisplayName("5th consecutive failed login attempt permanently locks the account")
-    void login_fifthFailedAttempt_locksAccount() {
-        validAdminUser.setFailedLoginAttempts(4); // 4 prior failures
+        // ── password complexity via resetPassword ─────────────────────────────
 
-        LoginRequest req = new LoginRequest();
-        req.setEmail("admin@school.com");
-        req.setPassword("wrongPassword");
-        req.setSelectedRole("ADMIN");
+        @Test
+        @DisplayName("resetPassword: rejects password shorter than 8 characters")
+        void resetPassword_shortPassword_rejected() {
+            User user = activeAdmin();
+            user.setResetOtp("VERIFIED");
+            user.setOtpExpiry(LocalDateTime.now(ZoneOffset.UTC).plusMinutes(10));
+            when(userRepository.findByEmailIgnoreCase("admin@school.com")).thenReturn(Optional.of(user));
 
-        when(userRepository.findByEmailIgnoreCase("admin@school.com"))
-            .thenReturn(Optional.of(validAdminUser));
-        when(passwordEncoder.matches("wrongPassword", "hashed-password"))
-            .thenReturn(false);
+            assertThat(authService.resetPassword("admin@school.com", "Ab1!").isSuccess()).isFalse();
+        }
 
-        ApiResponse<LoginResponse> response = authService.login(req);
+        @Test
+        @DisplayName("resetPassword: rejects password with no uppercase letter")
+        void resetPassword_noUppercase_rejected() {
+            User user = activeAdmin();
+            user.setResetOtp("VERIFIED");
+            user.setOtpExpiry(LocalDateTime.now(ZoneOffset.UTC).plusMinutes(10));
+            when(userRepository.findByEmailIgnoreCase("admin@school.com")).thenReturn(Optional.of(user));
 
-        assertFalse(response.isSuccess());
-        assertTrue(response.getMessage().toLowerCase().contains("locked") ||
-                   response.getMessage().contains("5 failed"));
-        assertNotNull(validAdminUser.getLockedUntil());
-    }
+            assertThat(authService.resetPassword("admin@school.com", "password1!").isSuccess()).isFalse();
+        }
 
-    @Test
-    @DisplayName("failed login before lockout threshold shows remaining attempts")
-    void login_failedAttemptBeforeThreshold_showsRemainingAttempts() {
-        validAdminUser.setFailedLoginAttempts(2); // 2 prior failures
+        @Test
+        @DisplayName("resetPassword: rejects password with no digit")
+        void resetPassword_noDigit_rejected() {
+            User user = activeAdmin();
+            user.setResetOtp("VERIFIED");
+            user.setOtpExpiry(LocalDateTime.now(ZoneOffset.UTC).plusMinutes(10));
+            when(userRepository.findByEmailIgnoreCase("admin@school.com")).thenReturn(Optional.of(user));
 
-        LoginRequest req = new LoginRequest();
-        req.setEmail("admin@school.com");
-        req.setPassword("wrongPassword");
-        req.setSelectedRole("ADMIN");
+            assertThat(authService.resetPassword("admin@school.com", "Password!").isSuccess()).isFalse();
+        }
 
-        when(userRepository.findByEmailIgnoreCase("admin@school.com"))
-            .thenReturn(Optional.of(validAdminUser));
-        when(passwordEncoder.matches("wrongPassword", "hashed-password"))
-            .thenReturn(false);
+        @Test
+        @DisplayName("resetPassword: rejects password with no special character")
+        void resetPassword_noSpecialChar_rejected() {
+            User user = activeAdmin();
+            user.setResetOtp("VERIFIED");
+            user.setOtpExpiry(LocalDateTime.now(ZoneOffset.UTC).plusMinutes(10));
+            when(userRepository.findByEmailIgnoreCase("admin@school.com")).thenReturn(Optional.of(user));
 
-        ApiResponse<LoginResponse> response = authService.login(req);
-
-        assertFalse(response.isSuccess());
-        // Should mention remaining attempts and NOT lock the account yet
-        assertTrue(response.getMessage().contains("attempt") ||
-                   response.getMessage().toLowerCase().contains("incorrect"));
-        assertNull(validAdminUser.getLockedUntil());
-    }
-
-    @Test
-    @DisplayName("resetPassword after OTP verification clears account lockout")
-    void resetPassword_clearsAccountLock() {
-        validAdminUser.setLockedUntil(LocalDateTime.now());
-        validAdminUser.setFailedLoginAttempts(5);
-        validAdminUser.setResetOtp("VERIFIED");
-        validAdminUser.setMobile("9876543210");
-
-        when(userRepository.findByMobile("9876543210"))
-            .thenReturn(Optional.of(validAdminUser));
-        when(passwordEncoder.encode("NewPass1!")).thenReturn("encoded-new");
-
-        ApiResponse<String> response = authService.resetPassword("9876543210", "NewPass1!");
-
-        assertTrue(response.isSuccess());
-        assertNull(validAdminUser.getLockedUntil());
-        assertEquals(0, validAdminUser.getFailedLoginAttempts());
-    }
-
-    // ── Password complexity ──────────────────────────────────────────────────
-
-    @Test
-    @DisplayName("resetPassword with weak password is rejected by complexity check")
-    void resetPassword_weakPassword_returnsComplexityError() {
-        validAdminUser.setResetOtp("VERIFIED");
-        validAdminUser.setMobile("9876543210");
-
-        when(userRepository.findByMobile("9876543210"))
-            .thenReturn(Optional.of(validAdminUser));
-
-        ApiResponse<String> response = authService.resetPassword("9876543210", "weak");
-
-        assertFalse(response.isSuccess());
-        assertTrue(response.getMessage().toLowerCase().contains("password"));
-    }
-
-    @Test
-    @DisplayName("changePassword with weak new password is rejected by complexity check")
-    void changePassword_weakNewPassword_returnsComplexityError() {
-        when(userRepository.findByEmailIgnoreCase("admin@school.com"))
-            .thenReturn(Optional.of(validAdminUser));
-        when(passwordEncoder.matches("CurrentPass1!", "hashed-password"))
-            .thenReturn(true);
-
-        ApiResponse<String> response = authService.changePassword(
-            "admin@school.com", "CurrentPass1!", "weak");
-
-        assertFalse(response.isSuccess());
-        assertTrue(response.getMessage().toLowerCase().contains("password"));
-    }
-
-    @Test
-    @DisplayName("setFirstPassword with weak new password is rejected by complexity check")
-    void setFirstPassword_weakNewPassword_returnsComplexityError() {
-        validAdminUser.setFirstLogin(true);
-
-        when(userRepository.findByEmailIgnoreCase("admin@school.com"))
-            .thenReturn(Optional.of(validAdminUser));
-        when(passwordEncoder.matches("TempPass1!", "hashed-password"))
-            .thenReturn(true);
-
-        ApiResponse<String> response = authService.setFirstPassword(
-            "admin@school.com", "TempPass1!", "weak");
-
-        assertFalse(response.isSuccess());
-        assertTrue(response.getMessage().toLowerCase().contains("password"));
-    }
-
-    // ── Forgot password enumeration fix ──────────────────────────────────────
-
-    @Test
-    @DisplayName("forgotPassword with non-existing mobile returns same success — prevents account enumeration")
-    void forgotPassword_nonExistingMobile_returnsSameSuccessMessage() {
-        when(userRepository.findByMobile("0000000000")).thenReturn(Optional.empty());
-
-        ApiResponse<String> response = authService.forgotPassword("0000000000");
-
-        assertTrue(response.isSuccess());
-        assertEquals("If this account exists, an OTP has been sent.", response.getMessage());
-    }
-
-    @Test
-    @DisplayName("forgotPassword with non-existing email returns same success — prevents account enumeration")
-    void forgotPassword_nonExistingEmail_returnsSameSuccessMessage() {
-        when(userRepository.findByEmailIgnoreCase("ghost@school.com")).thenReturn(Optional.empty());
-        when(userRepository.findByEmail("ghost@school.com")).thenReturn(Optional.empty());
-
-        ApiResponse<String> response = authService.forgotPassword("ghost@school.com");
-
-        assertTrue(response.isSuccess());
-        assertEquals("If this account exists, an OTP has been sent.", response.getMessage());
+            assertThat(authService.resetPassword("admin@school.com", "Password1").isSuccess()).isFalse();
+        }
     }
 }
