@@ -42,6 +42,7 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading]       = useState(false);
   const [error, setError]               = useState('');
+  const [accountLocked, setAccountLocked] = useState(false);
   const [serverWaking, setServerWaking] = useState(false);
   const [retryIn, setRetryIn]           = useState(0);
   const retryCountRef  = useRef(0);
@@ -72,6 +73,7 @@ const Login = () => {
     setSelectedRole(roleKey);
     setEmailForm({ email: '', password: '' });
     setError('');
+    setAccountLocked(false);
   };
 
   const isStudentRole  = selectedRole === 'STUDENT';
@@ -156,11 +158,12 @@ const Login = () => {
       } else {
         setServerWaking(false);
         retryCountRef.current = 0;
-        setError(
-          err.isColdStart
-            ? 'Server took too long to respond. Please wait a moment and try again.'
-            : (err.message || 'Login failed. Please try again.')
-        );
+        const msg = err.isColdStart
+          ? 'Server took too long to respond. Please wait a moment and try again.'
+          : (err.message || 'Login failed. Please try again.');
+        const isLocked = msg.toLowerCase().includes('locked') || msg.toLowerCase().includes('lock');
+        setAccountLocked(isLocked);
+        setError(msg);
       }
     } finally {
       setIsLoading(false);
@@ -390,10 +393,29 @@ const Login = () => {
           )}
 
           {error && !serverWaking && (
-            <div className="alert-error">
-              <span className="material-icons" style={{ fontSize: '16px' }}>error_outline</span>
-              {error}
-            </div>
+            accountLocked ? (
+              <div style={{ background: '#fff7ed', border: '1.5px solid #fed7aa', borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                  <span className="material-icons" style={{ fontSize: 22, color: '#c2410c', flexShrink: 0, marginTop: 1 }}>lock</span>
+                  <div>
+                    <div style={{ fontWeight: 700, color: '#92400e', fontSize: 13, marginBottom: 4 }}>Account Locked</div>
+                    <div style={{ color: '#92400e', fontSize: 12.5, lineHeight: 1.5, marginBottom: 10 }}>
+                      Too many failed login attempts. Your account has been locked for security. Reset your password to regain access.
+                    </div>
+                    <Link to="/forgot-password"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#c2410c', color: '#fff', borderRadius: 7, padding: '7px 14px', fontSize: 12.5, fontWeight: 700, textDecoration: 'none' }}>
+                      <span className="material-icons" style={{ fontSize: 15 }}>lock_reset</span>
+                      Reset Password
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="alert-error">
+                <span className="material-icons" style={{ fontSize: '16px' }}>error_outline</span>
+                {error}
+              </div>
+            )
           )}
 
           {/* Owner 2FA OTP step */}
@@ -488,7 +510,7 @@ const Login = () => {
                 </div>
               </div>
 
-              <button type="submit" className="btn-auth-submit" disabled={isLoading || serverWaking}
+              <button type="submit" className="btn-auth-submit" disabled={isLoading || serverWaking || accountLocked}
                 style={{ background: `linear-gradient(135deg, ${primary}, ${secondary})` }}>
                 {serverWaking ? (
                   <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>

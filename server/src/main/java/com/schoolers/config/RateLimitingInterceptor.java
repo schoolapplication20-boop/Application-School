@@ -17,7 +17,10 @@ import java.util.concurrent.atomic.AtomicLong;
  * Rate Limiting Interceptor using Bucket4j
  *
  * Limits API requests per IP address:
- * - 5 requests per 15 minutes for login / OTP / forgot-password (brute-force protection)
+ * - 20 requests per 15 minutes for /api/auth/login and /api/auth/register (IP-level bot protection;
+ *   per-account lockout after 5 wrong passwords is handled in AuthService)
+ * - 10 requests per hour for /api/auth/forgot-password and /api/auth/verify-otp
+ *   (prevents OTP spam; kept generous enough that a locked-out user can still reset)
  * - 1000 requests per 10 minutes for public endpoints
  * - 2000 requests per 10 minutes for authenticated endpoints
  */
@@ -27,6 +30,7 @@ public class RateLimitingInterceptor implements HandlerInterceptor {
     private final Map<String, Bucket>     authenticationBuckets = new ConcurrentHashMap<>();
     private final Map<String, Bucket>     generalBuckets        = new ConcurrentHashMap<>();
     private final Map<String, Bucket>     loginBuckets          = new ConcurrentHashMap<>();
+    private final Map<String, Bucket>     passwordResetBuckets  = new ConcurrentHashMap<>();
     /** Last-access epoch-ms per IP — used by evictStaleBuckets() to remove idle entries */
     private final Map<String, AtomicLong> lastSeen              = new ConcurrentHashMap<>();
 
@@ -46,19 +50,27 @@ public class RateLimitingInterceptor implements HandlerInterceptor {
         } else {
             response.setStatus(429);
             response.setContentType("application/json");
-            response.getWriter().write("{\"success\":false,\"message\":\"Too many attempts. Please try again in 15 minutes.\"}");
+            response.getWriter().write("{\"success\":false,\"message\":\"Too many requests from this device. Please wait a few minutes and try again.\"}");
             return false;
         }
     }
 
     private Bucket selectBucket(String path, String ipAddress) {
-        // Auth endpoints that can be brute-forced or spammed get the strictest limit: 5/15min per IP
-        if (path.contains("/api/auth/login")
+        // Forgot-password and OTP verify get their own generous bucket so a locked-out user
+        // can always recover their account — 10 attempts per hour is more than enough.
+        if (path.contains("/api/auth/forgot-password")
                 || path.contains("/api/auth/verify-otp")
-                || path.contains("/api/auth/forgot-password")
-                || path.contains("/api/auth/register")) {
+                || path.contains("/api/auth/reset-password")) {
+            return passwordResetBuckets.computeIfAbsent(ipAddress, k -> Bucket4j.builder()
+                    .addLimit(Bandwidth.classic(10, Refill.intervally(10, java.time.Duration.ofHours(1))))
+                    .build());
+        }
+
+        // Login and register: 20 attempts per 15 minutes per IP.
+        // Per-account lockout (5 wrong passwords → permanent lock) is handled in AuthService.
+        if (path.contains("/api/auth/login") || path.contains("/api/auth/register")) {
             return loginBuckets.computeIfAbsent(ipAddress, k -> Bucket4j.builder()
-                    .addLimit(Bandwidth.classic(5, Refill.intervally(5, java.time.Duration.ofMinutes(15))))
+                    .addLimit(Bandwidth.classic(20, Refill.intervally(20, java.time.Duration.ofMinutes(15))))
                     .build());
         }
 
@@ -85,6 +97,7 @@ public class RateLimitingInterceptor implements HandlerInterceptor {
                 loginBuckets.remove(ip);
                 generalBuckets.remove(ip);
                 authenticationBuckets.remove(ip);
+                passwordResetBuckets.remove(ip);
                 lastSeen.remove(ip);
                 removed++;
             }
