@@ -342,8 +342,10 @@ public class AdminService {
             ensureClassExists(saved.getClassName(), saved.getSection(), schoolId);
 
             // Step 3: Create the student User account (pass schoolId for multi-tenant isolation)
+            // Use the admin-provided real email if supplied (OTP-verified on the frontend); otherwise auto-generate.
+            String studentEmail = str(body, "studentEmail", null);
             StudentUserResult studentUserResult = createStudentUser(
-                    name, saved.getAdmissionNumber(), rollNumber, saved.getId(), null, schoolId);
+                    name, saved.getAdmissionNumber(), rollNumber, saved.getId(), studentEmail, schoolId);
 
             // Step 4: Back-patch the student row with the user ID
             if (studentUserResult != null) {
