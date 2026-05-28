@@ -318,14 +318,11 @@ function OwnerDashboard() {
                   <th>ID</th>
                   <th>School</th>
                   <th>Super Admin</th>
-                  <th>Contact</th>
+                  <th>Joined</th>
                   <th>Modules</th>
                   <th>Setup</th>
                   <th>Status</th>
-                  <th></th>
-                  <th></th>
-                  <th></th>
-                  <th></th>
+                  <th style={{ textAlign: 'center' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -410,69 +407,61 @@ function OwnerDashboard() {
                           </button>
                         </td>
                         <td>
-                          <button
-                            onClick={() => sa.schoolDbId && openUsersModal(sa)}
-                            disabled={!sa.schoolDbId}
-                            title="View all users"
-                            style={{ border: 'none', background: '#eff6ff', borderRadius: 8, width: 30, height: 30, cursor: sa.schoolDbId ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: sa.schoolDbId ? 1 : 0.4 }}
-                          >
-                            <span className="material-icons" style={{ fontSize: 16, color: '#2563eb' }}>group</span>
-                          </button>
-                        </td>
-                        <td>
-                          <button
-                            onClick={() => sa.schoolDbId && openModulesModal(sa)}
-                            disabled={!sa.schoolDbId}
-                            title="Manage Modules"
-                            style={{ border: 'none', background: '#f0fdf4', borderRadius: 8, width: 30, height: 30, cursor: sa.schoolDbId ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: sa.schoolDbId ? 1 : 0.4 }}
-                          >
-                            <span className="material-icons" style={{ fontSize: 16, color: '#16a34a' }}>tune</span>
-                          </button>
-                        </td>
-                        <td>
-                          <button
-                            onClick={() => setExpandedRow(isExpanded ? null : sa.schoolDbId)}
-                            title={isExpanded ? 'Collapse' : 'View details'}
-                            style={{ border: 'none', background: isExpanded ? '#ede9fe' : '#f8fafc', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                          >
-                            <span className="material-icons" style={{ fontSize: 16, color: isExpanded ? '#7c3aed' : '#a0aec0' }}>
-                              {isExpanded ? 'expand_less' : 'expand_more'}
-                            </span>
-                          </button>
-                        </td>
-                        <td>
-                          <button
-                            onClick={() => setEditTarget(sa)}
-                            title="Edit School"
-                            style={{ border: 'none', background: '#f0fff4', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                          >
-                            <span className="material-icons" style={{ fontSize: 16, color: '#276749' }}>edit</span>
-                          </button>
-                        </td>
-                        <td>
-                          <button
-                            onClick={() => setDeleteTarget(sa)}
-                            title="Delete Super Admin"
-                            style={{ border: 'none', background: '#fff5f5', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                          >
-                            <span className="material-icons" style={{ fontSize: 16, color: '#e53e3e' }}>person_remove</span>
-                          </button>
-                        </td>
-                        <td>
-                          <button
-                            onClick={() => setSchoolDeleteTarget(sa)}
-                            title="Delete Entire School & All Data"
-                            style={{ border: 'none', background: '#fff0f0', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                          >
-                            <span className="material-icons" style={{ fontSize: 16, color: '#c53030' }}>delete_forever</span>
-                          </button>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center' }}>
+                            <button
+                              onClick={() => sa.schoolDbId && openUsersModal(sa)}
+                              disabled={!sa.schoolDbId}
+                              title="View users"
+                              style={{ border: 'none', background: '#eff6ff', borderRadius: 7, width: 28, height: 28, cursor: sa.schoolDbId ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: sa.schoolDbId ? 1 : 0.4, flexShrink: 0 }}
+                            >
+                              <span className="material-icons" style={{ fontSize: 15, color: '#2563eb' }}>group</span>
+                            </button>
+                            <button
+                              onClick={() => sa.schoolDbId && openModulesModal(sa)}
+                              disabled={!sa.schoolDbId}
+                              title="Manage modules"
+                              style={{ border: 'none', background: '#f0fdf4', borderRadius: 7, width: 28, height: 28, cursor: sa.schoolDbId ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: sa.schoolDbId ? 1 : 0.4, flexShrink: 0 }}
+                            >
+                              <span className="material-icons" style={{ fontSize: 15, color: '#16a34a' }}>tune</span>
+                            </button>
+                            <button
+                              onClick={() => setExpandedRow(isExpanded ? null : sa.schoolDbId)}
+                              title={isExpanded ? 'Collapse' : 'View details'}
+                              style={{ border: 'none', background: isExpanded ? '#ede9fe' : '#f8fafc', borderRadius: 7, width: 28, height: 28, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                            >
+                              <span className="material-icons" style={{ fontSize: 15, color: isExpanded ? '#7c3aed' : '#a0aec0' }}>
+                                {isExpanded ? 'expand_less' : 'expand_more'}
+                              </span>
+                            </button>
+                            <button
+                              onClick={() => setEditTarget(sa)}
+                              title="Edit school"
+                              style={{ border: 'none', background: '#f0fff4', borderRadius: 7, width: 28, height: 28, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                            >
+                              <span className="material-icons" style={{ fontSize: 15, color: '#276749' }}>edit</span>
+                            </button>
+                            <button
+                              onClick={() => setDeleteTarget(sa)}
+                              title="Delete super admin"
+                              style={{ border: 'none', background: '#fff5f5', borderRadius: 7, width: 28, height: 28, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                            >
+                              <span className="material-icons" style={{ fontSize: 15, color: '#e53e3e' }}>person_remove</span>
+                            </button>
+                            <button
+                              onClick={() => setSchoolDeleteTarget(sa)}
+                              title="Delete entire school"
+                              style={{ border: 'none', background: '#fff0f0', borderRadius: 7, width: 28, height: 28, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                            >
+                              <span className="material-icons" style={{ fontSize: 15, color: '#c53030' }}>delete_forever</span>
+                            </button>
+                          </div>
                         </td>
                       </tr>
 
                       {/* ── Expanded detail row ─────────────────────────────── */}
                       {isExpanded && (
                         <tr>
-                          <td colSpan={12} style={{ padding: 0, background: '#fafbff', borderTop: '1px dashed #e2e8f0' }}>
+                          <td colSpan={8} style={{ padding: 0, background: '#fafbff', borderTop: '1px dashed #e2e8f0' }}>
                             <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
                               {/* School info */}
                               <div style={{ background: '#fff', borderRadius: 10, padding: '12px 14px', border: '1.5px solid #e2e8f0' }}>
