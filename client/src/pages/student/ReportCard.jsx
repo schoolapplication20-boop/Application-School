@@ -76,6 +76,31 @@ export default function ReportCard() {
 
   return (
     <Layout pageTitle="Report Card">
+      <style>{`
+        @media print {
+          @page {
+            size: A4 portrait;
+            margin: 12mm 15mm;
+          }
+          body.printing-report-card * { visibility: hidden; }
+          body.printing-report-card #report-card,
+          body.printing-report-card #report-card * { visibility: visible; }
+          body.printing-report-card #report-card {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            width: 180mm;
+            max-width: 180mm;
+            box-shadow: none !important;
+            border-radius: 0 !important;
+            padding: 10mm 0 0 0 !important;
+            margin: 0 !important;
+            font-size: 10pt;
+            line-height: 1.4;
+          }
+          body.printing-report-card table { page-break-inside: avoid; }
+          body.printing-report-card tr    { page-break-inside: avoid; }
+        }
+      `}</style>
       <div style={{ maxWidth: 860, margin: '0 auto', padding: '16px 16px 40px' }}>
 
         {/* Controls bar */}
