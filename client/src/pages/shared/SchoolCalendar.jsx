@@ -4,13 +4,13 @@ import { calendarAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
 const TYPE_META = {
-  HOLIDAY: { bg: '#fff5f5', color: '#c53030', label: 'Holiday' },
-  EVENT:   { bg: '#ebf8ff', color: '#2b6cb0', label: 'Event'   },
-  EXAM:    { bg: '#faf5ff', color: '#6b46c1', label: 'Exam'    },
-  MEETING: { bg: '#f0fff4', color: '#276749', label: 'Meeting'  },
+  HOLIDAY: { color: '#ef4444', label: 'Holiday', icon: 'beach_access' },
+  EVENT:   { color: '#3b82f6', label: 'Event',   icon: 'event'        },
+  EXAM:    { color: '#8b5cf6', label: 'Exam',    icon: 'quiz'         },
+  MEETING: { color: '#10b981', label: 'Meeting', icon: 'groups'       },
 };
 
-const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DAYS   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
 const fmt = (d) => d ? new Date(d + 'T00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
@@ -23,7 +23,7 @@ export default function SchoolCalendar() {
   const [events,   setEvents]   = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [year,     setYear]     = useState(today.getFullYear());
-  const [month,    setMonth]    = useState(today.getMonth()); // 0-based
+  const [month,    setMonth]    = useState(today.getMonth());
   const [showForm, setShowForm] = useState(false);
   const [saving,   setSaving]   = useState(false);
   const [editId,   setEditId]   = useState(null);
@@ -41,21 +41,22 @@ export default function SchoolCalendar() {
 
   useEffect(() => { load(); }, [load]);
 
-  // Build calendar grid
-  const firstDay  = new Date(year, month, 1).getDay();
-  const daysInMo  = new Date(year, month + 1, 0).getDate();
-  const cells     = Array(firstDay).fill(null).concat(Array.from({ length: daysInMo }, (_, i) => i + 1));
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMo = new Date(year, month + 1, 0).getDate();
+  const cells    = Array(firstDay).fill(null).concat(Array.from({ length: daysInMo }, (_, i) => i + 1));
 
   const eventsForDay = (d) => {
     const dateStr = `${year}-${String(month + 1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     return events.filter(e => e.startDate <= dateStr && (!e.endDate || e.endDate >= dateStr));
   };
 
-  const monthEvents = events.filter(e => {
-    const mo = parseInt(e.startDate?.split('-')[1]) - 1;
-    const yr = parseInt(e.startDate?.split('-')[0]);
-    return yr === year && mo === month;
-  });
+  const monthEvents = events
+    .filter(e => {
+      const mo = parseInt(e.startDate?.split('-')[1]) - 1;
+      const yr = parseInt(e.startDate?.split('-')[0]);
+      return yr === year && mo === month;
+    })
+    .sort((a, b) => a.startDate.localeCompare(b.startDate));
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -82,64 +83,106 @@ export default function SchoolCalendar() {
     setEditId(ev.id); setShowForm(true);
   };
 
+  const resetForm = () => { setShowForm(false); setEditId(null); setForm({ title: '', description: '', startDate: '', endDate: '', eventType: 'EVENT' }); setError(''); };
+
   const prevMonth = () => { if (month === 0) { setMonth(11); setYear(y => y-1); } else setMonth(m => m-1); };
   const nextMonth = () => { if (month === 11) { setMonth(0); setYear(y => y+1); } else setMonth(m => m+1); };
 
-  const inp = { width: '100%', padding: '9px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box' };
+  const inp = {
+    width: '100%', padding: '9px 12px',
+    border: '1px solid var(--border, #e2e8f0)',
+    borderRadius: 8, fontSize: 13, outline: 'none',
+    boxSizing: 'border-box',
+    background: 'var(--surface-input, #fafafa)',
+    color: 'var(--text-primary, #1a202c)',
+  };
+
+  const eventCount = monthEvents.length;
+  const accentColor = '#3b82f6';
 
   return (
     <Layout pageTitle="School Calendar">
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: 24 }}>
+      <div style={{ maxWidth: 1140, margin: '0 auto', padding: 24 }}>
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
           <div>
-            <h1 style={{ fontSize: 24, fontWeight: 700, color: '#1a202c', margin: 0 }}>School Calendar</h1>
-            <p style={{ color: '#718096', marginTop: 4, fontSize: 14 }}>Holidays, exams, and school events</p>
+            <h1 style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-primary, #1a202c)', margin: 0, letterSpacing: '-0.3px' }}>
+              School Calendar
+            </h1>
+            <p style={{ color: 'var(--text-muted, #718096)', marginTop: 4, fontSize: 14 }}>
+              Holidays, exams, events &amp; meetings
+            </p>
           </div>
-          {canEdit && (
-            <button onClick={() => { setShowForm(true); setEditId(null); setForm({ title: '', description: '', startDate: '', endDate: '', eventType: 'EVENT' }); }}
-              style={{ padding: '10px 20px', background: '#4299e1', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span className="material-icons" style={{ fontSize: 18 }}>add</span> Add Event
-            </button>
-          )}
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            {/* Type legend */}
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {Object.entries(TYPE_META).map(([k, v]) => (
+                <span key={k} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, color: v.color, background: v.color + '15', padding: '3px 9px', borderRadius: 20 }}>
+                  <span className="material-icons" style={{ fontSize: 12 }}>{v.icon}</span>
+                  {v.label}
+                </span>
+              ))}
+            </div>
+            {canEdit && (
+              <button
+                onClick={() => { resetForm(); setShowForm(true); }}
+                style={{ padding: '10px 20px', background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)', color: '#fff', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 4px 12px rgba(59,130,246,0.35)', whiteSpace: 'nowrap' }}>
+                <span className="material-icons" style={{ fontSize: 18 }}>add</span>
+                Add Event
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Add/Edit Form */}
         {showForm && (
-          <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.1)', padding: 24, marginBottom: 24 }}>
-            <h3 style={{ margin: '0 0 16px', fontSize: 16, fontWeight: 700 }}>{editId ? 'Edit Event' : 'New Event'}</h3>
-            {error && <div style={{ background: '#fff5f5', color: '#c53030', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: 13 }}>{error}</div>}
+          <div style={{ background: 'var(--surface, #fff)', borderRadius: 16, boxShadow: 'var(--shadow-card, 0 4px 20px rgba(0,0,0,0.08))', border: '1px solid var(--border, #f0f4f8)', padding: 24, marginBottom: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: accentColor + '20', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span className="material-icons" style={{ fontSize: 18, color: accentColor }}>{editId ? 'edit' : 'add_circle'}</span>
+              </div>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary, #1a202c)' }}>
+                {editId ? 'Edit Event' : 'New Event'}
+              </h3>
+            </div>
+            {error && (
+              <div style={{ background: '#fff5f5', color: '#c53030', borderRadius: 8, padding: '8px 12px', marginBottom: 14, fontSize: 13, border: '1px solid #fed7d7' }}>{error}</div>
+            )}
             <form onSubmit={handleSave}>
               <div className="calendar-form-grid">
                 <div style={{ gridColumn: '1/-1' }}>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 5 }}>Title *</label>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary, #4a5568)', display: 'block', marginBottom: 5 }}>Title *</label>
                   <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Event title" style={inp} />
                 </div>
                 <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 5 }}>Type</label>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary, #4a5568)', display: 'block', marginBottom: 5 }}>Type</label>
                   <select value={form.eventType} onChange={e => setForm(f => ({ ...f, eventType: e.target.value }))} style={inp}>
                     {Object.entries(TYPE_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 5 }}>Start Date *</label>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary, #4a5568)', display: 'block', marginBottom: 5 }}>Start Date *</label>
                   <input type="date" value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))} style={inp} />
                 </div>
                 <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 5 }}>End Date</label>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary, #4a5568)', display: 'block', marginBottom: 5 }}>End Date</label>
                   <input type="date" value={form.endDate} min={form.startDate} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))} style={inp} />
                 </div>
                 <div style={{ gridColumn: '1/-1' }}>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 5 }}>Description</label>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary, #4a5568)', display: 'block', marginBottom: 5 }}>Description</label>
                   <textarea rows={2} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Optional description" style={{ ...inp, resize: 'vertical' }} />
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 10 }}>
-                <button type="submit" disabled={saving} style={{ padding: '9px 22px', background: '#4299e1', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                  {saving ? 'Saving…' : (editId ? 'Update' : 'Create')}
+                <button type="submit" disabled={saving}
+                  style={{ padding: '9px 22px', background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
+                  {saving ? 'Saving…' : (editId ? 'Update Event' : 'Create Event')}
                 </button>
-                <button type="button" onClick={() => { setShowForm(false); setEditId(null); }} style={{ padding: '9px 22px', background: '#edf2f7', color: '#4a5568', border: 'none', borderRadius: 8, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+                <button type="button" onClick={resetForm}
+                  style={{ padding: '9px 22px', background: 'var(--surface-alt, #f7fafc)', color: 'var(--text-secondary, #4a5568)', border: '1px solid var(--border, #e2e8f0)', borderRadius: 8, fontSize: 13, cursor: 'pointer' }}>
+                  Cancel
+                </button>
               </div>
             </form>
           </div>
@@ -148,41 +191,59 @@ export default function SchoolCalendar() {
         <div className="calendar-main-grid">
 
           {/* Calendar grid */}
-          <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+          <div style={{ background: 'var(--surface, #fff)', borderRadius: 16, boxShadow: 'var(--shadow-card, 0 2px 14px rgba(0,0,0,0.07))', border: '1px solid var(--border, #f0f4f8)', overflow: 'hidden' }}>
+
             {/* Month navigation */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid #f0f0f0' }}>
-              <button onClick={prevMonth} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6 }}>
-                <span className="material-icons">chevron_left</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--border, #f0f4f8)', background: 'var(--surface-alt, #f7fafc)' }}>
+              <button onClick={prevMonth} style={{ background: 'var(--surface, #fff)', border: '1px solid var(--border, #e2e8f0)', borderRadius: 8, cursor: 'pointer', padding: '6px 10px', display: 'flex', alignItems: 'center', color: 'var(--text-secondary, #4a5568)' }}>
+                <span className="material-icons" style={{ fontSize: 20 }}>chevron_left</span>
               </button>
-              <span style={{ fontWeight: 700, fontSize: 16 }}>{MONTHS[month]} {year}</span>
-              <button onClick={nextMonth} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6 }}>
-                <span className="material-icons">chevron_right</span>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--text-primary, #1a202c)', letterSpacing: '-0.3px' }}>{MONTHS[month]}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted, #a0aec0)', marginTop: 1 }}>{year}</div>
+              </div>
+              <button onClick={nextMonth} style={{ background: 'var(--surface, #fff)', border: '1px solid var(--border, #e2e8f0)', borderRadius: 8, cursor: 'pointer', padding: '6px 10px', display: 'flex', alignItems: 'center', color: 'var(--text-secondary, #4a5568)' }}>
+                <span className="material-icons" style={{ fontSize: 20 }}>chevron_right</span>
               </button>
             </div>
 
             {/* Day headers */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', textAlign: 'center', borderBottom: '1px solid #f0f0f0' }}>
-              {DAYS.map(d => <div key={d} style={{ padding: '8px 0', fontSize: 11, fontWeight: 700, color: '#718096' }}>{d}</div>)}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', textAlign: 'center', borderBottom: '1px solid var(--border, #f0f4f8)', background: 'var(--surface-alt, #f7fafc)' }}>
+              {DAYS.map((d, i) => (
+                <div key={d} style={{ padding: '8px 0', fontSize: 11, fontWeight: 700, color: i === 0 ? '#ef4444' : 'var(--text-muted, #718096)' }}>{d}</div>
+              ))}
             </div>
 
             {/* Cells */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)' }}>
               {cells.map((day, idx) => {
-                if (!day) return <div key={`e${idx}`} style={{ minHeight: 70, borderRight: '1px solid #f7fafc', borderBottom: '1px solid #f7fafc' }} />;
-                const isToday = day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
-                const dayEvs = eventsForDay(day);
+                if (!day) return <div key={`e${idx}`} style={{ minHeight: 76, borderRight: '1px solid var(--border, #f7fafc)', borderBottom: '1px solid var(--border, #f7fafc)', background: 'var(--surface-alt, #fafafa)' }} />;
+                const isToday   = day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+                const isSunday  = new Date(year, month, day).getDay() === 0;
+                const dayEvs    = eventsForDay(day);
                 return (
-                  <div key={day} style={{ minHeight: 70, borderRight: '1px solid #f7fafc', borderBottom: '1px solid #f7fafc', padding: 4 }}>
-                    <div style={{ fontWeight: isToday ? 700 : 400, fontSize: 13, color: isToday ? '#fff' : '#2d3748',
-                      background: isToday ? '#4299e1' : 'transparent',
-                      borderRadius: 20, width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 2 }}>
+                  <div key={day} style={{ minHeight: 76, borderRight: '1px solid var(--border, #f0f4f8)', borderBottom: '1px solid var(--border, #f0f4f8)', padding: '4px 3px', background: 'var(--surface, #fff)' }}>
+                    <div style={{
+                      fontWeight: isToday ? 800 : 400,
+                      fontSize: 13,
+                      color: isToday ? '#fff' : isSunday ? '#ef4444' : 'var(--text-primary, #2d3748)',
+                      background: isToday ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)' : 'transparent',
+                      borderRadius: '50%', width: 26, height: 26,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      marginBottom: 3,
+                      boxShadow: isToday ? '0 2px 8px rgba(59,130,246,0.4)' : 'none',
+                    }}>
                       {day}
                     </div>
                     {dayEvs.slice(0, 2).map(ev => {
-                      const m = TYPE_META[ev.eventType] || TYPE_META.EVENT;
-                      return <div key={ev.id} style={{ fontSize: 10, fontWeight: 600, background: m.bg, color: m.color, borderRadius: 4, padding: '1px 4px', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</div>;
+                      const meta = TYPE_META[ev.eventType] || TYPE_META.EVENT;
+                      return (
+                        <div key={ev.id} style={{ fontSize: 10, fontWeight: 600, background: meta.color + '18', color: meta.color, borderLeft: `2px solid ${meta.color}`, borderRadius: '0 3px 3px 0', padding: '1px 4px', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {ev.title}
+                        </div>
+                      );
                     })}
-                    {dayEvs.length > 2 && <div style={{ fontSize: 10, color: '#718096' }}>+{dayEvs.length - 2} more</div>}
+                    {dayEvs.length > 2 && <div style={{ fontSize: 10, color: 'var(--text-muted, #a0aec0)', fontWeight: 600 }}>+{dayEvs.length - 2}</div>}
                   </div>
                 );
               })}
@@ -190,45 +251,80 @@ export default function SchoolCalendar() {
           </div>
 
           {/* Sidebar: this month's events */}
-          <div>
-            <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20 }}>
-              <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 14 }}>{MONTHS[month]} Events</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ background: 'var(--surface, #fff)', borderRadius: 16, boxShadow: 'var(--shadow-card, 0 2px 14px rgba(0,0,0,0.07))', border: '1px solid var(--border, #f0f4f8)', padding: 20 }}>
+              {/* Section header */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, paddingLeft: 10, borderLeft: `3px solid ${accentColor}` }}>
+                <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary, #1a202c)' }}>
+                  {MONTHS[month]} Events
+                </div>
+                <span style={{ fontSize: 11, fontWeight: 700, color: accentColor, background: accentColor + '15', padding: '2px 8px', borderRadius: 10 }}>
+                  {eventCount}
+                </span>
+              </div>
+
               {loading ? (
-                <div style={{ color: '#718096', fontSize: 13, textAlign: 'center', padding: 20 }}>Loading…</div>
+                <div style={{ color: 'var(--text-muted, #718096)', fontSize: 13, textAlign: 'center', padding: 20 }}>Loading…</div>
               ) : monthEvents.length === 0 ? (
-                <div style={{ color: '#a0aec0', fontSize: 13, textAlign: 'center', padding: 20 }}>No events this month</div>
+                <div style={{ textAlign: 'center', padding: '24px 0' }}>
+                  <span className="material-icons" style={{ fontSize: 36, color: 'var(--text-muted, #cbd5e0)', display: 'block', marginBottom: 8 }}>event_busy</span>
+                  <div style={{ color: 'var(--text-muted, #a0aec0)', fontSize: 13 }}>No events this month</div>
+                </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {monthEvents.map(ev => {
-                    const m = TYPE_META[ev.eventType] || TYPE_META.EVENT;
+                    const meta = TYPE_META[ev.eventType] || TYPE_META.EVENT;
                     return (
-                      <div key={ev.id} style={{ borderLeft: `3px solid ${m.color}`, padding: '8px 12px', background: m.bg, borderRadius: '0 8px 8px 0' }}>
+                      <div key={ev.id} style={{ borderLeft: `3px solid ${meta.color}`, padding: '10px 12px', background: meta.color + '0d', borderRadius: '0 10px 10px 0', position: 'relative' }}>
                         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-                          <div>
-                            <div style={{ fontWeight: 700, fontSize: 13, color: m.color }}>{ev.title}</div>
-                            <div style={{ fontSize: 11, color: '#718096', marginTop: 2 }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                              <span className="material-icons" style={{ fontSize: 13, color: meta.color }}>{meta.icon}</span>
+                              <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary, #1a202c)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</div>
+                            </div>
+                            <div style={{ fontSize: 11, color: 'var(--text-muted, #718096)' }}>
                               {fmt(ev.startDate)}{ev.endDate && ev.endDate !== ev.startDate ? ` – ${fmt(ev.endDate)}` : ''}
                             </div>
-                            <span style={{ fontSize: 10, fontWeight: 600, background: m.color, color: '#fff', padding: '1px 7px', borderRadius: 10, display: 'inline-block', marginTop: 4 }}>{m.label}</span>
+                            <span style={{ fontSize: 10, fontWeight: 700, background: meta.color, color: '#fff', padding: '1px 7px', borderRadius: 10, display: 'inline-block', marginTop: 5 }}>{meta.label}</span>
+                            {ev.description && <div style={{ fontSize: 11, color: 'var(--text-secondary, #4a5568)', marginTop: 5, lineHeight: 1.4 }}>{ev.description}</div>}
                           </div>
                           {canEdit && (
-                            <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                              <button onClick={() => openEdit(ev)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2 }}>
-                                <span className="material-icons" style={{ fontSize: 16, color: '#718096' }}>edit</span>
+                            <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+                              <button onClick={() => openEdit(ev)} title="Edit" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 3, borderRadius: 6 }}>
+                                <span className="material-icons" style={{ fontSize: 15, color: 'var(--text-muted, #718096)' }}>edit</span>
                               </button>
-                              <button onClick={() => handleDelete(ev.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2 }}>
-                                <span className="material-icons" style={{ fontSize: 16, color: '#e53e3e' }}>delete</span>
+                              <button onClick={() => handleDelete(ev.id)} title="Delete" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 3, borderRadius: 6 }}>
+                                <span className="material-icons" style={{ fontSize: 15, color: '#ef4444' }}>delete</span>
                               </button>
                             </div>
                           )}
                         </div>
-                        {ev.description && <div style={{ fontSize: 11, color: '#4a5568', marginTop: 4 }}>{ev.description}</div>}
                       </div>
                     );
                   })}
                 </div>
               )}
             </div>
+
+            {/* Type breakdown mini-card */}
+            {monthEvents.length > 0 && (
+              <div style={{ background: 'var(--surface, #fff)', borderRadius: 16, boxShadow: 'var(--shadow-card, 0 2px 14px rgba(0,0,0,0.07))', border: '1px solid var(--border, #f0f4f8)', padding: 16 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted, #8a99b0)', letterSpacing: '0.04em', marginBottom: 12, textTransform: 'uppercase' }}>Breakdown</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {Object.entries(TYPE_META).map(([k, v]) => {
+                    const count = monthEvents.filter(e => (e.eventType || 'EVENT') === k).length;
+                    if (!count) return null;
+                    return (
+                      <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span className="material-icons" style={{ fontSize: 15, color: v.color }}>{v.icon}</span>
+                        <div style={{ flex: 1, fontSize: 12, color: 'var(--text-secondary, #4a5568)', fontWeight: 600 }}>{v.label}</div>
+                        <span style={{ fontSize: 12, fontWeight: 800, color: v.color }}>{count}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
