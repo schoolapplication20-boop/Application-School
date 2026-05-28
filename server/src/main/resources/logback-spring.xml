@@ -3,17 +3,16 @@
 
     <!--
         Log format:
-          dev  (LOG_FORMAT unset or "text") → human-readable coloured console output
-          prod (LOG_FORMAT=json)            → structured JSON — one line per event,
-                                             parseable by Railway / Datadog / Loki
+          default             → human-readable console output
+          profile "json-log" → structured JSON — one line per event,
+                               parseable by Railway / Datadog / Loki
+
+        Activate JSON on Railway by setting:
+          SPRING_PROFILES_ACTIVE=json-log
 
         The %X{requestId} token comes from RequestIdFilter's MDC entry.
-        All log lines from the same HTTP request share the same requestId,
-        making it trivial to grep a single request out of millions of log lines.
+        All log lines from the same HTTP request share the same requestId.
     -->
-
-    <springProperty scope="context" name="logFormat"
-                    source="LOG_FORMAT" defaultValue="text"/>
 
     <!-- ── Colour-coded console appender (development / default) ───────── -->
     <appender name="CONSOLE_TEXT" class="ch.qos.logback.core.ConsoleAppender">
@@ -23,38 +22,27 @@
     </appender>
 
     <!-- ── Structured JSON console appender (production) ──────────────── -->
-    <!--
-        Logback's built-in JsonEncoder (requires logback-core ≥ 1.3.x,
-        bundled with Spring Boot 3.x via logback-classic 1.4.x).
-        If the encoder is unavailable on your version, replace with
-        logstash-logback-encoder (add net.logstash.logback:logstash-logback-encoder to pom.xml).
-    -->
     <appender name="CONSOLE_JSON" class="ch.qos.logback.core.ConsoleAppender">
         <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
-            <!-- Minimal JSON-like format that most log aggregators can parse without a plugin -->
             <pattern>{"ts":"%d{yyyy-MM-dd'T'HH:mm:ss.SSSZ}","level":"%-5level","requestId":"%X{requestId:--}","logger":"%logger{36}","msg":"%replace(%msg){'\"','\\\"'}"}%n</pattern>
         </encoder>
     </appender>
 
-    <!-- ── Root logger — switch appender based on LOG_FORMAT env var ───── -->
-    <if condition='property("logFormat").equals("json")'>
-        <then>
-            <root level="INFO">
-                <appender-ref ref="CONSOLE_JSON"/>
-            </root>
-        </then>
-        <else>
-            <root level="INFO">
-                <appender-ref ref="CONSOLE_TEXT"/>
-            </root>
-        </else>
-    </if>
+    <!-- ── Default: text output ─────────────────────────────────────────── -->
+    <springProfile name="!json-log">
+        <root level="${LOG_LEVEL:-INFO}">
+            <appender-ref ref="CONSOLE_TEXT"/>
+        </root>
+    </springProfile>
 
-    <!-- ── Per-package overrides ─────────────────────────────────────────
-         These mirror what was in application.properties; centralising them
-         here means the log config is the single source of truth.
-    -->
-    <logger name="com.schoolers" level="${LOG_LEVEL:-INFO}"/>
+    <!-- ── json-log profile: structured JSON output ─────────────────────── -->
+    <springProfile name="json-log">
+        <root level="${LOG_LEVEL:-INFO}">
+            <appender-ref ref="CONSOLE_JSON"/>
+        </root>
+    </springProfile>
+
+    <!-- ── Per-package overrides ─────────────────────────────────────────── -->
     <logger name="org.springframework.security" level="WARN"/>
     <logger name="org.hibernate.SQL" level="WARN"/>
     <logger name="com.zaxxer.hikari" level="WARN"/>
