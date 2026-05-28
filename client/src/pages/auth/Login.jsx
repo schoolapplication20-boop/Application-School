@@ -79,7 +79,7 @@ const Login = () => {
   const inputPlaceholder = isStudentRole ? 'Enter your admission number' : 'Enter your email';
 
   const rolePathMap = {
-    APPLICATION_OWNER: '/superadmin/dashboard',
+    APPLICATION_OWNER: '/owner/dashboard',
     SUPER_ADMIN:       '/superadmin/dashboard',
     ADMIN:             '/admin/dashboard',
     TEACHER:           '/teacher/dashboard',
@@ -88,7 +88,7 @@ const Login = () => {
 
   const navigateByRole = (registeredUser) => {
     if (registeredUser?.role === 'APPLICATION_OWNER') {
-      navigate('/superadmin/dashboard', { replace: true });
+      navigate('/owner/dashboard', { replace: true });
       return;
     }
     if (registeredUser?.firstLogin && registeredUser?.role !== 'SUPER_ADMIN') {

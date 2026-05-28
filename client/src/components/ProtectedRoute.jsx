@@ -84,7 +84,7 @@ const ProtectedRoute = ({ children, allowedRoles, permKey, moduleKey }) => {
   // Any attempt to visit a school-level route redirects back to the platform dashboard.
   if (user?.role === 'APPLICATION_OWNER') {
     if (!allowedRoles?.includes('APPLICATION_OWNER')) {
-      return <Navigate to="/superadmin/dashboard" replace />;
+      return <Navigate to="/owner/dashboard" replace />;
     }
     return children;
   }

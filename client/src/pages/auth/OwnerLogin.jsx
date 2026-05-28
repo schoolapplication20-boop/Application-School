@@ -21,7 +21,7 @@ const OwnerLogin = () => {
   const [otpLoading,  setOtpLoading]  = useState(false);
 
   useEffect(() => {
-    if (isAuthenticated) navigate('/superadmin/dashboard', { replace: true });
+    if (isAuthenticated) navigate('/owner/dashboard', { replace: true });
   }, [isAuthenticated, navigate]);
 
   const handleLogin = async (e) => {
@@ -52,7 +52,7 @@ const OwnerLogin = () => {
       }
 
       login(user, token);
-      navigate('/superadmin/dashboard', { replace: true });
+      navigate('/owner/dashboard', { replace: true });
     } catch (err) {
       setError(err.message || 'Login failed. Please check your credentials.');
     } finally {
@@ -68,7 +68,7 @@ const OwnerLogin = () => {
     try {
       const { user, token } = await apiVerifyOwnerOtp(otpEmail, otp.trim());
       login(user, token);
-      navigate('/superadmin/dashboard', { replace: true });
+      navigate('/owner/dashboard', { replace: true });
     } catch (err) {
       setError(err.message || 'Invalid OTP. Please try again.');
     } finally {

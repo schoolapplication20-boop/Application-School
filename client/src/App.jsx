@@ -174,12 +174,16 @@ function App() {
             <Route path="/admin/timetable"         element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} permKey="timetable"><Timetable /></ProtectedRoute>} />
             <Route path="/admin/examination"       element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} permKey="examination"><Examination /></ProtectedRoute>} />
 
-            {/* /superadmin/dashboard:
-                - APPLICATION_OWNER → OwnerDashboard (platform overview, manage all schools)
-                - SUPER_ADMIN       → SchoolDashboard (their school overview)
-                SuperAdminDashboard component routes internally based on role. */}
+            {/* APPLICATION_OWNER platform dashboard */}
+            <Route path="/owner/dashboard" element={
+              <ProtectedRoute allowedRoles={['APPLICATION_OWNER']}>
+                <SuperAdminDashboard />
+              </ProtectedRoute>
+            } />
+
+            {/* SUPER_ADMIN school dashboard */}
             <Route path="/superadmin/dashboard" element={
-              <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'APPLICATION_OWNER']}>
+              <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
                 <SuperAdminDashboard />
               </ProtectedRoute>
             } />

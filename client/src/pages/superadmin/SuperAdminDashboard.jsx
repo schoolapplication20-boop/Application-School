@@ -250,37 +250,46 @@ function OwnerDashboard() {
   return (
     <Layout pageTitle="Platform Dashboard">
       <SEOMeta title="Platform Dashboard" description="Application owner overview — manage all schools on the My-Skoolz platform." />
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#1a202c' }}>Platform Overview</h1>
-          <p style={{ margin: '4px 0 0', color: '#718096', fontSize: 13 }}>Manage all schools and their Super Admins from one place</p>
-        </div>
-        <button
-          onClick={() => setShowWizard(true)}
-          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', background: 'linear-gradient(135deg,#dc2626,#991b1b)', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: 'pointer', boxShadow: '0 2px 8px #dc262640' }}
-        >
-          <span className="material-icons" style={{ fontSize: 18 }}>add_business</span>
-          Onboard School 
-        </button>
-      </div>
 
-      {/* ── Stat Cards ─────────────────────────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 24 }}>
-        {[
-          { label: 'Total Schools',       value: totalSchools, icon: 'domain',           color: '#dc2626' },
-          { label: 'Setup Complete',       value: setupDone,    icon: 'task_alt',          color: '#16a34a' },
-          { label: 'Pending Setup',        value: pendingSetup, icon: 'pending_actions',   color: '#d97706' },
-          { label: 'Active Super Admins',  value: activeCount,  icon: 'manage_accounts',   color: '#7c3aed' },
-        ].map(c => (
-          <div key={c.label} className="stat-card" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <div className="stat-icon" style={{ backgroundColor: c.color + '18' }}>
-              <span className="material-icons" style={{ color: c.color }}>{c.icon}</span>
+      {/* ── Hero banner ────────────────────────────────────────────────────── */}
+      <div style={{
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%)',
+        borderRadius: 16, padding: '24px 28px', marginBottom: 24, color: '#fff',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+              <span className="material-icons" style={{ fontSize: 28, color: '#a78bfa' }}>domain</span>
+              <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#fff' }}>Platform Overview</h1>
             </div>
-            <div className="stat-value" style={{ color: c.color }}>{c.value}</div>
-            <div className="stat-label">{c.label}</div>
+            <p style={{ margin: 0, color: '#a5b4fc', fontSize: 13 }}>Manage all schools and their Super Admins from one place</p>
           </div>
-        ))}
+          <button
+            onClick={() => setShowWizard(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', background: 'linear-gradient(135deg,#dc2626,#991b1b)', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: 'pointer', boxShadow: '0 4px 12px rgba(220,38,38,0.4)', whiteSpace: 'nowrap', flexShrink: 0 }}
+          >
+            <span className="material-icons" style={{ fontSize: 17 }}>add_business</span>
+            Onboard School
+          </button>
+        </div>
+
+        {/* Stat tiles inside hero */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12 }}>
+          {[
+            { label: 'Total Schools',      value: totalSchools, icon: 'domain',          color: '#f87171', bg: 'rgba(248,113,113,0.15)' },
+            { label: 'Setup Complete',     value: setupDone,    icon: 'task_alt',         color: '#4ade80', bg: 'rgba(74,222,128,0.15)' },
+            { label: 'Pending Setup',      value: pendingSetup, icon: 'pending_actions',  color: '#fbbf24', bg: 'rgba(251,191,36,0.15)' },
+            { label: 'Active Admins',      value: activeCount,  icon: 'manage_accounts',  color: '#a78bfa', bg: 'rgba(167,139,250,0.15)' },
+          ].map(c => (
+            <div key={c.label} style={{ background: c.bg, borderRadius: 12, padding: '14px 16px', border: `1px solid ${c.color}30` }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <span className="material-icons" style={{ fontSize: 18, color: c.color }}>{c.icon}</span>
+              </div>
+              <div style={{ fontSize: 28, fontWeight: 800, color: c.color, lineHeight: 1 }}>{c.value}</div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 4, fontWeight: 600 }}>{c.label}</div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* ── Schools / Super Admins Table ────────────────────────────────────── */}

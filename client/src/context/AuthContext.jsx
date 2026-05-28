@@ -183,7 +183,7 @@ export const AuthProvider = ({ children }) => {
     if (!user) return '/login';
     switch (user.role) {
       // APPLICATION_OWNER → platform dashboard (all schools overview)
-      case 'APPLICATION_OWNER': return '/superadmin/dashboard';
+      case 'APPLICATION_OWNER': return '/owner/dashboard';
       // SUPER_ADMIN → school-level dashboard (filtered to their school)
       case 'SUPER_ADMIN':       return '/superadmin/dashboard';
       case 'ADMIN':             return '/admin/dashboard';
