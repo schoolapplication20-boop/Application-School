@@ -23,9 +23,12 @@ const Navbar = ({ onMenuToggle }) => {
   const [showProfile, setShowProfile]     = useState(false);
   const [selectedNotif, setSelectedNotif] = useState(null);
   const [searchQuery, setSearchQuery]     = useState('');
+  const displayEmail = (email) =>
+    email?.endsWith('@my-skoolz.com') ? email.split('@')[0] : (email || '');
+
   const [profileForm, setProfileForm]     = useState({
     name:   user?.name  || '',
-    email:  user?.email || '',
+    email:  displayEmail(user?.email),
     phone:  user?.phone || user?.mobile || '',
     address: user?.address || '',
   });
@@ -36,7 +39,7 @@ const Navbar = ({ onMenuToggle }) => {
     if (user) {
       setProfileForm({
         name:    user.name    || '',
-        email:   user.email   || '',
+        email:   displayEmail(user.email),
         phone:   user.phone   || user.mobile || '',
         address: user.address || '',
       });
@@ -254,7 +257,9 @@ const Navbar = ({ onMenuToggle }) => {
             }}>
               <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f4f8' }}>
                 <div style={{ fontSize: '14px', fontWeight: 700, color: '#2d3748' }}>{user?.name}</div>
-                <div style={{ fontSize: '12px', color: '#a0aec0' }}>{user?.email}</div>
+                <div style={{ fontSize: '12px', color: '#a0aec0' }}>
+                  {user?.email?.endsWith('@my-skoolz.com') ? user.email.split('@')[0] : user?.email}
+                </div>
               </div>
               <div
                 style={{ padding: '12px 20px', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', color: '#4a5568', fontSize: '14px', transition: 'background 0.2s' }}
