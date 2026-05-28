@@ -200,6 +200,68 @@ public class EmailService {
         }
     }
 
+    // ── Account locked notification (fire-and-forget) ────────────────────────
+
+    public void sendAccountLockedEmail(String toEmail, String name) {
+        try {
+            requireApiKey();
+            String resetUrl = appBaseUrl + "/forgot-password";
+            send(toEmail,
+                "My-Skoolz — Your account has been locked",
+                buildAccountLockedHtml(name, resetUrl));
+            log.info("[EmailService] Account locked notification sent to: " + toEmail);
+        } catch (Exception e) {
+            log.warning("[EmailService] Account locked email failed for " + toEmail + ": " + e.getMessage());
+        }
+    }
+
+    private String buildAccountLockedHtml(String name, String resetUrl) {
+        return "<!DOCTYPE html><html><body style='margin:0;padding:0;background:#f7fafc;font-family:Poppins,Arial,sans-serif;'>"
+            + "<div style='max-width:520px;margin:32px auto;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.10);'>"
+            // Red header
+            + "<div style='background:linear-gradient(135deg,#dc2626,#991b1b);padding:32px 28px;text-align:center;'>"
+            + "<div style='width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,0.15);display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px;'>"
+            + "<span style='font-size:30px;'>&#128274;</span>"
+            + "</div>"
+            + "<h2 style='color:#fff;margin:0;font-size:22px;font-weight:800;'>Account Locked</h2>"
+            + "<p style='color:#fecaca;margin:4px 0 0;font-size:13px;'>My-Skoolz Security Alert</p>"
+            + "</div>"
+            // Body
+            + "<div style='background:#fff;padding:32px 28px;'>"
+            + "<p style='color:#1a202c;font-size:15px;margin:0 0 12px;'>Hi <strong>" + (name != null ? name : "there") + "</strong>,</p>"
+            + "<p style='color:#4a5568;font-size:14px;line-height:1.7;margin:0 0 16px;'>"
+            + "Your <strong>My-Skoolz</strong> account has been <strong style='color:#dc2626;'>locked</strong> after "
+            + "<strong>5 consecutive failed login attempts</strong>. "
+            + "To protect your account, access has been suspended until you reset your password.</p>"
+            // Steps box
+            + "<div style='background:#fff5f5;border:1px solid #fecaca;border-radius:10px;padding:16px 20px;margin:0 0 24px;'>"
+            + "<div style='font-weight:700;font-size:13px;color:#991b1b;margin-bottom:10px;'>What to do next:</div>"
+            + "<ol style='margin:0;padding-left:18px;color:#4a5568;font-size:13px;line-height:2;'>"
+            + "<li>Click <strong>Reset My Password</strong> below</li>"
+            + "<li>Enter your registered email or mobile</li>"
+            + "<li>Enter the OTP you receive &amp; set a new password</li>"
+            + "</ol>"
+            + "</div>"
+            // CTA button
+            + "<div style='text-align:center;margin:0 0 28px;'>"
+            + "<a href='" + resetUrl + "' style='display:inline-block;background:linear-gradient(135deg,#2563EB,#1d4ed8);color:#fff;"
+            + "padding:14px 36px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;"
+            + "box-shadow:0 4px 14px rgba(37,99,235,0.35);'>Reset My Password</a>"
+            + "</div>"
+            // Security notice
+            + "<div style='background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;font-size:12px;color:#92400e;'>"
+            + "<strong>&#9888; Didn't try to log in?</strong> "
+            + "Someone may be attempting to access your account. Contact your school administrator immediately."
+            + "</div>"
+            + "</div>"
+            // Footer
+            + "<div style='background:#f7fafc;padding:16px;text-align:center;'>"
+            + "<p style='font-size:11px;color:#a0aec0;margin:0;'>Powered by My-Skoolz &mdash; Smart School Management</p>"
+            + "</div>"
+            + "</div>"
+            + "</body></html>";
+    }
+
     // ── Meeting confirmation (fire-and-forget) ────────────────────────────────
 
     public void sendMeetingConfirmation(String parentEmail, String studentName,

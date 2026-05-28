@@ -112,7 +112,13 @@ public class AuthService {
                     user.setLockedUntil(LocalDateTime.now(ZoneOffset.UTC));
                     user.setFailedLoginAttempts(0);
                     userRepository.save(user);
-                    log.warn("[login] Account locked after 5 failed attempts");
+                    log.warn("[login] Account locked after 5 failed attempts: {}", user.getEmail());
+                    // Notify the user by email (fire-and-forget; skip auto-generated @my-skoolz.com addresses)
+                    String lockedEmail = user.getEmail();
+                    if (lockedEmail != null && !lockedEmail.endsWith("@my-skoolz.com")) {
+                        try { emailService.sendAccountLockedEmail(lockedEmail, user.getName()); }
+                        catch (Exception ignored) {}
+                    }
                     return ApiResponse.error("Account locked after 5 failed attempts. "
                             + "Please use 'Forgot Password' to reset your password and unlock your account.");
                 }
