@@ -116,6 +116,7 @@ export const authAPI = {
   changePassword: (data) => api.post('/api/auth/change-password', data),
   setFirstPassword: (data) => api.post('/api/auth/set-first-password', data),
   verifyEmail:      (data) => api.post('/api/auth/verify-email', data),
+  verifyOwnerOtp:   (data) => api.post('/api/auth/verify-owner-otp', data),
 };
 
 // ============================================

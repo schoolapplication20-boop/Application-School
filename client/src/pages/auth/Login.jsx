@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useSchool } from '../../context/SchoolContext';
-import { loginWithEmail as apiLoginWithEmail } from '../../services/authService';
+import { loginWithEmail as apiLoginWithEmail, verifyOwnerOtp as apiVerifyOwnerOtp } from '../../services/authService';
 import Logo from '../../components/Logo';
 import SEOMeta from '../../components/SEOMeta';
 import '../../styles/auth.css';
@@ -47,6 +47,12 @@ const Login = () => {
   const retryCountRef  = useRef(0);
   const retryTimerRef  = useRef(null);
   const attemptLoginFn = useRef(null);
+
+  // Owner 2FA OTP step
+  const [ownerOtpStep,  setOwnerOtpStep]  = useState(false);
+  const [ownerEmail,    setOwnerEmail]    = useState('');
+  const [ownerOtp,      setOwnerOtp]      = useState('');
+  const [otpLoading,    setOtpLoading]    = useState(false);
 
   const seo = ROLE_SEO[selectedRole] || {
     title: 'School Login',
@@ -100,11 +106,21 @@ const Login = () => {
     setIsLoading(true);
     setError('');
     try {
-      const { user: loggedInUser, token } = await apiLoginWithEmail(
+      const result = await apiLoginWithEmail(
         emailForm.email.trim().toLowerCase(),
         emailForm.password,
         selectedRole,
       );
+
+      if (result.otpRequired) {
+        setOwnerEmail(result.email);
+        setOwnerOtpStep(true);
+        setServerWaking(false);
+        retryCountRef.current = 0;
+        return;
+      }
+
+      const { user: loggedInUser, token } = result;
 
       if (loggedInUser.role !== selectedRole) {
         setServerWaking(false);
@@ -152,6 +168,22 @@ const Login = () => {
   };
 
   attemptLoginFn.current = attemptLogin;
+
+  const handleOwnerOtpSubmit = async (e) => {
+    e.preventDefault();
+    if (!ownerOtp.trim()) { setError('Please enter the OTP.'); return; }
+    setOtpLoading(true);
+    setError('');
+    try {
+      const { user: loggedInUser, token } = await apiVerifyOwnerOtp(ownerEmail, ownerOtp.trim());
+      login(loggedInUser, token);
+      navigateByRole(loggedInUser);
+    } catch (err) {
+      setError(err.message || 'Invalid OTP. Please try again.');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -268,8 +300,8 @@ const Login = () => {
             <p style={{ fontSize: '13.5px', color: '#64748b', lineHeight: 1.6 }}>Select your role below to access your portal</p>
           </div>
 
-          {/* Role Selector */}
-          <div style={{ marginBottom: '22px' }}>
+          {/* Role Selector — hidden during owner OTP step */}
+          {!ownerOtpStep && <div style={{ marginBottom: '22px' }}>
             <label style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8', display: 'block', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '.06em' }}>
               Select Your Role
             </label>
@@ -329,7 +361,7 @@ const Login = () => {
                 );
               })}
             </div>
-          </div>
+          </div>}
 
           {serverWaking && (
             <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '10px', padding: '12px 14px', marginBottom: '16px' }}>
@@ -364,8 +396,48 @@ const Login = () => {
             </div>
           )}
 
+          {/* Owner 2FA OTP step */}
+          {ownerOtpStep && (
+            <form onSubmit={handleOwnerOtpSubmit}>
+              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '14px 16px', marginBottom: 16, fontSize: 13, color: '#991b1b' }}>
+                <span className="material-icons" style={{ fontSize: 16, verticalAlign: 'middle', marginRight: 6 }}>security</span>
+                A 6-digit OTP has been sent to the authorized security email. Enter it below to complete login.
+              </div>
+              <div className="form-group">
+                <label className="form-label">Verification OTP</label>
+                <div className="input-wrapper">
+                  <span className="material-icons input-icon-left">pin</span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    className="form-control has-left-icon"
+                    placeholder="Enter 6-digit OTP"
+                    value={ownerOtp}
+                    onChange={e => { setOwnerOtp(e.target.value.replace(/\D/g, '')); setError(''); }}
+                    autoFocus
+                    autoComplete="one-time-code"
+                  />
+                </div>
+              </div>
+              <button type="submit" className="btn-auth-submit" disabled={otpLoading}
+                style={{ background: 'linear-gradient(135deg, #dc2626, #b91c1c)' }}>
+                {otpLoading ? (
+                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                    <span style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />
+                    Verifying…
+                  </span>
+                ) : 'VERIFY OTP'}
+              </button>
+              <button type="button" onClick={() => { setOwnerOtpStep(false); setOwnerOtp(''); setError(''); }}
+                style={{ width: '100%', marginTop: 10, background: 'none', border: '1px solid #e2e8f0', borderRadius: 8, padding: '9px 0', fontSize: 13, color: '#64748b', cursor: 'pointer' }}>
+                ← Back to login
+              </button>
+            </form>
+          )}
+
           {/* Login Form — shown only after role is selected */}
-          {selectedRole && (
+          {!ownerOtpStep && selectedRole && (
             <form onSubmit={handleLogin}>
               <div className="form-group">
                 <label className="form-label">{inputLabel}</label>

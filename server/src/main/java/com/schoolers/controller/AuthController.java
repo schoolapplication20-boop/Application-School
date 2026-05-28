@@ -131,6 +131,20 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("Logged out successfully", null));
     }
 
+    /** Verifies the 2FA OTP for APPLICATION_OWNER login and issues a JWT on success. */
+    @PostMapping("/verify-owner-otp")
+    public ResponseEntity<ApiResponse<LoginResponse>> verifyOwnerOtp(@RequestBody Map<String, String> body) {
+        String email = body.get("email");
+        String otp   = body.get("otp");
+        if (email == null || email.isBlank() || otp == null || otp.isBlank()) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Email and OTP are required."));
+        }
+        ApiResponse<LoginResponse> response = authService.verifyOwnerOtp(email, otp);
+        return response.isSuccess()
+            ? ResponseEntity.ok(response)
+            : ResponseEntity.status(400).body(response);
+    }
+
     /** Activates a self-registered account by verifying the emailed OTP. */
     @PostMapping("/verify-email")
     public ResponseEntity<ApiResponse<String>> verifyEmail(@RequestBody Map<String, String> body) {

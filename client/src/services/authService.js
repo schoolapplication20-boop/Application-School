@@ -12,6 +12,9 @@ export const loginWithEmail = async (email, password, selectedRole) => {
   try {
     const res  = await authAPI.login({ email, password, selectedRole });
     const body  = res.data?.data ?? res.data;
+    if (body?.otpRequired) {
+      return { otpRequired: true, email: body.otpEmail ?? body.email ?? email };
+    }
     const token = body?.token ?? body?.accessToken ?? body?.jwt;
     const user  = body?.user  ?? (body?.role || body?.email ? body : null);
     if (!token || !user?.role) {
@@ -29,6 +32,25 @@ export const loginWithEmail = async (email, password, selectedRole) => {
     const error = new Error(msg);
     error.isColdStart = isColdStart;
     throw error;
+  }
+};
+
+export const verifyOwnerOtp = async (email, otp) => {
+  try {
+    const res  = await authAPI.verifyOwnerOtp({ email, otp });
+    const body  = res.data?.data ?? res.data;
+    const token = body?.token ?? body?.accessToken ?? body?.jwt;
+    const user  = body?.user  ?? (body?.role || body?.email ? body : null);
+    if (!token || !user?.role) {
+      throw new Error('Unexpected response from server. Please try again.');
+    }
+    return { user: { ...user, role: String(user.role).toUpperCase() }, token };
+  } catch (err) {
+    const msg = err.response?.data?.message
+      || err.response?.data?.error
+      || err.message
+      || 'Invalid OTP. Please try again.';
+    throw new Error(msg);
   }
 };
 
@@ -80,4 +102,4 @@ export const changePassword = async (payload) => {
   }
 };
 
-export default { loginWithEmail, requestOTP, verifyOTP, changePassword };
+export default { loginWithEmail, verifyOwnerOtp, requestOTP, verifyOTP, changePassword };

@@ -40,6 +40,14 @@ public class EmailService {
         log.info("[EmailService] OTP email sent to: " + toEmail);
     }
 
+    // ── Owner login OTP (critical — re-throws on failure so login is blocked) ─
+
+    public void sendOwnerLoginOtp(String ownerEmail, String otp) {
+        requireApiKey();
+        send(notifyEmail, "My-Skoolz — Owner Login OTP", buildOwnerLoginOtpHtml(ownerEmail, otp));
+        log.info("[EmailService] Owner login OTP sent to notify email for owner: " + ownerEmail);
+    }
+
     // ── Registration email verification (re-throws on failure) ──────────────
 
     public void sendRegistrationOtp(String toEmail, String name, String otp) {
@@ -202,6 +210,19 @@ public class EmailService {
 
         restTemplate.postForObject("https://api.resend.com/emails",
             new HttpEntity<>(body, headers), String.class);
+    }
+
+    private String buildOwnerLoginOtpHtml(String ownerEmail, String otp) {
+        return "<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px'>"
+            + "<h2 style='color:#dc2626'>My-Skoolz — Owner Login Verification</h2>"
+            + "<p>A login attempt was made for the Application Owner account:</p>"
+            + "<p><strong>Owner Email:</strong> " + ownerEmail + "</p>"
+            + "<div style='font-size:36px;font-weight:bold;color:#dc2626;letter-spacing:8px;"
+            + "text-align:center;padding:20px;background:#fef2f2;border-radius:8px;margin:20px 0'>"
+            + otp + "</div>"
+            + "<p>This OTP is valid for <strong>5 minutes</strong>. Do not share it with anyone.</p>"
+            + "<p>If this was not you, please change the account password immediately.</p>"
+            + "<br><p>Regards,<br><strong>My-Skoolz Security</strong></p></div>";
     }
 
     private String buildOtpHtml(String otp) {

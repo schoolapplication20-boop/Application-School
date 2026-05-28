@@ -11,8 +11,13 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class LoginResponse {
 
-    private String token;
+    private String  token;
     private UserDto user;
+
+    /** Set to true when APPLICATION_OWNER login requires OTP verification. */
+    private Boolean otpRequired;
+    /** The owner email to show in the OTP prompt. */
+    private String  otpEmail;
 
     @Data
     @Builder

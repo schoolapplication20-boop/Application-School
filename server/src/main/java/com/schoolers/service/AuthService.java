@@ -145,6 +145,23 @@ public class AuthService {
                 return ApiResponse.error("Your account is not linked to any school. Please contact admin.");
             }
 
+            // ── Step 3d: APPLICATION_OWNER 2FA — send OTP before issuing JWT ──
+            if (user.getRole() == User.Role.APPLICATION_OWNER) {
+                String otp = String.format("%06d", 100000 + new SecureRandom().nextInt(900000));
+                user.setResetOtp(otp);
+                user.setOtpExpiry(LocalDateTime.now(ZoneOffset.UTC).plusMinutes(5));
+                userRepository.save(user);
+                try {
+                    emailService.sendOwnerLoginOtp(user.getEmail(), otp);
+                } catch (Exception e) {
+                    log.error("[login] Failed to send owner OTP email: {}", e.getMessage());
+                    return ApiResponse.error("Failed to send verification OTP. Please try again.");
+                }
+                log.info("[login] Owner OTP issued, awaiting 2FA: {}", user.getEmail());
+                return ApiResponse.success("OTP sent to authorized email address.",
+                    LoginResponse.builder().otpRequired(true).otpEmail(user.getEmail()).build());
+            }
+
             // ── Step 4: Build JWT claims (include schoolId for tenant isolation) ──
             Map<String, Object> claims = new HashMap<>();
             claims.put("role",     user.getRole().name());
@@ -221,6 +238,63 @@ public class AuthService {
         } catch (Exception e) {
             log.error("[login] Unexpected error: {}", e.getMessage());
             return ApiResponse.error("Login failed. Please try again.");
+        }
+    }
+
+    // ── Verify APPLICATION_OWNER login OTP ───────────────────────────────────
+
+    public ApiResponse<LoginResponse> verifyOwnerOtp(String email, String otp) {
+        try {
+            if (email == null || email.isBlank()) return ApiResponse.error("Email is required.");
+            if (otp == null || otp.isBlank())    return ApiResponse.error("OTP is required.");
+
+            User user = userRepository.findByEmailIgnoreCase(email.trim().toLowerCase()).orElse(null);
+            if (user == null || user.getRole() != User.Role.APPLICATION_OWNER)
+                return ApiResponse.error("Invalid request.");
+
+            String dbOtp = user.getResetOtp();
+            if (dbOtp == null || !constantTimeEquals(dbOtp.trim(), otp.trim()))
+                return ApiResponse.error("Invalid OTP.");
+
+            LocalDateTime expiry = user.getOtpExpiry();
+            if (expiry != null && LocalDateTime.now(ZoneOffset.UTC).isAfter(expiry))
+                return ApiResponse.error("OTP has expired. Please log in again.");
+
+            user.setResetOtp(null);
+            user.setOtpExpiry(null);
+            user.setFailedLoginAttempts(0);
+            userRepository.save(user);
+
+            Map<String, Object> claims = new HashMap<>();
+            claims.put("role",   user.getRole().name());
+            claims.put("userId", user.getId());
+
+            UserDetails userDetails = new org.springframework.security.core.userdetails.User(
+                user.getEmail(), user.getPassword(),
+                Collections.singletonList(
+                    new org.springframework.security.core.authority.SimpleGrantedAuthority(
+                        "ROLE_" + user.getRole().name())));
+
+            String token = jwtUtil.generateToken(userDetails, claims);
+
+            LoginResponse.UserDto userDto = LoginResponse.UserDto.builder()
+                .id(user.getId())
+                .name(user.getName())
+                .email(user.getEmail())
+                .mobile(user.getMobile())
+                .role(user.getRole().name())
+                .firstLogin(Boolean.TRUE.equals(user.getFirstLogin()))
+                .permissions(user.getPermissions())
+                .schoolId(user.getSchoolId())
+                .build();
+
+            log.info("[verifyOwnerOtp] Success: owner={}", user.getEmail());
+            return ApiResponse.success("Login successful",
+                LoginResponse.builder().token(token).user(userDto).build());
+
+        } catch (Exception e) {
+            log.error("[verifyOwnerOtp] Unexpected error: {}", e.getMessage());
+            return ApiResponse.error("Verification failed. Please try again.");
         }
     }
 
