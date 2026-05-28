@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { loginWithEmail as apiLoginWithEmail } from '../../services/authService';
+import { loginWithEmail as apiLoginWithEmail, verifyOwnerOtp as apiVerifyOwnerOtp } from '../../services/authService';
 import Logo from '../../components/Logo';
 import '../../styles/auth.css';
 
@@ -14,6 +14,11 @@ const OwnerLogin = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading]       = useState(false);
   const [error, setError]               = useState('');
+
+  const [otpStep,     setOtpStep]     = useState(false);
+  const [otpEmail,    setOtpEmail]    = useState('');
+  const [otp,         setOtp]         = useState('');
+  const [otpLoading,  setOtpLoading]  = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) navigate('/superadmin/dashboard', { replace: true });
@@ -28,12 +33,19 @@ const OwnerLogin = () => {
     setError('');
 
     try {
-      const { user, token } = await apiLoginWithEmail(
+      const result = await apiLoginWithEmail(
         email.trim().toLowerCase(),
         password,
         'APPLICATION_OWNER',
       );
 
+      if (result.otpRequired) {
+        setOtpEmail(result.email);
+        setOtpStep(true);
+        return;
+      }
+
+      const { user, token } = result;
       if (user.role !== 'APPLICATION_OWNER') {
         setError('Access denied. This portal is for Application Owner only.');
         return;
@@ -45,6 +57,22 @@ const OwnerLogin = () => {
       setError(err.message || 'Login failed. Please check your credentials.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleOtpSubmit = async (e) => {
+    e.preventDefault();
+    if (!otp.trim()) { setError('Please enter the OTP.'); return; }
+    setOtpLoading(true);
+    setError('');
+    try {
+      const { user, token } = await apiVerifyOwnerOtp(otpEmail, otp.trim());
+      login(user, token);
+      navigate('/superadmin/dashboard', { replace: true });
+    } catch (err) {
+      setError(err.message || 'Invalid OTP. Please try again.');
+    } finally {
+      setOtpLoading(false);
     }
   };
 
@@ -98,7 +126,41 @@ const OwnerLogin = () => {
             </div>
           )}
 
-          {/* Form */}
+          {/* OTP verification step */}
+          {otpStep ? (
+            <form onSubmit={handleOtpSubmit}>
+              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '12px 14px', marginBottom: 18, fontSize: 13, color: '#991b1b' }}>
+                <span className="material-icons" style={{ fontSize: 16, verticalAlign: 'middle', marginRight: 6 }}>security</span>
+                A 6-digit OTP has been sent to the authorized security email. Enter it below to complete login.
+              </div>
+              <div className="form-group" style={{ marginBottom: 20 }}>
+                <label className="form-label" style={{ fontWeight: 600, fontSize: 13 }}>Verification OTP</label>
+                <div style={{ position: 'relative' }}>
+                  <span className="material-icons" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 18, color: '#94a3b8' }}>pin</span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    className="form-control"
+                    placeholder="Enter 6-digit OTP"
+                    value={otp}
+                    onChange={e => { setOtp(e.target.value.replace(/\D/g, '')); setError(''); }}
+                    style={{ paddingLeft: 40, borderRadius: 10, letterSpacing: 4, fontSize: 18 }}
+                    autoFocus
+                    autoComplete="one-time-code"
+                  />
+                </div>
+              </div>
+              <button type="submit" disabled={otpLoading}
+                style={{ width: '100%', padding: '12px', borderRadius: 10, border: 'none', background: otpLoading ? '#94a3b8' : 'linear-gradient(135deg, #dc2626, #b91c1c)', color: '#fff', fontWeight: 700, fontSize: 15, fontFamily: 'Poppins, sans-serif', cursor: otpLoading ? 'not-allowed' : 'pointer', transition: 'all 0.2s' }}>
+                {otpLoading ? 'Verifying…' : 'Verify OTP'}
+              </button>
+              <button type="button" onClick={() => { setOtpStep(false); setOtp(''); setError(''); }}
+                style={{ width: '100%', marginTop: 10, background: 'none', border: '1px solid #e2e8f0', borderRadius: 10, padding: '10px 0', fontSize: 13, color: '#64748b', cursor: 'pointer' }}>
+                ← Back to login
+              </button>
+            </form>
+          ) : (
           <form onSubmit={handleLogin}>
             <div className="form-group" style={{ marginBottom: 16 }}>
               <label className="form-label" style={{ fontWeight: 600, fontSize: 13 }}>Email Address</label>
@@ -170,6 +232,7 @@ const OwnerLogin = () => {
               {isLoading ? 'Signing in…' : 'Sign In'}
             </button>
           </form>
+          )}
 
           <div style={{ textAlign: 'center', marginTop: 20 }}>
             <a href="/login" style={{ fontSize: 12, color: '#94a3b8', textDecoration: 'none' }}>
