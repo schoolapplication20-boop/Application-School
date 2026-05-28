@@ -85,6 +85,7 @@ import StudentMarks          from './pages/student/StudentMarks';
 import ReportCard            from './pages/student/ReportCard';
 import StudentAppointments   from './pages/student/StudentAppointments';
 import MeetingBookings       from './pages/student/MeetingBookings';
+import StudentAssignments    from './pages/student/StudentAssignments';
 
 // Shared pages
 import SchoolCalendar        from './pages/shared/SchoolCalendar';
@@ -240,6 +241,7 @@ function App() {
             <Route path="/student/report-card"    element={<ProtectedRoute allowedRoles={['STUDENT']} moduleKey="examination"><ReportCard /></ProtectedRoute>} />
             <Route path="/student/appointments"   element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentAppointments /></ProtectedRoute>} />
             <Route path="/student/meetings"       element={<ProtectedRoute allowedRoles={['STUDENT']}><MeetingBookings /></ProtectedRoute>} />
+            <Route path="/student/assignments"    element={<ProtectedRoute allowedRoles={['STUDENT']} moduleKey="diary"><StudentAssignments /></ProtectedRoute>} />
 
             {/* Shared routes (all authenticated roles) */}
             <Route path="/school/calendar"          element={<ProtectedRoute allowedRoles={['ADMIN','SUPER_ADMIN','TEACHER','STUDENT']}><SchoolCalendar /></ProtectedRoute>} />

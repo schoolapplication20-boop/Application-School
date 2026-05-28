@@ -61,6 +61,7 @@ const studentNavItems = [
   { path: '/student/dashboard',        icon: 'dashboard',          label: 'Dashboard',        moduleKey: null },
   { path: '/student/attendance',       icon: 'fact_check',         label: 'Attendance',       moduleKey: 'attendance' },
   { path: '/student/diary',            icon: 'photo_library',      label: 'Class Diary',      moduleKey: 'diary' },
+  { path: '/student/assignments',      icon: 'assignment_turned_in', label: 'Assignments',      moduleKey: 'diary' },
   { path: '/student/fees',             icon: 'payments',           label: 'Pay Fees',         moduleKey: 'fees' },
   { path: '/student/leave',            icon: 'event_busy',         label: 'Leave Request',    moduleKey: 'leave' },
   { path: '/student/messages',         icon: 'chat',               label: 'Messages',         moduleKey: 'messages' },

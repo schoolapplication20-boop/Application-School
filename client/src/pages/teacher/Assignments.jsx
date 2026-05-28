@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Layout from '../../components/Layout';
 import Toast from '../../components/Toast';
 import { teacherAPI } from '../../services/api';
@@ -20,18 +20,25 @@ const gradeColor = { O: '#276749', 'A+': '#276749', A: '#276749', 'B+': '#2b6cb0
 const gradeBg    = { O: '#f0fff4', 'A+': '#f0fff4', A: '#f0fff4', 'B+': '#ebf8ff', B: '#ebf8ff', 'B-': '#fffaf0', C: '#fffaf0', F: '#fff5f5' };
 const statusColor = { Active: '#0de1e8', Completed: '#3182ce', Overdue: '#e53e3e' };
 
-const EMPTY_FORM = { title: '', description: '', classSection: '', dueDate: '', maxMarks: '' };
+const EMPTY_FORM = { title: '', description: '', className: '', dueDate: '', maxMarks: '' };
 
 export default function Assignments() {
-  const [assignments,  setAssignments]  = useState([]);
-  const [loading,      setLoading]      = useState(true);
-  const [filterStatus, setFilterStatus] = useState('');
-  const [showModal,    setShowModal]    = useState(false);
-  const [formData,     setFormData]     = useState(EMPTY_FORM);
-  const [saving,       setSaving]       = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState(null);
-  const [deleting,     setDeleting]     = useState(false);
-  const [toast,        setToast]        = useState(null);
+  const [assignments,    setAssignments]    = useState([]);
+  const [loading,        setLoading]        = useState(true);
+  const [filterStatus,   setFilterStatus]   = useState('');
+  const [showModal,      setShowModal]      = useState(false);
+  const [formData,       setFormData]       = useState(EMPTY_FORM);
+  const [saving,         setSaving]         = useState(false);
+  const [deleteTarget,   setDeleteTarget]   = useState(null);
+  const [deleting,       setDeleting]       = useState(false);
+  const [toast,          setToast]          = useState(null);
+  // Submissions panel
+  const [viewSubmissions,  setViewSubmissions]  = useState(null); // assignment object
+  const [submissions,      setSubmissions]      = useState([]);
+  const [loadingSubs,      setLoadingSubs]      = useState(false);
+  const [gradingId,        setGradingId]        = useState(null);
+  const [gradeForm,        setGradeForm]        = useState({ grade: '', feedback: '' });
+  const [savingGrade,      setSavingGrade]      = useState(false);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -55,21 +62,53 @@ export default function Assignments() {
 
   useEffect(() => { load(); }, [load]);
 
+  // ── Submissions ───────────────────────────────────────────────────────────
+  const openSubmissions = async (assignment) => {
+    setViewSubmissions(assignment);
+    setLoadingSubs(true);
+    setSubmissions([]);
+    setGradingId(null);
+    try {
+      const res = await teacherAPI.getAssignmentSubmissions(assignment.id);
+      setSubmissions(res.data?.data ?? []);
+    } catch {
+      setSubmissions([]);
+    } finally {
+      setLoadingSubs(false);
+    }
+  };
+
+  const handleGrade = async (sub) => {
+    setSavingGrade(true);
+    try {
+      await teacherAPI.gradeSubmission(viewSubmissions.id, sub.id, gradeForm);
+      setGradingId(null);
+      // Refresh list
+      const res = await teacherAPI.getAssignmentSubmissions(viewSubmissions.id);
+      setSubmissions(res.data?.data ?? []);
+      showToast('Grade saved');
+    } catch {
+      showToast('Failed to save grade', 'error');
+    } finally {
+      setSavingGrade(false);
+    }
+  };
+
   // ── Create ────────────────────────────────────────────────────────────────
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!formData.title.trim())        { showToast('Title is required', 'error'); return; }
-    if (!formData.classSection.trim()) { showToast('Class is required', 'error'); return; }
+    if (!formData.title.trim())     { showToast('Title is required', 'error'); return; }
+    if (!formData.className.trim()) { showToast('Class is required', 'error'); return; }
 
     setSaving(true);
     try {
       const res = await teacherAPI.createAssignment({
-        title:        formData.title.trim(),
-        description:  formData.description.trim(),
-        classSection: formData.classSection.trim(),
-        dueDate:      formData.dueDate || null,
-        maxMarks:     formData.maxMarks ? Number(formData.maxMarks) : null,
-        status:       'Active',
+        title:       formData.title.trim(),
+        description: formData.description.trim(),
+        className:   formData.className.trim(),
+        dueDate:     formData.dueDate || null,
+        maxMarks:    formData.maxMarks ? Number(formData.maxMarks) : null,
+        status:      'ACTIVE',
       });
       const created = res.data?.data ?? res.data;
       if (res.data?.success === false) {
@@ -210,7 +249,14 @@ export default function Assignments() {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, marginLeft: 16 }}>
                       <span style={{ padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600, background: color + '15', color }}>{a.status || 'Active'}</span>
-                      <div className="action-btns">
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button
+                          onClick={() => openSubmissions(a)}
+                          title="View Submissions"
+                          style={{ border: 'none', background: '#ebf8ff', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', color: '#2b6cb0', fontWeight: 600, fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span className="material-icons" style={{ fontSize: 15 }}>assignment_turned_in</span>
+                          Submissions
+                        </button>
                         <button
                           className="action-btn action-btn-delete"
                           title="Delete Assignment"
@@ -277,8 +323,8 @@ export default function Assignments() {
                     <input
                       type="text" className="form-control form-control-sm"
                       placeholder="e.g. 10-A"
-                      value={formData.classSection}
-                      onChange={e => setFormData(f => ({ ...f, classSection: e.target.value }))}
+                      value={formData.className}
+                      onChange={e => setFormData(f => ({ ...f, className: e.target.value }))}
                     />
                   </div>
                   <div>
@@ -314,6 +360,97 @@ export default function Assignments() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Submissions Modal ───────────────────────────────────────────────── */}
+      {viewSubmissions && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setViewSubmissions(null)}>
+          <div className="modal-container" style={{ maxWidth: 600 }}>
+            <div className="modal-header">
+              <div>
+                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Submissions</h3>
+                <div style={{ fontSize: 12, color: '#718096', marginTop: 2 }}>{viewSubmissions.title} — Class {viewSubmissions.className}</div>
+              </div>
+              <button onClick={() => setViewSubmissions(null)}
+                style={{ border: 'none', background: 'none', fontSize: 20, cursor: 'pointer', color: '#718096' }}>✕</button>
+            </div>
+            <div style={{ padding: '16px 24px', maxHeight: '60vh', overflowY: 'auto' }}>
+              {loadingSubs ? (
+                <div style={{ textAlign: 'center', padding: 32, color: '#a0aec0' }}>Loading…</div>
+              ) : submissions.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: 32 }}>
+                  <span className="material-icons" style={{ fontSize: 40, color: '#e2e8f0', display: 'block', marginBottom: 8 }}>inbox</span>
+                  <div style={{ color: '#a0aec0', fontSize: 13 }}>No submissions yet</div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {submissions.map(sub => (
+                    <div key={sub.id} style={{ border: '1px solid #f0f4f8', borderRadius: 10, padding: 14 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: 700, fontSize: 14, color: '#2d3748' }}>{sub.studentName}</div>
+                          <div style={{ fontSize: 12, color: '#718096', marginTop: 2 }}>
+                            {sub.classSection} · {sub.submittedAt ? new Date(sub.submittedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
+                          </div>
+                          {sub.notes && (
+                            <div style={{ fontSize: 13, color: '#4a5568', marginTop: 6, padding: '6px 10px', background: '#f7fafc', borderRadius: 6 }}>{sub.notes}</div>
+                          )}
+                          {sub.grade && (
+                            <span style={{ display: 'inline-block', marginTop: 6, padding: '2px 10px', borderRadius: 12, fontSize: 12, fontWeight: 700, background: '#ebf8ff', color: '#2b6cb0' }}>Grade: {sub.grade}</span>
+                          )}
+                          {sub.feedback && (
+                            <div style={{ fontSize: 12, color: '#805ad5', marginTop: 4, fontStyle: 'italic' }}>Feedback: {sub.feedback}</div>
+                          )}
+                        </div>
+                        {gradingId === sub.id ? (
+                          <div style={{ minWidth: 200 }}>
+                            <input
+                              type="text" placeholder="Grade (e.g. A, 85/100)"
+                              value={gradeForm.grade}
+                              onChange={e => setGradeForm(f => ({ ...f, grade: e.target.value }))}
+                              style={{ width: '100%', padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12, marginBottom: 6, boxSizing: 'border-box' }}
+                            />
+                            <textarea
+                              placeholder="Feedback (optional)"
+                              rows={2}
+                              value={gradeForm.feedback}
+                              onChange={e => setGradeForm(f => ({ ...f, feedback: e.target.value }))}
+                              style={{ width: '100%', padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12, resize: 'none', marginBottom: 6, boxSizing: 'border-box' }}
+                            />
+                            <div style={{ display: 'flex', gap: 6 }}>
+                              <button onClick={() => handleGrade(sub)} disabled={savingGrade}
+                                style={{ flex: 1, padding: '6px', background: '#0de1e8', color: '#fff', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                                {savingGrade ? 'Saving…' : 'Save'}
+                              </button>
+                              <button onClick={() => setGradingId(null)}
+                                style={{ padding: '6px 10px', background: '#edf2f7', color: '#4a5568', border: 'none', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => { setGradingId(sub.id); setGradeForm({ grade: sub.grade || '', feedback: sub.feedback || '' }); }}
+                            style={{ border: 'none', background: '#f0fff4', color: '#276749', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 600, flexShrink: 0 }}>
+                            <span className="material-icons" style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 3 }}>grade</span>
+                            {sub.grade ? 'Re-grade' : 'Grade'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="modal-footer" style={{ justifyContent: 'flex-end' }}>
+              <span style={{ fontSize: 13, color: '#718096', marginRight: 'auto' }}>{submissions.length} submission{submissions.length !== 1 ? 's' : ''}</span>
+              <button onClick={() => setViewSubmissions(null)}
+                style={{ padding: '8px 20px', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

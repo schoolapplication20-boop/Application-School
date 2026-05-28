@@ -2,6 +2,8 @@ package com.schoolers.controller;
 
 import com.schoolers.dto.ApiResponse;
 import com.schoolers.model.*;
+import com.schoolers.repository.AssignmentRepository;
+import com.schoolers.repository.AssignmentSubmissionRepository;
 import com.schoolers.repository.StudentRepository;
 import com.schoolers.repository.UserRepository;
 import com.schoolers.service.AdminService;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -38,6 +41,12 @@ public class StudentController {
 
     @Autowired
     private StudentRepository studentRepository;
+
+    @Autowired
+    private AssignmentRepository assignmentRepository;
+
+    @Autowired
+    private AssignmentSubmissionRepository submissionRepository;
 
     private Long resolveStudentId(Authentication auth) {
         if (auth == null) return null;
@@ -115,5 +124,79 @@ public class StudentController {
         Long schoolId = studentRepository.findByStudentUserId(userId)
                 .map(Student::getSchoolId).orElse(null);
         return ResponseEntity.ok(adminService.getGradeScales(schoolId));
+    }
+
+    @GetMapping("/assignments")
+    public ResponseEntity<?> getMyAssignments(Authentication auth) {
+        if (auth == null) return ResponseEntity.status(401).body(ApiResponse.error("Not authenticated."));
+        var userOpt = userRepository.findByEmailIgnoreCase(auth.getName());
+        if (userOpt.isEmpty()) return ResponseEntity.status(403).body(ApiResponse.error("User not found."));
+        Long userId = userOpt.get().getId();
+        Optional<Student> studentOpt = studentRepository.findByStudentUserId(userId);
+        if (studentOpt.isEmpty()) return ResponseEntity.status(404).body(ApiResponse.error("Student profile not found."));
+        Student student = studentOpt.get();
+        Long schoolId = student.getSchoolId();
+        // Build class identifier matching the assignment's className field
+        String classSection = student.getClassName();
+        if (student.getSection() != null && !student.getSection().isBlank()) {
+            classSection = classSection + "-" + student.getSection();
+        }
+        // Try exact match first, then fallback to class name only
+        List<Assignment> found = assignmentRepository.findByClassNameAndSchoolIdOrderByCreatedAtDesc(classSection, schoolId);
+        if (found.isEmpty()) {
+            found = assignmentRepository.findByClassNameAndSchoolIdOrderByCreatedAtDesc(student.getClassName(), schoolId);
+        }
+        return ResponseEntity.ok(ApiResponse.success(found));
+    }
+
+    @PostMapping("/assignments/{id}/submit")
+    public ResponseEntity<?> submitAssignment(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> body,
+            Authentication auth) {
+        if (auth == null) return ResponseEntity.status(401).body(ApiResponse.error("Not authenticated."));
+        var userOpt = userRepository.findByEmailIgnoreCase(auth.getName());
+        if (userOpt.isEmpty()) return ResponseEntity.status(403).body(ApiResponse.error("User not found."));
+        Long userId = userOpt.get().getId();
+        Optional<Student> studentOpt = studentRepository.findByStudentUserId(userId);
+        if (studentOpt.isEmpty()) return ResponseEntity.status(404).body(ApiResponse.error("Student profile not found."));
+        Student student = studentOpt.get();
+
+        if (!assignmentRepository.existsById(id)) {
+            return ResponseEntity.status(404).body(ApiResponse.error("Assignment not found."));
+        }
+
+        String classSection = student.getClassName();
+        if (student.getSection() != null && !student.getSection().isBlank()) {
+            classSection = classSection + "-" + student.getSection();
+        }
+        String notes = body.containsKey("notes") ? (String) body.get("notes") : "";
+        final String cs = classSection;
+
+        AssignmentSubmission sub = submissionRepository
+                .findByStudentIdAndAssignmentId(student.getId(), id)
+                .orElseGet(() -> AssignmentSubmission.builder()
+                        .assignmentId(id)
+                        .studentId(student.getId())
+                        .studentName(student.getName())
+                        .classSection(cs)
+                        .schoolId(student.getSchoolId())
+                        .build());
+        sub.setNotes(notes);
+        AssignmentSubmission saved = submissionRepository.save(sub);
+        return ResponseEntity.status(201).body(ApiResponse.success("Submitted successfully", saved));
+    }
+
+    @GetMapping("/assignments/my-submissions")
+    public ResponseEntity<?> getMySubmissions(Authentication auth) {
+        if (auth == null) return ResponseEntity.status(401).body(ApiResponse.error("Not authenticated."));
+        var userOpt = userRepository.findByEmailIgnoreCase(auth.getName());
+        if (userOpt.isEmpty()) return ResponseEntity.status(403).body(ApiResponse.error("User not found."));
+        Long userId = userOpt.get().getId();
+        Optional<Student> studentOpt = studentRepository.findByStudentUserId(userId);
+        if (studentOpt.isEmpty()) return ResponseEntity.status(404).body(ApiResponse.error("Student profile not found."));
+        Student student = studentOpt.get();
+        return ResponseEntity.ok(ApiResponse.success(
+            submissionRepository.findByStudentIdAndSchoolIdOrderBySubmittedAtDesc(student.getId(), student.getSchoolId())));
     }
 }

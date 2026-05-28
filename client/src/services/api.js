@@ -256,6 +256,8 @@ export const teacherAPI = {
   createAssignment: (data) => api.post('/api/teacher/assignments', data),
   updateAssignment: (id, data) => api.put(`/api/teacher/assignments/${id}`, data),
   deleteAssignment: (id) => api.delete(`/api/teacher/assignments/${id}`),
+  getAssignmentSubmissions: (id) => api.get(`/api/teacher/assignments/${id}/submissions`),
+  gradeSubmission: (assignmentId, subId, data) => api.put(`/api/teacher/assignments/${assignmentId}/submissions/${subId}/grade`, data),
 
   // Marks
   getMarks: (studentId) => api.get(`/api/teacher/marks/${studentId}`),
@@ -277,9 +279,12 @@ export const studentAPI = {
     const startDate = `${new Date().getFullYear()}-01-01`;
     return api.get('/api/student/attendance', { params: { startDate, endDate: today } });
   },
-  getMyMarks:      ()       => api.get('/api/student/marks'),
-  getMyFees:       ()       => api.get('/api/student/fees'),
-  getMyDiary:      ()       => api.get('/api/student/diary'),
+  getMyMarks:          ()         => api.get('/api/student/marks'),
+  getMyFees:           ()         => api.get('/api/student/fees'),
+  getMyDiary:          ()         => api.get('/api/student/diary'),
+  getMyAssignments:    ()         => api.get('/api/student/assignments'),
+  submitAssignment:    (id, data) => api.post(`/api/student/assignments/${id}/submit`, data),
+  getMySubmissions:    ()         => api.get('/api/student/assignments/my-submissions'),
 };
 
 // ============================================

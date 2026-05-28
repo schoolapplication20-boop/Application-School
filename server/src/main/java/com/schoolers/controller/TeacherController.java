@@ -2,9 +2,12 @@ package com.schoolers.controller;
 
 import com.schoolers.dto.ApiResponse;
 import com.schoolers.model.*;
+import com.schoolers.repository.AssignmentRepository;
+import com.schoolers.repository.AssignmentSubmissionRepository;
 import com.schoolers.repository.ClassRoomRepository;
 import com.schoolers.repository.UserRepository;
 import com.schoolers.repository.TeacherRepository;
+import com.schoolers.model.AssignmentSubmission;
 import com.schoolers.service.AdminService;
 import com.schoolers.service.TeacherService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,6 +43,12 @@ public class TeacherController {
 
     @Autowired
     private ClassRoomRepository classRoomRepository;
+
+    @Autowired
+    private AssignmentRepository assignmentRepository;
+
+    @Autowired
+    private AssignmentSubmissionRepository submissionRepository;
 
     // ── Helper: resolve teacher id from auth ──────────────────────────────────
 
@@ -276,6 +285,25 @@ public class TeacherController {
     public ResponseEntity<ApiResponse<String>> deleteAssignment(@PathVariable Long id) {
         ApiResponse<String> response = teacherService.deleteAssignment(id);
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
+    }
+
+    @GetMapping("/assignments/{id}/submissions")
+    public ResponseEntity<?> getSubmissions(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success(submissionRepository.findByAssignmentIdOrderBySubmittedAtAsc(id)));
+    }
+
+    @PutMapping("/assignments/{id}/submissions/{subId}/grade")
+    public ResponseEntity<?> gradeSubmission(
+            @PathVariable Long id, @PathVariable Long subId,
+            @RequestBody Map<String, Object> body) {
+        return submissionRepository.findById(subId)
+                .filter(s -> s.getAssignmentId().equals(id))
+                .map(s -> {
+                    if (body.containsKey("grade"))    s.setGrade((String) body.get("grade"));
+                    if (body.containsKey("feedback")) s.setFeedback((String) body.get("feedback"));
+                    return ResponseEntity.ok(ApiResponse.success(submissionRepository.save(s)));
+                })
+                .orElseGet(() -> ResponseEntity.status(404).body(ApiResponse.error("Submission not found")));
     }
 
     // ── Marks ──────────────────────────────────────────────────────────────────
