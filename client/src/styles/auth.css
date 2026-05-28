@@ -387,6 +387,7 @@
   padding: 15px;
   border: none;
   border-radius: 14px;
+  background: linear-gradient(135deg, #0de1e8, #0369a1);
   color: #ffffff;
   font-size: 14px;
   font-weight: 800;
@@ -396,7 +397,7 @@
   text-transform: uppercase;
   margin-top: 8px;
   font-family: 'Poppins', sans-serif;
-  box-shadow: 0 6px 20px rgba(99,102,241,.4);
+  box-shadow: 0 6px 20px rgba(13,225,232,.35);
   position: relative;
   overflow: hidden;
 }
