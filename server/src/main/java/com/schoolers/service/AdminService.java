@@ -268,6 +268,14 @@ public class AdminService {
         String name = str(body, "name", null);
         if (name == null || name.isBlank()) return ApiResponse.<Map<String, Object>>error("Student name is required");
 
+        String studentEmailRaw = str(body, "studentEmail", null);
+        if (studentEmailRaw == null || studentEmailRaw.isBlank())
+            return ApiResponse.<Map<String, Object>>error("Student email is required");
+        if (!EMAIL_PATTERN.matcher(studentEmailRaw.trim().toLowerCase()).matches())
+            return ApiResponse.<Map<String, Object>>error("A valid student email address is required");
+        if (userRepository.existsByEmailIgnoreCase(studentEmailRaw.trim()))
+            return ApiResponse.<Map<String, Object>>error("Email '" + studentEmailRaw.trim().toLowerCase() + "' is already registered. Use a different email.");
+
         // Extract schoolId injected by AdminController from authenticated user
         Long schoolId = body.get("schoolId") != null
                 ? Long.parseLong(body.get("schoolId").toString()) : null;
@@ -342,7 +350,6 @@ public class AdminService {
             ensureClassExists(saved.getClassName(), saved.getSection(), schoolId);
 
             // Step 3: Create the student User account (pass schoolId for multi-tenant isolation)
-            // Use the admin-provided real email if supplied (OTP-verified on the frontend); otherwise auto-generate.
             String studentEmail = str(body, "studentEmail", null);
             StudentUserResult studentUserResult = createStudentUser(
                     name, saved.getAdmissionNumber(), rollNumber, saved.getId(), studentEmail, schoolId);
@@ -365,6 +372,8 @@ public class AdminService {
                 responseData.put("studentEmail", studentUserResult.loginEmail());
                 responseData.put("studentUsername", studentUserResult.user().getUsername());
                 responseData.put("studentTempPassword", studentUserResult.rawPassword());
+                // Send welcome email with temporary password (fire-and-forget)
+                emailService.sendWelcomeEmail(studentUserResult.loginEmail(), name.trim(), "STUDENT", studentUserResult.rawPassword());
             }
 
             responseData.put("newParentCreated", false);
@@ -702,15 +711,17 @@ public class AdminService {
         if (req.getEmail() == null || !EMAIL_PATTERN.matcher(req.getEmail()).matches())
             return ApiResponse.error("A valid email address is required");
 
+        if (req.getMobile() == null || req.getMobile().isBlank())
+            return ApiResponse.error("Mobile number is required");
+
         String normalizedEmail  = req.getEmail().trim().toLowerCase();
-        String normalizedMobile = (req.getMobile() != null && !req.getMobile().isBlank())
-                ? req.getMobile().trim() : null;
+        String normalizedMobile = req.getMobile().trim();
 
         // Case-insensitive pre-check — prevents duplicate accounts regardless of email casing
         if (userRepository.existsByEmailIgnoreCase(normalizedEmail))
             return ApiResponse.error("Email '" + normalizedEmail + "' is already registered. Use a different email.");
 
-        if (normalizedMobile != null && userRepository.existsByMobile(normalizedMobile))
+        if (userRepository.existsByMobile(normalizedMobile))
             return ApiResponse.error("Mobile number '" + normalizedMobile + "' is already registered. Use a different number.");
 
         String rawPassword = (req.getPassword() != null && !req.getPassword().isBlank())

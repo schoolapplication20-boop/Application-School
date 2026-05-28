@@ -366,7 +366,9 @@ export default function Teachers() {
       e.email = 'Please verify the email with OTP before saving';
     }
 
-    if (form.mobile && !/^\d{10}$/.test(form.mobile))
+    if (!form.mobile.trim())
+      e.mobile = 'Mobile number is required';
+    else if (!/^\d{10}$/.test(form.mobile))
       e.mobile = 'Mobile must be exactly 10 digits';
 
     if (!editTeacher) {
@@ -850,7 +852,7 @@ export default function Teachers() {
                       </>
                     )}
                   </Field>
-                  <Field label="Mobile Number" error={errors.mobile}>
+                  <Field label="Mobile Number" required error={errors.mobile}>
                     <input type="tel" style={inputStyle(errors.mobile)} placeholder="10-digit mobile" maxLength={10} value={form.mobile}
                       onChange={e => setForm({ ...form, mobile: e.target.value.replace(/\D/g, '').slice(0, 10) })} />
                   </Field>

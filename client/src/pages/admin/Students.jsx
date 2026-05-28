@@ -407,8 +407,14 @@ export default function Students() {
     if (formData.guardianPhone && !/^\d{10}$/.test(formData.guardianPhone)) e.guardianPhone = 'Must be exactly 10 digits';
     if (!formData.permanentAddress.trim()) e.permanentAddress = 'Permanent address is required';
     if (!formData.idProofName)            e.idProof     = 'ID proof document is required';
-    if (!editStudent && formData.studentEmail?.trim() && !studentOtp.verified)
-      e.studentEmail = 'Please verify the email with OTP before saving';
+    if (!editStudent) {
+      if (!formData.studentEmail?.trim())
+        e.studentEmail = 'Student email is required';
+      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.studentEmail.trim()))
+        e.studentEmail = 'Enter a valid email address';
+      else if (!studentOtp.verified)
+        e.studentEmail = 'Please verify the email with OTP before saving';
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -1071,10 +1077,10 @@ export default function Students() {
                         <option>Inactive</option>
                       </select>
                     </div>
-                    {/* Student email (optional, OTP required if provided) */}
+                    {/* Student email — required, OTP-verified */}
                     <div className="col-12">
                       <label className="form-label fw-medium small">
-                        Student Email <span style={{ color: '#a0aec0', fontWeight: 400 }}>(optional — required for student login)</span>
+                        Student Email <span style={{ color: '#e53e3e' }}>*</span>
                       </label>
                       {editStudent ? (
                         <input type="email"
@@ -1092,7 +1098,7 @@ export default function Students() {
                               value={formData.studentEmail || ''}
                               onChange={e => { setFormData(fd => ({ ...fd, studentEmail: e.target.value })); resetStudentOtp(); }}
                             />
-                            {formData.studentEmail?.trim() && !studentOtp.verified && (
+                            {!studentOtp.verified && (
                               <button type="button" onClick={handleStudentSendOtp} disabled={studentOtp.sending}
                                 style={{ flexShrink: 0, padding: '6px 12px', background: '#0de1e815', border: '1.5px solid #0de1e840', borderRadius: 6, cursor: studentOtp.sending ? 'not-allowed' : 'pointer', color: '#276749', fontSize: 12, fontWeight: 600, fontFamily: 'Poppins, sans-serif', whiteSpace: 'nowrap' }}>
                                 {studentOtp.sending ? 'Sending…' : studentOtp.sent ? 'Resend OTP' : 'Send OTP'}

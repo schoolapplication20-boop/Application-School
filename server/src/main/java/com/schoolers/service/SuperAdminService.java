@@ -93,14 +93,17 @@ public class SuperAdminService {
         if (email == null || !email.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"))
             return ApiResponse.error("A valid email address is required");
 
+        if (mobile == null || mobile.isBlank())
+            return ApiResponse.error("Mobile number is required");
+
         String normalizedEmail  = email.trim().toLowerCase();
-        String normalizedMobile = (mobile != null && !mobile.isBlank()) ? mobile.trim() : null;
+        String normalizedMobile = mobile.trim();
 
         // Case-insensitive pre-check — prevents duplicate accounts regardless of email casing
         if (userRepository.existsByEmailIgnoreCase(normalizedEmail))
             return ApiResponse.error("Email '" + normalizedEmail + "' is already registered. Use a different email.");
 
-        if (normalizedMobile != null && userRepository.existsByMobile(normalizedMobile))
+        if (userRepository.existsByMobile(normalizedMobile))
             return ApiResponse.error("Mobile number '" + normalizedMobile + "' is already registered. Use a different number.");
 
         String rawPassword = generatePassword();
