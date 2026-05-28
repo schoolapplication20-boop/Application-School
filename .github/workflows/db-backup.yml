@@ -35,7 +35,7 @@ jobs:
 
           pg_dump \
             --host="${{ secrets.DB_HOST }}" \
-            --port=5432 \
+            --port="${{ secrets.DB_PORT }}" \
             --username="${{ secrets.DB_USERNAME }}" \
             --dbname="${{ secrets.DB_NAME }}" \
             --no-password \
