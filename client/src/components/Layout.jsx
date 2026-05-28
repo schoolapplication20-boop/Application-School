@@ -3,6 +3,7 @@ import Sidebar from './Sidebar';
 import Navbar from './Navbar';
 import AiChat from './AiChat';
 import MaintenanceBanner from './MaintenanceBanner';
+import BgPicker, { loadSavedBg } from './BgPicker';
 import { useAuth } from '../context/AuthContext';
 import { schoolAPI } from '../services/api';
 import '../styles/sidebar.css';
@@ -13,6 +14,7 @@ const Layout = ({ children, pageTitle }) => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [schoolInactive, setSchoolInactive]       = useState(false);
   const [inactiveSchoolName, setInactiveSchoolName] = useState('');
+  const [appBg, setAppBg] = useState(() => loadSavedBg());
   const { user } = useAuth();
 
   const showAi = !!user;
@@ -31,7 +33,7 @@ const Layout = ({ children, pageTitle }) => {
   }, [user]);
 
   return (
-    <div className="app-layout">
+    <div className="app-layout" style={{ background: appBg }}>
       <Sidebar
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
@@ -58,6 +60,7 @@ const Layout = ({ children, pageTitle }) => {
       </div>
 
       {showAi && <AiChat />}
+      <BgPicker value={appBg} onChange={setAppBg} />
 
       {/* ── Subscription Ended Overlay ──────────────────────────────────────── */}
       {schoolInactive && (
