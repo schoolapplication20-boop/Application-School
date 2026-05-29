@@ -267,7 +267,8 @@ class AuthServiceTest {
         @DisplayName("valid OTP: issues JWT and clears OTP fields")
         void validOtp_issuesJwt() {
             LocalDateTime expiry = LocalDateTime.now(ZoneOffset.UTC).plusMinutes(5);
-            User owner = ownerWithOtp("123456", expiry);
+            // Store the pre-hashed value so the service's hash-comparison succeeds
+            User owner = ownerWithOtp(AuthService.hashOtp("123456", "owner@platform.com"), expiry);
             when(userRepository.findByEmailIgnoreCase("owner@platform.com")).thenReturn(Optional.of(owner));
             when(jwtUtil.generateToken(any(UserDetails.class), any())).thenReturn("owner-jwt");
 
@@ -351,7 +352,7 @@ class AuthServiceTest {
         }
 
         @Test
-        @DisplayName("forgotPassword: known email persists OTP and sends email")
+        @DisplayName("forgotPassword: known email persists hashed OTP and sends email")
         void forgotPassword_knownEmail_sendsOtp() throws Exception {
             User user = activeAdmin();
             when(userRepository.findByEmailIgnoreCase("admin@school.com")).thenReturn(Optional.of(user));
@@ -360,7 +361,8 @@ class AuthServiceTest {
             ApiResponse<String> resp = authService.forgotPassword("admin@school.com");
 
             assertThat(resp.isSuccess()).isTrue();
-            assertThat(user.getResetOtp()).isNotNull().hasSize(6);
+            // OTP is now stored as a salted SHA-256 hex hash (64 chars), not the raw 6-digit code
+            assertThat(user.getResetOtp()).isNotNull().hasSize(64);
             assertThat(user.getOtpExpiry()).isAfter(LocalDateTime.now(ZoneOffset.UTC));
             verify(emailService).sendOtpEmail(eq("admin@school.com"), any());
         }
@@ -369,7 +371,8 @@ class AuthServiceTest {
         @DisplayName("verifyOTP: valid OTP sets VERIFIED sentinel with 15-min expiry")
         void verifyOTP_valid_setsVerifiedSentinel() {
             User user = activeAdmin();
-            user.setResetOtp("654321");
+            // Store the pre-hashed value so the service's hash-comparison succeeds
+            user.setResetOtp(AuthService.hashOtp("654321", "admin@school.com"));
             user.setOtpExpiry(LocalDateTime.now(ZoneOffset.UTC).plusMinutes(10));
             when(userRepository.findByEmailIgnoreCase("admin@school.com")).thenReturn(Optional.of(user));
 
