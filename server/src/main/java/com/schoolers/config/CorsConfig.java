@@ -29,6 +29,7 @@ public class CorsConfig {
 
         // Always allow the known production domains
         origins.add("https://application-school.vercel.app");
+        origins.add("https://my-skoolz.vercel.app");
         origins.add("https://my-skoolz.com");
         origins.add("https://www.my-skoolz.com");
 
