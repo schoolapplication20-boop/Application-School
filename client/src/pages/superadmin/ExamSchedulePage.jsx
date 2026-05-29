@@ -56,7 +56,7 @@ function Toast({ toast, onClose }) {
 function ConfirmDialog({ message, onConfirm, onCancel }) {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ background: '#fff', borderRadius: 16, padding: 28, width: 360, boxShadow: '0 8px 40px rgba(0,0,0,0.18)' }}>
+      <div className="modal-card" style={{ background: '#fff', borderRadius: 16, padding: 28, width: 360, boxShadow: '0 8px 40px rgba(0,0,0,0.18)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
           <span className="material-icons" style={{ color: '#c53030', fontSize: 28 }}>warning</span>
           <h4 style={{ margin: 0, fontSize: 16, color: '#1a202c' }}>Confirm Delete</h4>
@@ -206,7 +206,7 @@ function ScheduleModal({ initial, onClose, onSaved, dbClasses = [], dbSections =
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', zIndex: 8000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ background: '#fff', borderRadius: 18, width: '100%', maxWidth: 860, maxHeight: '93vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
+      <div className="modal-card" style={{ background: '#fff', borderRadius: 18, width: '100%', maxWidth: 860, maxHeight: '93vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
 
         {/* ── Modal Header ── */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 24px', borderBottom: '1px solid #f0f4f8', flexShrink: 0 }}>

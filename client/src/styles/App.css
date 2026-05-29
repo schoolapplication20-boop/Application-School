@@ -44,11 +44,12 @@ a {
   color: inherit;
 }
 
-/* Default: all form controls show dark text so user input is always readable */
+/* Default: all form controls respect the current theme */
 input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
 textarea,
 select {
-  color: #1a202c;
+  color: var(--text-primary, #1a202c);
+  background-color: var(--surface-input, #fafafa);
 }
 
 /* Utility Classes */

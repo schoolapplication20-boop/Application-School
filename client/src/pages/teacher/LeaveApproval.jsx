@@ -302,7 +302,7 @@ export default function LeaveApproval() {
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
         }}>
-          <div style={{
+          <div className="modal-card" style={{
             background: '#fff', borderRadius: 16, padding: 28, width: '100%', maxWidth: 460,
             boxShadow: '0 20px 60px rgba(0,0,0,0.15)', maxHeight: '90vh', overflowY: 'auto',
           }}>

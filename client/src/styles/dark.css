@@ -166,3 +166,74 @@
   color: var(--text-muted) !important;
   background: var(--surface-alt) !important;
 }
+
+/* ── All form controls (overrides inline background/color) ──── */
+[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+[data-theme="dark"] textarea,
+[data-theme="dark"] select {
+  background-color: var(--surface-input) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-strong) !important;
+}
+
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder {
+  color: var(--text-muted) !important;
+  opacity: 1;
+}
+
+[data-theme="dark"] select option {
+  background: var(--surface) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Paid/error state tint on inputs — keep a subtle version in dark mode */
+[data-theme="dark"] input[style*="#f0fff4"],
+[data-theme="dark"] input[style*="f0fff4"] {
+  background-color: rgba(39,103,73,0.2) !important;
+}
+[data-theme="dark"] input[style*="#fff5f5"],
+[data-theme="dark"] input[style*="fff5f5"] {
+  background-color: rgba(197,48,48,0.2) !important;
+}
+
+/* ── Modal card (add className="modal-card" to each modal inner div) ── */
+[data-theme="dark"] .modal-card {
+  background: var(--surface) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border) !important;
+}
+
+[data-theme="dark"] .modal-card h2,
+[data-theme="dark"] .modal-card h3,
+[data-theme="dark"] .modal-card h4 {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .modal-card p,
+[data-theme="dark"] .modal-card span:not(.material-icons) {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .modal-card label {
+  color: var(--text-secondary) !important;
+}
+
+/* Info/summary boxes inside modals */
+[data-theme="dark"] .modal-card .modal-info-box {
+  background: var(--surface-alt) !important;
+  border-color: var(--border) !important;
+  color: var(--text-secondary) !important;
+}
+
+/* Cancel / outline buttons inside modals */
+[data-theme="dark"] .modal-card .modal-btn-cancel {
+  background: var(--surface-alt) !important;
+  border-color: var(--border-strong) !important;
+  color: var(--text-secondary) !important;
+}
+
+/* Dashed section dividers */
+[data-theme="dark"] .modal-card .modal-section-divider {
+  border-color: var(--border-strong) !important;
+}

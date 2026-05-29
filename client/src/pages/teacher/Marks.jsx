@@ -523,7 +523,7 @@ export default function Marks() {
           onClick={() => !saving && setShowModal(false)}
         >
           <div
-            style={{ background: '#fff', borderRadius: 16, width: '96vw', maxWidth: 1200, maxHeight: '94vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.20)', overflow: 'hidden' }}
+            className="modal-card" style={{ background: '#fff', borderRadius: 16, width: '96vw', maxWidth: 1200, maxHeight: '94vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.20)', overflow: 'hidden' }}
             onClick={e => e.stopPropagation()}
           >
 

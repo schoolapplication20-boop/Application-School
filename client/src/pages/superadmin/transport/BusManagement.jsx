@@ -9,7 +9,7 @@ function Modal({ open, title, children, onClose, onSave, saving }) {
   if (!open) return null;
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 580, maxHeight: '90vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+      <div className="modal-card" style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 580, maxHeight: '90vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
         <div style={{ padding: '20px 24px', borderBottom: '1px solid #f0f4f8', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#2d3748' }}>{title}</h2>
           <button onClick={onClose} style={{ border: 'none', background: 'none', fontSize: 22, cursor: 'pointer', color: '#a0aec0' }}>×</button>
@@ -228,7 +228,7 @@ export default function BusManagement() {
       {/* Delete Confirm */}
       {deleteId && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1001, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 380, width: '100%', textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+          <div className="modal-card" style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 380, width: '100%', textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
             <span className="material-icons" style={{ fontSize: 44, color: '#e53e3e', display: 'block', marginBottom: 12 }}>delete_forever</span>
             <h3 style={{ margin: '0 0 8px', color: '#1a202c' }}>Delete Bus?</h3>
             <p style={{ margin: '0 0 22px', color: '#718096', fontSize: 14 }}>This action cannot be undone. All assignment data for this bus will be affected.</p>
