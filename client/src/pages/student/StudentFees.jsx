@@ -15,7 +15,7 @@ const fmtDate = (d) => {
 };
 
 const isOverdue = (dueDate, status) =>
-  status !== 'PAID' && dueDate && new Date(dueDate + 'T00:00:00') < new Date();
+  String(status || '').toUpperCase() !== 'PAID' && dueDate && new Date(dueDate + 'T00:00:00') < new Date();
 
 /* ── Fee type rows ── */
 const FEE_TYPES = [
@@ -50,6 +50,14 @@ export default function StudentFees() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Auto-refresh every 30s when fee is not yet fully paid
+  useEffect(() => {
+    const status = feeData?.summary?.status;
+    if (!status || String(status).toUpperCase() === 'PAID') return;
+    const t = setInterval(() => load(true), 30000);
+    return () => clearInterval(t);
+  }, [feeData?.summary?.status, load]);
+
   /* ── derived ── */
   const summary      = feeData?.summary          ?? {};
   const installments = feeData?.installments      ?? [];
@@ -62,7 +70,7 @@ export default function StudentFees() {
   const dueAmount  = Number(summary.dueAmount   || 0);
   const paidPct    = totalFee > 0 ? Math.min(100, (paidAmount / totalFee) * 100) : 0;
 
-  const overallStatus = summary.status || assignment?.status || 'PENDING';
+  const overallStatus = String(summary.status || assignment?.status || 'PENDING').toUpperCase();
   const nextDueDate   = summary.nextDueDate ?? assignment?.dueDate ?? null;
 
   const statusConfig = {
@@ -103,8 +111,9 @@ export default function StudentFees() {
   );
 
   const InstBadge = ({ status, dueDate }) => {
+    const normStatus = String(status || '').toUpperCase();
     const overdue = isOverdue(dueDate, status);
-    if (status === 'PAID')
+    if (normStatus === 'PAID')
       return <span style={{ padding: '3px 11px', background: '#f0fff4', color: '#276749', borderRadius: 99, fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
         <span className="material-icons" style={{ fontSize: 12 }}>check_circle</span> Paid
       </span>;
@@ -185,7 +194,7 @@ export default function StudentFees() {
             </p>
             {lastUpdated && (
               <p style={{ margin: '3px 0 0', fontSize: 11, color: '#a0aec0' }}>
-                Last updated: {lastUpdated.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                Last updated: {lastUpdated.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })}
               </p>
             )}
           </div>
@@ -307,7 +316,7 @@ export default function StudentFees() {
                   <tbody>
                     {installments.map((inst, idx) => {
                       const overdue = isOverdue(inst.dueDate, inst.status);
-                      const isPaid  = inst.status === 'PAID';
+                      const isPaid  = String(inst.status || '').toUpperCase() === 'PAID';
                       return (
                         <tr key={inst.id ?? idx}
                             style={{ borderBottom: '1px solid #f0f4f8', background: isPaid ? '#f0fff4' : overdue ? '#fff5f5' : '#fff' }}
@@ -339,7 +348,7 @@ export default function StudentFees() {
                   <tfoot>
                     <tr style={{ background: '#f7fafc', borderTop: '2px solid #e2e8f0' }}>
                       <td colSpan={2} style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#4a5568' }}>
-                        Total · {installments.filter(i => i.status === 'PAID').length} of {installments.length} paid
+                        Total · {installments.filter(i => String(i.status || '').toUpperCase() === 'PAID').length} of {installments.length} paid
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'right', fontSize: 15, fontWeight: 800, color: '#1a202c' }}>
                         ₹{fmt(installments.reduce((s, i) => s + Number(i.amount || 0), 0))}

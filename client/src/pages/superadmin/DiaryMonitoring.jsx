@@ -5,6 +5,8 @@ import { diaryAPI, adminAPI } from '../../services/api';
 
 const STATUS_COLOR  = { PENDING: '#ed8936', APPROVED: '#0de1e8', REJECTED: '#e53e3e' };
 const STATUS_BG     = { PENDING: '#fff7ed', APPROVED: '#f0fff4', REJECTED: '#fff5f5' };
+const statusColor   = (s) => STATUS_COLOR[String(s || '').toUpperCase()] || '#718096';
+const statusBg      = (s) => STATUS_BG[String(s || '').toUpperCase()]    || '#f7fafc';
 
 export default function DiaryMonitoring() {
   const [entries,   setEntries]   = useState([]);
@@ -38,7 +40,7 @@ export default function DiaryMonitoring() {
       if (filterDate)    params.date       = filterDate;
       const res = await diaryAPI.getAll(params);
       let data = res.data?.data ?? [];
-      if (filterStatus) data = data.filter(e => e.reviewStatus === filterStatus);
+      if (filterStatus) data = data.filter(e => String(e.reviewStatus || '').toUpperCase() === filterStatus.toUpperCase());
       setEntries(Array.isArray(data) ? data : []);
     } catch {
       setEntries([]);
@@ -103,9 +105,9 @@ export default function DiaryMonitoring() {
 
   const statCounts = {
     total:    entries.length,
-    pending:  entries.filter(e => e.reviewStatus === 'PENDING'  || !e.reviewStatus).length,
-    approved: entries.filter(e => e.reviewStatus === 'APPROVED').length,
-    rejected: entries.filter(e => e.reviewStatus === 'REJECTED').length,
+    pending:  entries.filter(e => String(e.reviewStatus || '').toUpperCase() === 'PENDING' || !e.reviewStatus).length,
+    approved: entries.filter(e => String(e.reviewStatus || '').toUpperCase() === 'APPROVED').length,
+    rejected: entries.filter(e => String(e.reviewStatus || '').toUpperCase() === 'REJECTED').length,
   };
 
   return (
@@ -209,7 +211,7 @@ export default function DiaryMonitoring() {
                   {/* Status badge */}
                   <span style={{
                     position: 'absolute', top: 10, right: 10,
-                    background: STATUS_COLOR[status], color: '#fff',
+                    background: statusColor(status), color: '#fff',
                     borderRadius: '20px', padding: '3px 10px', fontSize: '11px', fontWeight: 700,
                   }}>
                     {status}
@@ -251,7 +253,7 @@ export default function DiaryMonitoring() {
                       <span className="material-icons" style={{ fontSize: '14px' }}>visibility</span> View
                     </button>
                     <button onClick={() => openReview(entry)} title="Review"
-                      style={{ flex: 1, border: 'none', background: STATUS_BG[status], color: STATUS_COLOR[status], borderRadius: '8px', padding: '7px', cursor: 'pointer', fontSize: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                      style={{ flex: 1, border: 'none', background: statusBg(status), color: statusColor(status), borderRadius: '8px', padding: '7px', cursor: 'pointer', fontSize: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
                       <span className="material-icons" style={{ fontSize: '14px' }}>rate_review</span> Review
                     </button>
                     <button onClick={() => handleDownload(entry)} title="Download"
@@ -333,9 +335,9 @@ export default function DiaryMonitoring() {
                       <button key={s} type="button"
                         onClick={() => setReviewForm(prev => ({ ...prev, reviewStatus: s }))}
                         style={{
-                          flex: 1, padding: '10px', border: `2px solid ${reviewForm.reviewStatus === s ? STATUS_COLOR[s] : '#e2e8f0'}`,
-                          borderRadius: '10px', background: reviewForm.reviewStatus === s ? STATUS_BG[s] : '#fff',
-                          color: reviewForm.reviewStatus === s ? STATUS_COLOR[s] : '#a0aec0',
+                          flex: 1, padding: '10px', border: `2px solid ${reviewForm.reviewStatus === s ? statusColor(s) : '#e2e8f0'}`,
+                          borderRadius: '10px', background: reviewForm.reviewStatus === s ? statusBg(s) : '#fff',
+                          color: reviewForm.reviewStatus === s ? statusColor(s) : '#a0aec0',
                           cursor: 'pointer', fontWeight: 700, fontSize: '12px', transition: 'all 0.2s',
                         }}>
                         {s}

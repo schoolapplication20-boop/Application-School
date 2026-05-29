@@ -32,8 +32,8 @@ const emptyForm = {
 };
 
 const StatusBadge = ({ status }) => {
-  const map = { Pending: 'badge-warning', Approved: 'badge-success', Rejected: 'badge-danger' };
-  return <span className={map[status] || 'badge-info'}>{status}</span>;
+  const map = { PENDING: 'badge-warning', APPROVED: 'badge-success', REJECTED: 'badge-danger' };
+  return <span className={map[String(status || '').toUpperCase()] || 'badge-info'}>{status}</span>;
 };
 
 // Reusable doc upload box
@@ -118,16 +118,16 @@ const Applications = () => {
   }, []);
 
   const filtered = applications.filter(a => {
-    const matchTab = activeTab === 'All' || a.status === activeTab;
+    const matchTab = activeTab === 'All' || String(a.status || '').toUpperCase() === activeTab.toUpperCase();
     const matchSearch = !search || a.studentName.toLowerCase().includes(search.toLowerCase()) || a.classApplied.toLowerCase().includes(search.toLowerCase());
     return matchTab && matchSearch;
   });
 
   const stats = {
     total:    applications.length,
-    pending:  applications.filter(a => a.status === 'Pending').length,
-    approved: applications.filter(a => a.status === 'Approved').length,
-    rejected: applications.filter(a => a.status === 'Rejected').length,
+    pending:  applications.filter(a => String(a.status || '').toUpperCase() === 'PENDING').length,
+    approved: applications.filter(a => String(a.status || '').toUpperCase() === 'APPROVED').length,
+    rejected: applications.filter(a => String(a.status || '').toUpperCase() === 'REJECTED').length,
   };
 
   const handleApprove = async (id) => {
@@ -168,8 +168,16 @@ const Applications = () => {
   const handleDocChange = (field, nameField, ref) => {
     const file = ref.current?.files?.[0];
     if (!file) return;
+    const sizeMB = file.size / (1024 * 1024);
+    if (sizeMB > 5) {
+      setFormErrors(prev => ({ ...prev, [field]: 'File too large. Maximum size is 5 MB.' }));
+      if (ref.current) ref.current.value = '';
+      return;
+    }
+    setFormErrors(prev => ({ ...prev, [field]: '' }));
+    const sizeLabel = sizeMB >= 1 ? `${sizeMB.toFixed(1)} MB` : `${(file.size / 1024).toFixed(0)} KB`;
     const reader = new FileReader();
-    reader.onload = e => setFormData(fd => ({ ...fd, [field]: e.target.result, [nameField]: file.name }));
+    reader.onload = e => setFormData(fd => ({ ...fd, [field]: e.target.result, [nameField]: `${file.name} (${sizeLabel})` }));
     reader.readAsDataURL(file);
   };
 

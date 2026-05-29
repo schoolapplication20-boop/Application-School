@@ -10,7 +10,7 @@ import { adminAPI, superAdminAPI, applicationAPI } from '../../services/api';
 import { getLogs } from '../../services/activityLog';
 import SEOMeta from '../../components/SEOMeta';
 
-const revenueData = [
+const EMPTY_REVENUE_DATA = [
   { name: 'Jan', revenue: 0, expenses: 0 }, { name: 'Feb', revenue: 0, expenses: 0 },
   { name: 'Mar', revenue: 0, expenses: 0 }, { name: 'Apr', revenue: 0, expenses: 0 },
   { name: 'May', revenue: 0, expenses: 0 }, { name: 'Jun', revenue: 0, expenses: 0 },
@@ -37,7 +37,7 @@ const fmtDate = (d) => {
 const getInitials = (name) => name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
 const greeting = () => {
-  const h = new Date().getHours();
+  const h = parseInt(new Date().toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Asia/Kolkata' }), 10);
   if (h < 12) return 'Good Morning';
   if (h < 17) return 'Good Afternoon';
   return 'Good Evening';
@@ -159,11 +159,12 @@ export default function AdminDashboard() {
 
   const statusBadge = (status) => {
     const cfg = { APPROVED: ['#f0fff4','#276749'], PENDING: ['#fffaf0','#c05621'], REJECTED: ['#fff5f5','#c53030'] };
-    const [bg, clr] = cfg[status] || ['#f7fafc','#4a5568'];
+    const key = String(status || '').toUpperCase();
+    const [bg, clr] = cfg[key] || ['#f7fafc','#4a5568'];
     return <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: bg, color: clr }}>{status}</span>;
   };
 
-  const today = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const today = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Kolkata' });
 
   return (
     <Layout pageTitle="Dashboard">
@@ -189,7 +190,7 @@ export default function AdminDashboard() {
           </div>
           <div style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.7)' }}>
             Here's what's happening in your school today.
-            {lastRefresh && <span style={{ marginLeft: 10, fontSize: 11, opacity: 0.6 }}>Updated {lastRefresh.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>}
+            {lastRefresh && <span style={{ marginLeft: 10, fontSize: 11, opacity: 0.6 }}>Updated {lastRefresh.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })}</span>}
           </div>
         </div>
         <div style={{ display: 'flex', gap: 20, flexShrink: 0 }}>
@@ -349,11 +350,19 @@ export default function AdminDashboard() {
             </div>
           </div>
           <div style={{ padding: '16px 8px 8px' }}>
-            <BarChartComponent
-              data={chartPeriod === '3M' ? revenueData.slice(-3) : chartPeriod === '6M' ? revenueData.slice(-6) : revenueData}
-              bars={[{ key: 'revenue', name: 'Revenue', color: '#0de1e8' }, { key: 'expenses', name: 'Expenses', color: '#e53e3e' }]}
-              height={260}
-            />
+            {(() => {
+              const revenueData = (dbStats?.monthlyData && dbStats.monthlyData.length === 12)
+                ? dbStats.monthlyData.map(m => ({ name: m.name, revenue: Number(m.revenue || 0), expenses: Number(m.expenses || 0) }))
+                : EMPTY_REVENUE_DATA;
+              const sliced = chartPeriod === '3M' ? revenueData.slice(-3) : chartPeriod === '6M' ? revenueData.slice(-6) : revenueData;
+              return (
+                <BarChartComponent
+                  data={sliced}
+                  bars={[{ key: 'revenue', name: 'Revenue', color: '#0de1e8' }, { key: 'expenses', name: 'Expenses', color: '#e53e3e' }]}
+                  height={260}
+                />
+              );
+            })()}
           </div>
         </div>
 
@@ -433,7 +442,7 @@ export default function AdminDashboard() {
                       <td style={{ fontSize: 13, color: '#718096' }}>{a.fatherName || a.guardianName || '—'}</td>
                       <td>{statusBadge(a.status)}</td>
                       <td>
-                        {(a.status === 'PENDING' || a.status === 'Pending') && (
+                        {String(a.status || '').toUpperCase() === 'PENDING' && (
                           <div style={{ display: 'flex', gap: 6 }}>
                             <button onClick={() => handleApprove(a.id)} style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: '#f0fff4', color: '#276749', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>Approve</button>
                             <button onClick={() => handleReject(a.id)} style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: '#fff5f5', color: '#c53030', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>Reject</button>

@@ -62,7 +62,9 @@ api.interceptors.response.use(
     const isAuthEndpoint = config?.url?.includes('/api/auth/');
     if (error.response?.status === 401 && !isAuthEndpoint) {
       clearAuthToken();
-      window.location.href = '/login';
+      // Fire a custom event so AuthContext can show a graceful "session expired" dialog
+      // instead of hard-redirecting and losing any unsaved form data.
+      window.dispatchEvent(new CustomEvent('auth:session-expired'));
       return Promise.reject(error);
     }
 

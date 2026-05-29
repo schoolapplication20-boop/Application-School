@@ -222,7 +222,7 @@ export default function StudentLeaveRequest() {
                         }
                       </td>
                       <td style={{ fontSize: 12, color: '#718096', fontStyle: l.teacherRemark ? 'normal' : 'italic' }}>
-                        {l.teacherRemark || (l.status === 'PENDING' ? 'Awaiting review' : '—')}
+                        {l.teacherRemark || (String(l.status || '').toUpperCase() === 'PENDING' ? 'Awaiting review' : '—')}
                       </td>
                       <td style={{ fontSize: 12, color: '#718096' }}>{l.reviewedBy || '—'}</td>
                       <td style={{ fontSize: 11, color: '#a0aec0' }}>

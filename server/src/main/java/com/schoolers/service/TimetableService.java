@@ -74,20 +74,62 @@ public class TimetableService {
     }
 
     public ApiResponse<Timetable> update(Long id, Map<String, Object> body, Long schoolId) {
-        return timetableRepository.findById(id)
-                .map(entry -> {
-                    if (schoolId != null && entry.getSchoolId() != null && !schoolId.equals(entry.getSchoolId()))
-                        return ApiResponse.<Timetable>error("Access denied: timetable entry belongs to another school");
-                    if (body.containsKey("classSection")) entry.setClassSection(str(body, "classSection", entry.getClassSection()));
-                    if (body.containsKey("subject"))      entry.setSubject(str(body, "subject", entry.getSubject()));
-                    if (body.containsKey("day"))          entry.setDay(str(body, "day", entry.getDay()));
-                    if (body.containsKey("startTime"))    entry.setStartTime(str(body, "startTime", entry.getStartTime()));
-                    if (body.containsKey("endTime"))      entry.setEndTime(str(body, "endTime", entry.getEndTime()));
-                    if (body.containsKey("room"))         entry.setRoom(str(body, "room", entry.getRoom()));
-                    if (body.containsKey("teacherName"))  entry.setTeacherName(str(body, "teacherName", entry.getTeacherName()));
-                    return ApiResponse.success("Timetable entry updated", timetableRepository.save(entry));
-                })
-                .orElse(ApiResponse.error("Timetable entry not found"));
+        Timetable entry = timetableRepository.findById(id).orElse(null);
+        if (entry == null) return ApiResponse.error("Timetable entry not found");
+        if (schoolId != null && entry.getSchoolId() != null && !schoolId.equals(entry.getSchoolId()))
+            return ApiResponse.<Timetable>error("Access denied: timetable entry belongs to another school");
+
+        // Apply incoming changes onto a copy so we can validate before saving
+        String classSection = body.containsKey("classSection") ? str(body, "classSection", entry.getClassSection()) : entry.getClassSection();
+        String subject      = body.containsKey("subject")      ? str(body, "subject",      entry.getSubject())      : entry.getSubject();
+        String day          = body.containsKey("day")          ? str(body, "day",          entry.getDay())          : entry.getDay();
+        String startTime    = body.containsKey("startTime")    ? str(body, "startTime",    entry.getStartTime())    : entry.getStartTime();
+        String endTime      = body.containsKey("endTime")      ? str(body, "endTime",      entry.getEndTime())      : entry.getEndTime();
+        Long   teacherId    = body.containsKey("teacherId")    ? longVal(body, "teacherId", entry.getTeacherId())   : entry.getTeacherId();
+
+        if (startTime != null && endTime != null && toMin(startTime) >= toMin(endTime))
+            return ApiResponse.error("End time must be after start time");
+
+        // Teacher overlap: same teacher, same day, overlapping time — excluding this entry
+        if (teacherId != null && day != null && startTime != null && endTime != null) {
+            List<Timetable> sameTeacherDay = schoolId != null
+                    ? timetableRepository.findBySchoolIdAndTeacherIdAndDay(schoolId, teacherId, day)
+                    : timetableRepository.findByTeacherIdAndDay(teacherId, day);
+            int ns = toMin(startTime), ne = toMin(endTime);
+            for (Timetable e : sameTeacherDay) {
+                if (e.getId().equals(id)) continue; // skip self
+                if (ns < toMin(e.getEndTime()) && ne > toMin(e.getStartTime()))
+                    return ApiResponse.error("Updated time overlaps with existing schedule for this teacher on " + day
+                            + " (" + e.getSubject() + " " + e.getStartTime() + "–" + e.getEndTime() + ")");
+            }
+        }
+
+        // Class-section overlap: same class, same day, overlapping time — excluding this entry
+        if (classSection != null && day != null && startTime != null && endTime != null) {
+            List<Timetable> sameClassDay = schoolId != null
+                    ? timetableRepository.findBySchoolIdAndClassSection(schoolId, classSection)
+                    : timetableRepository.findByClassSection(classSection);
+            int ns = toMin(startTime), ne = toMin(endTime);
+            for (Timetable e : sameClassDay) {
+                if (e.getId().equals(id)) continue; // skip self
+                if (e.getDay() != null && e.getDay().equals(day)
+                        && ns < toMin(e.getEndTime()) && ne > toMin(e.getStartTime()))
+                    return ApiResponse.error("Updated time overlaps with an existing period for class " + classSection
+                            + " on " + day + " (" + e.getSubject() + " " + e.getStartTime() + "–" + e.getEndTime() + ")");
+            }
+        }
+
+        // Commit changes
+        entry.setClassSection(classSection);
+        entry.setSubject(subject);
+        entry.setDay(day);
+        entry.setStartTime(startTime);
+        entry.setEndTime(endTime);
+        entry.setTeacherId(teacherId);
+        if (body.containsKey("room"))        entry.setRoom(str(body, "room", entry.getRoom()));
+        if (body.containsKey("teacherName")) entry.setTeacherName(str(body, "teacherName", entry.getTeacherName()));
+
+        return ApiResponse.success("Timetable entry updated", timetableRepository.save(entry));
     }
 
     @Transactional

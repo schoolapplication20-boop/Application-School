@@ -79,7 +79,7 @@ export default function TeacherAppointments() {
     } finally { setRespondLoading(false); }
   };
 
-  const pendingCount = appointments.filter(a => a.status === 'PENDING' && a.requestedBy === 'STUDENT').length;
+  const pendingCount = appointments.filter(a => String(a.status || '').toUpperCase() === 'PENDING' && String(a.requestedBy || '').toUpperCase() === 'STUDENT').length;
 
   return (
     <Layout pageTitle="Appointments">
@@ -255,9 +255,9 @@ export default function TeacherAppointments() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {appointments.map(appt => {
-              const s = STATUS_STYLE[appt.status] || STATUS_STYLE.PENDING;
-              const studentRequested = appt.requestedBy === 'STUDENT';
-              const canRespond = appt.status === 'PENDING' && studentRequested;
+              const s = STATUS_STYLE[String(appt.status || '').toUpperCase()] || STATUS_STYLE.PENDING;
+              const studentRequested = String(appt.requestedBy || '').toUpperCase() === 'STUDENT';
+              const canRespond = String(appt.status || '').toUpperCase() === 'PENDING' && studentRequested;
               return (
                 <div key={appt.id} style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', padding: 20 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10 }}>

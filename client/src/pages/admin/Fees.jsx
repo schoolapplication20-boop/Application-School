@@ -134,7 +134,7 @@ export default function Fees() {
   /* ── filtered assignments ── */
   const filteredAssignments = useMemo(() => assignments.filter(a => {
     if (filterClass && a.className !== filterClass) return false;
-    if (filterStatus && a.status !== filterStatus) return false;
+    if (filterStatus && String(a.status || '').toUpperCase() !== filterStatus.toUpperCase()) return false;
     if (search && !a.studentName?.toLowerCase().includes(search.toLowerCase()) &&
         !a.rollNumber?.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
@@ -145,7 +145,7 @@ export default function Fees() {
     const totalBilled = assignments.reduce((s, a) => s + Number(a.totalFee || 0), 0);
     const totalPaid   = assignments.reduce((s, a) => s + Number(a.paidAmount || 0), 0);
     const totalDue    = totalBilled - totalPaid;
-    const paid        = assignments.filter(a => a.status === 'PAID').length;
+    const paid        = assignments.filter(a => String(a.status || '').toUpperCase() === 'PAID').length;
     return { totalBilled, totalPaid, totalDue, paid, total: assignments.length };
   }, [assignments]);
 
@@ -649,7 +649,7 @@ export default function Fees() {
                         value={inst.termName}
                         onChange={e => updateInstallment(idx, 'termName', e.target.value)}
                         placeholder="e.g. Term 1"
-                        style={{ width: '100%', padding: '7px 10px', border: `1.5px solid ${inst.status === 'PAID' ? '#68d391' : '#e2e8f0'}`, borderRadius: 7, fontSize: 13, outline: 'none', boxSizing: 'border-box', background: inst.status === 'PAID' ? '#f0fff4' : '#fff' }}
+                        style={{ width: '100%', padding: '7px 10px', border: `1.5px solid ${String(inst.status || '').toUpperCase() === 'PAID' ? '#68d391' : '#e2e8f0'}`, borderRadius: 7, fontSize: 13, outline: 'none', boxSizing: 'border-box', background: String(inst.status || '').toUpperCase() === 'PAID' ? '#f0fff4' : '#fff' }}
                       />
                     </div>
                     <div>
@@ -659,8 +659,8 @@ export default function Fees() {
                         value={inst.amount}
                         onChange={e => updateInstallment(idx, 'amount', e.target.value)}
                         placeholder="0"
-                        disabled={inst.status === 'PAID'}
-                        style={{ width: '100%', padding: '7px 10px', border: '1.5px solid #e2e8f0', borderRadius: 7, fontSize: 13, outline: 'none', boxSizing: 'border-box', background: inst.status === 'PAID' ? '#f7fafc' : '#fff' }}
+                        disabled={String(inst.status || '').toUpperCase() === 'PAID'}
+                        style={{ width: '100%', padding: '7px 10px', border: '1.5px solid #e2e8f0', borderRadius: 7, fontSize: 13, outline: 'none', boxSizing: 'border-box', background: String(inst.status || '').toUpperCase() === 'PAID' ? '#f7fafc' : '#fff' }}
                       />
                     </div>
                     <div>
@@ -668,14 +668,15 @@ export default function Fees() {
                       <input
                         type="date"
                         value={inst.dueDate}
+                        min={new Date().toISOString().split('T')[0]}
                         onChange={e => updateInstallment(idx, 'dueDate', e.target.value)}
-                        disabled={inst.status === 'PAID'}
-                        style={{ width: '100%', padding: '7px 8px', border: '1.5px solid #e2e8f0', borderRadius: 7, fontSize: 12, outline: 'none', boxSizing: 'border-box', background: inst.status === 'PAID' ? '#f7fafc' : '#fff' }}
+                        disabled={String(inst.status || '').toUpperCase() === 'PAID'}
+                        style={{ width: '100%', padding: '7px 8px', border: '1.5px solid #e2e8f0', borderRadius: 7, fontSize: 12, outline: 'none', boxSizing: 'border-box', background: String(inst.status || '').toUpperCase() === 'PAID' ? '#f7fafc' : '#fff' }}
                       />
                     </div>
                     <div>
                       {idx === 0 && <div style={{ height: 20 }} />}
-                      {inst.status === 'PAID' ? (
+                      {String(inst.status || '').toUpperCase() === 'PAID' ? (
                         <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 32, fontSize: 16 }} title="Paid">✅</span>
                       ) : (
                         <button type="button" onClick={() => removeInstallment(idx)}

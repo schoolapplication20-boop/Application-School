@@ -5,7 +5,10 @@ import { adminAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
 /* ── helpers ── */
-const todayStr = () => new Date().toISOString().split('T')[0];
+const todayStr = () => {
+  const d = new Date();
+  return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }); // en-CA gives YYYY-MM-DD
+};
 const fmt = (n) => Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const genReceipt = () => `RCP-${Date.now().toString().slice(-7)}-${Math.random().toString(36).slice(2,5).toUpperCase()}`;
 const isOverdue = (dueDateStr) => dueDateStr && new Date(dueDateStr) < new Date(todayStr());
@@ -17,7 +20,7 @@ const StatusBadge = ({ status }) => {
     PENDING: { bg: '#fff5f5', color: '#c53030', label: 'Pending' },
     OVERDUE: { bg: '#fff5f5', color: '#9b2c2c', label: 'Overdue' },
   };
-  const s = map[status] || map.PENDING;
+  const s = map[String(status || '').toUpperCase()] || map.PENDING;
   return <span style={{ padding: '3px 10px', background: s.bg, color: s.color, borderRadius: 20, fontSize: 11, fontWeight: 700 }}>{s.label}</span>;
 };
 
@@ -213,7 +216,7 @@ export default function CollectFee() {
       <hr class="dashed"/>
       <div class="row"><span class="label">Total Assigned Fee</span><span class="value">₹${fmt(d.totalFee)}</span></div>
       <div class="row"><span class="label">Previously Paid</span><span class="value">₹${fmt(Number(d.paidSoFar) - Number(d.amountPaid))}</span></div>
-      <div class="watermark">${d.status === 'PAID' ? 'PAID' : ''}</div>
+      <div class="watermark">${String(d.status || '').toUpperCase() === 'PAID' ? 'PAID' : ''}</div>
       <div class="amount-box">
         <div class="amount-label">Amount Received (Cash)</div>
         <div class="amount-value">₹${fmt(d.amountPaid)}</div>
@@ -224,7 +227,7 @@ export default function CollectFee() {
       ${d.term ? `<div class="row"><span class="label">Term / Installment</span><span class="value" style="color:#2b6cb0;font-weight:700">${d.term}</span></div>` : ''}
       ${d.remarks ? `<div class="row"><span class="label">Remarks</span><span class="value">${d.remarks}</span></div>` : ''}
       <div class="footer">
-        <span>Generated: ${new Date().toLocaleString('en-IN')}</span>
+        <span>Generated: ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</span>
         <div>
           <div class="sig-line">Received By: ${d.receivedBy}</div>
         </div>
@@ -241,7 +244,7 @@ export default function CollectFee() {
     ? Math.min(100, (Number(assignment.paidAmount || 0) / Number(assignment.totalFee)) * 100)
     : 0;
 
-  const pendingInstallments = installments.filter(i => i.status !== 'PAID');
+  const pendingInstallments = installments.filter(i => String(i.status || '').toUpperCase() !== 'PAID');
   const hasInstallments     = installments.length > 0;
 
   return (
@@ -343,7 +346,7 @@ export default function CollectFee() {
                       </div>
                     </div>
 
-                    {assignment.status === 'PAID' && (
+                    {String(assignment.status || '').toUpperCase() === 'PAID' && (
                       <div style={{ marginTop: 14, padding: '12px', background: '#f0fff4', border: '1.5px solid #0de1e840', borderRadius: 8, textAlign: 'center', color: '#276749', fontWeight: 700, fontSize: 13 }}>
                         ✓ Fee fully paid
                       </div>
@@ -357,11 +360,11 @@ export default function CollectFee() {
                 <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden' }}>
                   <div style={{ padding: '12px 16px', borderBottom: '1px solid #f0f4f8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontWeight: 700, fontSize: 14, color: '#2d3748' }}>Installments</span>
-                    <span style={{ fontSize: 11, color: '#a0aec0' }}>{installments.filter(i => i.status === 'PAID').length}/{installments.length} paid</span>
+                    <span style={{ fontSize: 11, color: '#a0aec0' }}>{installments.filter(i => String(i.status || '').toUpperCase() === 'PAID').length}/{installments.length} paid</span>
                   </div>
                   <div style={{ padding: '8px 0' }}>
                     {installments.map(inst => {
-                      const isPaid    = inst.status === 'PAID';
+                      const isPaid    = String(inst.status || '').toUpperCase() === 'PAID';
                       const overdue   = !isPaid && isOverdue(inst.dueDate);
                       const selected  = selectedInstallment?.id === inst.id;
                       return (
@@ -438,6 +441,7 @@ export default function CollectFee() {
                   <div style={{ marginBottom: 16 }}>
                     <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Remarks</label>
                     <input value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="Optional"
+                      maxLength={250}
                       style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
                   </div>
 

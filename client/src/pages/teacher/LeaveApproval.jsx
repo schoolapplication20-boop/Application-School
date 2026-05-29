@@ -89,11 +89,11 @@ export default function LeaveApproval() {
     }
   };
 
-  const pending   = leaves.filter(l => l.status === 'PENDING');
-  const decided   = leaves.filter(l => l.status !== 'PENDING');
+  const pending   = leaves.filter(l => String(l.status || '').toUpperCase() === 'PENDING');
+  const decided   = leaves.filter(l => String(l.status || '').toUpperCase() !== 'PENDING');
 
   const StatusBadge = ({ status }) => {
-    const s = STATUS_COLORS[status] || STATUS_COLORS.PENDING;
+    const s = STATUS_COLORS[String(status || '').toUpperCase()] || STATUS_COLORS.PENDING;
     return (
       <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: s.bg, color: s.color }}>
         {s.label}
@@ -166,8 +166,8 @@ export default function LeaveApproval() {
       <div className="stats-grid" style={{ marginBottom: 24 }}>
         {[
           { label: 'Pending',  value: pending.length,  icon: 'pending_actions', color: '#ed8936' },
-          { label: 'Approved', value: leaves.filter(l => l.status === 'APPROVED').length, icon: 'check_circle', color: '#0de1e8' },
-          { label: 'Rejected', value: leaves.filter(l => l.status === 'REJECTED').length, icon: 'cancel',       color: '#e53e3e' },
+          { label: 'Approved', value: leaves.filter(l => String(l.status || '').toUpperCase() === 'APPROVED').length, icon: 'check_circle', color: '#0de1e8' },
+          { label: 'Rejected', value: leaves.filter(l => String(l.status || '').toUpperCase() === 'REJECTED').length, icon: 'cancel',       color: '#e53e3e' },
           { label: 'Total',    value: leaves.length,   icon: 'list_alt',        color: '#3182ce' },
         ].map(s => (
           <div key={s.label} className="stat-card">

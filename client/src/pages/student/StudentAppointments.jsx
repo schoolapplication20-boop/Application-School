@@ -188,7 +188,7 @@ export default function StudentAppointments() {
                         </div>
                       )}
                     </div>
-                    {(appt.status === 'PENDING' || appt.status === 'ACCEPTED') && (
+                    {(['PENDING','ACCEPTED'].includes(String(appt.status || '').toUpperCase())) && (
                       <button onClick={() => handleCancel(appt.id)}
                         style={{ padding: '6px 14px', background: '#fff5f5', color: '#c53030',
                           border: '1px solid #fed7d7', borderRadius: 8, fontSize: 12, cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap' }}>

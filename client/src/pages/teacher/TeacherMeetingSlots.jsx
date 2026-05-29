@@ -143,8 +143,8 @@ export default function TeacherMeetingSlots() {
                     <div style={{ fontSize: 12, fontWeight: 600, color: '#718096', marginBottom: 8 }}>BOOKINGS</div>
                     {bookings.map(b => (
                       <div key={b.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: '1px solid #f7fafc' }}>
-                        <span className="material-icons" style={{ fontSize: 18, color: b.status === 'CONFIRMED' ? '#48bb78' : '#a0aec0' }}>
-                          {b.status === 'CONFIRMED' ? 'check_circle' : 'cancel'}
+                        <span className="material-icons" style={{ fontSize: 18, color: String(b.status || '').toUpperCase() === 'CONFIRMED' ? '#48bb78' : '#a0aec0' }}>
+                          {String(b.status || '').toUpperCase() === 'CONFIRMED' ? 'check_circle' : 'cancel'}
                         </span>
                         <div style={{ flex: 1 }}>
                           <div style={{ fontWeight: 600, fontSize: 13 }}>{b.studentName}</div>
@@ -153,8 +153,8 @@ export default function TeacherMeetingSlots() {
                           {b.notes && <div style={{ fontSize: 12, color: '#4a5568', fontStyle: 'italic' }}>Note: {b.notes}</div>}
                         </div>
                         <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 10,
-                          background: b.status === 'CONFIRMED' ? '#f0fff4' : '#f7fafc',
-                          color: b.status === 'CONFIRMED' ? '#276749' : '#a0aec0' }}>
+                          background: String(b.status || '').toUpperCase() === 'CONFIRMED' ? '#f0fff4' : '#f7fafc',
+                          color: String(b.status || '').toUpperCase() === 'CONFIRMED' ? '#276749' : '#a0aec0' }}>
                           {b.status}
                         </span>
                       </div>

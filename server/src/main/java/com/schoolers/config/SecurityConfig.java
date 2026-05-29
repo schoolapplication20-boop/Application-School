@@ -82,6 +82,8 @@ public class SecurityConfig {
                     .policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
                 .permissionsPolicy(p -> p
                     .policy("camera=(), microphone=(), geolocation=(), payment=()"))
+                // Prevent sensitive API responses from being cached by browsers or proxies
+                .cacheControl(c -> {})
             )
 
             // Session management - stateless (JWT)

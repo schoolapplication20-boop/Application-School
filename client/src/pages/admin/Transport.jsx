@@ -1358,13 +1358,13 @@ function FeesPanel({ fees, setFees, students, showToast }) {
   // Backend status enum: PAID, PENDING, OVERDUE
   const filtered = fees.filter(f =>
     (!search || f.studentName?.toLowerCase().includes(search.toLowerCase()) || String(f.studentId).includes(search)) &&
-    (!filterStatus || f.status === filterStatus)
+    (!filterStatus || String(f.status || '').toUpperCase() === filterStatus.toUpperCase())
   );
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
   const totalAmount  = fees.reduce((s, f) => s + (+f.amount || 0), 0);
-  const collectedAmt = fees.filter(f => f.status === 'PAID').reduce((s, f) => s + (+f.amount || 0), 0);
+  const collectedAmt = fees.filter(f => String(f.status || '').toUpperCase() === 'PAID').reduce((s, f) => s + (+f.amount || 0), 0);
   const pendingAmt   = totalAmount - collectedAmt;
 
   const validate = () => {
@@ -1493,7 +1493,7 @@ function FeesPanel({ fees, setFees, students, showToast }) {
                 <td style={{ fontSize: 12, color: '#718096' }}>{f.paidDate || '—'}</td>
                 <td>
                   <div className="action-btns">
-                    {f.status !== 'PAID' && (
+                    {String(f.status || '').toUpperCase() !== 'PAID' && (
                       <button className="action-btn" style={{ background: '#f0fff4', color: '#276749' }} onClick={() => markPaid(f.id)} title="Mark Paid">
                         <span className="material-icons">check_circle</span>
                       </button>

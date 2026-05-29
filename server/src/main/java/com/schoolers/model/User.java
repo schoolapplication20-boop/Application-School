@@ -101,7 +101,7 @@ public class User {
     @Column(name = "school_id")
     private Long schoolId;
 
-    @Column(name = "reset_otp", length = 10)
+    @Column(name = "reset_otp", length = 64)
     private String resetOtp;
 
     @Column(name = "otp_expiry")

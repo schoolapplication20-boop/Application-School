@@ -11,6 +11,7 @@ const EnterOTP = () => {
   const [error, setError] = useState('');
   const [timer, setTimer] = useState(296); // 4:56 = 296 seconds
   const [canResend, setCanResend] = useState(false);
+  const [verified, setVerified] = useState(false);
   const inputRefs = useRef([]);
   const mobile = location.state?.mobile || sessionStorage.getItem('otp_mobile') || '**********';
 
@@ -106,7 +107,8 @@ const EnterOTP = () => {
     setError('');
     try {
       await authAPI.verifyOTP({ mobile, otp: otpString });
-      navigate('/set-new-password', { state: { mobile } });
+      setVerified(true);
+      setTimeout(() => navigate('/set-new-password', { state: { mobile } }), 1000);
     } catch (err) {
       setError(err.response?.data?.message || 'Invalid OTP. Please try again.');
     } finally {
@@ -212,9 +214,15 @@ const EnterOTP = () => {
             <button
               type="submit"
               className="btn-auth-submit"
-              disabled={isLoading || otp.join('').length < 4}
+              disabled={isLoading || verified || otp.join('').length < 4}
+              style={verified ? { background: 'linear-gradient(135deg,#38a169,#276749)' } : undefined}
             >
-              {isLoading ? (
+              {verified ? (
+                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                  <span className="material-icons" style={{ fontSize: 18 }}>check_circle</span>
+                  Verified! Redirecting…
+                </span>
+              ) : isLoading ? (
                 <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                   <span style={{
                     width: '16px', height: '16px', border: '2px solid rgba(255,255,255,0.4)',
@@ -223,7 +231,7 @@ const EnterOTP = () => {
                   }} />
                   Verifying...
                 </span>
-              ) : 'NEXT'}
+              ) : 'VERIFY & CONTINUE'}
             </button>
           </form>
 

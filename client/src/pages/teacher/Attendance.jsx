@@ -4,7 +4,7 @@ import Toast from '../../components/Toast';
 import { teacherAPI } from '../../services/api';
 import { exportCSV } from '../../services/attendanceStore';
 
-const TODAY = new Date().toISOString().split('T')[0];
+const TODAY = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }); // YYYY-MM-DD in IST
 
 const STATUS_CONFIG = {
   PRESENT: { label: 'Present', short: 'P', bg: '#0de1e8', light: '#f0fff4', text: '#276749', icon: 'check_circle' },

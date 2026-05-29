@@ -466,6 +466,10 @@ public class DatabaseMigration implements CommandLineRunner {
         exec("CREATE INDEX IF NOT EXISTS idx_revoked_tokens_expires ON revoked_tokens(expires_at)");
         log.debug("revoked_tokens table ensured.");
 
+        // ── users: widen reset_otp from VARCHAR(10) to VARCHAR(64) for hashed OTPs ──
+        exec("ALTER TABLE users ALTER COLUMN reset_otp TYPE VARCHAR(64)");
+        log.debug("users.reset_otp column widened to VARCHAR(64) for hashed storage.");
+
         log.info("DB migrations complete.");
     }
 

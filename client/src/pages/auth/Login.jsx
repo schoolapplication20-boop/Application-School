@@ -481,12 +481,7 @@ const Login = () => {
               </div>
 
               <div className="form-group">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <label className="form-label" style={{ margin: 0 }}>Password</label>
-                  {!isStudentRole && (
-                    <Link to="/forgot-password" className="forgot-password-link" style={{ float: 'none' }}>Forgot Password?</Link>
-                  )}
-                </div>
+                <label className="form-label">Password</label>
                 <div className="input-wrapper">
                   <span className="material-icons input-icon-left">lock</span>
                   <input
@@ -508,6 +503,11 @@ const Login = () => {
                     <span className="material-icons">{showPassword ? 'visibility_off' : 'visibility'}</span>
                   </button>
                 </div>
+                {!isStudentRole && (
+                  <div style={{ textAlign: 'right', marginTop: '6px' }}>
+                    <Link to="/forgot-password" className="forgot-password-link" style={{ float: 'none' }}>Forgot Password?</Link>
+                  </div>
+                )}
               </div>
 
               <button type="submit" className="btn-auth-submit" disabled={isLoading || serverWaking || accountLocked}

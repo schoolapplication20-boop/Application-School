@@ -242,7 +242,7 @@ export default function TeacherDashboard() {
   }, [assignedClasses, classStudents]);
 
   const greeting = () => {
-    const h = new Date().getHours();
+    const h = parseInt(new Date().toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Asia/Kolkata' }), 10);
     if (h < 12) return 'Good Morning';
     if (h < 17) return 'Good Afternoon';
     return 'Good Evening';

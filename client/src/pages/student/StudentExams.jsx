@@ -357,7 +357,7 @@ export default function StudentExams() {
               )}
 
               {/* Past exams — table */}
-              {filteredExams.some(e => e.status === 'COMPLETED' || e.status === 'CANCELLED') && (
+              {filteredExams.some(e => ['COMPLETED','CANCELLED'].includes(String(e.status || '').toUpperCase())) && (
                 <div>
                   <div style={{ padding: '12px 20px 8px', fontSize: 12, fontWeight: 700, color: '#718096', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
                     Past Exams
@@ -371,8 +371,8 @@ export default function StudentExams() {
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredExams.filter(e => e.status === 'COMPLETED' || e.status === 'CANCELLED').map(e => {
-                          const st = EXAM_STATUS[e.status] || EXAM_STATUS.COMPLETED;
+                        {filteredExams.filter(e => ['COMPLETED','CANCELLED'].includes(String(e.status || '').toUpperCase())).map(e => {
+                          const st = EXAM_STATUS[String(e.status || '').toUpperCase()] || EXAM_STATUS.COMPLETED;
                           const tc = EXAM_TYPE_COLOR[e.examType] || { bg: '#f7fafc', color: '#718096' };
                           return (
                             <tr key={e.id} style={{ opacity: 0.78 }}>
@@ -414,8 +414,8 @@ export default function StudentExams() {
 // ── Exam Card ─────────────────────────────────────────────────────────────────
 
 function ExamCard({ exam }) {
-  const tc  = EXAM_TYPE_COLOR[exam.examType]  || { bg: '#f7fafc', color: '#718096' };
-  const st  = EXAM_STATUS[exam.status]        || EXAM_STATUS.SCHEDULED;
+  const tc  = EXAM_TYPE_COLOR[String(exam.examType || '').toUpperCase()] || { bg: '#f7fafc', color: '#718096' };
+  const st  = EXAM_STATUS[String(exam.status || '').toUpperCase()]       || EXAM_STATUS.SCHEDULED;
   const today    = new Date(); today.setHours(0, 0, 0, 0);
   const examDate = new Date(exam.examDate);
   const diffDays = Math.ceil((examDate - today) / (1000 * 60 * 60 * 24));

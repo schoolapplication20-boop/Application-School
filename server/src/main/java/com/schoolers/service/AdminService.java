@@ -208,24 +208,41 @@ public class AdminService {
 
     public ApiResponse<Map<String, Object>> getDashboardStats(Long schoolId) {
         Map<String, Object> stats = new HashMap<>();
+        int currentYear = java.time.LocalDate.now().getYear();
+        String[] monthNames = {"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"};
+
         if (schoolId != null) {
             // Multi-tenant: scope all counts to the caller's school
             stats.put("totalStudents", studentRepository.countBySchoolId(schoolId));
             stats.put("totalTeachers", teacherRepository.countBySchoolId(schoolId));
             stats.put("totalClasses",  classRoomRepository.countBySchoolId(schoolId));
-            BigDecimal rev = feeRepository.sumPaidFeesBySchool(schoolId);
+            // Revenue: sum actual payments recorded (FeePayment table), not the legacy Fee table
+            BigDecimal rev = feePaymentRepository.sumAmountPaidBySchool(schoolId);
             BigDecimal exp = expenseRepository.sumAllExpensesBySchool(schoolId);
             stats.put("totalRevenue",  rev != null ? rev : BigDecimal.ZERO);
             stats.put("totalExpenses", exp != null ? exp : BigDecimal.ZERO);
+            // Monthly chart data for current year
+            java.util.List<java.util.Map<String, Object>> monthly = new java.util.ArrayList<>();
+            for (int m = 1; m <= 12; m++) {
+                BigDecimal mRev = feePaymentRepository.sumAmountPaidBySchoolAndMonth(schoolId, m, currentYear);
+                BigDecimal mExp = expenseRepository.sumBySchoolAndMonth(schoolId, m, currentYear);
+                java.util.Map<String, Object> mo = new java.util.LinkedHashMap<>();
+                mo.put("name",     monthNames[m - 1]);
+                mo.put("revenue",  mRev != null ? mRev : BigDecimal.ZERO);
+                mo.put("expenses", mExp != null ? mExp : BigDecimal.ZERO);
+                monthly.add(mo);
+            }
+            stats.put("monthlyData", monthly);
         } else {
             // Platform-level SUPER_ADMIN: aggregate across all schools
             stats.put("totalStudents", studentRepository.count());
             stats.put("totalTeachers", teacherRepository.count());
             stats.put("totalClasses",  classRoomRepository.count());
-            BigDecimal rev = feeRepository.sumPaidFees();
+            BigDecimal rev = feePaymentRepository.sumAmountPaidAll();
             BigDecimal exp = expenseRepository.sumAllExpenses();
             stats.put("totalRevenue",  rev != null ? rev : BigDecimal.ZERO);
             stats.put("totalExpenses", exp != null ? exp : BigDecimal.ZERO);
+            stats.put("monthlyData",   java.util.List.of());
         }
         return ApiResponse.success(stats);
     }
@@ -1834,6 +1851,7 @@ public class AdminService {
                 .feeId(0L)
                 .assignmentId(assignment.getId())
                 .studentId(assignment.getStudentId())
+                .schoolId(assignment.getSchoolId())
                 .studentName(assignment.getStudentName())
                 .rollNumber(assignment.getRollNumber())
                 .className(assignment.getClassName())
@@ -1841,7 +1859,7 @@ public class AdminService {
                 .term(installment.getTermName())
                 .amountPaid(installment.getAmount())
                 .paymentDate(paymentDate)
-                .paymentMode("CASH")
+                .paymentMode(str(body, "paymentMode", "CASH"))
                 .receiptNumber(receiptNumber)
                 .receivedBy(str(body, "receivedBy", null))
                 .remarks(str(body, "remarks", null))

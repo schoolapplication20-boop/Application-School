@@ -211,6 +211,7 @@ function ExpenseModal({ initial, addedBy, addedById, onClose, onSaved, onError }
               <textarea
                 style={{ ...inp, resize: 'vertical', minHeight: '76px' }}
                 placeholder="Any additional notes..."
+                maxLength={500}
                 value={form.description}
                 onChange={e => set('description', e.target.value)}
               />

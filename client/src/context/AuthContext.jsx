@@ -2,6 +2,14 @@ import React, { createContext, useContext, useState, useCallback, useRef, useEff
 import { setAuthToken, clearAuthToken } from '../services/api';
 import api from '../services/api';
 
+/** Decode the exp claim from a JWT (no signature verification — frontend only) */
+const getTokenExpiry = (token) => {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.exp ? payload.exp * 1000 : null; // convert to ms
+  } catch { return null; }
+};
+
 const SESSION_KEY = 'schoolers_session';
 
 const AuthContext = createContext(null);
@@ -25,9 +33,12 @@ const parsePermissions = (raw) => {
 };
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser]           = useState(null);
-  const [token, setToken]         = useState(null);
-  const [isLoading, setIsLoading] = useState(true); // true during session restore
+  const [user, setUser]                     = useState(null);
+  const [token, setToken]                   = useState(null);
+  const [isLoading, setIsLoading]           = useState(true); // true during session restore
+  const [sessionExpired, setSessionExpired] = useState(false); // show session-expired modal
+
+  const expiryTimerRef = useRef(null);
 
   // schoolRef allows SchoolContext to register itself so AuthContext can
   // push school data on login without creating a circular dependency.
@@ -35,6 +46,43 @@ export const AuthProvider = ({ children }) => {
   const schoolLoaderRef    = useRef(null);
   const registerSchoolSetter = useCallback((fn) => { schoolSetterRef.current = fn; }, []);
   const registerSchoolLoader = useCallback((fn) => { schoolLoaderRef.current = fn; }, []);
+
+  // ── Proactive token expiry: schedule auto-logout 60s before JWT expires ─
+  useEffect(() => {
+    if (expiryTimerRef.current) clearTimeout(expiryTimerRef.current);
+    if (!token) return;
+    const expMs = getTokenExpiry(token);
+    if (!expMs) return;
+    const msUntilExpiry = expMs - Date.now() - 60_000; // 60s early warning
+    if (msUntilExpiry <= 0) {
+      setSessionExpired(true);
+      return;
+    }
+    expiryTimerRef.current = setTimeout(() => setSessionExpired(true), msUntilExpiry);
+    return () => clearTimeout(expiryTimerRef.current);
+  }, [token]);
+
+  // ── Listen for 401 fired by api.js interceptor ──────────────────────────
+  useEffect(() => {
+    const onExpired = () => setSessionExpired(true);
+    window.addEventListener('auth:session-expired', onExpired);
+    return () => window.removeEventListener('auth:session-expired', onExpired);
+  }, []);
+
+  // ── Cross-tab logout sync via localStorage ───────────────────────────────
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key === SESSION_KEY && e.newValue === null) {
+        // Another tab cleared the session (logged out) — clear this tab too
+        setUser(null);
+        setToken(null);
+        clearAuthToken();
+        setSessionExpired(false);
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
 
   // ── Restore session from sessionStorage on first mount ──────────────────
   useEffect(() => {
@@ -101,7 +149,11 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     setToken(null);
     clearAuthToken();
+    setSessionExpired(false);
     sessionStorage.removeItem(SESSION_KEY);
+    // Removing SESSION_KEY from sessionStorage triggers 'storage' event in other
+    // tabs that also have the app open, causing them to clear their session.
+    localStorage.removeItem(SESSION_KEY);
     localStorage.removeItem('ms_school_tenant');
     localStorage.removeItem('ms_last_activity');
     window.dispatchEvent(new Event('auth:logout'));
@@ -219,6 +271,11 @@ export const AuthProvider = ({ children }) => {
     return false;
   }, [user]);
 
+  const dismissSessionExpired = useCallback(() => {
+    setSessionExpired(false);
+    window.location.href = '/login';
+  }, []);
+
   const value = {
     user,
     token,
@@ -233,11 +290,54 @@ export const AuthProvider = ({ children }) => {
     hasPermission,
     registerSchoolSetter,
     registerSchoolLoader,
+    sessionExpired,
+    dismissSessionExpired,
   };
 
   return (
     <AuthContext.Provider value={value}>
       {children}
+      {/* Session-expired overlay — shown when JWT expires mid-session.
+          Lets the user save any unsaved work before navigating to login. */}
+      {sessionExpired && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 99999,
+        }}>
+          <div style={{
+            background: '#fff', borderRadius: 18, padding: '36px 32px',
+            maxWidth: 420, width: 'calc(100% - 40px)', boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
+            textAlign: 'center',
+          }}>
+            <div style={{
+              width: 64, height: 64, borderRadius: '50%',
+              background: 'linear-gradient(135deg,#e53e3e,#c53030)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 18px',
+            }}>
+              <span className="material-icons" style={{ color: '#fff', fontSize: 32 }}>lock_clock</span>
+            </div>
+            <h2 style={{ fontSize: 20, fontWeight: 800, color: '#1a202c', marginBottom: 10 }}>
+              Session Expired
+            </h2>
+            <p style={{ fontSize: 14, color: '#718096', lineHeight: 1.6, marginBottom: 24 }}>
+              Your login session has expired for security reasons.
+              Please save any unsaved work before returning to the login page.
+            </p>
+            <button
+              onClick={dismissSessionExpired}
+              style={{
+                padding: '12px 32px', background: 'linear-gradient(135deg,#0de1e8,#0369a1)',
+                color: '#fff', border: 'none', borderRadius: 10, fontWeight: 700,
+                fontSize: 14, cursor: 'pointer', width: '100%',
+              }}
+            >
+              Go to Login
+            </button>
+          </div>
+        </div>
+      )}
     </AuthContext.Provider>
   );
 };

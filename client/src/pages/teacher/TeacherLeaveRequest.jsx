@@ -70,10 +70,20 @@ export default function TeacherLeaveRequest() {
     prevLeaveDecisionCount.current = decisionCount;
   }, [notifications]);
 
+  const TODAY_STR = new Date().toISOString().split('T')[0];
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.fromDate || !formData.toDate || !formData.reason.trim()) {
       showToast('Please fill all required fields', 'error');
+      return;
+    }
+    if (formData.fromDate < TODAY_STR) {
+      showToast('From date cannot be in the past', 'error');
+      return;
+    }
+    if (formData.toDate < formData.fromDate) {
+      showToast('To date must be on or after the from date', 'error');
       return;
     }
     if (submitting) return;
@@ -287,12 +297,13 @@ export default function TeacherLeaveRequest() {
                     <div className="col-6">
                       <label className="form-label small fw-medium">From Date *</label>
                       <input type="date" className="form-control form-control-sm" value={formData.fromDate}
-                        onChange={e => setFormData({ ...formData, fromDate: e.target.value })} required />
+                        min={TODAY_STR}
+                        onChange={e => setFormData({ ...formData, fromDate: e.target.value, toDate: e.target.value > formData.toDate ? e.target.value : formData.toDate })} required />
                     </div>
                     <div className="col-6">
                       <label className="form-label small fw-medium">To Date *</label>
                       <input type="date" className="form-control form-control-sm" value={formData.toDate}
-                        min={formData.fromDate}
+                        min={formData.fromDate || TODAY_STR}
                         onChange={e => setFormData({ ...formData, toDate: e.target.value })} required />
                     </div>
                     <div className="col-12">

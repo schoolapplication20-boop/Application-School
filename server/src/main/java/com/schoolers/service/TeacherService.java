@@ -677,6 +677,16 @@ public class TeacherService {
     }
 
     public ApiResponse<Marks> addMarks(Marks marks, Long authSchoolId) {
+        // Validate marks range
+        if (marks.getMarks() == null || marks.getMaxMarks() == null)
+            return ApiResponse.error("Marks and maximum marks are required");
+        if (marks.getMarks() < 0)
+            return ApiResponse.error("Marks cannot be negative");
+        if (marks.getMaxMarks() <= 0)
+            return ApiResponse.error("Maximum marks must be greater than zero");
+        if (marks.getMarks() > marks.getMaxMarks())
+            return ApiResponse.error("Marks (" + marks.getMarks() + ") cannot exceed maximum marks (" + marks.getMaxMarks() + ")");
+
         // Resolve school from teacher profile if not already set
         if (marks.getTeacherId() != null && marks.getSchoolId() == null) {
             teacherRepository.findByUserId(marks.getTeacherId())
@@ -697,15 +707,25 @@ public class TeacherService {
     }
 
     public ApiResponse<Marks> updateMarks(Long id, Marks updated, Long authSchoolId) {
+        // Validate marks range
+        if (updated.getMarks() != null && updated.getMaxMarks() != null) {
+            if (updated.getMarks() < 0)
+                return ApiResponse.error("Marks cannot be negative");
+            if (updated.getMaxMarks() <= 0)
+                return ApiResponse.error("Maximum marks must be greater than zero");
+            if (updated.getMarks() > updated.getMaxMarks())
+                return ApiResponse.error("Marks (" + updated.getMarks() + ") cannot exceed maximum marks (" + updated.getMaxMarks() + ")");
+        }
+
         return marksRepository.findById(id)
                 .map(m -> {
                     // Tenant isolation: prevent cross-school edits
                     if (authSchoolId != null && m.getSchoolId() != null
                             && !authSchoolId.equals(m.getSchoolId()))
                         return ApiResponse.<Marks>error("Marks record not found");
-                    m.setMarks(updated.getMarks());
-                    m.setMaxMarks(updated.getMaxMarks());
-                    m.setGrade(updated.getGrade());
+                    if (updated.getMarks() != null)    m.setMarks(updated.getMarks());
+                    if (updated.getMaxMarks() != null) m.setMaxMarks(updated.getMaxMarks());
+                    if (updated.getGrade() != null)    m.setGrade(updated.getGrade());
                     return ApiResponse.success(marksRepository.save(m));
                 })
                 .orElse(ApiResponse.error("Marks record not found"));

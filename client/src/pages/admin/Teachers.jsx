@@ -27,7 +27,7 @@ function subjectColor(str) {
 const EMPTY_FORM = {
   name: '', empId: '', subject: '', department: '', qualification: '',
   experience: '', joining: '', mobile: '', email: '', classes: '', status: 'Active',
-  idProof: '', idProofName: '', otherDoc: '', otherDocName: '',
+  idProof: '', idProofName: '', idProofSize: '', otherDoc: '', otherDocName: '', otherDocSize: '',
   password: '',
   teacherType: 'SUBJECT_TEACHER',
   primaryClassId: '',
@@ -373,7 +373,7 @@ export default function Teachers() {
 
     if (!editTeacher) {
       if (!form.password.trim())        e.password = 'Password is required';
-      else if (form.password.length < 6) e.password = 'Password must be at least 6 characters';
+      else if (form.password.length < 8) e.password = 'Password must be at least 8 characters';
     }
 
     if ((form.teacherType === 'CLASS_TEACHER' || form.teacherType === 'BOTH') && !form.primaryClassId)
@@ -966,19 +966,34 @@ export default function Teachers() {
                           {form.idProof ? 'check_circle' : 'upload_file'}
                         </span>
                         <span style={{ fontSize: 13, color: form.idProof ? '#276749' : '#a0aec0', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {form.idProofName || 'Choose file (PDF / JPG / PNG)'}
+                          {form.idProofName || 'Choose file (PDF / JPG / PNG, max 5 MB)'}
                         </span>
+                        {form.idProofSize && (
+                          <span style={{ fontSize: 11, color: '#718096', flexShrink: 0, marginLeft: 4 }}>
+                            {form.idProofSize}
+                          </span>
+                        )}
                         <input type="file" accept=".pdf,.jpg,.jpeg,.png" style={{ display: 'none' }}
                           onChange={e => {
                             const file = e.target.files[0];
                             if (!file) return;
+                            const sizeMB = file.size / (1024 * 1024);
+                            if (sizeMB > 5) {
+                              setErrors(prev => ({ ...prev, idProof: 'File too large. Maximum size is 5 MB.' }));
+                              return;
+                            }
+                            setErrors(prev => ({ ...prev, idProof: '' }));
+                            const sizeLabel = sizeMB >= 1
+                              ? `${sizeMB.toFixed(1)} MB`
+                              : `${(file.size / 1024).toFixed(0)} KB`;
                             const reader = new FileReader();
-                            reader.onload = ev => setForm(f => ({ ...f, idProof: ev.target.result, idProofName: file.name }));
+                            reader.onload = ev => setForm(f => ({ ...f, idProof: ev.target.result, idProofName: file.name, idProofSize: sizeLabel }));
                             reader.readAsDataURL(file);
                           }} />
                       </label>
+                      {errors.idProof && <p style={{ ...errStyle, marginTop: 4 }}>{errors.idProof}</p>}
                       {form.idProof && (
-                        <button type="button" onClick={() => setForm(f => ({ ...f, idProof: '', idProofName: '' }))}
+                        <button type="button" onClick={() => setForm(f => ({ ...f, idProof: '', idProofName: '', idProofSize: '' }))}
                           style={{ marginTop: 4, fontSize: 11, color: '#e53e3e', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'Poppins, sans-serif' }}>
                           Remove
                         </button>
@@ -996,19 +1011,34 @@ export default function Teachers() {
                           {form.otherDoc ? 'check_circle' : 'upload_file'}
                         </span>
                         <span style={{ fontSize: 13, color: form.otherDoc ? '#276749' : '#a0aec0', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {form.otherDocName || 'Choose file (PDF / JPG / PNG)'}
+                          {form.otherDocName || 'Choose file (PDF / JPG / PNG, max 5 MB)'}
                         </span>
+                        {form.otherDocSize && (
+                          <span style={{ fontSize: 11, color: '#718096', flexShrink: 0, marginLeft: 4 }}>
+                            {form.otherDocSize}
+                          </span>
+                        )}
                         <input type="file" accept=".pdf,.jpg,.jpeg,.png" style={{ display: 'none' }}
                           onChange={e => {
                             const file = e.target.files[0];
                             if (!file) return;
+                            const sizeMB = file.size / (1024 * 1024);
+                            if (sizeMB > 5) {
+                              setErrors(prev => ({ ...prev, otherDoc: 'File too large. Maximum size is 5 MB.' }));
+                              return;
+                            }
+                            setErrors(prev => ({ ...prev, otherDoc: '' }));
+                            const sizeLabel = sizeMB >= 1
+                              ? `${sizeMB.toFixed(1)} MB`
+                              : `${(file.size / 1024).toFixed(0)} KB`;
                             const reader = new FileReader();
-                            reader.onload = ev => setForm(f => ({ ...f, otherDoc: ev.target.result, otherDocName: file.name }));
+                            reader.onload = ev => setForm(f => ({ ...f, otherDoc: ev.target.result, otherDocName: file.name, otherDocSize: sizeLabel }));
                             reader.readAsDataURL(file);
                           }} />
                       </label>
+                      {errors.otherDoc && <p style={{ ...errStyle, marginTop: 4 }}>{errors.otherDoc}</p>}
                       {form.otherDoc && (
-                        <button type="button" onClick={() => setForm(f => ({ ...f, otherDoc: '', otherDocName: '' }))}
+                        <button type="button" onClick={() => setForm(f => ({ ...f, otherDoc: '', otherDocName: '', otherDocSize: '' }))}
                           style={{ marginTop: 4, fontSize: 11, color: '#e53e3e', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'Poppins, sans-serif' }}>
                           Remove
                         </button>

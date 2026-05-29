@@ -124,8 +124,9 @@ public class AuthService {
                 int attempts = (user.getFailedLoginAttempts() == null ? 0 : user.getFailedLoginAttempts()) + 1;
                 user.setFailedLoginAttempts(attempts);
                 if (attempts >= 5) {
-                    // Lock permanently — cleared only when user completes a password reset via OTP
-                    user.setLockedUntil(LocalDateTime.now(ZoneOffset.UTC));
+                    // Lock permanently — cleared only when user completes a password reset via OTP.
+                    // Use a far-future sentinel so any time-based lock check added later still works.
+                    user.setLockedUntil(LocalDateTime.now(ZoneOffset.UTC).plusYears(100));
                     user.setFailedLoginAttempts(0);
                     userRepository.save(user);
                     log.warn("[login] Account locked after 5 failed attempts: {}", user.getEmail());
@@ -170,7 +171,7 @@ public class AuthService {
             // ── Step 3d: APPLICATION_OWNER 2FA — send OTP before issuing JWT ──
             if (user.getRole() == User.Role.APPLICATION_OWNER) {
                 String otp = String.format("%06d", 100000 + new SecureRandom().nextInt(900000));
-                user.setResetOtp(otp);
+                user.setResetOtp(hashOtp(otp, user.getEmail()));
                 user.setOtpExpiry(LocalDateTime.now(ZoneOffset.UTC).plusMinutes(5));
                 userRepository.save(user);
                 try {
@@ -285,7 +286,7 @@ public class AuthService {
                 return ApiResponse.error("Too many incorrect attempts. Please log in again to receive a new OTP.");
             }
 
-            String dbOtp = user.getResetOtp();
+            String dbOtpHash = user.getResetOtp();
             LocalDateTime expiry = user.getOtpExpiry();
 
             if (expiry != null && LocalDateTime.now(ZoneOffset.UTC).isAfter(expiry)) {
@@ -296,7 +297,8 @@ public class AuthService {
                 return ApiResponse.error("OTP has expired. Please log in again.");
             }
 
-            if (dbOtp == null || !constantTimeEquals(dbOtp.trim(), otp.trim())) {
+            String submittedOwnerHash = hashOtp(otp.trim(), email.trim().toLowerCase());
+            if (dbOtpHash == null || !constantTimeEquals(dbOtpHash.trim(), submittedOwnerHash)) {
                 user.setFailedLoginAttempts(attempts + 1);
                 userRepository.save(user);
                 int remaining = 5 - (attempts + 1);
@@ -495,7 +497,8 @@ public class AuthService {
 
             String otp = String.format("%06d", 100000 + new SecureRandom().nextInt(900000));
             LocalDateTime expiry = LocalDateTime.now(ZoneOffset.UTC).plusMinutes(10);
-            user.setResetOtp(otp);
+            // Store a salted SHA-256 hash — never the raw OTP — so a DB leak cannot expose it
+            user.setResetOtp(hashOtp(otp, identifier));
             user.setOtpExpiry(expiry);
             userRepository.save(user);
 
@@ -524,21 +527,26 @@ public class AuthService {
         boolean isEmail = identifier != null && identifier.contains("@");
         User user;
 
+        // Generic error message — do NOT reveal whether the identifier is registered
+        final String INVALID_MSG = "Invalid or expired OTP. Please request a new one.";
+
         if (isEmail) {
             user = userRepository.findByEmailIgnoreCase(identifier.trim().toLowerCase()).orElse(null);
-            if (user == null) return ApiResponse.error("Email not registered.");
+            if (user == null) return ApiResponse.error(INVALID_MSG);
         } else {
             user = userRepository.findByMobile(identifier).orElse(null);
-            if (user == null) return ApiResponse.error("Mobile number not registered.");
+            if (user == null) return ApiResponse.error(INVALID_MSG);
         }
 
-        String dbOtp = user.getResetOtp();
-        if (dbOtp == null || !constantTimeEquals(dbOtp.trim(), otp.trim()))
-            return ApiResponse.error("Invalid OTP.");
+        String dbOtpHash = user.getResetOtp();
+        // Compare the hash of the submitted OTP against the stored hash (constant-time)
+        String submittedHash = hashOtp(otp.trim(), identifier.trim());
+        if (dbOtpHash == null || !constantTimeEquals(dbOtpHash.trim(), submittedHash))
+            return ApiResponse.error(INVALID_MSG);
 
         LocalDateTime expiry = user.getOtpExpiry();
         if (expiry != null && LocalDateTime.now(ZoneOffset.UTC).isAfter(expiry))
-            return ApiResponse.error("OTP has expired. Please request a new one.");
+            return ApiResponse.error(INVALID_MSG);
 
         // Mark OTP as verified — resetPassword() checks for this sentinel before allowing reset.
         // 15-minute window: prevents the verified state from persisting indefinitely.
@@ -582,6 +590,8 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(newPassword));
         user.setResetOtp(null);
         user.setOtpExpiry(null);
+        user.setTempPassword(null);       // remove plaintext credential now that user has a real password
+        user.setFirstLogin(false);        // password was explicitly set by the user — no longer first-login
         // Clear any lockout so user can log in with new password
         user.setLockedUntil(null);
         user.setFailedLoginAttempts(0);
@@ -647,6 +657,29 @@ public class AuthService {
     private boolean constantTimeEquals(String a, String b) {
         return MessageDigest.isEqual(a.getBytes(java.nio.charset.StandardCharsets.UTF_8),
                                      b.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    /**
+     * Hash a plain-text OTP with SHA-256 using the identifier (email/mobile) as a salt.
+     * Returns a 16-character hex string (first 8 bytes of SHA-256) — fits in VARCHAR(64)
+     * and is sufficient to protect a 6-digit OTP from offline brute-force if the DB is
+     * compromised (attacker must hash all 1M combinations per account, and the per-account
+     * 5-attempt limit and 10-min expiry still apply online).
+     * The "VERIFIED" sentinel is stored as-is (no hash).
+     */
+    static String hashOtp(String otp, String salt) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            String input = (salt != null ? salt.toLowerCase() : "") + ":" + otp;
+            byte[] hash = digest.digest(input.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            // Return the full 64-char hex for defence-in-depth (column is now VARCHAR(64))
+            StringBuilder sb = new StringBuilder(64);
+            for (byte b : hash) sb.append(String.format("%02x", b));
+            return sb.toString();
+        } catch (java.security.NoSuchAlgorithmException e) {
+            // SHA-256 is always present in the JDK — this can never happen
+            throw new IllegalStateException("SHA-256 not available", e);
+        }
     }
 
     private LoginResponse.SchoolDto toSchoolDto(School s) {

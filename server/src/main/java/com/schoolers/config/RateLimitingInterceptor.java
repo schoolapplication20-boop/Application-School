@@ -31,6 +31,8 @@ public class RateLimitingInterceptor implements HandlerInterceptor {
     private final Map<String, Bucket>     generalBuckets        = new ConcurrentHashMap<>();
     private final Map<String, Bucket>     loginBuckets          = new ConcurrentHashMap<>();
     private final Map<String, Bucket>     passwordResetBuckets  = new ConcurrentHashMap<>();
+    /** Tight bucket for onboarding OTP send — prevents email-bombing users */
+    private final Map<String, Bucket>     onboardingOtpBuckets  = new ConcurrentHashMap<>();
     /** Last-access epoch-ms per IP — used by evictStaleBuckets() to remove idle entries */
     private final Map<String, AtomicLong> lastSeen              = new ConcurrentHashMap<>();
 
@@ -56,6 +58,15 @@ public class RateLimitingInterceptor implements HandlerInterceptor {
     }
 
     private Bucket selectBucket(String path, String ipAddress) {
+        // Onboarding email OTP (teacher/student creation) — very tight to prevent email bombing.
+        // 5 OTP-send requests per 10 min per IP is generous for legitimate admins.
+        if (path.contains("/api/auth/onboarding/send-otp")
+                || path.contains("/api/auth/onboarding/verify-otp")) {
+            return onboardingOtpBuckets.computeIfAbsent(ipAddress, k -> Bucket4j.builder()
+                    .addLimit(Bandwidth.classic(5, Refill.intervally(5, java.time.Duration.ofMinutes(10))))
+                    .build());
+        }
+
         // Forgot-password and OTP verify get their own generous bucket so a locked-out user
         // can always recover their account — 10 attempts per hour is more than enough.
         if (path.contains("/api/auth/forgot-password")
@@ -98,6 +109,7 @@ public class RateLimitingInterceptor implements HandlerInterceptor {
                 generalBuckets.remove(ip);
                 authenticationBuckets.remove(ip);
                 passwordResetBuckets.remove(ip);
+                onboardingOtpBuckets.remove(ip);
                 lastSeen.remove(ip);
                 removed++;
             }
@@ -106,24 +118,63 @@ public class RateLimitingInterceptor implements HandlerInterceptor {
     }
 
     /**
-     * Get client IP address, accounting for proxies (X-Forwarded-For, CF-Connecting-IP)
+     * Extract the real client IP, resistant to spoofing.
+     *
+     * Strategy (in priority order):
+     * 1. CF-Connecting-IP — set by Cloudflare's edge; cannot be forged by the end client
+     *    because Cloudflare strips/overwrites it.  Only trust this when remoteAddr is a
+     *    Cloudflare IP (private-range guard handles non-CF deploys automatically).
+     * 2. X-Forwarded-For — only trusted when the *direct* connection comes from a private
+     *    network (i.e., a known reverse proxy like Render, Nginx, AWS ALB).  We take the
+     *    LAST non-private IP in the chain, which is the outermost public address and the
+     *    hardest for an attacker to spoof.
+     * 3. Direct remoteAddr — used when not behind a proxy.
      */
     private String getClientIp(HttpServletRequest request) {
-        String cfConnectingIp = request.getHeader("CF-Connecting-IP"); // Cloudflare
-        if (cfConnectingIp != null && !cfConnectingIp.isEmpty()) {
-            return cfConnectingIp;
+        String remoteAddr = request.getRemoteAddr();
+
+        // CF-Connecting-IP is reliable when the request genuinely comes from Cloudflare
+        String cfIp = request.getHeader("CF-Connecting-IP");
+        if (cfIp != null && !cfIp.isBlank() && isPrivateOrLoopback(remoteAddr)) {
+            // remoteAddr is a private IP → we are behind a proxy; CF-Connecting-IP is trustworthy
+            String candidate = cfIp.split(",")[0].trim();
+            if (!candidate.isEmpty()) return candidate;
         }
 
-        String xForwardedFor = request.getHeader("X-Forwarded-For");
-        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
-            return xForwardedFor.split(",")[0].trim();
+        // X-Forwarded-For is only trusted from private/loopback remoteAddr (known reverse proxy)
+        if (isPrivateOrLoopback(remoteAddr)) {
+            String xForwardedFor = request.getHeader("X-Forwarded-For");
+            if (xForwardedFor != null && !xForwardedFor.isBlank()) {
+                // Take the last public (non-private) IP in the chain
+                String[] hops = xForwardedFor.split(",");
+                for (int i = hops.length - 1; i >= 0; i--) {
+                    String hop = hops[i].trim();
+                    if (!hop.isEmpty() && !isPrivateOrLoopback(hop)) return hop;
+                }
+                // All hops are private — fall through to remoteAddr
+            }
         }
 
-        String xRealIp = request.getHeader("X-Real-IP");
-        if (xRealIp != null && !xRealIp.isEmpty()) {
-            return xRealIp;
-        }
+        return remoteAddr;
+    }
 
-        return request.getRemoteAddr();
+    /** Returns true if the given IP string is a loopback or RFC-1918 private address. */
+    private boolean isPrivateOrLoopback(String ip) {
+        if (ip == null || ip.isBlank()) return false;
+        return ip.startsWith("127.")
+                || ip.startsWith("10.")
+                || ip.startsWith("192.168.")
+                || ip.equals("::1")
+                || ip.startsWith("172.") && isPrivate172(ip)
+                || ip.startsWith("fd")   // IPv6 ULA
+                || ip.startsWith("fc");
+    }
+
+    private boolean isPrivate172(String ip) {
+        // 172.16.0.0 – 172.31.255.255
+        try {
+            int second = Integer.parseInt(ip.split("\\.")[1]);
+            return second >= 16 && second <= 31;
+        } catch (Exception e) { return false; }
     }
 }

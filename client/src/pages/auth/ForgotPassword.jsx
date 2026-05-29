@@ -18,6 +18,7 @@ const ForgotPassword = () => {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpError, setOtpError] = useState('');
+  const [otpVerified, setOtpVerified] = useState(false);
   const [timer, setTimer] = useState(OTP_EXPIRY_SECONDS);
   const [canResend, setCanResend] = useState(false);
   const inputRefs = useRef([]);
@@ -130,8 +131,11 @@ const ForgotPassword = () => {
     setOtpError('');
     try {
       await authAPI.verifyOTP({ identifier, otp: otpString });
-      setShowOtpPopup(false);
-      navigate('/set-new-password', { state: { identifier } });
+      setOtpVerified(true);
+      setTimeout(() => {
+        setShowOtpPopup(false);
+        navigate('/set-new-password', { state: { identifier } });
+      }, 1000);
     } catch (err) {
       setOtpError(
         err.response?.data?.message ||
@@ -310,9 +314,15 @@ const ForgotPassword = () => {
               <button
                 type="submit"
                 className="btn-auth-submit"
-                disabled={otpLoading || otp.join('').length < 6}
+                disabled={otpLoading || otpVerified || otp.join('').length < 6}
+                style={otpVerified ? { background: 'linear-gradient(135deg,#38a169,#276749)' } : undefined}
               >
-                {otpLoading ? (
+                {otpVerified ? (
+                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                    <span className="material-icons" style={{ fontSize: 18 }}>check_circle</span>
+                    Verified! Redirecting…
+                  </span>
+                ) : otpLoading ? (
                   <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                     <span style={{
                       width: '16px', height: '16px', border: '2px solid rgba(255,255,255,0.4)',

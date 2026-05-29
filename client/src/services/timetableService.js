@@ -72,18 +72,27 @@ export const deleteTimetableEntry = async (id) => {
 };
 
 /**
- * Check if a candidate entry overlaps existing entries for the same teacher + day.
- * Operates against a provided list for instant UI feedback.
+ * Check if a candidate entry overlaps existing entries for the same teacher OR
+ * same class-section on the same day.
+ * Returns the conflicting entry or null.
  */
 export const checkOverlap = (candidate, allEntries = [], excludeId = null) => {
-  const same = allEntries.filter(
-    e => e.id !== excludeId &&
-         String(e.teacherId) === String(candidate.teacherId) &&
-         e.day === candidate.day
-  );
   const ns = toMin(candidate.startTime);
   const ne = toMin(candidate.endTime);
-  return same.find(e => ns < toMin(e.endTime) && ne > toMin(e.startTime)) || null;
+
+  return allEntries.find(e => {
+    if (e.id === excludeId) return false;
+    if (e.day !== candidate.day) return false;
+    const es = toMin(e.startTime);
+    const ee = toMin(e.endTime);
+    const timeOverlap = ns < ee && ne > es;
+    if (!timeOverlap) return false;
+    // Teacher double-booked OR class-section double-booked
+    return (
+      String(e.teacherId) === String(candidate.teacherId) ||
+      (e.classSection && e.classSection === candidate.classSection)
+    );
+  }) || null;
 };
 
 /** Format "HH:MM" → "9:00 AM" */

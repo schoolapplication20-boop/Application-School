@@ -62,42 +62,52 @@ const toMin = (t) => {
 const getEntryConflict = (candidate, existingEntries, batchEntries, idx) => {
   const ns = toMin(candidate.startTime);
   const ne = toMin(candidate.endTime);
+  const timeOverlap = (s, e) => ns < toMin(e) && ne > toMin(s);
 
   // Teacher overlap vs DB
   const teacherConflict = existingEntries.find(e =>
     String(e.teacherId) === String(candidate.teacherId) &&
     e.day === candidate.day &&
-    ns < toMin(e.endTime) && ne > toMin(e.startTime)
+    timeOverlap(e.startTime, e.endTime)
   );
   if (teacherConflict)
     return `Teacher overlap: ${teacherConflict.subject} (${teacherConflict.classSection}) ${formatTime(teacherConflict.startTime)}–${formatTime(teacherConflict.endTime)}`;
+
+  // Class-section overlap vs DB
+  const classConflict = existingEntries.find(e =>
+    e.classSection === candidate.classSection &&
+    e.day === candidate.day &&
+    timeOverlap(e.startTime, e.endTime)
+  );
+  if (classConflict)
+    return `Class conflict: ${classConflict.classSection} already has ${classConflict.subject} at ${formatTime(classConflict.startTime)}–${formatTime(classConflict.endTime)}`;
 
   // Room overlap vs DB
   if (candidate.room) {
     const roomConflict = existingEntries.find(e =>
       e.room && e.room === candidate.room &&
       e.day === candidate.day &&
-      ns < toMin(e.endTime) && ne > toMin(e.startTime)
+      timeOverlap(e.startTime, e.endTime)
     );
     if (roomConflict)
       return `Room ${candidate.room} already booked: ${roomConflict.subject} (${roomConflict.classSection})`;
   }
 
-  // Teacher overlap within batch
+  // Teacher / class-section / room overlap within batch
   for (let i = 0; i < batchEntries.length; i++) {
     if (i === idx) continue;
     const other = batchEntries[i];
-    if (String(other.teacherId) === String(candidate.teacherId) &&
-        other.day === candidate.day &&
-        ns < toMin(other.endTime) && ne > toMin(other.startTime)) {
+    if (other.day !== candidate.day) continue;
+    if (!timeOverlap(other.startTime, other.endTime)) continue;
+
+    if (String(other.teacherId) === String(candidate.teacherId))
       return `Batch teacher conflict: ${other.subject} (${other.classSection}) on ${other.day}`;
-    }
-    // Room overlap within batch
-    if (candidate.room && other.room === candidate.room &&
-        other.day === candidate.day &&
-        ns < toMin(other.endTime) && ne > toMin(other.startTime)) {
+
+    if (other.classSection === candidate.classSection)
+      return `Batch class conflict: ${candidate.classSection} already has ${other.subject} on ${other.day}`;
+
+    if (candidate.room && other.room === candidate.room)
       return `Batch room conflict: Room ${candidate.room} used by ${other.subject} (${other.classSection})`;
-    }
   }
 
   return null;
@@ -579,6 +589,12 @@ export default function Timetable() {
                     {form.days.length} day{form.days.length > 1 ? 's' : ''} selected — will create {form.days.length} entr{form.days.length > 1 ? 'ies' : 'y'}
                   </div>
                 )}
+              {!editId && form.days.length > 1 && (
+                <div style={{ marginTop: 6, padding: '7px 10px', background: '#fffbeb', border: '1px solid #f6e05e', borderRadius: 7, fontSize: 11, color: '#92400e', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span className="material-icons" style={{ fontSize: 14, flexShrink: 0 }}>info</span>
+                  All days share the same time. For <strong>different times on different days</strong>, use <strong>Bulk Assign → Custom Rows</strong>.
+                </div>
+              )}
               </Field>
               <Col2>
                 <Field label="Start Time *" error={errors.startTime}>
@@ -1052,6 +1068,13 @@ function BulkAssignModal({ teachers, classes, entries, onSave, onClose }) {
                     style={inputStyle(false)}
                   />
                 </Field>
+
+                {selDays.length > 1 && getTimeSlots().length > 0 && (
+                  <div style={{ padding: '9px 12px', background: '#fffbeb', border: '1px solid #f6e05e', borderRadius: 8, fontSize: 12, color: '#92400e', display: 'flex', gap: 7, alignItems: 'flex-start' }}>
+                    <span className="material-icons" style={{ fontSize: 15, flexShrink: 0, marginTop: 1 }}>info</span>
+                    <span>Uniform mode applies the <strong>same time slot to every selected day</strong>. To set <strong>different times per day</strong>, switch to <strong>Custom Rows</strong> mode above.</span>
+                  </div>
+                )}
               </>
             )}
 

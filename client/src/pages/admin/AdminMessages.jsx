@@ -238,7 +238,7 @@ export default function AdminMessages() {
                   <span style={{ margin: '0 8px' }}>·</span>
                   <span>{msg.senderName}</span>
                   <span style={{ margin: '0 8px' }}>·</span>
-                  <span>{msg.createdAt ? new Date(msg.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                  <span>{msg.createdAt ? new Date(msg.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' }) : ''}</span>
                 </div>
               </div>
             </div>

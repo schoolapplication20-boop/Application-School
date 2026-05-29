@@ -5,6 +5,7 @@ import com.schoolers.dto.LoginRequest;
 import com.schoolers.dto.LoginResponse;
 import com.schoolers.model.EmailVerification;
 import com.schoolers.repository.EmailVerificationRepository;
+import com.schoolers.repository.UserRepository;
 import com.schoolers.security.JwtUtil;
 import com.schoolers.service.AuthService;
 import com.schoolers.service.EmailService;
@@ -34,6 +35,7 @@ public class AuthController {
     @Autowired private JwtUtil jwtUtil;
     @Autowired private EmailService emailService;
     @Autowired private EmailVerificationRepository emailVerificationRepository;
+    @Autowired private UserRepository userRepository;
 
     private static final Pattern EMAIL_RE =
             Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
@@ -182,6 +184,11 @@ public class AuthController {
             return ResponseEntity.badRequest().body(ApiResponse.error("Valid email is required"));
 
         email = email.trim().toLowerCase();
+
+        // Reject if the email is already registered as any user (teacher, student, admin)
+        if (userRepository.existsByEmailIgnoreCase(email))
+            return ResponseEntity.badRequest().body(ApiResponse.error(
+                "This email is already registered in the system. Please use a different email address."));
 
         // Delete any existing (possibly expired) record for this email
         emailVerificationRepository.deleteByEmail(email);

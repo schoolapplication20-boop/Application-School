@@ -9,6 +9,7 @@ const VerifyIdentity = () => {
   const [mobile, setMobile] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [sent, setSent] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -25,7 +26,8 @@ const VerifyIdentity = () => {
 
     try {
       await authAPI.forgotPassword({ mobile });
-      navigate('/enter-otp', { state: { mobile } });
+      setSent(true);
+      setTimeout(() => navigate('/enter-otp', { state: { mobile } }), 1000);
     } catch (err) {
       if (err.code === 'ERR_NETWORK') {
         navigate('/enter-otp', { state: { mobile } });
@@ -99,9 +101,15 @@ const VerifyIdentity = () => {
             <button
               type="submit"
               className="btn-auth-submit"
-              disabled={isLoading}
+              disabled={isLoading || sent}
+              style={sent ? { background: 'linear-gradient(135deg,#38a169,#276749)' } : undefined}
             >
-              {isLoading ? 'Sending...' : 'SEND OTP'}
+              {sent ? (
+                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                  <span className="material-icons" style={{ fontSize: 18 }}>check_circle</span>
+                  OTP Sent! Redirecting…
+                </span>
+              ) : isLoading ? 'Sending...' : 'SEND OTP'}
             </button>
           </form>
 

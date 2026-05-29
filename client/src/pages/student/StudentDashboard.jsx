@@ -52,7 +52,7 @@ export default function StudentDashboard() {
   const paidFee    = Number(feeSummary.paidAmount || 0);
   const pendingFee = Number(feeSummary.dueAmount  || 0);
   // Next due: first PENDING installment by due date
-  const pendingInstallments = (feeData?.installments ?? []).filter(i => i.status !== 'PAID' && i.dueDate);
+  const pendingInstallments = (feeData?.installments ?? []).filter(i => String(i.status || '').toUpperCase() !== 'PAID' && i.dueDate);
   pendingInstallments.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
   const nextDue = pendingInstallments[0] ?? null;
 
@@ -97,7 +97,7 @@ export default function StudentDashboard() {
   }
 
   const greeting = () => {
-    const h = new Date().getHours();
+    const h = parseInt(new Date().toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Asia/Kolkata' }), 10);
     if (h < 12) return 'Good Morning';
     if (h < 17) return 'Good Afternoon';
     return 'Good Evening';

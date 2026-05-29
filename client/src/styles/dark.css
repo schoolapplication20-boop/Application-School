@@ -96,8 +96,12 @@
 }
 [data-theme="dark"] .modal-title  { color: var(--text-primary) !important; }
 [data-theme="dark"] .modal-close  {
-  background: var(--surface-alt) !important;
-  color: var(--text-muted) !important;
+  background: #2d3748 !important;
+  color: #e2e8f0 !important;
+}
+[data-theme="dark"] .modal-close:hover {
+  background: #4a5568 !important;
+  color: #fff !important;
 }
 
 /* ── Form inputs ───────────────────────────────────────────── */

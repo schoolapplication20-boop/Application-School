@@ -450,6 +450,12 @@ export default function Students() {
   const handlePhotoChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    const sizeMB = file.size / (1024 * 1024);
+    if (sizeMB > 5) {
+      setErrors(er => ({ ...er, photo: 'Photo too large. Maximum size is 5 MB.' }));
+      return;
+    }
+    setErrors(er => ({ ...er, photo: '' }));
     const reader = new FileReader();
     reader.onload = (ev) => {
       setPhotoPreview(ev.target.result);
@@ -461,11 +467,18 @@ export default function Students() {
   const handleDocChange = (field, nameField) => (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    const sizeMB = file.size / (1024 * 1024);
+    const errorKey = field === 'idProof' ? 'idProof' : field;
+    if (sizeMB > 5) {
+      setErrors(er => ({ ...er, [errorKey]: 'File too large. Maximum size is 5 MB.' }));
+      return;
+    }
+    const sizeLabel = sizeMB >= 1 ? `${sizeMB.toFixed(1)} MB` : `${(file.size / 1024).toFixed(0)} KB`;
     const reader = new FileReader();
     reader.onload = (ev) => {
-      setFormData(fd => ({ ...fd, [field]: ev.target.result, [nameField]: file.name }));
-      if (errors[field === 'idProof' ? 'idProof' : field]) {
-        setErrors(er => ({ ...er, [field === 'idProof' ? 'idProof' : field]: '' }));
+      setFormData(fd => ({ ...fd, [field]: ev.target.result, [nameField]: `${file.name} (${sizeLabel})` }));
+      if (errors[errorKey]) {
+        setErrors(er => ({ ...er, [errorKey]: '' }));
       }
     };
     reader.readAsDataURL(file);

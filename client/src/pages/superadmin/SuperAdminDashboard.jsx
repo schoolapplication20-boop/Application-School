@@ -694,8 +694,8 @@ function OwnerDashboard() {
                 <div style={{ fontSize: 11, color: '#718096', marginTop: 4 }}>
                   {(() => {
                     const start = new Date(activeNotice.scheduledAt);
-                    const fmt   = d => d.toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
-                    const fmtT  = d => d.toLocaleString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+                    const fmt   = d => d.toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' });
+                    const fmtT  = d => d.toLocaleString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' });
                     if (activeNotice.durationMinutes) {
                       const end = new Date(start.getTime() + activeNotice.durationMinutes * 60000);
                       return `Planned outage: ${fmt(start)} – ${fmtT(end)}`;

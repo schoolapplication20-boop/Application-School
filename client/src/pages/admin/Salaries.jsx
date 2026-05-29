@@ -10,9 +10,10 @@ const YEARS = [String(currentYear - 1), String(currentYear), String(currentYear 
 const fmt = (n) => `₹${Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const statusBadge = (s) => {
+  const k     = String(s || '').toUpperCase();
   const map   = { PAID: 'success', PENDING: 'secondary', PROCESSING: 'warning text-dark' };
   const label = { PAID: 'Paid',    PENDING: 'Unpaid',    PROCESSING: 'Partial' };
-  return <span className={`badge bg-${map[s] || 'secondary'}`}>{label[s] || s}</span>;
+  return <span className={`badge bg-${map[k] || 'secondary'}`}>{label[k] || s}</span>;
 };
 
 export default function Salaries() {
@@ -79,15 +80,15 @@ export default function Salaries() {
 
   const filtered = useMemo(() => records.filter(r => {
     const matchSearch = !search || r.staffName?.toLowerCase().includes(search.toLowerCase()) || r.department?.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = filterStatus === 'All' || r.status === filterStatus;
+    const matchStatus = filterStatus === 'All' || String(r.status || '').toUpperCase() === filterStatus.toUpperCase();
     return matchSearch && matchStatus;
   }), [records, search, filterStatus]);
 
   const stats = useMemo(() => ({
     total: records.length,
-    paid: records.filter(r => r.status === 'PAID').length,
-    partial: records.filter(r => r.status === 'PROCESSING').length,
-    unpaid: records.filter(r => r.status === 'PENDING').length,
+    paid: records.filter(r => String(r.status || '').toUpperCase() === 'PAID').length,
+    partial: records.filter(r => String(r.status || '').toUpperCase() === 'PROCESSING').length,
+    unpaid: records.filter(r => String(r.status || '').toUpperCase() === 'PENDING').length,
     totalCalc: records.reduce((s, r) => s + Number(r.calculatedSalary || 0), 0),
     totalPaid: records.reduce((s, r) => s + Number(r.paidAmount || 0), 0),
   }), [records]);
@@ -360,7 +361,7 @@ export default function Salaries() {
                                 <button className="btn btn-outline-info btn-sm" title="Record leaves" onClick={() => openLeaves(r)}>
                                   <span className="material-icons" style={{ fontSize: 14 }}>event_busy</span>
                                 </button>
-                                {(r.status === 'PENDING' || r.status === 'PROCESSING') && (
+                                {(['PENDING','PROCESSING'].includes(String(r.status || '').toUpperCase())) && (
                                   <button className="btn btn-success btn-sm" title="Collect payment" onClick={() => openPay(r)}>
                                     <span className="material-icons" style={{ fontSize: 14 }}>payments</span>
                                   </button>
@@ -651,7 +652,7 @@ export default function Salaries() {
                   </div>
                   <div className="col-md-6">
                     <label className="form-label small fw-medium">Remarks</label>
-                    <input className="form-control form-control-sm" value={payForm.remarks} onChange={e => setPayForm(f=>({...f, remarks: e.target.value}))} placeholder="Optional" />
+                    <input className="form-control form-control-sm" maxLength={250} value={payForm.remarks} onChange={e => setPayForm(f=>({...f, remarks: e.target.value}))} placeholder="Optional" />
                   </div>
                 </div>
 

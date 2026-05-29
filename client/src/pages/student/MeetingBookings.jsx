@@ -138,8 +138,8 @@ export default function MeetingBookings() {
               {bookings.map(({ booking: b, slot }) => (
                 <div key={b.id} style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 20, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
                   <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
-                    <span className="material-icons" style={{ fontSize: 28, color: b.status === 'CONFIRMED' ? '#48bb78' : '#a0aec0', marginTop: 2 }}>
-                      {b.status === 'CONFIRMED' ? 'check_circle' : 'cancel'}
+                    <span className="material-icons" style={{ fontSize: 28, color: String(b.status || '').toUpperCase() === 'CONFIRMED' ? '#48bb78' : '#a0aec0', marginTop: 2 }}>
+                      {String(b.status || '').toUpperCase() === 'CONFIRMED' ? 'check_circle' : 'cancel'}
                     </span>
                     <div>
                       {slot && <div style={{ fontWeight: 700, fontSize: 15, color: '#2d3748' }}>{slot.teacherName}</div>}
@@ -150,11 +150,11 @@ export default function MeetingBookings() {
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <span style={{ fontSize: 12, fontWeight: 700, padding: '4px 12px', borderRadius: 20,
-                      background: b.status === 'CONFIRMED' ? '#f0fff4' : '#f7fafc',
-                      color: b.status === 'CONFIRMED' ? '#276749' : '#a0aec0' }}>
+                      background: String(b.status || '').toUpperCase() === 'CONFIRMED' ? '#f0fff4' : '#f7fafc',
+                      color: String(b.status || '').toUpperCase() === 'CONFIRMED' ? '#276749' : '#a0aec0' }}>
                       {b.status}
                     </span>
-                    {b.status === 'CONFIRMED' && (
+                    {String(b.status || '').toUpperCase() === 'CONFIRMED' && (
                       <button onClick={() => handleCancel(b.id)}
                         style={{ padding: '6px 14px', background: '#fff5f5', color: '#c53030', border: '1px solid #fed7d7', borderRadius: 8, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
                         Cancel

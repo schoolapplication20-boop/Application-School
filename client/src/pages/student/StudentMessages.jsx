@@ -204,7 +204,7 @@ export default function StudentMessages() {
                   </div>
                 </div>
                 <span style={{ fontSize: 13, color: '#a0aec0', whiteSpace: 'nowrap', marginLeft: 16 }}>
-                  {selected.createdAt ? new Date(selected.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
+                  {selected.createdAt ? new Date(selected.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' }) : ''}
                 </span>
               </div>
 
