@@ -1395,6 +1395,8 @@ function CreateSuperAdminWizard({ onClose, onCreated }) {
       if (!form.adminEmail.trim()) return 'Admin email is required';
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.adminEmail)) return 'Enter a valid admin email';
       if (!otpVerified) return 'Please verify the admin email with OTP before continuing.';
+      if (!form.adminMobile.trim()) return 'Mobile number is required';
+      if (!/^\d{10}$/.test(form.adminMobile.trim())) return 'Mobile number must be exactly 10 digits';
     }
     return null;
   };
@@ -1786,7 +1788,7 @@ function CreateSuperAdminWizard({ onClose, onCreated }) {
                 </WizardField>
               )}
 
-              <WizardField label="Mobile Number" hint="Optional">
+              <WizardField label="Mobile Number" required>
                 <input
                   type="tel"
                   value={form.adminMobile}
@@ -2430,21 +2432,32 @@ function CredentialsModal({ creds, onClose }) {
           </div>
 
           {/* Credentials */}
-          <div style={{ background: '#f8fafc', borderRadius: 10, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ background: '#f8fafc', borderRadius: 10, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: 1 }}>Login Credentials</div>
+
+            {/* Name (display only) */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span className="material-icons" style={{ fontSize: 16, color: '#7c3aed' }}>person</span>
-              <span style={{ fontSize: 13, color: '#374151', flex: 1 }}>{creds.name}</span>
+              <span className="material-icons" style={{ fontSize: 16, color: '#94a3b8' }}>badge</span>
+              <span style={{ fontSize: 11, color: '#94a3b8', minWidth: 68 }}>Name</span>
+              <span style={{ fontSize: 13, color: '#374151', fontWeight: 500 }}>{creds.name}</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span className="material-icons" style={{ fontSize: 16, color: '#7c3aed' }}>email</span>
-              <span style={{ fontSize: 13, color: '#374151', flex: 1 }}>{creds.email}</span>
-              <button onClick={() => copy(creds.email)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#7c3aed' }}>
-                <span className="material-icons" style={{ fontSize: 16 }}>content_copy</span>
-              </button>
+
+            {/* Login ID = email */}
+            <div style={{ background: '#ede9fe', borderRadius: 8, padding: '8px 12px' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 }}>Login ID (Email)</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span className="material-icons" style={{ fontSize: 16, color: '#7c3aed' }}>email</span>
+                <span style={{ fontSize: 14, color: '#1a202c', fontWeight: 700, flex: 1 }}>{creds.email}</span>
+                <button onClick={() => copy(creds.email)} title="Copy email" style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#7c3aed', padding: 2 }}>
+                  <span className="material-icons" style={{ fontSize: 16 }}>content_copy</span>
+                </button>
+              </div>
             </div>
+
+            {/* Password */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span className="material-icons" style={{ fontSize: 16, color: '#7c3aed' }}>key</span>
+              <span className="material-icons" style={{ fontSize: 16, color: '#94a3b8' }}>key</span>
+              <span style={{ fontSize: 11, color: '#94a3b8', minWidth: 68 }}>Password</span>
               <span style={{ fontSize: 13, color: '#374151', flex: 1, fontFamily: 'monospace', background: '#fffbeb', padding: '2px 8px', borderRadius: 6 }}>
                 {showPwd ? creds.password : '••••••••••'}
               </span>
