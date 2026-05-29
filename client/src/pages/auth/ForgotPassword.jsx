@@ -37,10 +37,15 @@ const ForgotPassword = () => {
 
   const isEmail = (val) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
 
+  // Mask for display in the OTP popup
   const maskIdentifier = (val) => {
-    if (!val.includes('@')) return val;
-    const [local, domain] = val.split('@');
-    return local.slice(0, 2) + '****@' + domain;
+    if (isEmail(val)) {
+      const [local, domain] = val.split('@');
+      return local.slice(0, 2) + '****@' + domain;
+    }
+    // admission number or mobile — show first 2 + last 2 chars
+    if (val.length > 4) return val.slice(0, 2) + '****' + val.slice(-2);
+    return val;
   };
 
   const sendOtp = async () => {
@@ -57,9 +62,12 @@ const ForgotPassword = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!identifier.trim()) { setError('Please enter your email address.'); return; }
-    if (!isEmail(identifier)) {
-      setError('Please enter a valid email address.');
+    if (!identifier.trim()) {
+      setError('Please enter your email address or admission number.');
+      return;
+    }
+    if (identifier.trim().length < 3) {
+      setError('Please enter a valid email address or admission number.');
       return;
     }
     setIsLoading(true);
@@ -185,7 +193,13 @@ const ForgotPassword = () => {
 
           <div className="auth-form-header" style={{ textAlign: 'center' }}>
             <h1>Forgot Password</h1>
-            <p>Enter your registered email address to receive a one-time password. Students: use the email address linked to your account.</p>
+            <p>
+              Enter your registered <strong>email address</strong> to receive an OTP.
+            </p>
+            <div style={{ marginTop: 10, padding: '10px 14px', background: '#eff6ff', border: '1.5px solid #bfdbfe', borderRadius: 10, textAlign: 'left', fontSize: 13, color: '#1d4ed8', lineHeight: 1.6 }}>
+              <span className="material-icons" style={{ fontSize: 15, verticalAlign: 'middle', marginRight: 5 }}>school</span>
+              <strong>Students:</strong> enter your <strong>admission number</strong> or registered email — the OTP will be sent to your email on file.
+            </div>
           </div>
 
           {error && (
@@ -197,16 +211,17 @@ const ForgotPassword = () => {
 
           <form onSubmit={handleSubmit}>
             <div className="form-group">
-              <label className="form-label">Email Address</label>
+              <label className="form-label">Email Address or Admission Number</label>
               <div className="input-wrapper">
-                <span className="material-icons input-icon-left">email</span>
+                <span className="material-icons input-icon-left">person_search</span>
                 <input
-                  type="email"
+                  type="text"
                   className="form-control has-left-icon"
-                  placeholder="Enter your email address"
+                  placeholder="Email address or admission number"
                   value={identifier}
                   onChange={(e) => { setIdentifier(e.target.value); setError(''); }}
                   autoFocus
+                  autoComplete="username"
                 />
               </div>
             </div>
@@ -265,7 +280,8 @@ const ForgotPassword = () => {
               </div>
               <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#2d3748', margin: '0 0 6px' }}>Enter OTP</h2>
               <p style={{ fontSize: '13px', color: '#718096', margin: 0 }}>
-                OTP sent to <span style={{ fontWeight: 600, color: '#0de1e8' }}>{maskIdentifier(identifier)}</span>
+                OTP sent to the email registered for{' '}
+                <span style={{ fontWeight: 600, color: '#0de1e8' }}>{maskIdentifier(identifier)}</span>
               </p>
             </div>
 

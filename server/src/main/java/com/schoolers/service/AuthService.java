@@ -484,35 +484,57 @@ public class AuthService {
             User user;
             log.info("[forgotPassword] isEmail={}", isEmail);
 
+            String resolvedEmail = null; // the email address we will actually send the OTP to
+
             if (isEmail) {
                 String email = identifier.trim().toLowerCase();
                 user = userRepository.findByEmailIgnoreCase(email).orElse(null);
                 if (user == null) user = userRepository.findByEmail(email).orElse(null);
                 // Return the same message whether the account exists or not — prevents enumeration
                 if (user == null) return ApiResponse.success("If this account exists, an OTP has been sent.", null);
+                resolvedEmail = user.getEmail();
             } else {
-                user = userRepository.findByMobile(identifier).orElse(null);
+                // Try mobile number first
+                user = userRepository.findByMobile(identifier.trim()).orElse(null);
+
+                // Not found by mobile → try as student admission number
+                if (user == null) {
+                    java.util.List<com.schoolers.model.Student> students =
+                            studentRepository.findAllByAdmissionNumberIgnoreCase(identifier.trim());
+                    if (students.size() == 1) {
+                        com.schoolers.model.Student student = students.get(0);
+                        if (student.getStudentUserId() != null) {
+                            user = userRepository.findById(student.getStudentUserId()).orElse(null);
+                        }
+                    }
+                    log.info("[forgotPassword] Admission-number lookup for '{}': {} student(s) found, user={}",
+                            identifier, students.size(), user != null ? user.getId() : "null");
+                }
+
                 if (user == null) return ApiResponse.success("If this account exists, an OTP has been sent.", null);
+                // OTP will be sent to the user's registered email address
+                resolvedEmail = user.getEmail();
+            }
+
+            if (resolvedEmail == null || resolvedEmail.isBlank()) {
+                log.warn("[forgotPassword] No email on file for identifier='{}' userId={}", identifier, user.getId());
+                // Still return opaque success — don't reveal account details
+                return ApiResponse.success("If this account exists, an OTP has been sent.", null);
             }
 
             String otp = String.format("%06d", 100000 + new SecureRandom().nextInt(900000));
             LocalDateTime expiry = LocalDateTime.now(ZoneOffset.UTC).plusMinutes(10);
-            // Store a salted SHA-256 hash — never the raw OTP — so a DB leak cannot expose it
-            user.setResetOtp(hashOtp(otp, identifier));
+            // Hash uses the resolved email as salt (consistent for this user regardless of identifier format)
+            user.setResetOtp(hashOtp(otp, resolvedEmail.toLowerCase()));
             user.setOtpExpiry(expiry);
             userRepository.save(user);
 
-            if (isEmail) {
-                try {
-                    emailService.sendOtpEmail(identifier.trim().toLowerCase(), otp);
-                    return ApiResponse.success("OTP sent to your registered email address", null);
-                } catch (Exception mailEx) {
-                    log.error("[forgotPassword] Failed to send OTP email: {}", mailEx.getMessage());
-                    return ApiResponse.error("Failed to send OTP email. Please check your email configuration.");
-                }
-            } else {
-                log.info("[forgotPassword] Mobile OTP issued (SMS delivery not configured)");
+            try {
+                emailService.sendOtpEmail(resolvedEmail.toLowerCase(), otp);
                 return ApiResponse.success("If this account exists, an OTP has been sent.", null);
+            } catch (Exception mailEx) {
+                log.error("[forgotPassword] Failed to send OTP email to {}: {}", resolvedEmail, mailEx.getMessage());
+                return ApiResponse.error("Failed to send OTP email. Please check your email configuration.");
             }
         } catch (Exception e) {
             log.error("[forgotPassword] Unexpected error: {}", e.getMessage());
@@ -534,13 +556,22 @@ public class AuthService {
             user = userRepository.findByEmailIgnoreCase(identifier.trim().toLowerCase()).orElse(null);
             if (user == null) return ApiResponse.error(INVALID_MSG);
         } else {
-            user = userRepository.findByMobile(identifier).orElse(null);
+            // Try mobile first, then admission number (same resolution order as forgotPassword)
+            user = userRepository.findByMobile(identifier.trim()).orElse(null);
+            if (user == null) {
+                java.util.List<com.schoolers.model.Student> students =
+                        studentRepository.findAllByAdmissionNumberIgnoreCase(identifier.trim());
+                if (students.size() == 1 && students.get(0).getStudentUserId() != null) {
+                    user = userRepository.findById(students.get(0).getStudentUserId()).orElse(null);
+                }
+            }
             if (user == null) return ApiResponse.error(INVALID_MSG);
         }
 
         String dbOtpHash = user.getResetOtp();
-        // Compare the hash of the submitted OTP against the stored hash (constant-time)
-        String submittedHash = hashOtp(otp.trim(), identifier.trim());
+        // Salt for verification = user's registered email (same as in forgotPassword)
+        String emailSalt = user.getEmail() != null ? user.getEmail().toLowerCase() : identifier.trim().toLowerCase();
+        String submittedHash = hashOtp(otp.trim(), emailSalt);
         if (dbOtpHash == null || !constantTimeEquals(dbOtpHash.trim(), submittedHash))
             return ApiResponse.error(INVALID_MSG);
 
@@ -566,10 +597,18 @@ public class AuthService {
 
         if (isEmail) {
             user = userRepository.findByEmailIgnoreCase(identifier.trim().toLowerCase()).orElse(null);
-            if (user == null) return ApiResponse.error("Email not registered.");
+            if (user == null) return ApiResponse.error("Identifier not registered.");
         } else {
-            user = userRepository.findByMobile(identifier).orElse(null);
-            if (user == null) return ApiResponse.error("Mobile number not registered.");
+            // Try mobile, then admission number (same resolution order)
+            user = userRepository.findByMobile(identifier.trim()).orElse(null);
+            if (user == null) {
+                java.util.List<com.schoolers.model.Student> students =
+                        studentRepository.findAllByAdmissionNumberIgnoreCase(identifier.trim());
+                if (students.size() == 1 && students.get(0).getStudentUserId() != null) {
+                    user = userRepository.findById(students.get(0).getStudentUserId()).orElse(null);
+                }
+            }
+            if (user == null) return ApiResponse.error("Identifier not registered.");
         }
 
         if (!"VERIFIED".equals(user.getResetOtp()))

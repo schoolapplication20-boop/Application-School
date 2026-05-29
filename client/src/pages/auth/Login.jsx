@@ -503,11 +503,9 @@ const Login = () => {
                     <span className="material-icons">{showPassword ? 'visibility_off' : 'visibility'}</span>
                   </button>
                 </div>
-                {!isStudentRole && (
-                  <div style={{ textAlign: 'right', marginTop: '6px' }}>
-                    <Link to="/forgot-password" className="forgot-password-link" style={{ float: 'none' }}>Forgot Password?</Link>
-                  </div>
-                )}
+                <div style={{ textAlign: 'right', marginTop: '6px' }}>
+                  <Link to="/forgot-password" className="forgot-password-link" style={{ float: 'none' }}>Forgot Password?</Link>
+                </div>
               </div>
 
               <button type="submit" className="btn-auth-submit" disabled={isLoading || serverWaking || accountLocked}
