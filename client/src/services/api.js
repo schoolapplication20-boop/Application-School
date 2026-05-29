@@ -137,8 +137,10 @@ export const superAdminAPI = {
   createSuperAdmin: (data)     => api.post('/api/superadmin/super-admins', data),
   getSuperAdmins:   ()         => api.get('/api/superadmin/super-admins'),
   deleteSuperAdmin: (id)       => api.delete(`/api/superadmin/super-admins/${id}`),
-  deleteSchool:     (id)       => api.delete(`/api/superadmin/schools/${id}`),
-  getMyPermissions: ()         => api.get('/api/admin/permissions'),
+  deleteSchool:     (id)            => api.delete(`/api/superadmin/schools/${id}`),
+  suspendSchool:    (id)            => api.put(`/api/superadmin/schools/${id}/suspend`),
+  reactivateSchool: (id, expiryDate) => api.put(`/api/superadmin/schools/${id}/reactivate`, { expiryDate }),
+  getMyPermissions: ()              => api.get('/api/admin/permissions'),
 };
 
 // ============================================

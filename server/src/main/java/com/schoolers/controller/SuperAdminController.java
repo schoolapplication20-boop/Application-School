@@ -181,6 +181,26 @@ public class SuperAdminController {
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.status(403).body(response);
     }
 
+    /** Suspend a school: blocks all logins, data preserved. APPLICATION_OWNER only. */
+    @PutMapping("/schools/{id}/suspend")
+    @PreAuthorize("hasRole('APPLICATION_OWNER')")
+    public ResponseEntity<ApiResponse<String>> suspendSchool(@PathVariable Long id) {
+        ApiResponse<String> response = superAdminService.suspendSchool(id);
+        return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
+    }
+
+    /** Reactivate a suspended school with a new expiry date. APPLICATION_OWNER only. */
+    @PutMapping("/schools/{id}/reactivate")
+    @PreAuthorize("hasRole('APPLICATION_OWNER')")
+    public ResponseEntity<ApiResponse<String>> reactivateSchool(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        String expiryStr = body.get("expiryDate") != null ? body.get("expiryDate").toString() : null;
+        java.time.LocalDate newExpiry = expiryStr != null && !expiryStr.isBlank()
+            ? java.time.LocalDate.parse(expiryStr)
+            : java.time.LocalDate.now().plusYears(1);
+        ApiResponse<String> response = superAdminService.reactivateSchool(id, newExpiry);
+        return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
+    }
+
     /** Permanently delete a school and ALL its data. APPLICATION_OWNER only. */
     @DeleteMapping("/schools/{id}")
     @PreAuthorize("hasRole('APPLICATION_OWNER')")

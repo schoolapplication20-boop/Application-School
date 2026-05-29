@@ -419,6 +419,28 @@ public class SuperAdminService {
                 .orElse(ApiResponse.<String>error("Admin not found"));
     }
 
+    /** Suspend a school: block all logins while preserving every byte of data. */
+    public ApiResponse<String> suspendSchool(Long schoolDbPk) {
+        School school = schoolRepository.findById(schoolDbPk).orElse(null);
+        if (school == null) return ApiResponse.error("School not found");
+        school.setIsActive(false);
+        school.setSubscriptionExpiry(java.time.LocalDate.now());
+        schoolRepository.save(school);
+        log.info("[suspendSchool] School '{}' (dbPk={}) suspended", school.getName(), schoolDbPk);
+        return ApiResponse.success("School suspended. All users are blocked from login. Data is fully preserved.", "suspended");
+    }
+
+    /** Reactivate a suspended school and set a new subscription expiry date. */
+    public ApiResponse<String> reactivateSchool(Long schoolDbPk, java.time.LocalDate newExpiry) {
+        School school = schoolRepository.findById(schoolDbPk).orElse(null);
+        if (school == null) return ApiResponse.error("School not found");
+        school.setIsActive(true);
+        school.setSubscriptionExpiry(newExpiry);
+        schoolRepository.save(school);
+        log.info("[reactivateSchool] School '{}' (dbPk={}) reactivated, expiry={}", school.getName(), schoolDbPk, newExpiry);
+        return ApiResponse.success("School reactivated. Users can now log in.", "reactivated");
+    }
+
     /**
      * Permanently deletes a school and ALL its related data from the database.
      * Only APPLICATION_OWNER can call this.

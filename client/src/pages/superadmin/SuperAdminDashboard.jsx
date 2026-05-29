@@ -53,8 +53,14 @@ function OwnerDashboard() {
   const [expandedRow,  setExpandedRow]  = useState(null); // schoolId of expanded row
   const [deleteTarget,       setDeleteTarget]       = useState(null); // sa object — delete super admin
   const [deleting,           setDeleting]           = useState(false);
-  const [schoolDeleteTarget, setSchoolDeleteTarget] = useState(null); // sa object — delete entire school
-  const [schoolDeleting,     setSchoolDeleting]     = useState(false);
+  const [schoolDeleteTarget,     setSchoolDeleteTarget]     = useState(null); // sa object — delete entire school
+  const [schoolDeleting,         setSchoolDeleting]         = useState(false);
+  const [schoolSuspendTarget,    setSchoolSuspendTarget]    = useState(null); // sa object — suspend school
+  const [schoolSuspending,       setSchoolSuspending]       = useState(false);
+  const [schoolReactivateTarget, setSchoolReactivateTarget] = useState(null); // sa object — reactivate school
+  const [reactivateExpiry,       setReactivateExpiry]       = useState('');
+  const [schoolReactivating,     setSchoolReactivating]     = useState(false);
+  const [schoolDeleteConfirmName, setSchoolDeleteConfirmName] = useState('');
   const [editTarget,   setEditTarget]   = useState(null); // sa object being edited
   const [demoBookings, setDemoBookings] = useState([]);
   const [bookingsLoading, setBookingsLoading] = useState(true);
@@ -230,11 +236,41 @@ function OwnerDashboard() {
     try {
       await superAdminAPI.deleteSchool(schoolDeleteTarget.schoolActualId ?? schoolDeleteTarget.schoolDbId);
       setSchoolDeleteTarget(null);
+      setSchoolDeleteConfirmName('');
       load();
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to delete school. Please try again.');
     } finally {
       setSchoolDeleting(false);
+    }
+  };
+
+  const handleSuspendConfirm = async () => {
+    if (!schoolSuspendTarget) return;
+    setSchoolSuspending(true);
+    try {
+      await superAdminAPI.suspendSchool(schoolSuspendTarget.schoolDbId);
+      setSchoolSuspendTarget(null);
+      load();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to suspend school. Please try again.');
+    } finally {
+      setSchoolSuspending(false);
+    }
+  };
+
+  const handleReactivateConfirm = async () => {
+    if (!schoolReactivateTarget) return;
+    setSchoolReactivating(true);
+    try {
+      await superAdminAPI.reactivateSchool(schoolReactivateTarget.schoolDbId, reactivateExpiry || null);
+      setSchoolReactivateTarget(null);
+      setReactivateExpiry('');
+      load();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to reactivate school. Please try again.');
+    } finally {
+      setSchoolReactivating(false);
     }
   };
 
@@ -457,6 +493,25 @@ function OwnerDashboard() {
                             >
                               <span className="material-icons" style={{ fontSize: 15, color: '#276749' }}>edit</span>
                             </button>
+                            {sa.schoolActive !== false ? (
+                              <button
+                                onClick={() => sa.schoolDbId && setSchoolSuspendTarget(sa)}
+                                disabled={!sa.schoolDbId}
+                                title="Suspend school (block logins, preserve data)"
+                                style={{ border: 'none', background: '#fffbeb', borderRadius: 7, width: 28, height: 28, cursor: sa.schoolDbId ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: sa.schoolDbId ? 1 : 0.4 }}
+                              >
+                                <span className="material-icons" style={{ fontSize: 15, color: '#d97706' }}>pause_circle</span>
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => { sa.schoolDbId && setSchoolReactivateTarget(sa); setReactivateExpiry(''); }}
+                                disabled={!sa.schoolDbId}
+                                title="Reactivate school"
+                                style={{ border: 'none', background: '#f0fff4', borderRadius: 7, width: 28, height: 28, cursor: sa.schoolDbId ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: sa.schoolDbId ? 1 : 0.4 }}
+                              >
+                                <span className="material-icons" style={{ fontSize: 15, color: '#276749' }}>play_circle</span>
+                              </button>
+                            )}
                             <button
                               onClick={() => setDeleteTarget(sa)}
                               title="Delete super admin"
@@ -465,8 +520,8 @@ function OwnerDashboard() {
                               <span className="material-icons" style={{ fontSize: 15, color: '#e53e3e' }}>person_remove</span>
                             </button>
                             <button
-                              onClick={() => setSchoolDeleteTarget(sa)}
-                              title="Delete entire school"
+                              onClick={() => { setSchoolDeleteTarget(sa); setSchoolDeleteConfirmName(''); }}
+                              title="Permanently delete school and all data"
                               style={{ border: 'none', background: '#fff0f0', borderRadius: 7, width: 28, height: 28, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
                             >
                               <span className="material-icons" style={{ fontSize: 15, color: '#c53030' }}>delete_forever</span>
@@ -987,6 +1042,127 @@ function OwnerDashboard() {
         </div>
       )}
 
+      {/* ── Suspend School Modal ─────────────────────────────────────────────── */}
+      {schoolSuspendTarget && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 460, width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+              <div style={{ width: 48, height: 48, borderRadius: 12, background: '#fffbeb', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <span className="material-icons" style={{ color: '#d97706', fontSize: 28 }}>pause_circle</span>
+              </div>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 17, color: '#1a202c' }}>Suspend School</div>
+                <div style={{ fontSize: 12, color: '#d97706', marginTop: 2, fontWeight: 600 }}>All users will be blocked from login</div>
+              </div>
+            </div>
+
+            <div style={{ background: '#fffbeb', borderRadius: 10, padding: '14px 16px', marginBottom: 16, border: '1.5px solid #fcd34d' }}>
+              <div style={{ fontSize: 13, color: '#2d3748', marginBottom: 6 }}>You are suspending:</div>
+              <div style={{ fontWeight: 800, fontSize: 16, color: '#92400e' }}>{schoolSuspendTarget.schoolName || '—'}</div>
+              <div style={{ fontSize: 12, color: '#718096', marginTop: 2 }}>Code: {schoolSuspendTarget.schoolCode || '—'}</div>
+              <div style={{ fontSize: 12, color: '#718096', marginTop: 1 }}>{schoolSuspendTarget.name} · {schoolSuspendTarget.email}</div>
+            </div>
+
+            <div style={{ background: '#f0fff4', borderRadius: 8, padding: '10px 14px', marginBottom: 20, border: '1px solid #9ae6b4', fontSize: 12, color: '#276749', lineHeight: 1.6 }}>
+              <strong>No data will be deleted.</strong> The school's login will be blocked immediately. You can reactivate it at any time and set a new subscription expiry date.
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setSchoolSuspendTarget(null)}
+                disabled={schoolSuspending}
+                style={{ padding: '9px 20px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: '#fff', color: '#4a5568', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSuspendConfirm}
+                disabled={schoolSuspending}
+                style={{ padding: '9px 22px', borderRadius: 8, border: 'none', background: '#d97706', color: '#fff', fontWeight: 700, fontSize: 13, cursor: schoolSuspending ? 'not-allowed' : 'pointer', opacity: schoolSuspending ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 6 }}
+              >
+                {schoolSuspending ? (
+                  <>
+                    <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />
+                    Suspending…
+                  </>
+                ) : (
+                  <>
+                    <span className="material-icons" style={{ fontSize: 16 }}>pause_circle</span>
+                    Suspend School
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Reactivate School Modal ──────────────────────────────────────────── */}
+      {schoolReactivateTarget && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 460, width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+              <div style={{ width: 48, height: 48, borderRadius: 12, background: '#f0fff4', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <span className="material-icons" style={{ color: '#276749', fontSize: 28 }}>play_circle</span>
+              </div>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 17, color: '#1a202c' }}>Reactivate School</div>
+                <div style={{ fontSize: 12, color: '#276749', marginTop: 2, fontWeight: 600 }}>Users will regain login access</div>
+              </div>
+            </div>
+
+            <div style={{ background: '#f0fff4', borderRadius: 10, padding: '14px 16px', marginBottom: 16, border: '1.5px solid #9ae6b4' }}>
+              <div style={{ fontWeight: 800, fontSize: 15, color: '#276749' }}>{schoolReactivateTarget.schoolName || '—'}</div>
+              <div style={{ fontSize: 12, color: '#718096', marginTop: 2 }}>Code: {schoolReactivateTarget.schoolCode || '—'}</div>
+              <div style={{ fontSize: 12, color: '#718096', marginTop: 1 }}>{schoolReactivateTarget.name} · {schoolReactivateTarget.email}</div>
+            </div>
+
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#2d3748', marginBottom: 6 }}>
+                New Subscription Expiry Date
+              </label>
+              <input
+                type="date"
+                value={reactivateExpiry}
+                min={new Date().toISOString().split('T')[0]}
+                onChange={e => setReactivateExpiry(e.target.value)}
+                style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 14, color: '#2d3748', outline: 'none', boxSizing: 'border-box' }}
+              />
+              <div style={{ fontSize: 11, color: '#a0aec0', marginTop: 4 }}>
+                Leave blank to default to 1 year from today.
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setSchoolReactivateTarget(null)}
+                disabled={schoolReactivating}
+                style={{ padding: '9px 20px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: '#fff', color: '#4a5568', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleReactivateConfirm}
+                disabled={schoolReactivating}
+                style={{ padding: '9px 22px', borderRadius: 8, border: 'none', background: '#276749', color: '#fff', fontWeight: 700, fontSize: 13, cursor: schoolReactivating ? 'not-allowed' : 'pointer', opacity: schoolReactivating ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 6 }}
+              >
+                {schoolReactivating ? (
+                  <>
+                    <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />
+                    Reactivating…
+                  </>
+                ) : (
+                  <>
+                    <span className="material-icons" style={{ fontSize: 16 }}>play_circle</span>
+                    Reactivate School
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Delete School Confirmation Modal ────────────────────────────────── */}
       {schoolDeleteTarget && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1008,13 +1184,26 @@ function OwnerDashboard() {
               <div style={{ fontSize: 12, color: '#718096', marginTop: 1 }}>{schoolDeleteTarget.name} · {schoolDeleteTarget.email}</div>
             </div>
 
-            <div style={{ background: '#fffbeb', borderRadius: 8, padding: '10px 14px', marginBottom: 20, border: '1px solid #fcd34d', fontSize: 12, color: '#92400e', lineHeight: 1.6 }}>
-              This will delete <strong>ALL data</strong> associated with this school — students, teachers, attendance, marks, fees, salary, transport, chat messages, announcements, and the school record itself.
+            <div style={{ background: '#fffbeb', borderRadius: 8, padding: '10px 14px', marginBottom: 16, border: '1px solid #fcd34d', fontSize: 12, color: '#92400e', lineHeight: 1.6 }}>
+              This will delete <strong>ALL data</strong> — students, teachers, attendance, marks, fees, salary, transport, messages, and the school record itself. This cannot be undone.
+            </div>
+
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#c53030', marginBottom: 6 }}>
+                Type the school name to confirm: <strong>{schoolDeleteTarget.schoolName}</strong>
+              </label>
+              <input
+                type="text"
+                value={schoolDeleteConfirmName}
+                onChange={e => setSchoolDeleteConfirmName(e.target.value)}
+                placeholder="Type school name exactly"
+                style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #feb2b2', borderRadius: 8, fontSize: 14, color: '#2d3748', outline: 'none', boxSizing: 'border-box' }}
+              />
             </div>
 
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
               <button
-                onClick={() => setSchoolDeleteTarget(null)}
+                onClick={() => { setSchoolDeleteTarget(null); setSchoolDeleteConfirmName(''); }}
                 disabled={schoolDeleting}
                 style={{ padding: '9px 20px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: '#fff', color: '#4a5568', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
               >
@@ -1022,8 +1211,8 @@ function OwnerDashboard() {
               </button>
               <button
                 onClick={handleSchoolDeleteConfirm}
-                disabled={schoolDeleting}
-                style={{ padding: '9px 22px', borderRadius: 8, border: 'none', background: '#c53030', color: '#fff', fontWeight: 700, fontSize: 13, cursor: schoolDeleting ? 'not-allowed' : 'pointer', opacity: schoolDeleting ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 6 }}
+                disabled={schoolDeleting || schoolDeleteConfirmName !== schoolDeleteTarget.schoolName}
+                style={{ padding: '9px 22px', borderRadius: 8, border: 'none', background: '#c53030', color: '#fff', fontWeight: 700, fontSize: 13, cursor: (schoolDeleting || schoolDeleteConfirmName !== schoolDeleteTarget.schoolName) ? 'not-allowed' : 'pointer', opacity: (schoolDeleting || schoolDeleteConfirmName !== schoolDeleteTarget.schoolName) ? 0.5 : 1, display: 'flex', alignItems: 'center', gap: 6 }}
               >
                 {schoolDeleting ? (
                   <>
