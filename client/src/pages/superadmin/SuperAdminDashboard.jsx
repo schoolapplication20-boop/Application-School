@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '../../components/Layout';
-import { superAdminAPI, adminAPI, schoolAPI, marketingAPI, systemAPI } from '../../services/api';
+import { superAdminAPI, adminAPI, schoolAPI, marketingAPI, systemAPI, onboardingVerifyAPI } from '../../services/api';
 import { getLogs } from '../../services/activityLog';
 import { useAuth } from '../../context/AuthContext';
 import SEOMeta from '../../components/SEOMeta';
@@ -1284,8 +1284,70 @@ function CreateSuperAdminWizard({ onClose, onCreated }) {
   const [error,     setError]     = useState('');
   const [form,      setForm]      = useState({ ...WIZARD_INIT });
   const [perms,     setPerms]     = useState({ ...DEFAULT_PERMS });
-  const [logoFile,  setLogoFile]  = useState(null);   // File object
-  const [logoPreview, setLogoPreview] = useState(null); // object URL for preview
+  const [logoFile,  setLogoFile]  = useState(null);
+  const [logoPreview, setLogoPreview] = useState(null);
+
+  // ── OTP state for admin email verification ──────────────────────────────────
+  const [otpSent,     setOtpSent]     = useState(false);
+  const [otpCode,     setOtpCode]     = useState('');
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [otpLoading,  setOtpLoading]  = useState(false);
+  const [otpError,    setOtpError]    = useState('');
+  const [otpTimer,    setOtpTimer]    = useState(0);
+  const [canResendOtp, setCanResendOtp] = useState(false);
+
+  const OTP_SECONDS = 300;
+
+  // Reset OTP state when email changes
+  const prevAdminEmail = React.useRef(form.adminEmail);
+  React.useEffect(() => {
+    if (form.adminEmail !== prevAdminEmail.current) {
+      prevAdminEmail.current = form.adminEmail;
+      setOtpSent(false); setOtpVerified(false); setOtpCode('');
+      setOtpError(''); setOtpTimer(0); setCanResendOtp(false);
+    }
+  }, [form.adminEmail]);
+
+  // Countdown timer
+  React.useEffect(() => {
+    if (!otpSent || otpVerified || otpTimer <= 0) {
+      if (otpSent && !otpVerified && otpTimer <= 0) setCanResendOtp(true);
+      return;
+    }
+    const id = setInterval(() => setOtpTimer(t => t - 1), 1000);
+    return () => clearInterval(id);
+  }, [otpSent, otpVerified, otpTimer]);
+
+  const fmtTimer = (s) => `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
+
+  const handleSendOtp = async () => {
+    const email = form.adminEmail.trim();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setOtpError('Enter a valid email address first.'); return;
+    }
+    setOtpLoading(true); setOtpError('');
+    try {
+      await onboardingVerifyAPI.sendOtp(email);
+      setOtpSent(true); setOtpTimer(OTP_SECONDS); setCanResendOtp(false); setOtpCode('');
+    } catch (err) {
+      setOtpError(err.response?.data?.message || 'Failed to send OTP. Please try again.');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (otpCode.trim().length < 6) { setOtpError('Enter the 6-digit OTP.'); return; }
+    setOtpLoading(true); setOtpError('');
+    try {
+      await onboardingVerifyAPI.verifyOtp(form.adminEmail.trim(), otpCode.trim());
+      setOtpVerified(true); setOtpError('');
+    } catch (err) {
+      setOtpError(err.response?.data?.message || 'Invalid OTP. Please try again.');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
 
   const handleLogoChange = (file) => {
     if (!file) return;
@@ -1332,6 +1394,7 @@ function CreateSuperAdminWizard({ onClose, onCreated }) {
       if (!form.adminName.trim())  return 'Admin name is required';
       if (!form.adminEmail.trim()) return 'Admin email is required';
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.adminEmail)) return 'Enter a valid admin email';
+      if (!otpVerified) return 'Please verify the admin email with OTP before continuing.';
     }
     return null;
   };
@@ -1655,9 +1718,74 @@ function CreateSuperAdminWizard({ onClose, onCreated }) {
               <WizardField label="Full Name" required>
                 <input value={form.adminName} onChange={on('adminName')} placeholder="e.g. Rajesh Kumar" style={inp(false)} />
               </WizardField>
-              <WizardField label="Email Address" required>
-                <input type="email" value={form.adminEmail} onChange={on('adminEmail')} placeholder="e.g. rajesh@springfield.edu" style={inp(false)} />
+
+              {/* Email + OTP verification */}
+              <WizardField label="Email Address" required hint={otpVerified ? undefined : 'An OTP will be sent to verify this email.'}>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    type="email"
+                    value={form.adminEmail}
+                    onChange={on('adminEmail')}
+                    placeholder="e.g. rajesh@springfield.edu"
+                    disabled={otpVerified}
+                    style={{ ...inp(false), flex: 1, background: otpVerified ? '#f0fff4' : '#fff' }}
+                  />
+                  {!otpVerified && (
+                    <button
+                      type="button"
+                      onClick={handleSendOtp}
+                      disabled={otpLoading || !form.adminEmail.trim()}
+                      style={{ padding: '10px 14px', background: otpSent ? '#4a5568' : '#7c3aed', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0, opacity: (otpLoading || !form.adminEmail.trim()) ? 0.6 : 1 }}
+                    >
+                      {otpLoading ? '…' : otpSent ? 'Resend OTP' : 'Send OTP'}
+                    </button>
+                  )}
+                  {otpVerified && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#276749', fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
+                      <span className="material-icons" style={{ fontSize: 18, color: '#276749' }}>verified</span>
+                      Verified
+                    </div>
+                  )}
+                </div>
               </WizardField>
+
+              {/* OTP input — shown after OTP is sent and before it's verified */}
+              {otpSent && !otpVerified && (
+                <WizardField label="Enter OTP">
+                  {otpError && (
+                    <div style={{ background: '#fff5f5', border: '1px solid #feb2b2', borderRadius: 6, padding: '7px 10px', fontSize: 12, color: '#c53030', marginBottom: 8 }}>
+                      {otpError}
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      value={otpCode}
+                      onChange={e => { setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6)); setOtpError(''); }}
+                      placeholder="6-digit OTP"
+                      style={{ ...inp(false), flex: 1, letterSpacing: 4, textAlign: 'center', fontWeight: 700, fontSize: 16 }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleVerifyOtp}
+                      disabled={otpLoading || otpCode.length < 6}
+                      style={{ padding: '10px 16px', background: '#276749', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 12, cursor: 'pointer', flexShrink: 0, opacity: (otpLoading || otpCode.length < 6) ? 0.6 : 1 }}
+                    >
+                      {otpLoading ? '…' : 'Verify'}
+                    </button>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 5, fontSize: 11, color: '#a0aec0' }}>
+                    <span>OTP sent to {form.adminEmail}</span>
+                    {otpTimer > 0
+                      ? <span>Expires in {fmtTimer(otpTimer)}</span>
+                      : <button type="button" onClick={handleSendOtp} style={{ background: 'none', border: 'none', color: '#7c3aed', fontWeight: 700, fontSize: 11, cursor: 'pointer', padding: 0 }}>Resend OTP</button>
+                    }
+                  </div>
+                </WizardField>
+              )}
+
               <WizardField label="Mobile Number" hint="Optional">
                 <input
                   type="tel"

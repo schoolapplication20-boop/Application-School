@@ -27,8 +27,7 @@ A full-stack Progressive Web App (PWA) for managing schools: students, teachers,
 my-skoolz/
 ├── client/          React 18 + Vite + Tailwind CSS (PWA)
 ├── server/          Spring Boot 3.2 + JPA + PostgreSQL
-├── test/            Test cases, bug reports, E2E scenarios
-└── Application-School/  Marketing website (separate React app)
+└── mobile/          React Native (Expo) mobile app
 ```
 
 **Frontend:** React 18, Vite, React Router v6, Tailwind CSS, Recharts, PWA (service worker + manifest)  
@@ -201,9 +200,6 @@ mvn test -pl . -Dsurefire.useFile=false
 - Frontend: **95 tests** (api service, AuthContext, ProtectedRoute, InstallPrompt, Login, HomePage)
 - Backend: **42 tests** (JwtUtil ×15, AuthService ×9, AuthController ×9, AdminController ×9)
 
-See [test/BUG_REPORT.md](test/BUG_REPORT.md) for known issues found during testing.  
-See [test/E2E_TEST_CASES.md](test/E2E_TEST_CASES.md) for full manual E2E test suite.
-
 ---
 
 ## Deployment
@@ -312,8 +308,8 @@ client/
 │   │   ├── admin/             Dashboard, Students, Teachers, Fees, …
 │   │   ├── teacher/           Attendance, Homework, Marks, Schedule, …
 │   │   ├── student/           Dashboard, Attendance, Exams, Fees, …
-│   │   ├── parent/            Dashboard, Performance, PayFees, …
 │   │   ├── superadmin/        SetupSchool, AdminManagement, Transport, …
+│   │   ├── shared/            SchoolCalendar
 │   │   └── marketing/         HomePage, SolutionsPage, ContactUs, …
 │   ├── services/
 │   │   ├── api.js             Axios instance + all API call functions
@@ -346,7 +342,4 @@ server/
 │       ├── application-test.properties  H2 datasource for tests
 │       └── mockito-extensions/          Inline mock maker config
 
-test/
-├── BUG_REPORT.md       Bugs found during automated testing
-└── E2E_TEST_CASES.md   Manual end-to-end test scenarios
 ```
