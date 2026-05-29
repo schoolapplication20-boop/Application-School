@@ -181,7 +181,7 @@ const ForgotPassword = () => {
 
           <div className="auth-form-header" style={{ textAlign: 'center' }}>
             <h1>Forgot Password</h1>
-            <p>Enter your registered email address to receive an OTP</p>
+            <p>Enter your registered email address to receive a one-time password. Students: use the email address linked to your account.</p>
           </div>
 
           {error && (

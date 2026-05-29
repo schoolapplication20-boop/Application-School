@@ -77,8 +77,8 @@ const Login = () => {
   };
 
   const isStudentRole  = selectedRole === 'STUDENT';
-  const inputLabel     = isStudentRole ? 'Admission Number' : 'Email';
-  const inputPlaceholder = isStudentRole ? 'Enter your admission number' : 'Enter your email';
+  const inputLabel     = isStudentRole ? 'Email or Admission Number' : 'Email';
+  const inputPlaceholder = isStudentRole ? 'Enter your email or admission number' : 'Enter your email';
 
   const rolePathMap = {
     APPLICATION_OWNER: '/owner/dashboard',
@@ -465,7 +465,7 @@ const Login = () => {
                 <label className="form-label">{inputLabel}</label>
                 <div className="input-wrapper">
                   <span className="material-icons input-icon-left">
-                    {isStudentRole ? 'badge' : 'email'}
+                    {isStudentRole ? 'person_search' : 'email'}
                   </span>
                   <input
                     type="text"

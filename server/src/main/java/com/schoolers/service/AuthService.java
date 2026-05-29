@@ -4,8 +4,10 @@ import com.schoolers.dto.ApiResponse;
 import com.schoolers.dto.LoginRequest;
 import com.schoolers.dto.LoginResponse;
 import com.schoolers.model.School;
+import com.schoolers.model.Student;
 import com.schoolers.model.User;
 import com.schoolers.repository.SchoolRepository;
+import com.schoolers.repository.StudentRepository;
 import com.schoolers.repository.TeacherRepository;
 import com.schoolers.repository.UserRepository;
 import com.schoolers.security.JwtUtil;
@@ -30,6 +32,7 @@ public class AuthService {
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
     @Autowired private UserRepository    userRepository;
+    @Autowired private StudentRepository studentRepository;
     @Autowired private SchoolRepository  schoolRepository;
     @Autowired private TeacherRepository teacherRepository;
     @Autowired private JwtUtil           jwtUtil;
@@ -62,8 +65,21 @@ public class AuthService {
                     user = userRepository.findByUsername(username).orElse(null);
                     if (user != null) username = user.getEmail();
                 }
+                // Try admission number lookup (for students who log in with their admission number)
+                if (user == null) {
+                    java.util.List<Student> byAdmission = studentRepository.findAllByAdmissionNumberIgnoreCase(username);
+                    if (byAdmission.size() == 1) {
+                        Student s = byAdmission.get(0);
+                        if (s.getStudentUserId() != null) {
+                            user = userRepository.findById(s.getStudentUserId()).orElse(null);
+                            if (user != null) username = user.getEmail();
+                        }
+                    } else if (byAdmission.size() > 1) {
+                        return ApiResponse.error("Multiple accounts found with this admission number. Please use your email address to log in.");
+                    }
+                }
                 if (user == null)
-                    return ApiResponse.error("No account found with this email or username. Please contact admin.");
+                    return ApiResponse.error("No account found with this email or admission number. Please contact admin.");
             }
 
             // ── Step 2: Status checks ──────────────────────────────────────
