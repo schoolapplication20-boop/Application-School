@@ -304,7 +304,7 @@ export default function LeaveApproval() {
         }}>
           <div style={{
             background: '#fff', borderRadius: 16, padding: 28, width: '100%', maxWidth: 460,
-            boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.15)', maxHeight: '90vh', overflowY: 'auto',
           }}>
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>

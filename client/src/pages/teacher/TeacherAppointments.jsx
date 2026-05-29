@@ -104,7 +104,7 @@ export default function TeacherAppointments() {
         {/* Respond modal */}
         {responding && (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-            <div style={{ background: '#fff', borderRadius: 14, padding: 28, maxWidth: 460, width: '100%', boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }}>
+            <div style={{ background: '#fff', borderRadius: 14, padding: 28, maxWidth: 460, width: '100%', boxShadow: '0 8px 32px rgba(0,0,0,0.18)', maxHeight: '90vh', overflowY: 'auto' }}>
               <h3 style={{ fontSize: 16, fontWeight: 700, color: '#2d3748', margin: '0 0 6px' }}>Respond to Request</h3>
               <p style={{ fontSize: 13, color: '#718096', margin: '0 0 20px' }}>
                 {responding.studentName} · {responding.topic}

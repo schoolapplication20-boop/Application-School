@@ -221,7 +221,7 @@ export default function StudentAssignments() {
       {submitFor && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
           onClick={e => e.target === e.currentTarget && !submitting && setSubmitFor(null)}>
-          <div style={{ background: 'var(--surface, #fff)', borderRadius: 18, width: '100%', maxWidth: 480, boxShadow: '0 24px 60px rgba(0,0,0,0.18)' }}>
+          <div style={{ background: 'var(--surface, #fff)', borderRadius: 18, width: '100%', maxWidth: 480, boxShadow: '0 24px 60px rgba(0,0,0,0.18)', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border, #f0f4f8)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div>
                 <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text-primary, #1a202c)' }}>Submit Assignment</div>
