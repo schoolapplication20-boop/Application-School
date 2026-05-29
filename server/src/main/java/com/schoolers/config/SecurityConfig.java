@@ -59,15 +59,17 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
 
             // ── HTTP security headers ────────────────────────────────────────────
-            .headers(headers -> headers
-                .frameOptions(f -> f.deny())
-                .xssProtection(x -> x.disable())                      // X-XSS-Protection deprecated; CSP handles XSS
-                .contentTypeOptions(c -> {})                           // X-Content-Type-Options: nosniff
-                .httpStrictTransportSecurity(hsts -> hsts
+            // Block-style lambda avoids method-chain ambiguity when permissionsPolicy()
+            // return type differs across Spring Security patch versions.
+            .headers(headers -> {
+                headers.frameOptions(f -> f.deny());
+                headers.xssProtection(x -> x.disable());           // X-XSS-Protection deprecated; CSP handles XSS
+                headers.contentTypeOptions(c -> {});                // X-Content-Type-Options: nosniff
+                headers.httpStrictTransportSecurity(hsts -> hsts
                     .maxAgeInSeconds(31536000)
                     .includeSubDomains(true)
-                    .preload(true))
-                .contentSecurityPolicy(csp -> csp
+                    .preload(true));
+                headers.contentSecurityPolicy(csp -> csp
                     .policyDirectives(
                         "default-src 'self'; " +
                         "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://storage.googleapis.com; " +
@@ -77,14 +79,14 @@ public class SecurityConfig {
                         "connect-src 'self' https: wss:; " +
                         "frame-ancestors 'none'; " +
                         "base-uri 'self'; " +
-                        "form-action 'self';"))
-                .referrerPolicy(r -> r
-                    .policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
-                .permissionsPolicy(p -> p
-                    .policy("camera=(), microphone=(), geolocation=(), payment=()"))
+                        "form-action 'self';"));
+                headers.referrerPolicy(r -> r
+                    .policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN));
+                headers.permissionsPolicy(p -> p
+                    .policy("camera=(), microphone=(), geolocation=(), payment=()"));
                 // Prevent sensitive API responses from being cached by browsers or proxies
-                .cacheControl(c -> {})
-            )
+                headers.cacheControl(c -> {});
+            })
 
             // Session management - stateless (JWT)
             .sessionManagement(session ->
