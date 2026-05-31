@@ -408,16 +408,19 @@ public class LeaveService {
                                 + (adminComment != null && !adminComment.isBlank()
                                         ? " Remark: " + adminComment : "");
                         // saved.getRequesterId() is the Teacher entity ID.
-                        // Notifications are fetched by User entity ID, so resolve it.
+                        // Notifications are addressed by User entity ID — resolve it before sending.
                         Long notifyUserId = teacherRepository.findById(saved.getRequesterId())
                                 .map(t -> t.getUser() != null ? t.getUser().getId() : null)
                                 .orElse(null);
-                        if (notifyUserId == null) notifyUserId = saved.getRequesterId(); // fallback
-                        notificationService.create(
-                                notifyUserId, msg,
-                                approved ? "check_circle" : "cancel",
-                                approved ? "#76C442"      : "#e53e3e",
-                                "leave_decision", saved.getId());
+                        if (notifyUserId != null) {
+                            notificationService.create(
+                                    notifyUserId, msg,
+                                    approved ? "check_circle" : "cancel",
+                                    approved ? "#76C442"      : "#e53e3e",
+                                    "leave_decision", saved.getId());
+                        } else {
+                            log.warn("[adminApproveLeave] Teacher {} has no linked User; skipping push notification", saved.getRequesterId());
+                        }
                     }
                     return ApiResponse.success("Leave status updated", saved);
                 })

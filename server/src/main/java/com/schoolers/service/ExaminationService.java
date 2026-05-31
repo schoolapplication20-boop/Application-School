@@ -61,7 +61,7 @@ public class ExaminationService {
                 .startTime((String) body.get("startTime"))
                 .endTime((String) body.get("endTime"))
                 .hallNumber((String) body.get("hallNumber"))
-                .maxMarks(Integer.parseInt(String.valueOf(body.getOrDefault("maxMarks", 100))))
+                .maxMarks(parseIntSafe(body.get("maxMarks"), 100))
                 .status((String) body.getOrDefault("status", "SCHEDULED"))
                 .instructions((String) body.getOrDefault("instructions", ""))
                 .schoolId(schoolId)
@@ -84,7 +84,7 @@ public class ExaminationService {
         if (body.containsKey("startTime"))   s.setStartTime((String) body.get("startTime"));
         if (body.containsKey("endTime"))     s.setEndTime((String) body.get("endTime"));
         if (body.containsKey("hallNumber"))  s.setHallNumber((String) body.get("hallNumber"));
-        if (body.containsKey("maxMarks"))    s.setMaxMarks(Integer.parseInt(String.valueOf(body.get("maxMarks"))));
+        if (body.containsKey("maxMarks"))    s.setMaxMarks(parseIntSafe(body.get("maxMarks"), s.getMaxMarks() != null ? s.getMaxMarks() : 100));
         if (body.containsKey("status"))      s.setStatus((String) body.get("status"));
         if (body.containsKey("instructions")) s.setInstructions((String) body.get("instructions"));
         return ApiResponse.success("Exam schedule updated", examScheduleRepository.save(s));
@@ -321,5 +321,17 @@ public class ExaminationService {
         } else {
             return (year - 1) + "-" + year;
         }
+    }
+
+    /**
+     * Safely parse any JSON numeric value to int.
+     * JSON numbers often deserialise as Double (e.g. 100.0), which makes
+     * Integer.parseInt(String.valueOf(100.0)) throw NumberFormatException.
+     */
+    private int parseIntSafe(Object value, int fallback) {
+        if (value == null) return fallback;
+        if (value instanceof Number) return ((Number) value).intValue();
+        try { return Integer.parseInt(String.valueOf(value).replaceAll("\\..*", "")); }
+        catch (NumberFormatException e) { return fallback; }
     }
 }

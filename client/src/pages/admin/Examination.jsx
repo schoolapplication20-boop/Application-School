@@ -292,6 +292,13 @@ export default function Examination() {
     setSaving(true);
     const student = students.find(s => String(s.id) === String(htForm.studentId));
     if (!student) { showToast('Student not found', 'error'); setSaving(false); return; }
+    const subjectList = schedules
+      .filter(s => s.examName === htForm.examName && s.className === student.className)
+      .map(s => ({ subject: s.subject, date: s.examDate, startTime: s.startTime, endTime: s.endTime, hall: s.hallNumber, maxMarks: s.maxMarks }));
+    if (subjectList.length === 0) {
+      showToast(`No exam schedules found for "${htForm.examName}" in class ${student.className}. Add exam schedules first.`, 'error');
+      setSaving(false); return;
+    }
     const payload = {
       studentId:   student.id,
       studentName: student.name,
@@ -301,10 +308,7 @@ export default function Examination() {
       examName:    htForm.examName,
       examType:    htForm.examType,
       academicYear: htForm.academicYear,
-      examSubjects: JSON.stringify(
-        schedules.filter(s => s.examName === htForm.examName && s.className === student.className)
-          .map(s => ({ subject: s.subject, date: s.examDate, startTime: s.startTime, endTime: s.endTime, hall: s.hallNumber, maxMarks: s.maxMarks }))
-      ),
+      examSubjects: JSON.stringify(subjectList),
     };
     try {
       await examinationAPI.createHallTicket(payload);
@@ -325,12 +329,16 @@ export default function Examination() {
       showToast('Select class and exam name', 'error'); return;
     }
     setSaving(true);
+    const bulkSubjectList = schedules
+      .filter(s => s.examName === bulkForm.examName && s.className === bulkForm.className)
+      .map(s => ({ subject: s.subject, date: s.examDate, startTime: s.startTime, endTime: s.endTime, hall: s.hallNumber, maxMarks: s.maxMarks }));
+    if (bulkSubjectList.length === 0) {
+      showToast(`No exam schedules found for "${bulkForm.examName}" in class ${bulkForm.className}. Add exam schedules first.`, 'error');
+      setSaving(false); return;
+    }
     const payload = {
       ...bulkForm,
-      examSubjects: JSON.stringify(
-        schedules.filter(s => s.examName === bulkForm.examName && s.className === bulkForm.className)
-          .map(s => ({ subject: s.subject, date: s.examDate, startTime: s.startTime, endTime: s.endTime, hall: s.hallNumber, maxMarks: s.maxMarks }))
-      ),
+      examSubjects: JSON.stringify(bulkSubjectList),
     };
     try {
       const res = await examinationAPI.generateBulkHallTickets(payload);
