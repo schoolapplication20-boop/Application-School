@@ -142,14 +142,17 @@ class AuthServiceTest {
 
             assertThat(resp.isSuccess()).isFalse();
             assertThat(resp.getMessage()).containsIgnoringCase("locked");
-            assertThat(user.getLockedUntil()).isNotNull();
+            // lockedUntil must be a far-future timestamp so the time-based check fires
+            assertThat(user.getLockedUntil()).isNotNull()
+                    .isAfter(LocalDateTime.now(ZoneOffset.UTC));
         }
 
         @Test
         @DisplayName("locked account: rejects login immediately without checking password")
         void lockedAccount_rejectsLogin() {
             User user = activeAdmin();
-            user.setLockedUntil(LocalDateTime.now(ZoneOffset.UTC));
+            // Lock must be in the future for the time-based check to recognise it
+            user.setLockedUntil(LocalDateTime.now(ZoneOffset.UTC).plusYears(50));
             when(userRepository.findByEmailIgnoreCase("admin@school.com")).thenReturn(Optional.of(user));
 
             ApiResponse<LoginResponse> resp = authService.login(loginReq("admin@school.com", "Password1!", "ADMIN"));

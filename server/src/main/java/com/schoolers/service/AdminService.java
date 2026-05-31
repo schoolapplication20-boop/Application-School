@@ -250,19 +250,13 @@ public class AdminService {
     // ── Students ───────────────────────────────────────────────────────────
 
     public ApiResponse<Page<Student>> getStudents(Long schoolId, String search, int page, int size) {
+        if (schoolId == null) return ApiResponse.success(Page.empty());
         size = Math.min(size, 100);
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        if (schoolId != null) {
-            if (search != null && !search.isEmpty()) {
-                return ApiResponse.success(studentRepository.searchStudentsBySchool(schoolId, search, pageable));
-            }
-            return ApiResponse.success(studentRepository.findBySchoolId(schoolId, pageable));
-        }
-        // Platform-level fallback
         if (search != null && !search.isEmpty()) {
-            return ApiResponse.success(studentRepository.searchStudents(search, pageable));
+            return ApiResponse.success(studentRepository.searchStudentsBySchool(schoolId, search, pageable));
         }
-        return ApiResponse.success(studentRepository.findAll(pageable));
+        return ApiResponse.success(studentRepository.findBySchoolId(schoolId, pageable));
     }
 
     public ApiResponse<Student> getStudentById(Long id, Long schoolId) {
@@ -684,9 +678,8 @@ public class AdminService {
     // ── Teachers ───────────────────────────────────────────────────────────
 
     public ApiResponse<List<Map<String, Object>>> getTeachers(Long schoolId) {
-        List<Teacher> teachers = schoolId != null
-                ? teacherRepository.findBySchoolId(schoolId)
-                : teacherRepository.findAll();
+        if (schoolId == null) return ApiResponse.success(java.util.List.of());
+        List<Teacher> teachers = teacherRepository.findBySchoolId(schoolId);
 
         List<Map<String, Object>> result = teachers.stream().map(t -> {
             Map<String, Object> map = new LinkedHashMap<>();
@@ -1012,9 +1005,8 @@ public class AdminService {
     // ── Classes ────────────────────────────────────────────────────────────
 
     public ApiResponse<List<Map<String, Object>>> getClasses(Long schoolId) {
-        List<ClassRoom> rooms = (schoolId != null)
-                ? classRoomRepository.findBySchoolId(schoolId)
-                : classRoomRepository.findAll();
+        if (schoolId == null) return ApiResponse.success(java.util.List.of());
+        List<ClassRoom> rooms = classRoomRepository.findBySchoolId(schoolId);
 
         List<Map<String, Object>> result = rooms.stream().map(room -> {
             Long sid = schoolId != null ? schoolId : room.getSchoolId();
@@ -1234,10 +1226,8 @@ public class AdminService {
     // ── Fees ───────────────────────────────────────────────────────────────
 
     public ApiResponse<List<Fee>> getFees(Long schoolId) {
-        if (schoolId != null) {
-            return ApiResponse.success(feeRepository.findBySchoolId(schoolId));
-        }
-        return ApiResponse.success(feeRepository.findAll());
+        if (schoolId == null) return ApiResponse.success(java.util.List.of());
+        return ApiResponse.success(feeRepository.findBySchoolId(schoolId));
     }
 
     public ApiResponse<List<Student>> searchStudentsForFee(Long schoolId, String query) {
@@ -1447,10 +1437,8 @@ public class AdminService {
     // ── Class Fee Structure ─────────────────────────────────────────────────
 
     public ApiResponse<List<ClassFeeStructure>> getClassFeeStructures(Long schoolId) {
-        if (schoolId != null) {
-            return ApiResponse.success(classFeeStructureRepository.findBySchoolId(schoolId));
-        }
-        return ApiResponse.success(classFeeStructureRepository.findAll());
+        if (schoolId == null) return ApiResponse.success(java.util.List.of());
+        return ApiResponse.success(classFeeStructureRepository.findBySchoolId(schoolId));
     }
 
     @Transactional
@@ -1550,14 +1538,12 @@ public class AdminService {
     // ── Student Fee Assignment ───────────────────────────────────────────────
 
     public ApiResponse<List<StudentFeeAssignment>> getAllStudentFeeAssignments(Long schoolId) {
+        if (schoolId == null) return ApiResponse.success(java.util.List.of());
+        // Filter via student ownership since StudentFeeAssignment has schoolId column
         List<StudentFeeAssignment> all = studentFeeAssignmentRepository.findAllByOrderByCreatedAtDesc();
-        if (schoolId != null) {
-            // Filter via student ownership since StudentFeeAssignment has no schoolId column
-            java.util.Set<Long> schoolStudentIds = studentRepository.findBySchoolId(schoolId)
-                    .stream().map(Student::getId).collect(java.util.stream.Collectors.toSet());
-            all = all.stream().filter(a -> schoolStudentIds.contains(a.getStudentId())).toList();
-        }
-        return ApiResponse.success(all);
+        java.util.Set<Long> schoolStudentIds = studentRepository.findBySchoolId(schoolId)
+                .stream().map(Student::getId).collect(java.util.stream.Collectors.toSet());
+        return ApiResponse.success(all.stream().filter(a -> schoolStudentIds.contains(a.getStudentId())).toList());
     }
 
     public ApiResponse<StudentFeeAssignment> getStudentFeeAssignment(Long studentId, Long schoolId) {
@@ -1781,14 +1767,9 @@ public class AdminService {
     }
 
     public ApiResponse<List<FeePayment>> getAllFeePayments(Long schoolId) {
-        if (schoolId != null) {
-            return ApiResponse.success(
-                    feePaymentRepository.findBySchoolIdOrderByPaymentDateDescCreatedAtDesc(schoolId));
-        }
+        if (schoolId == null) return ApiResponse.success(java.util.List.of());
         return ApiResponse.success(
-                feePaymentRepository.findAll(
-                        org.springframework.data.domain.Sort.by(
-                                org.springframework.data.domain.Sort.Direction.DESC, "createdAt")));
+                feePaymentRepository.findBySchoolIdOrderByPaymentDateDescCreatedAtDesc(schoolId));
     }
 
     // ── Installment management ─────────────────────────────────────────────
@@ -1984,12 +1965,9 @@ public class AdminService {
         String dateToParam   = (dateTo   != null && !dateTo.isBlank())   ? dateTo                : null;
         String searchParam   = (search   != null && !search.isBlank())   ? search.trim()         : null;
 
-        if (schoolId != null) {
-            return ApiResponse.success(
-                    expenseRepository.findFilteredBySchool(schoolId, statusParam, dateFromParam, dateToParam, searchParam));
-        }
+        if (schoolId == null) return ApiResponse.success(java.util.List.of());
         return ApiResponse.success(
-                expenseRepository.findFiltered(statusParam, dateFromParam, dateToParam, searchParam));
+                expenseRepository.findFilteredBySchool(schoolId, statusParam, dateFromParam, dateToParam, searchParam));
     }
 
     public ApiResponse<Expense> createExpense(Map<String, Object> body) {

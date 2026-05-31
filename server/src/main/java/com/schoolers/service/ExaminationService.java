@@ -36,20 +36,16 @@ public class ExaminationService {
     // ============================================================
 
     public ApiResponse<List<ExamSchedule>> getAllSchedules(String className, String examType, Long schoolId) {
+        // Require a valid schoolId — never return cross-school data
+        if (schoolId == null) return ApiResponse.success("Exam schedules retrieved", List.of());
+
         List<ExamSchedule> schedules;
-        if (schoolId != null && className != null && !className.isEmpty()) {
-            // Include records with matching school OR school_id IS NULL (legacy/backfill)
+        if (className != null && !className.isEmpty()) {
             schedules = examScheduleRepository.findByClassNameAndSchoolIdOrNull(className, schoolId);
-        } else if (schoolId != null && examType != null && !examType.isEmpty()) {
-            schedules = examScheduleRepository.findByExamTypeAndSchoolIdOrNull(examType, schoolId);
-        } else if (schoolId != null) {
-            schedules = examScheduleRepository.findBySchoolIdOrNull(schoolId);
-        } else if (className != null && !className.isEmpty()) {
-            schedules = examScheduleRepository.findByClassNameOrderByExamDateAsc(className);
         } else if (examType != null && !examType.isEmpty()) {
-            schedules = examScheduleRepository.findByExamTypeOrderByExamDateAsc(examType);
+            schedules = examScheduleRepository.findByExamTypeAndSchoolIdOrNull(examType, schoolId);
         } else {
-            schedules = examScheduleRepository.findAllByOrderByExamDateAsc();
+            schedules = examScheduleRepository.findBySchoolIdOrNull(schoolId);
         }
         return ApiResponse.success("Exam schedules retrieved", schedules);
     }
@@ -231,23 +227,21 @@ public class ExaminationService {
     // ============================================================
 
     public ApiResponse<List<Certificate>> getAllCertificates(String type, Long schoolId) {
+        if (schoolId == null) return ApiResponse.success("Certificates retrieved", List.of());
+
         List<Certificate> certs;
-        if (schoolId != null && type != null && !type.isEmpty()) {
+        if (type != null && !type.isEmpty()) {
             certs = certificateRepository.findByCertificateTypeAndSchoolIdOrderByCreatedAtDesc(type, schoolId);
-        } else if (schoolId != null) {
-            certs = certificateRepository.findBySchoolIdOrderByCreatedAtDesc(schoolId);
-        } else if (type != null && !type.isEmpty()) {
-            certs = certificateRepository.findByCertificateTypeOrderByCreatedAtDesc(type);
         } else {
-            certs = certificateRepository.findAllByOrderByCreatedAtDesc();
+            certs = certificateRepository.findBySchoolIdOrderByCreatedAtDesc(schoolId);
         }
         return ApiResponse.success("Certificates retrieved", certs);
     }
 
     public ApiResponse<List<Certificate>> getCertificatesByStudent(Long studentId, Long schoolId) {
-        List<Certificate> certs = (schoolId != null)
-                ? certificateRepository.findByStudentIdAndSchoolIdOrderByCreatedAtDesc(studentId, schoolId)
-                : certificateRepository.findByStudentIdOrderByCreatedAtDesc(studentId);
+        if (schoolId == null) return ApiResponse.success("Certificates retrieved", List.of());
+        List<Certificate> certs = certificateRepository
+                .findByStudentIdAndSchoolIdOrderByCreatedAtDesc(studentId, schoolId);
         return ApiResponse.success("Certificates retrieved", certs);
     }
 

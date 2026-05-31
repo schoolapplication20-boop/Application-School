@@ -92,8 +92,11 @@ public class AuthService {
             }
 
             // ── Step 2b: Account lockout check ────────────────────────────
-            // Account is locked when lockedUntil is set (permanently — cleared only on password reset).
-            if (user.getLockedUntil() != null) {
+            // Lock is active only when lockedUntil is in the future.
+            // Old records with a past timestamp (set by code that used now() instead of now()+100y)
+            // are automatically recognised as unlocked by this time-based comparison.
+            if (user.getLockedUntil() != null
+                    && user.getLockedUntil().isAfter(LocalDateTime.now(ZoneOffset.UTC))) {
                 return ApiResponse.error("Your account has been locked after too many failed attempts. "
                         + "Please use 'Forgot Password' to reset your password and unlock your account.");
             }

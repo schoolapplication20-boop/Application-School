@@ -1113,7 +1113,7 @@ export default function Students() {
                             />
                             {!studentOtp.verified && (
                               <button type="button" onClick={handleStudentSendOtp} disabled={studentOtp.sending}
-                                style={{ flexShrink: 0, padding: '6px 12px', background: '#0de1e815', border: '1.5px solid #0de1e840', borderRadius: 6, cursor: studentOtp.sending ? 'not-allowed' : 'pointer', color: '#276749', fontSize: 12, fontWeight: 600, fontFamily: 'Poppins, sans-serif', whiteSpace: 'nowrap' }}>
+                                style={{ flexShrink: 0, padding: '6px 14px', background: studentOtp.sending ? '#a0aec0' : '#0369a1', border: 'none', borderRadius: 6, cursor: studentOtp.sending ? 'not-allowed' : 'pointer', color: '#fff', fontSize: 12, fontWeight: 600, fontFamily: 'Poppins, sans-serif', whiteSpace: 'nowrap' }}>
                                 {studentOtp.sending ? 'Sending…' : studentOtp.sent ? 'Resend OTP' : 'Send OTP'}
                               </button>
                             )}
