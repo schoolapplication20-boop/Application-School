@@ -473,7 +473,7 @@ const Login = () => {
                     className="form-control has-left-icon"
                     placeholder={inputPlaceholder}
                     value={emailForm.email}
-                    onChange={e => { setEmailForm({ ...emailForm, email: e.target.value }); setError(''); }}
+                    onChange={e => { setEmailForm({ ...emailForm, email: e.target.value.replace(/\s/g, '') }); setError(''); }}
                     autoComplete="username"
                     autoFocus
                   />

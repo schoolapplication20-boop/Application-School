@@ -1100,7 +1100,7 @@ export default function Students() {
                           className={`form-control form-control-sm ${errors.studentEmail ? 'is-invalid' : ''}`}
                           placeholder="student@example.com"
                           value={formData.studentEmail || ''}
-                          onChange={e => setFormData(fd => ({ ...fd, studentEmail: e.target.value }))}
+                          onChange={e => setFormData(fd => ({ ...fd, studentEmail: e.target.value.replace(/\s/g, '') }))}
                         />
                       ) : (
                         <>
@@ -1109,7 +1109,7 @@ export default function Students() {
                               className={`form-control form-control-sm ${errors.studentEmail ? 'is-invalid' : ''}`}
                               placeholder="student@example.com"
                               value={formData.studentEmail || ''}
-                              onChange={e => { setFormData(fd => ({ ...fd, studentEmail: e.target.value })); resetStudentOtp(); }}
+                              onChange={e => { setFormData(fd => ({ ...fd, studentEmail: e.target.value.replace(/\s/g, '') })); resetStudentOtp(); }}
                             />
                             {!studentOtp.verified && (
                               <button type="button" onClick={handleStudentSendOtp} disabled={studentOtp.sending}

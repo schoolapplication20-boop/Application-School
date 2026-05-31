@@ -808,7 +808,7 @@ export default function Teachers() {
                   <Field label="Email (Login ID)" required error={errors.email || (!editTeacher && teacherOtp.error)}>
                     {editTeacher ? (
                       <input type="email" style={inputStyle(errors.email)} placeholder="teacher@school.com" value={form.email}
-                        onChange={e => setForm({ ...form, email: e.target.value })} />
+                        onChange={e => setForm({ ...form, email: e.target.value.replace(/\s/g, '') })} />
                     ) : (
                       <>
                         <div style={{ display: 'flex', gap: 8 }}>
@@ -817,7 +817,7 @@ export default function Teachers() {
                             style={{ ...inputStyle(errors.email), flex: 1 }}
                             placeholder="teacher@school.com"
                             value={form.email}
-                            onChange={e => { setForm({ ...form, email: e.target.value }); resetTeacherOtp(); }}
+                            onChange={e => { setForm({ ...form, email: e.target.value.replace(/\s/g, '') }); resetTeacherOtp(); }}
                           />
                           {!teacherOtp.verified && (
                             <button type="button" onClick={handleTeacherSendOtp} disabled={teacherOtp.sending}

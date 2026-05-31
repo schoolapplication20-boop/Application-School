@@ -219,7 +219,7 @@ const ForgotPassword = () => {
                   className="form-control has-left-icon"
                   placeholder="Email address or admission number"
                   value={identifier}
-                  onChange={(e) => { setIdentifier(e.target.value); setError(''); }}
+                  onChange={(e) => { setIdentifier(e.target.value.replace(/\s/g, '')); setError(''); }}
                   autoFocus
                   autoComplete="username"
                 />
