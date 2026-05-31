@@ -44,14 +44,14 @@ public class TransportController {
     }
 
     @PutMapping("/buses/{id}")
-    public ResponseEntity<?> updateBus(@PathVariable Long id, @RequestBody Map<String, Object> body) {
-        var response = transportService.updateBus(id, body);
+    public ResponseEntity<?> updateBus(@PathVariable Long id, @RequestBody Map<String, Object> body, Authentication auth) {
+        var response = transportService.updateBus(id, body, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
     @DeleteMapping("/buses/{id}")
-    public ResponseEntity<?> deleteBus(@PathVariable Long id) {
-        var response = transportService.deleteBus(id);
+    public ResponseEntity<?> deleteBus(@PathVariable Long id, Authentication auth) {
+        var response = transportService.deleteBus(id, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
     }
 
@@ -74,8 +74,8 @@ public class TransportController {
     }
 
     @DeleteMapping("/routes/{id}")
-    public ResponseEntity<?> deleteRoute(@PathVariable Long id) {
-        var response = transportService.deleteRoute(id);
+    public ResponseEntity<?> deleteRoute(@PathVariable Long id, Authentication auth) {
+        var response = transportService.deleteRoute(id, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
     }
 
@@ -92,14 +92,14 @@ public class TransportController {
     }
 
     @PutMapping("/drivers/{id}")
-    public ResponseEntity<?> updateDriver(@PathVariable Long id, @RequestBody Map<String, Object> body) {
-        var response = transportService.updateDriver(id, body);
+    public ResponseEntity<?> updateDriver(@PathVariable Long id, @RequestBody Map<String, Object> body, Authentication auth) {
+        var response = transportService.updateDriver(id, body, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
     @DeleteMapping("/drivers/{id}")
-    public ResponseEntity<?> deleteDriver(@PathVariable Long id) {
-        var response = transportService.deleteDriver(id);
+    public ResponseEntity<?> deleteDriver(@PathVariable Long id, Authentication auth) {
+        var response = transportService.deleteDriver(id, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
     }
 
@@ -116,14 +116,14 @@ public class TransportController {
     }
 
     @PutMapping("/stops/{id}")
-    public ResponseEntity<?> updateStop(@PathVariable Long id, @RequestBody Map<String, Object> body) {
-        var response = transportService.updateStop(id, body);
+    public ResponseEntity<?> updateStop(@PathVariable Long id, @RequestBody Map<String, Object> body, Authentication auth) {
+        var response = transportService.updateStop(id, body, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
     @DeleteMapping("/stops/{id}")
-    public ResponseEntity<?> deleteStop(@PathVariable Long id) {
-        var response = transportService.deleteStop(id);
+    public ResponseEntity<?> deleteStop(@PathVariable Long id, Authentication auth) {
+        var response = transportService.deleteStop(id, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
     }
 
@@ -146,8 +146,8 @@ public class TransportController {
     }
 
     @DeleteMapping("/students/{id}")
-    public ResponseEntity<?> removeStudentAssignment(@PathVariable Long id) {
-        var response = transportService.removeStudentAssignment(id);
+    public ResponseEntity<?> removeStudentAssignment(@PathVariable Long id, Authentication auth) {
+        var response = transportService.removeStudentAssignment(id, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
     }
 
@@ -164,20 +164,20 @@ public class TransportController {
     }
 
     @PutMapping("/fees/{id}")
-    public ResponseEntity<?> updateTransportFee(@PathVariable Long id, @RequestBody Map<String, Object> body) {
-        var response = transportService.updateTransportFee(id, body);
+    public ResponseEntity<?> updateTransportFee(@PathVariable Long id, @RequestBody Map<String, Object> body, Authentication auth) {
+        var response = transportService.updateTransportFee(id, body, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
     @PatchMapping("/fees/{id}/pay")
-    public ResponseEntity<?> markFeePaid(@PathVariable Long id) {
-        var response = transportService.markTransportFeePaid(id);
+    public ResponseEntity<?> markFeePaid(@PathVariable Long id, Authentication auth) {
+        var response = transportService.markTransportFeePaid(id, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
     }
 
     @DeleteMapping("/fees/{id}")
-    public ResponseEntity<?> deleteTransportFee(@PathVariable Long id) {
-        var response = transportService.deleteTransportFee(id);
+    public ResponseEntity<?> deleteTransportFee(@PathVariable Long id, Authentication auth) {
+        var response = transportService.deleteTransportFee(id, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
     }
 
@@ -188,8 +188,8 @@ public class TransportController {
     }
 
     @GetMapping("/student-transport/{id}")
-    public ResponseEntity<?> getStudentTransportById(@PathVariable Long id) {
-        var response = transportService.getStudentTransportById(id);
+    public ResponseEntity<?> getStudentTransportById(@PathVariable Long id, Authentication auth) {
+        var response = transportService.getStudentTransportById(id, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
     }
 
@@ -200,14 +200,14 @@ public class TransportController {
     }
 
     @PutMapping("/student-transport/{id}")
-    public ResponseEntity<?> updateStudentTransport(@PathVariable Long id, @RequestBody Map<String, Object> body) {
-        var response = transportService.updateStudentTransport(id, body);
+    public ResponseEntity<?> updateStudentTransport(@PathVariable Long id, @RequestBody Map<String, Object> body, Authentication auth) {
+        var response = transportService.updateStudentTransport(id, body, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
     @DeleteMapping("/student-transport/{id}")
-    public ResponseEntity<?> deleteStudentTransport(@PathVariable Long id) {
-        var response = transportService.deleteStudentTransport(id);
+    public ResponseEntity<?> deleteStudentTransport(@PathVariable Long id, Authentication auth) {
+        var response = transportService.deleteStudentTransport(id, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
     }
 }

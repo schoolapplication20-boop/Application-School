@@ -66,6 +66,13 @@ public class ApplicationService {
                 .map(app -> {
                     if (schoolId != null && app.getSchoolId() != null && !schoolId.equals(app.getSchoolId()))
                         return ApiResponse.<AdmissionApplication>error("Access denied: application belongs to another school");
+                    // Prevent re-processing an already decided application
+                    if (app.getStatus() == AdmissionApplication.Status.APPROVED
+                            || app.getStatus() == AdmissionApplication.Status.REJECTED) {
+                        return ApiResponse.<AdmissionApplication>error(
+                                "Application has already been " + app.getStatus().name().toLowerCase()
+                                + " and cannot be changed.");
+                    }
                     String statusStr = str(body, "status", null);
                     if (statusStr != null) {
                         try { app.setStatus(AdmissionApplication.Status.valueOf(statusStr.toUpperCase())); }

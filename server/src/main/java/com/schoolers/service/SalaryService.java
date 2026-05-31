@@ -111,6 +111,10 @@ public class SalaryService {
                 if (schoolId != null && s.getSchoolId() != null && !schoolId.equals(s.getSchoolId()))
                     return ApiResponse.<Salary>error("Access denied: salary record belongs to another school");
                 int leaves = intVal(body, "leavesTaken", s.getLeavesTaken() != null ? s.getLeavesTaken() : 0);
+                if (leaves < 0) return ApiResponse.<Salary>error("Leaves taken cannot be negative");
+                // Cap at working days so salary doesn't go below zero
+                if (s.getTotalWorkingDays() != null && s.getTotalWorkingDays() > 0 && leaves > s.getTotalWorkingDays())
+                    return ApiResponse.<Salary>error("Leaves taken (" + leaves + ") cannot exceed working days (" + s.getTotalWorkingDays() + ")");
                 s.setLeavesTaken(leaves);
                 applyCalculations(s);
                 return ApiResponse.success("Leaves updated", salaryRepository.save(s));

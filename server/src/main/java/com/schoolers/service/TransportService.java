@@ -54,25 +54,28 @@ public class TransportService {
         return ApiResponse.success("Bus created", busRepository.save(bus));
     }
 
-    public ApiResponse<TransportBus> updateBus(Long id, Map<String, Object> body) {
-        return busRepository.findById(id)
-                .map(bus -> {
-                    if (body.containsKey("model"))           bus.setModel(str(body, "model", bus.getModel()));
-                    if (body.containsKey("year"))            bus.setYear(str(body, "year", bus.getYear()));
-                    if (body.containsKey("capacity"))        bus.setCapacity(intVal(body, "capacity", bus.getCapacity()));
-                    if (body.containsKey("currentStudents")) bus.setCurrentStudents(intVal(body, "currentStudents", bus.getCurrentStudents()));
-                    if (body.containsKey("driver"))          bus.setDriver(str(body, "driver", bus.getDriver()));
-                    if (body.containsKey("conductor"))       bus.setConductor(str(body, "conductor", bus.getConductor()));
-                    if (body.containsKey("route"))           bus.setRoute(str(body, "route", bus.getRoute()));
-                    if (body.containsKey("status"))          bus.setStatus(str(body, "status", bus.getStatus()));
-                    return ApiResponse.success("Bus updated", busRepository.save(bus));
-                })
-                .orElse(ApiResponse.error("Bus not found"));
+    public ApiResponse<TransportBus> updateBus(Long id, Map<String, Object> body, Long schoolId) {
+        TransportBus bus = busRepository.findById(id).orElse(null);
+        if (bus == null) return ApiResponse.error("Bus not found");
+        if (schoolId != null && bus.getSchoolId() != null && !schoolId.equals(bus.getSchoolId()))
+            return ApiResponse.error("Access denied");
+        if (body.containsKey("model"))           bus.setModel(str(body, "model", bus.getModel()));
+        if (body.containsKey("year"))            bus.setYear(str(body, "year", bus.getYear()));
+        if (body.containsKey("capacity"))        bus.setCapacity(intVal(body, "capacity", bus.getCapacity()));
+        if (body.containsKey("currentStudents")) bus.setCurrentStudents(intVal(body, "currentStudents", bus.getCurrentStudents()));
+        if (body.containsKey("driver"))          bus.setDriver(str(body, "driver", bus.getDriver()));
+        if (body.containsKey("conductor"))       bus.setConductor(str(body, "conductor", bus.getConductor()));
+        if (body.containsKey("route"))           bus.setRoute(str(body, "route", bus.getRoute()));
+        if (body.containsKey("status"))          bus.setStatus(str(body, "status", bus.getStatus()));
+        return ApiResponse.success("Bus updated", busRepository.save(bus));
     }
 
     @Transactional
-    public ApiResponse<String> deleteBus(Long id) {
-        if (!busRepository.existsById(id)) return ApiResponse.error("Bus not found");
+    public ApiResponse<String> deleteBus(Long id, Long schoolId) {
+        TransportBus bus = busRepository.findById(id).orElse(null);
+        if (bus == null) return ApiResponse.error("Bus not found");
+        if (schoolId != null && bus.getSchoolId() != null && !schoolId.equals(bus.getSchoolId()))
+            return ApiResponse.error("Access denied");
         assignmentRepository.deleteByBusId(id);
         busRepository.deleteById(id);
         return ApiResponse.success("Bus deleted", "Deleted");
@@ -134,8 +137,11 @@ public class TransportService {
     }
 
     @Transactional
-    public ApiResponse<String> deleteRoute(Long id) {
-        if (!routeRepository.existsById(id)) return ApiResponse.error("Route not found");
+    public ApiResponse<String> deleteRoute(Long id, Long schoolId) {
+        TransportRoute route = routeRepository.findById(id).orElse(null);
+        if (route == null) return ApiResponse.error("Route not found");
+        if (schoolId != null && route.getSchoolId() != null && !schoolId.equals(route.getSchoolId()))
+            return ApiResponse.error("Access denied");
         stopRepository.deleteByRouteId(id);
         assignmentRepository.deleteByRouteId(id);
         routeRepository.deleteById(id);
@@ -165,22 +171,25 @@ public class TransportService {
         return ApiResponse.success("Driver created", driverRepository.save(driver));
     }
 
-    public ApiResponse<TransportDriver> updateDriver(Long id, Map<String, Object> body) {
-        return driverRepository.findById(id)
-                .map(driver -> {
-                    if (body.containsKey("name"))       driver.setName(str(body, "name", driver.getName()));
-                    if (body.containsKey("license"))    driver.setLicense(str(body, "license", driver.getLicense()));
-                    if (body.containsKey("mobile"))     driver.setMobile(str(body, "mobile", driver.getMobile()));
-                    if (body.containsKey("bus"))        driver.setBus(str(body, "bus", driver.getBus()));
-                    if (body.containsKey("experience")) driver.setExperience(str(body, "experience", driver.getExperience()));
-                    if (body.containsKey("status"))     driver.setStatus(str(body, "status", driver.getStatus()));
-                    return ApiResponse.success("Driver updated", driverRepository.save(driver));
-                })
-                .orElse(ApiResponse.error("Driver not found"));
+    public ApiResponse<TransportDriver> updateDriver(Long id, Map<String, Object> body, Long schoolId) {
+        TransportDriver driver = driverRepository.findById(id).orElse(null);
+        if (driver == null) return ApiResponse.error("Driver not found");
+        if (schoolId != null && driver.getSchoolId() != null && !schoolId.equals(driver.getSchoolId()))
+            return ApiResponse.error("Access denied");
+        if (body.containsKey("name"))       driver.setName(str(body, "name", driver.getName()));
+        if (body.containsKey("license"))    driver.setLicense(str(body, "license", driver.getLicense()));
+        if (body.containsKey("mobile"))     driver.setMobile(str(body, "mobile", driver.getMobile()));
+        if (body.containsKey("bus"))        driver.setBus(str(body, "bus", driver.getBus()));
+        if (body.containsKey("experience")) driver.setExperience(str(body, "experience", driver.getExperience()));
+        if (body.containsKey("status"))     driver.setStatus(str(body, "status", driver.getStatus()));
+        return ApiResponse.success("Driver updated", driverRepository.save(driver));
     }
 
-    public ApiResponse<String> deleteDriver(Long id) {
-        if (!driverRepository.existsById(id)) return ApiResponse.error("Driver not found");
+    public ApiResponse<String> deleteDriver(Long id, Long schoolId) {
+        TransportDriver driver = driverRepository.findById(id).orElse(null);
+        if (driver == null) return ApiResponse.error("Driver not found");
+        if (schoolId != null && driver.getSchoolId() != null && !schoolId.equals(driver.getSchoolId()))
+            return ApiResponse.error("Access denied");
         driverRepository.deleteById(id);
         return ApiResponse.success("Driver deleted", "Deleted");
     }
@@ -207,20 +216,23 @@ public class TransportService {
         return ApiResponse.success("Stop created", stopRepository.save(stop));
     }
 
-    public ApiResponse<TransportStop> updateStop(Long id, Map<String, Object> body) {
-        return stopRepository.findById(id)
-                .map(stop -> {
-                    if (body.containsKey("name"))      stop.setName(str(body, "name", stop.getName()));
-                    if (body.containsKey("timing"))    stop.setTiming(str(body, "timing", stop.getTiming()));
-                    if (body.containsKey("stopOrder")) stop.setStopOrder(intVal(body, "stopOrder", stop.getStopOrder()));
-                    return ApiResponse.success("Stop updated", stopRepository.save(stop));
-                })
-                .orElse(ApiResponse.error("Stop not found"));
+    public ApiResponse<TransportStop> updateStop(Long id, Map<String, Object> body, Long schoolId) {
+        TransportStop stop = stopRepository.findById(id).orElse(null);
+        if (stop == null) return ApiResponse.error("Stop not found");
+        if (schoolId != null && stop.getSchoolId() != null && !schoolId.equals(stop.getSchoolId()))
+            return ApiResponse.error("Access denied");
+        if (body.containsKey("name"))      stop.setName(str(body, "name", stop.getName()));
+        if (body.containsKey("timing"))    stop.setTiming(str(body, "timing", stop.getTiming()));
+        if (body.containsKey("stopOrder")) stop.setStopOrder(intVal(body, "stopOrder", stop.getStopOrder()));
+        return ApiResponse.success("Stop updated", stopRepository.save(stop));
     }
 
     @Transactional
-    public ApiResponse<String> deleteStop(Long id) {
-        if (!stopRepository.existsById(id)) return ApiResponse.error("Stop not found");
+    public ApiResponse<String> deleteStop(Long id, Long schoolId) {
+        TransportStop stop = stopRepository.findById(id).orElse(null);
+        if (stop == null) return ApiResponse.error("Stop not found");
+        if (schoolId != null && stop.getSchoolId() != null && !schoolId.equals(stop.getSchoolId()))
+            return ApiResponse.error("Access denied");
         assignmentRepository.deleteByStopId(id);
         stopRepository.deleteById(id);
         return ApiResponse.success("Stop deleted", "Deleted");
@@ -345,10 +357,11 @@ public class TransportService {
     }
 
     @Transactional
-    public ApiResponse<String> removeStudentAssignment(Long id) {
-        var opt = assignmentRepository.findById(id);
-        if (opt.isEmpty()) return ApiResponse.error("Assignment not found");
-        TransportStudentAssignment a = opt.get();
+    public ApiResponse<String> removeStudentAssignment(Long id, Long schoolId) {
+        TransportStudentAssignment a = assignmentRepository.findById(id).orElse(null);
+        if (a == null) return ApiResponse.error("Assignment not found");
+        if (schoolId != null && a.getSchoolId() != null && !schoolId.equals(a.getSchoolId()))
+            return ApiResponse.error("Access denied");
         // Decrement bus count
         if (a.getBusId() != null) {
             busRepository.findById(a.getBusId()).ifPresent(b -> {
@@ -384,36 +397,39 @@ public class TransportService {
         return ApiResponse.success("Transport fee created", feeRepository.save(fee));
     }
 
-    public ApiResponse<TransportFee> updateTransportFee(Long id, Map<String, Object> body) {
-        return feeRepository.findById(id)
-                .map(fee -> {
-                    if (body.containsKey("amount")) {
-                        Object amountObj = body.get("amount");
-                        if (amountObj == null) return ApiResponse.<TransportFee>error("amount is required.");
-                        try { fee.setAmount(new java.math.BigDecimal(amountObj.toString())); }
-                        catch (NumberFormatException e) { return ApiResponse.<TransportFee>error("Invalid amount format."); }
-                    }
-                    if (body.containsKey("status")) {
-                        try { fee.setStatus(TransportFee.Status.valueOf(str(body, "status", "PENDING"))); }
-                        catch (IllegalArgumentException e) { return ApiResponse.<TransportFee>error("Invalid status value."); }
-                    }
-                    return ApiResponse.success("Transport fee updated", feeRepository.save(fee));
-                })
-                .orElse(ApiResponse.error("Transport fee not found"));
+    public ApiResponse<TransportFee> updateTransportFee(Long id, Map<String, Object> body, Long schoolId) {
+        TransportFee fee = feeRepository.findById(id).orElse(null);
+        if (fee == null) return ApiResponse.error("Transport fee not found");
+        if (schoolId != null && fee.getSchoolId() != null && !schoolId.equals(fee.getSchoolId()))
+            return ApiResponse.error("Access denied");
+        if (body.containsKey("amount")) {
+            Object amountObj = body.get("amount");
+            if (amountObj == null) return ApiResponse.error("amount is required.");
+            try { fee.setAmount(new java.math.BigDecimal(amountObj.toString())); }
+            catch (NumberFormatException e) { return ApiResponse.error("Invalid amount format."); }
+        }
+        if (body.containsKey("status")) {
+            try { fee.setStatus(TransportFee.Status.valueOf(str(body, "status", "PENDING"))); }
+            catch (IllegalArgumentException e) { return ApiResponse.error("Invalid status value."); }
+        }
+        return ApiResponse.success("Transport fee updated", feeRepository.save(fee));
     }
 
-    public ApiResponse<TransportFee> markTransportFeePaid(Long id) {
-        return feeRepository.findById(id)
-                .map(fee -> {
-                    fee.setStatus(TransportFee.Status.PAID);
-                    fee.setPaidDate(LocalDate.now());
-                    return ApiResponse.success("Fee marked as paid", feeRepository.save(fee));
-                })
-                .orElse(ApiResponse.error("Transport fee not found"));
+    public ApiResponse<TransportFee> markTransportFeePaid(Long id, Long schoolId) {
+        TransportFee fee = feeRepository.findById(id).orElse(null);
+        if (fee == null) return ApiResponse.error("Transport fee not found");
+        if (schoolId != null && fee.getSchoolId() != null && !schoolId.equals(fee.getSchoolId()))
+            return ApiResponse.error("Access denied");
+        fee.setStatus(TransportFee.Status.PAID);
+        fee.setPaidDate(LocalDate.now());
+        return ApiResponse.success("Fee marked as paid", feeRepository.save(fee));
     }
 
-    public ApiResponse<String> deleteTransportFee(Long id) {
-        if (!feeRepository.existsById(id)) return ApiResponse.error("Transport fee not found");
+    public ApiResponse<String> deleteTransportFee(Long id, Long schoolId) {
+        TransportFee fee = feeRepository.findById(id).orElse(null);
+        if (fee == null) return ApiResponse.error("Transport fee not found");
+        if (schoolId != null && fee.getSchoolId() != null && !schoolId.equals(fee.getSchoolId()))
+            return ApiResponse.error("Access denied");
         feeRepository.deleteById(id);
         return ApiResponse.success("Transport fee deleted", "Deleted");
     }
@@ -425,10 +441,12 @@ public class TransportService {
         return ApiResponse.success(studentTransportRepository.findAll());
     }
 
-    public ApiResponse<StudentTransport> getStudentTransportById(Long id) {
-        return studentTransportRepository.findById(id)
-                .map(st -> ApiResponse.success(st))
-                .orElse(ApiResponse.error("Record not found"));
+    public ApiResponse<StudentTransport> getStudentTransportById(Long id, Long schoolId) {
+        StudentTransport st = studentTransportRepository.findById(id).orElse(null);
+        if (st == null) return ApiResponse.error("Record not found");
+        if (schoolId != null && st.getSchoolId() != null && !schoolId.equals(st.getSchoolId()))
+            return ApiResponse.error("Access denied");
+        return ApiResponse.success(st);
     }
 
     public ApiResponse<StudentTransport> createStudentTransport(Map<String, Object> body, Long schoolId) {
@@ -457,31 +475,34 @@ public class TransportService {
         return ApiResponse.success("Student transport record created", studentTransportRepository.save(st));
     }
 
-    public ApiResponse<StudentTransport> updateStudentTransport(Long id, Map<String, Object> body) {
-        return studentTransportRepository.findById(id)
-                .map(st -> {
-                    if (body.containsKey("studentName"))      st.setStudentName(str(body, "studentName", st.getStudentName()));
-                    if (body.containsKey("studentClass"))     st.setStudentClass(str(body, "studentClass", st.getStudentClass()));
-                    if (body.containsKey("transportNeeded"))  st.setTransportNeeded(Boolean.TRUE.equals(body.get("transportNeeded")));
-                    if (body.containsKey("pickupLocation"))   st.setPickupLocation(str(body, "pickupLocation", st.getPickupLocation()));
-                    if (body.containsKey("dropLocation"))     st.setDropLocation(str(body, "dropLocation", st.getDropLocation()));
-                    if (body.containsKey("routeId"))          st.setRouteId(longVal(body, "routeId", st.getRouteId()));
-                    if (body.containsKey("routeName"))        st.setRouteName(str(body, "routeName", st.getRouteName()));
-                    if (body.containsKey("stopId"))           st.setStopId(longVal(body, "stopId", st.getStopId()));
-                    if (body.containsKey("stopName"))         st.setStopName(str(body, "stopName", st.getStopName()));
-                    if (body.containsKey("pickupTime"))       st.setPickupTime(str(body, "pickupTime", st.getPickupTime()));
-                    if (body.containsKey("dropTime"))         st.setDropTime(str(body, "dropTime", st.getDropTime()));
-                    if (body.containsKey("fee"))              st.setFee(body.get("fee") != null ? new BigDecimal(body.get("fee").toString()) : st.getFee());
-                    if (body.containsKey("emergencyContact")) st.setEmergencyContact(str(body, "emergencyContact", st.getEmergencyContact()));
-                    if (body.containsKey("notes"))            st.setNotes(str(body, "notes", st.getNotes()));
-                    if (body.containsKey("status"))           st.setStatus(str(body, "status", st.getStatus()));
-                    return ApiResponse.success("Student transport updated", studentTransportRepository.save(st));
-                })
-                .orElse(ApiResponse.error("Record not found"));
+    public ApiResponse<StudentTransport> updateStudentTransport(Long id, Map<String, Object> body, Long schoolId) {
+        StudentTransport st = studentTransportRepository.findById(id).orElse(null);
+        if (st == null) return ApiResponse.error("Record not found");
+        if (schoolId != null && st.getSchoolId() != null && !schoolId.equals(st.getSchoolId()))
+            return ApiResponse.error("Access denied");
+        if (body.containsKey("studentName"))      st.setStudentName(str(body, "studentName", st.getStudentName()));
+        if (body.containsKey("studentClass"))     st.setStudentClass(str(body, "studentClass", st.getStudentClass()));
+        if (body.containsKey("transportNeeded"))  st.setTransportNeeded(Boolean.TRUE.equals(body.get("transportNeeded")));
+        if (body.containsKey("pickupLocation"))   st.setPickupLocation(str(body, "pickupLocation", st.getPickupLocation()));
+        if (body.containsKey("dropLocation"))     st.setDropLocation(str(body, "dropLocation", st.getDropLocation()));
+        if (body.containsKey("routeId"))          st.setRouteId(longVal(body, "routeId", st.getRouteId()));
+        if (body.containsKey("routeName"))        st.setRouteName(str(body, "routeName", st.getRouteName()));
+        if (body.containsKey("stopId"))           st.setStopId(longVal(body, "stopId", st.getStopId()));
+        if (body.containsKey("stopName"))         st.setStopName(str(body, "stopName", st.getStopName()));
+        if (body.containsKey("pickupTime"))       st.setPickupTime(str(body, "pickupTime", st.getPickupTime()));
+        if (body.containsKey("dropTime"))         st.setDropTime(str(body, "dropTime", st.getDropTime()));
+        if (body.containsKey("fee"))              st.setFee(body.get("fee") != null ? new BigDecimal(body.get("fee").toString()) : st.getFee());
+        if (body.containsKey("emergencyContact")) st.setEmergencyContact(str(body, "emergencyContact", st.getEmergencyContact()));
+        if (body.containsKey("notes"))            st.setNotes(str(body, "notes", st.getNotes()));
+        if (body.containsKey("status"))           st.setStatus(str(body, "status", st.getStatus()));
+        return ApiResponse.success("Student transport updated", studentTransportRepository.save(st));
     }
 
-    public ApiResponse<String> deleteStudentTransport(Long id) {
-        if (!studentTransportRepository.existsById(id)) return ApiResponse.error("Record not found");
+    public ApiResponse<String> deleteStudentTransport(Long id, Long schoolId) {
+        StudentTransport st = studentTransportRepository.findById(id).orElse(null);
+        if (st == null) return ApiResponse.error("Record not found");
+        if (schoolId != null && st.getSchoolId() != null && !schoolId.equals(st.getSchoolId()))
+            return ApiResponse.error("Access denied");
         studentTransportRepository.deleteById(id);
         return ApiResponse.success("Student transport record deleted", "Deleted");
     }

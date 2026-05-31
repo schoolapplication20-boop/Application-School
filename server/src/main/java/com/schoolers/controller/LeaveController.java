@@ -31,9 +31,9 @@ public class LeaveController {
                 .orElse(null);
     }
 
-    // ── Admin: student leaves (school ADMIN only — SUPER_ADMIN excluded intentionally) ──
+    // ── Admin: student leaves — accessible to both ADMIN and SUPER_ADMIN (school owner) ──
     @GetMapping("/student")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<List<LeaveRequest>>> getStudentLeaves(Authentication auth) {
         return ResponseEntity.ok(leaveService.getStudentLeaves(getCurrentSchoolId(auth)));
     }
