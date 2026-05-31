@@ -32,6 +32,12 @@ public interface FeePaymentRepository extends JpaRepository<FeePayment, Long> {
     @Query(value = "SELECT COALESCE(SUM(amount_paid), 0) FROM fee_payments WHERE school_id = :schoolId AND EXTRACT(MONTH FROM payment_date) = :month AND EXTRACT(YEAR FROM payment_date) = :year", nativeQuery = true)
     BigDecimal sumAmountPaidBySchoolAndMonth(@Param("schoolId") Long schoolId, @Param("month") int month, @Param("year") int year);
 
+    /** All 12 months' revenue for a school in a given year — returns [month(1-12), total] rows */
+    @Query(value = "SELECT EXTRACT(MONTH FROM payment_date) AS m, COALESCE(SUM(amount_paid), 0) AS total " +
+                   "FROM fee_payments WHERE school_id = :schoolId AND EXTRACT(YEAR FROM payment_date) = :year " +
+                   "GROUP BY EXTRACT(MONTH FROM payment_date)", nativeQuery = true)
+    List<Object[]> sumMonthlyBySchoolAndYear(@Param("schoolId") Long schoolId, @Param("year") int year);
+
     @Modifying @Transactional
     void deleteByStudentId(Long studentId);
 

@@ -80,8 +80,9 @@ public class SalaryController {
     }
 
     @GetMapping("/{id}/payments")
-    public ResponseEntity<ApiResponse<List<SalaryPayment>>> getPayments(@PathVariable Long id) {
-        return ResponseEntity.ok(salaryService.getPayments(id));
+    public ResponseEntity<ApiResponse<List<SalaryPayment>>> getPayments(
+            @PathVariable Long id, Authentication auth) {
+        return ResponseEntity.ok(salaryService.getPayments(id, getCurrentSchoolId(auth)));
     }
 
     @GetMapping("/payments")
@@ -92,19 +93,19 @@ public class SalaryController {
     // ── HOLIDAYS ─────────────────────────────────────────────────────────────
 
     @GetMapping("/holidays")
-    public ResponseEntity<ApiResponse<List<Holiday>>> getHolidays() {
-        return ResponseEntity.ok(salaryService.getHolidays());
+    public ResponseEntity<ApiResponse<List<Holiday>>> getHolidays(Authentication auth) {
+        return ResponseEntity.ok(salaryService.getHolidays(getCurrentSchoolId(auth)));
     }
 
     @PostMapping("/holidays")
-    public ResponseEntity<?> addHoliday(@RequestBody Map<String, Object> body) {
-        var response = salaryService.addHoliday(body);
+    public ResponseEntity<?> addHoliday(@RequestBody Map<String, Object> body, Authentication auth) {
+        var response = salaryService.addHoliday(body, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.status(201).body(response) : ResponseEntity.badRequest().body(response);
     }
 
     @DeleteMapping("/holidays/{id}")
-    public ResponseEntity<?> deleteHoliday(@PathVariable Long id) {
-        var response = salaryService.deleteHoliday(id);
+    public ResponseEntity<?> deleteHoliday(@PathVariable Long id, Authentication auth) {
+        var response = salaryService.deleteHoliday(id, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
     }
 }

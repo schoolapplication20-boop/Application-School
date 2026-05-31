@@ -153,9 +153,12 @@ public class TimetableService {
             String teacherName  = str(item, "teacherName",  "");
             String room         = str(item, "room",         null);
 
-            if (classSection == null || subject == null || day == null
-                    || startTime == null || endTime == null) {
-                conflicts.add("Entry " + (i + 1) + ": missing required fields");
+            if (classSection == null || classSection.isBlank()
+                    || subject == null || subject.isBlank()
+                    || day == null || day.isBlank()
+                    || startTime == null || startTime.isBlank()
+                    || endTime == null || endTime.isBlank()) {
+                conflicts.add("Entry " + (i + 1) + ": missing required fields (class, subject, day, start time, end time)");
                 continue;
             }
             int ns = toMin(startTime), ne = toMin(endTime);

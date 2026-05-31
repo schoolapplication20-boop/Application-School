@@ -241,3 +241,90 @@
 [data-theme="dark"] .modal-card .modal-section-divider {
   border-color: var(--border-strong) !important;
 }
+
+/* ── Bootstrap form classes ─────────────────────────────────── */
+[data-theme="dark"] .form-label,
+[data-theme="dark"] label.form-label {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .form-control,
+[data-theme="dark"] .form-select {
+  background-color: var(--surface-input) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-strong) !important;
+}
+
+[data-theme="dark"] .form-control:focus,
+[data-theme="dark"] .form-select:focus {
+  background-color: var(--surface-input) !important;
+  color: var(--text-primary) !important;
+  border-color: #0de1e8 !important;
+  box-shadow: 0 0 0 2px rgba(13,225,232,0.2) !important;
+}
+
+[data-theme="dark"] .form-control::placeholder { color: var(--text-muted) !important; }
+
+[data-theme="dark"] .form-control.is-invalid {
+  background-color: var(--surface-input) !important;
+  border-color: #e53e3e !important;
+}
+
+[data-theme="dark"] .invalid-feedback { color: #fc8181 !important; }
+
+/* ── Page-level text ─────────────────────────────────────────── */
+[data-theme="dark"] .page-header h1  { color: var(--text-primary)   !important; }
+[data-theme="dark"] .page-header p   { color: var(--text-muted)     !important; }
+
+/* ── Bootstrap card ─────────────────────────────────────────── */
+[data-theme="dark"] .card {
+  background: var(--surface) !important;
+  border-color: var(--border) !important;
+}
+[data-theme="dark"] .card-body { color: var(--text-secondary) !important; }
+[data-theme="dark"] .card-title { color: var(--text-primary) !important; }
+
+/* ── Bootstrap table ─────────────────────────────────────────── */
+[data-theme="dark"] .table {
+  color: var(--text-secondary) !important;
+  border-color: var(--border) !important;
+}
+[data-theme="dark"] .table th {
+  background: var(--surface-alt) !important;
+  color: var(--text-muted) !important;
+  border-color: var(--border) !important;
+}
+[data-theme="dark"] .table td { border-color: var(--border) !important; }
+
+/* ── Bootstrap nav tabs (Salaries / similar) ─────────────────── */
+[data-theme="dark"] .nav-tabs { border-color: var(--border) !important; }
+[data-theme="dark"] .nav-link {
+  color: var(--text-muted) !important;
+}
+[data-theme="dark"] .nav-link.active {
+  color: var(--text-primary) !important;
+  background: var(--surface) !important;
+  border-color: var(--border) var(--border) var(--surface) !important;
+}
+
+/* ── Bootstrap input-group ─────────────────────────────────── */
+[data-theme="dark"] .input-group-text {
+  background: var(--surface-alt) !important;
+  border-color: var(--border-strong) !important;
+  color: var(--text-muted) !important;
+}
+
+/* ── Bootstrap badge ─────────────────────────────────────────── */
+[data-theme="dark"] .badge.bg-secondary { background: #374151 !important; }
+[data-theme="dark"] .badge.bg-warning   { background: #78350f !important; color: #fcd34d !important; }
+[data-theme="dark"] .badge.bg-success   { background: rgba(39,103,73,0.3) !important; color: #6ee7b7 !important; }
+[data-theme="dark"] .badge.bg-danger    { background: rgba(197,48,48,0.3) !important; color: #fca5a5 !important; }
+
+/* ── Misc text / small elements ─────────────────────────────── */
+[data-theme="dark"] small,
+[data-theme="dark"] .text-muted { color: var(--text-muted) !important; }
+[data-theme="dark"] .fw-bold    { color: var(--text-primary) !important; }
+
+/* ── Data table card header/title text ──────────────────────── */
+[data-theme="dark"] .data-table-card .fw-bold,
+[data-theme="dark"] .data-table-card .fw-semibold { color: var(--text-primary) !important; }

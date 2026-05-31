@@ -79,6 +79,12 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
         nativeQuery = true)
     BigDecimal sumBySchoolAndMonth(@Param("schoolId") Long schoolId, @Param("month") int month, @Param("year") int year);
 
+    /** All 12 months' expenses for a school in a given year */
+    @Query(value = "SELECT EXTRACT(MONTH FROM date) AS m, COALESCE(SUM(amount), 0) AS total " +
+                   "FROM expenses WHERE school_id = :schoolId AND EXTRACT(YEAR FROM date) = :year " +
+                   "GROUP BY EXTRACT(MONTH FROM date)", nativeQuery = true)
+    List<Object[]> sumMonthlyBySchoolAndYear(@Param("schoolId") Long schoolId, @Param("year") int year);
+
     @org.springframework.data.jpa.repository.Modifying
     @org.springframework.transaction.annotation.Transactional
     void deleteBySchoolId(Long schoolId);

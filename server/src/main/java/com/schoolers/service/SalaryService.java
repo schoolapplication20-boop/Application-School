@@ -33,13 +33,13 @@ public class SalaryService {
     // ── READ ────────────────────────────────────────────────────────────────
 
     public ApiResponse<List<Salary>> getAll(Long schoolId) {
-        if (schoolId != null) return ApiResponse.success(salaryRepository.findBySchoolId(schoolId));
-        return ApiResponse.success(salaryRepository.findAll());
+        if (schoolId == null) return ApiResponse.success(List.of());
+        return ApiResponse.success(salaryRepository.findBySchoolId(schoolId));
     }
 
     public ApiResponse<List<Salary>> getByMonthYear(String month, String year, Long schoolId) {
-        if (schoolId != null) return ApiResponse.success(salaryRepository.findBySchoolIdAndMonthAndYear(schoolId, month, year));
-        return ApiResponse.success(salaryRepository.findByMonthAndYear(month, year));
+        if (schoolId == null) return ApiResponse.success(List.of());
+        return ApiResponse.success(salaryRepository.findBySchoolIdAndMonthAndYear(schoolId, month, year));
     }
 
     // ── CREATE / UPDATE ─────────────────────────────────────────────────────
@@ -171,41 +171,50 @@ public class SalaryService {
 
     // ── PAYMENT HISTORY ─────────────────────────────────────────────────────
 
-    public ApiResponse<List<SalaryPayment>> getPayments(Long salaryId) {
+    public ApiResponse<List<SalaryPayment>> getPayments(Long salaryId, Long schoolId) {
+        Salary salary = salaryRepository.findById(salaryId).orElse(null);
+        if (salary == null) return ApiResponse.success(List.of());
+        if (schoolId != null && salary.getSchoolId() != null && !schoolId.equals(salary.getSchoolId()))
+            return ApiResponse.error("Salary record not found");
         return ApiResponse.success(salaryPaymentRepository.findBySalaryIdOrderByPaidDateDesc(salaryId));
     }
 
     public ApiResponse<List<SalaryPayment>> getAllPayments(Long schoolId) {
-        if (schoolId != null)
-            return ApiResponse.success(salaryPaymentRepository.findBySchoolIdOrderByPaidDateDescCreatedAtDesc(schoolId));
-        return ApiResponse.success(salaryPaymentRepository.findAllByOrderByPaidDateDescCreatedAtDesc());
+        if (schoolId == null) return ApiResponse.success(List.of());
+        return ApiResponse.success(salaryPaymentRepository.findBySchoolIdOrderByPaidDateDescCreatedAtDesc(schoolId));
     }
 
     // ── HOLIDAYS ────────────────────────────────────────────────────────────
 
-    public ApiResponse<List<Holiday>> getHolidays() {
-        return ApiResponse.success(holidayRepository.findAll());
+    public ApiResponse<List<Holiday>> getHolidays(Long schoolId) {
+        if (schoolId == null) return ApiResponse.success(List.of());
+        return ApiResponse.success(holidayRepository.findBySchoolIdOrderByDateAsc(schoolId));
     }
 
     @Transactional
-    public ApiResponse<Holiday> addHoliday(Map<String, Object> body) {
+    public ApiResponse<Holiday> addHoliday(Map<String, Object> body, Long schoolId) {
         String name = str(body, "name", null);
         String dateStr = str(body, "date", null);
         if (name == null || name.isBlank()) return ApiResponse.error("Holiday name is required");
         if (dateStr == null || dateStr.isBlank()) return ApiResponse.error("Holiday date is required");
+        if (schoolId == null) return ApiResponse.error("School context required");
 
         boolean recurring = Boolean.TRUE.equals(body.get("recurring"));
         Holiday holiday = Holiday.builder()
             .name(name)
             .date(LocalDate.parse(dateStr))
             .recurring(recurring)
+            .schoolId(schoolId)
             .build();
         return ApiResponse.success("Holiday added", holidayRepository.save(holiday));
     }
 
     @Transactional
-    public ApiResponse<String> deleteHoliday(Long id) {
-        if (!holidayRepository.existsById(id)) return ApiResponse.error("Holiday not found");
+    public ApiResponse<String> deleteHoliday(Long id, Long schoolId) {
+        Holiday h = holidayRepository.findById(id).orElse(null);
+        if (h == null) return ApiResponse.error("Holiday not found");
+        if (schoolId != null && h.getSchoolId() != null && !schoolId.equals(h.getSchoolId()))
+            return ApiResponse.error("Holiday not found");
         holidayRepository.deleteById(id);
         return ApiResponse.success("Holiday deleted", "Deleted");
     }

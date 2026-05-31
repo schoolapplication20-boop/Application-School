@@ -221,15 +221,23 @@ public class AdminService {
             BigDecimal exp = expenseRepository.sumAllExpensesBySchool(schoolId);
             stats.put("totalRevenue",  rev != null ? rev : BigDecimal.ZERO);
             stats.put("totalExpenses", exp != null ? exp : BigDecimal.ZERO);
-            // Monthly chart data for current year
+            // Monthly chart data — 2 aggregated queries instead of 24 individual queries
+            java.util.Map<Integer, BigDecimal> revByMonth = new java.util.HashMap<>();
+            java.util.Map<Integer, BigDecimal> expByMonth = new java.util.HashMap<>();
+            for (Object[] row : feePaymentRepository.sumMonthlyBySchoolAndYear(schoolId, currentYear)) {
+                int m = ((Number) row[0]).intValue();
+                revByMonth.put(m, row[1] != null ? new BigDecimal(row[1].toString()) : BigDecimal.ZERO);
+            }
+            for (Object[] row : expenseRepository.sumMonthlyBySchoolAndYear(schoolId, currentYear)) {
+                int m = ((Number) row[0]).intValue();
+                expByMonth.put(m, row[1] != null ? new BigDecimal(row[1].toString()) : BigDecimal.ZERO);
+            }
             java.util.List<java.util.Map<String, Object>> monthly = new java.util.ArrayList<>();
             for (int m = 1; m <= 12; m++) {
-                BigDecimal mRev = feePaymentRepository.sumAmountPaidBySchoolAndMonth(schoolId, m, currentYear);
-                BigDecimal mExp = expenseRepository.sumBySchoolAndMonth(schoolId, m, currentYear);
                 java.util.Map<String, Object> mo = new java.util.LinkedHashMap<>();
                 mo.put("name",     monthNames[m - 1]);
-                mo.put("revenue",  mRev != null ? mRev : BigDecimal.ZERO);
-                mo.put("expenses", mExp != null ? mExp : BigDecimal.ZERO);
+                mo.put("revenue",  revByMonth.getOrDefault(m, BigDecimal.ZERO));
+                mo.put("expenses", expByMonth.getOrDefault(m, BigDecimal.ZERO));
                 monthly.add(mo);
             }
             stats.put("monthlyData", monthly);
