@@ -242,12 +242,26 @@ export default function Fees() {
   const saveAssignment = async () => {
     if (!assignStudent) { showToast('Select a student', 'error'); return; }
     if (!assignForm.totalFee) { showToast('Enter total fee', 'error'); return; }
+
+    // Validate installments: if any are filled, their total must match totalFee
+    const filledInstallments = installments
+      .filter(i => i.termName?.trim() && i.amount && Number(i.amount) > 0)
+      .map(i => ({ termName: i.termName.trim(), amount: i.amount, dueDate: i.dueDate || null }));
+
+    if (filledInstallments.length > 0) {
+      const instTotal = filledInstallments.reduce((s, i) => s + Number(i.amount || 0), 0);
+      const feeTotal  = Number(assignForm.totalFee);
+      if (Math.abs(instTotal - feeTotal) > 0.01) {
+        showToast(
+          `Installment total ₹${fmt(instTotal)} does not match total fee ₹${fmt(feeTotal)}. Please correct before saving.`,
+          'error'
+        );
+        return;
+      }
+    }
+
     setSaving(true);
     try {
-      // Only send installments that have both a name and an amount
-      const filledInstallments = installments
-        .filter(i => i.termName?.trim() && i.amount && Number(i.amount) > 0)
-        .map(i => ({ termName: i.termName.trim(), amount: i.amount, dueDate: i.dueDate || null }));
 
       await adminAPI.assignStudentFee({
         studentId: assignStudent.id,

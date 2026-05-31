@@ -86,7 +86,12 @@ export default function StudentAttendance() {
 
   // ── Calendar grid for selected month ───────────────────────────────────────
   const calendarData = useMemo(() => {
-    const year = new Date().getFullYear();
+    // Derive year from the actual records for the selected month so the
+    // calendar layout is correct even when viewing a month in a past year.
+    const firstRecord = monthRecords.find(r => r.date);
+    const year = firstRecord
+      ? new Date(firstRecord.date + 'T00:00:00').getFullYear()
+      : new Date().getFullYear();
     const firstDay = new Date(year, selectedMonth, 1).getDay(); // 0=Sun
     const daysInMonth = new Date(year, selectedMonth + 1, 0).getDate();
     const dateMap = {};

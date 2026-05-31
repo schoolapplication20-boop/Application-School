@@ -50,6 +50,19 @@ export default function StudentLeaveRequest() {
     if (form.toDate && form.fromDate && form.toDate < form.fromDate)
       errs.toDate = 'To date cannot be before from date';
     if (!form.reason.trim()) errs.reason = 'Reason is required';
+
+    // Check for overlapping pending/approved leaves
+    if (form.fromDate && form.toDate && !errs.fromDate && !errs.toDate) {
+      const overlap = leaves.find(l => {
+        const st = String(l.status || '').toUpperCase();
+        if (st === 'REJECTED') return false;
+        return l.fromDate <= form.toDate && l.toDate >= form.fromDate;
+      });
+      if (overlap) {
+        errs.fromDate = `You already have a ${String(overlap.status || '').toLowerCase()} leave overlapping these dates (${overlap.fromDate} – ${overlap.toDate}).`;
+      }
+    }
+
     return errs;
   };
 

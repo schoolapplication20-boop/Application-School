@@ -139,6 +139,11 @@ export const AuthProvider = ({ children }) => {
     } else if (userData?.schoolId) {
       localStorage.setItem('ms_school_tenant', String(userData.schoolId));
     }
+
+    // Write a sentinel value to localStorage so the cross-tab storage event
+    // fires reliably when logout removes it (storage events only fire for
+    // localStorage, not sessionStorage, and only when a value actually changes).
+    localStorage.setItem(SESSION_KEY, 'active');
   }, []);
 
   const logout = useCallback(() => {

@@ -225,7 +225,7 @@ export default function Marks() {
     const maxNum = parseFloat(bulkMaxMarks);
     if (isNaN(maxNum) || maxNum <= 0) { showToast('Enter valid max marks', 'error'); return; }
 
-    const date = bulkDate || new Date().toISOString().split('T')[0];
+    const date = bulkDate || new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }); // IST YYYY-MM-DD
     const cls  = classes.find(c => String(c.id) === bulkClassId);
 
     const entries = [];

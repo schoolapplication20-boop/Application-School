@@ -47,6 +47,7 @@ export default function CollectFee() {
   /* payment form */
   const [amount, setAmount]             = useState('');
   const [payDate, setPayDate]           = useState(todayStr());
+  const [paymentMode, setPaymentMode]   = useState('Cash');
   const [receiptNo, setReceiptNo]       = useState(genReceipt());
   const [remarks, setRemarks]           = useState('');
   const [paying, setPaying]             = useState(false);
@@ -109,6 +110,7 @@ export default function CollectFee() {
   const pickInstallment = (inst) => {
     setSelectedInstallment(inst);
     setAmount(String(inst.amount));
+    setPaymentMode('Cash');
     setReceiptNo(genReceipt());
     setRemarks('');
     setPayDate(todayStr());
@@ -117,6 +119,7 @@ export default function CollectFee() {
   const clearInstallmentSelection = () => {
     setSelectedInstallment(null);
     setAmount('');
+    setPaymentMode('Cash');
     setReceiptNo(genReceipt());
     setRemarks('');
   };
@@ -137,6 +140,7 @@ export default function CollectFee() {
       const res = await adminAPI.collectInstallmentFee(selectedInstallment.id, {
         amountPaid:    amt,
         paidDate:      payDate,
+        paymentMode:   paymentMode,
         receiptNumber: receiptNo,
         receivedBy:    user?.name || user?.email || 'Admin',
         term:          selectedInstallment.termName || null,
@@ -164,12 +168,14 @@ export default function CollectFee() {
         status:      updatedAssignment?.status,
         receivedBy:  user?.name || user?.email || 'Admin',
         term:        selectedInstallment.termName || null,
+        paymentMode,
         remarks,
       });
 
       await reloadFeeData(assignment.id);
       setSelectedInstallment(null);
       setAmount('');
+      setPaymentMode('Cash');
       setReceiptNo(genReceipt());
       setRemarks('');
       showToast('Payment recorded successfully');
@@ -223,7 +229,7 @@ export default function CollectFee() {
       </div>
       <div class="row"><span class="label">Total Paid to Date</span><span class="value">₹${fmt(d.paidSoFar)}</span></div>
       <div class="row"><span class="label">Balance Due</span><span class="value" style="color:${d.dueAmount > 0 ? '#e53e3e':'#276749'}">${d.dueAmount > 0 ? '₹'+fmt(d.dueAmount) : 'NIL'}</span></div>
-      <div class="row"><span class="label">Payment Mode</span><span class="value">Cash</span></div>
+      <div class="row"><span class="label">Payment Mode</span><span class="value">${d.paymentMode || 'Cash'}</span></div>
       ${d.term ? `<div class="row"><span class="label">Term / Installment</span><span class="value" style="color:#2b6cb0;font-weight:700">${d.term}</span></div>` : ''}
       ${d.remarks ? `<div class="row"><span class="label">Remarks</span><span class="value">${d.remarks}</span></div>` : ''}
       <div class="footer">
@@ -432,6 +438,15 @@ export default function CollectFee() {
                     <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Payment Date *</label>
                     <input type="date" value={payDate} max={todayStr()} onChange={e => setPayDate(e.target.value)}
                       style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
+                  </div>
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Payment Mode</label>
+                    <select value={paymentMode} onChange={e => setPaymentMode(e.target.value)}
+                      style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box', background: '#fff' }}>
+                      {['Cash','UPI','NEFT','RTGS','Cheque','DD','Card','Online'].map(m => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
                   </div>
                   <div style={{ marginBottom: 12 }}>
                     <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Receipt No.</label>
