@@ -134,6 +134,9 @@ class AuthServiceTest {
         void fiveWrongPasswords_locksAccount() {
             User user = activeAdmin();
             user.setFailedLoginAttempts(4); // one more makes 5
+            // Set lastFailedAttemptAt within the 30-min window so the sliding-window
+            // code does NOT reset the counter before incrementing.
+            user.setLastFailedAttemptAt(LocalDateTime.now(ZoneOffset.UTC).minusMinutes(5));
             when(userRepository.findByEmailIgnoreCase("admin@school.com")).thenReturn(Optional.of(user));
             when(schoolRepository.findBySchoolId(5)).thenReturn(Optional.of(activeSchool()));
             when(passwordEncoder.matches(any(), any())).thenReturn(false);
