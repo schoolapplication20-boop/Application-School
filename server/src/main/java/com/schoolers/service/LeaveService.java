@@ -3,6 +3,8 @@ package com.schoolers.service;
 import com.schoolers.dto.ApiResponse;
 import com.schoolers.model.*;
 import com.schoolers.repository.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
@@ -19,6 +21,8 @@ import java.util.stream.Stream;
 
 @Service
 public class LeaveService {
+
+    private static final Logger log = LoggerFactory.getLogger(LeaveService.class);
 
     @Autowired private LeaveRequestRepository    leaveRepository;
     @Autowired private AppNotificationService    notificationService;
