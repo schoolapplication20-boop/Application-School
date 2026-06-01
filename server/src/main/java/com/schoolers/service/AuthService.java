@@ -127,24 +127,24 @@ public class AuthService {
                 LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
 
                 // ── 30-minute sliding window ───────────────────────────────────────────
-                // Use updatedAt as a proxy for "when was the counter last incremented".
-                // updatedAt is written by @UpdateTimestamp on every save(), so it reflects
-                // the timestamp of the most recent failed attempt.
-                // If more than 30 minutes have passed, reset the counter — treating this
-                // as a fresh session to prevent stale accumulated failures from locking
-                // users who simply forgot their password days ago.
-                LocalDateTime lastActivity = user.getUpdatedAt();
-                if (lastActivity == null || lastActivity.isBefore(now.minusMinutes(30))) {
+                // lastFailedAttemptAt tracks ONLY failed login attempts, unlike updatedAt
+                // which is refreshed by any admin operation.  If the last failure was more
+                // than 30 minutes ago, treat this as a fresh session and reset the counter
+                // so stale failures from previous days don't cause a surprise lock.
+                LocalDateTime lastFailed = user.getLastFailedAttemptAt();
+                if (lastFailed == null || lastFailed.isBefore(now.minusMinutes(30))) {
                     user.setFailedLoginAttempts(0);
                 }
 
                 int attempts = (user.getFailedLoginAttempts() == null ? 0 : user.getFailedLoginAttempts()) + 1;
                 user.setFailedLoginAttempts(attempts);
+                user.setLastFailedAttemptAt(now);
 
                 if (attempts >= 5) {
                     // Lock permanently — cleared only when user completes a password reset via OTP.
                     user.setLockedUntil(now.plusYears(100));
                     user.setFailedLoginAttempts(0);
+                    user.setLastFailedAttemptAt(null);
                     userRepository.save(user);
                     log.warn("[login] Account locked after 5 failed attempts: {}", user.getEmail());
                     String lockedEmail = user.getEmail();
@@ -159,8 +159,10 @@ public class AuthService {
                 return ApiResponse.error("Incorrect password. " + (5 - attempts) + " attempt(s) remaining before account lock.");
             }
             // Reset counter on successful password match
-            if (user.getFailedLoginAttempts() != null && user.getFailedLoginAttempts() > 0) {
+            if ((user.getFailedLoginAttempts() != null && user.getFailedLoginAttempts() > 0)
+                    || user.getLastFailedAttemptAt() != null) {
                 user.setFailedLoginAttempts(0);
+                user.setLastFailedAttemptAt(null);
                 userRepository.save(user);
             }
 
@@ -647,9 +649,10 @@ public class AuthService {
         user.setOtpExpiry(null);
         user.setTempPassword(null);
         user.setFirstLogin(false);
-        // Clear lockout and failure counter so the fresh password works on the first try
+        // Clear lockout and all failure tracking so the fresh password works on the first try
         user.setLockedUntil(null);
         user.setFailedLoginAttempts(0);
+        user.setLastFailedAttemptAt(null);
         userRepository.save(user);
         return ApiResponse.success("Password reset successfully", "Password updated");
     }
