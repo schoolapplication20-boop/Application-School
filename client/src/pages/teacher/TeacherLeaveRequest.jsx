@@ -113,12 +113,6 @@ export default function TeacherLeaveRequest() {
   const approved = leaves.filter(l => (l.status || '').toUpperCase() === 'APPROVED').length;
   const rejected = leaves.filter(l => (l.status || '').toUpperCase() === 'REJECTED').length;
 
-  // Recently decided leaves (decided but not yet seen by teacher in this session)
-  const decidedLeaves = leaves.filter(l => {
-    const s = (l.status || '').toUpperCase();
-    return s === 'APPROVED' || s === 'REJECTED';
-  });
-
   return (
     <Layout pageTitle="Leave Request">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
@@ -127,43 +121,6 @@ export default function TeacherLeaveRequest() {
         <h1>My Leave Requests</h1>
         <p>Apply for leave — requests are reviewed and approved by Admin</p>
       </div>
-
-      {/* Decision Alert Banner — shown when there are decided leaves */}
-      {decidedLeaves.length > 0 && (
-        <div style={{ marginBottom: 20 }}>
-          {decidedLeaves.slice(0, 3).map(l => {
-            const status = normalizeStatus(l.status);
-            const color  = STATUS_COLOR[status] || '#718096';
-            const bg     = STATUS_BG[status]    || '#f7fafc';
-            const icon   = STATUS_ICON[status]  || 'info';
-            return (
-              <div key={l.id} style={{
-                display: 'flex', alignItems: 'center', gap: 12,
-                background: bg, border: `1.5px solid ${color}40`,
-                borderRadius: 10, padding: '12px 16px', marginBottom: 8,
-              }}>
-                <span className="material-icons" style={{ color, fontSize: 20 }}>{icon}</span>
-                <div style={{ flex: 1 }}>
-                  <span style={{ fontWeight: 700, color, fontSize: 13 }}>
-                    Leave {status}
-                  </span>
-                  <span style={{ fontSize: 12, color: '#718096', marginLeft: 8 }}>
-                    {l.leaveType} · {l.fromDate} → {l.toDate}
-                  </span>
-                  {l.adminComment && (
-                    <span style={{ fontSize: 12, color: '#718096', marginLeft: 8 }}>
-                      · Admin remark: <em>{l.adminComment}</em>
-                    </span>
-                  )}
-                </div>
-                {l.reviewedBy && (
-                  <span style={{ fontSize: 11, color: '#a0aec0' }}>by {l.reviewedBy}</span>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '16px', marginBottom: '24px' }}>
