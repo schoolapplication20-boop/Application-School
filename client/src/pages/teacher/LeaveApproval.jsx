@@ -73,6 +73,10 @@ export default function LeaveApproval() {
 
   const handleAction = async () => {
     if (!selected) return;
+    if (actionType === 'REJECTED' && !remark.trim()) {
+      showToast('Please provide a remark explaining the rejection.', 'error');
+      return;
+    }
     setActing(true);
     try {
       await leaveAPI.approveRejectLeave(selected.id, {
@@ -350,14 +354,19 @@ export default function LeaveApproval() {
             {/* Remark */}
             <div style={{ marginBottom: 20 }}>
               <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#4a5568', marginBottom: 6 }}>
-                Remark <span style={{ fontWeight: 400, color: '#a0aec0' }}>(optional)</span>
+                Remark{' '}
+                {actionType === 'REJECTED'
+                  ? <span style={{ fontWeight: 700, color: '#c53030' }}>* required</span>
+                  : <span style={{ fontWeight: 400, color: '#a0aec0' }}>(optional)</span>
+                }
               </label>
               <textarea
                 rows={2}
                 value={remark}
                 onChange={e => setRemark(e.target.value)}
-                placeholder="Add a note for the student…"
-                style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 13, resize: 'vertical', boxSizing: 'border-box', outline: 'none' }}
+                placeholder={actionType === 'REJECTED' ? 'Reason for rejection (required)…' : 'Add a note for the student…'}
+                maxLength={500}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: `1px solid ${actionType === 'REJECTED' && !remark.trim() ? '#fc8181' : '#e2e8f0'}`, fontSize: 13, resize: 'vertical', boxSizing: 'border-box', outline: 'none' }}
               />
             </div>
 
