@@ -56,7 +56,7 @@ export const NotificationProvider = ({ children }) => {
           icon:      n.icon  || 'notifications',
           color:     n.color || '#0de1e8',
           read:      n.isRead,
-          time:      new Date(n.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+          time:      new Date(typeof n.createdAt === 'string' && !n.createdAt.endsWith('Z') && !n.createdAt.includes('+') ? n.createdAt + 'Z' : n.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }),
           linkType:  n.linkType,
           linkId:    n.linkId,
         }));
