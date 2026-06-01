@@ -228,6 +228,29 @@ const Classes = () => {
     if (!name)    { showToast('Class name is required', 'error');  return; }
     if (!section) { showToast('Section is required', 'error');     return; }
 
+    // ── Client-side duplicate check (instant feedback, no API round-trip) ──
+    if (!editClass) {
+      const duplicate = classes.find(
+        c => c.name.trim().toLowerCase() === name.toLowerCase() &&
+             (c.section || '').trim().toUpperCase() === section
+      );
+      if (duplicate) {
+        showToast(`Class "${name} - ${section}" already exists. Please use a different name or section.`, 'error');
+        return; // keep modal open so user can fix the input
+      }
+    } else {
+      // On edit: check for conflict with OTHER classes (not the one being edited)
+      const conflict = classes.find(
+        c => c.id !== editClass.id &&
+             c.name.trim().toLowerCase() === name.toLowerCase() &&
+             (c.section || '').trim().toUpperCase() === section
+      );
+      if (conflict) {
+        showToast(`Class "${name} - ${section}" already exists. Choose a different name or section.`, 'error');
+        return;
+      }
+    }
+
     const selectedTeacher = teacherList.find(t => String(t.id) === String(formData.teacherId));
     const payload = {
       name,
@@ -247,14 +270,16 @@ const Classes = () => {
         showToast('Class added successfully');
       }
       loadClasses();
+      // Only close the modal on SUCCESS
+      setShowModal(false);
+      setFormData(initialForm);
+      setEditClass(null);
     } catch (err) {
-      const msg = err.response?.data?.message || (editClass ? 'Failed to update class' : 'Class already exists or could not be saved');
+      // Keep modal open so the user can correct the input
+      const msg = err.response?.data?.message ||
+                  (editClass ? 'Failed to update class' : 'Class already exists or could not be saved');
       showToast(msg, 'error');
     }
-
-    setShowModal(false);
-    setFormData(initialForm);
-    setEditClass(null);
   };
 
   const openEdit = (c) => {
