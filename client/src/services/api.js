@@ -216,7 +216,7 @@ export const adminAPI = {
   collectInstallmentFee: (installmentId, data) => api.post(`/api/admin/fee-installments/${installmentId}/pay`, data),
 
   // Student search for fee collection
-  searchStudentsForFee: (q) => api.get('/api/admin/students/search', { params: { q } }),
+  searchStudentsForFee: (q, className) => api.get('/api/admin/students/search', { params: { q: q || undefined, className: className || undefined } }),
 
   // Expenses
   getExpenses: (params) => api.get('/api/admin/expenses', { params }),

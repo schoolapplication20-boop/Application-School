@@ -1238,11 +1238,33 @@ public class AdminService {
         return ApiResponse.success(feeRepository.findBySchoolId(schoolId));
     }
 
-    public ApiResponse<List<Student>> searchStudentsForFee(Long schoolId, String query) {
-        if (query == null || query.trim().isEmpty()) return ApiResponse.success(java.util.Collections.emptyList());
-        List<Student> results = (schoolId != null)
-                ? studentRepository.searchBySchoolAndNameRollOrPhone(schoolId, query.trim())
-                : studentRepository.searchByNameRollOrPhone(query.trim());
+    public ApiResponse<List<Student>> searchStudentsForFee(Long schoolId, String query, String className) {
+        // If no query and no class filter, return empty (avoid loading all students)
+        boolean hasQuery     = query != null && !query.trim().isEmpty();
+        boolean hasClassFilter = className != null && !className.trim().isEmpty();
+
+        if (!hasQuery && !hasClassFilter) return ApiResponse.success(java.util.Collections.emptyList());
+
+        List<Student> results;
+        if (hasQuery) {
+            results = (schoolId != null)
+                    ? studentRepository.searchBySchoolAndNameRollOrPhone(schoolId, query.trim())
+                    : studentRepository.searchByNameRollOrPhone(query.trim());
+        } else {
+            // class filter only — return all students in that class
+            results = (schoolId != null)
+                    ? studentRepository.findBySchoolIdAndClassName(schoolId, className.trim())
+                    : studentRepository.findByClassName(className.trim());
+        }
+
+        // Apply class filter on top of query results if both provided
+        if (hasQuery && hasClassFilter) {
+            final String cls = className.trim().toLowerCase();
+            results = results.stream()
+                    .filter(s -> s.getClassName() != null && s.getClassName().toLowerCase().contains(cls))
+                    .toList();
+        }
+
         return ApiResponse.success(results);
     }
 

@@ -30,6 +30,8 @@ export default function CollectFee() {
 
   /* search */
   const [query, setQuery]               = useState('');
+  const [filterClass, setFilterClass]   = useState('');
+  const [classList, setClassList]       = useState([]);
   const [suggestions, setSuggestions]   = useState([]);
   const [showDrop, setShowDrop]         = useState(false);
   const [searching, setSearching]       = useState(false);
@@ -60,19 +62,32 @@ export default function CollectFee() {
 
   const showToast = (msg, type = 'success') => setToast({ message: msg, type });
 
-  /* ── student search ── */
+  /* ── load class list for filter dropdown ── */
   useEffect(() => {
-    if (!query || query.length < 2) { setSuggestions([]); setShowDrop(false); return; }
+    adminAPI.getClasses()
+      .then(res => {
+        const list = res.data?.data ?? [];
+        const names = [...new Set(list.map(c => c.name).filter(Boolean))].sort();
+        setClassList(names);
+      })
+      .catch(() => {});
+  }, []);
+
+  /* ── student search (re-runs on query OR class filter change) ── */
+  useEffect(() => {
+    const hasQuery = query && query.length >= 2;
+    const hasClass = !!filterClass;
+    if (!hasQuery && !hasClass) { setSuggestions([]); setShowDrop(false); return; }
     const t = setTimeout(async () => {
       setSearching(true);
       try {
-        const res = await adminAPI.searchStudentsForFee(query);
+        const res = await adminAPI.searchStudentsForFee(hasQuery ? query : '', filterClass);
         setSuggestions(res.data?.data ?? []);
         setShowDrop(true);
       } catch { } finally { setSearching(false); }
     }, 300);
     return () => clearTimeout(t);
-  }, [query]);
+  }, [query, filterClass]);
 
   /* ── reload installments & payments ── */
   const reloadFeeData = useCallback(async (assignId) => {
@@ -264,34 +279,65 @@ export default function CollectFee() {
           <p style={{ margin: 0, fontSize: 13, color: '#a0aec0' }}>Search a student, select an installment, and record cash payment</p>
         </div>
 
-        {/* Search Bar */}
-        <div style={{ position: 'relative', maxWidth: 560, marginBottom: 28 }}>
-          <span className="material-icons" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#a0aec0', fontSize: 20 }}>search</span>
-          <input
-            ref={searchRef}
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            placeholder="Search student by name, roll number, or phone..."
-            style={{ width: '100%', padding: '12px 14px 12px 40px', border: '2px solid #e2e8f0', borderRadius: 10, fontSize: 14, outline: 'none', boxSizing: 'border-box', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
-            onFocus={() => suggestions.length > 0 && setShowDrop(true)}
-            onBlur={() => setTimeout(() => setShowDrop(false), 180)}
-          />
-          {searching && <span style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', color: '#a0aec0', fontSize: 12 }}>Searching...</span>}
-          {showDrop && suggestions.length > 0 && (
-            <div style={{ position: 'absolute', left: 0, right: 0, top: '100%', marginTop: 4, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.14)', zIndex: 100, maxHeight: 240, overflowY: 'auto' }}>
-              {suggestions.map(s => (
-                <div key={s.id} onMouseDown={() => selectStudent(s)}
-                     style={{ padding: '11px 16px', cursor: 'pointer', borderBottom: '1px solid #f0f4f8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-                     onMouseEnter={e => e.currentTarget.style.background = '#f7fafc'}
-                     onMouseLeave={e => e.currentTarget.style.background = '#fff'}>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: '#2d3748' }}>{s.name}</div>
-                    <div style={{ fontSize: 12, color: '#a0aec0' }}>{s.className} · Roll: {s.rollNumber}</div>
+        {/* Search + Class Filter */}
+        <div style={{ display: 'flex', gap: 10, marginBottom: 28, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+
+          {/* Class filter dropdown */}
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            <span className="material-icons" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#a0aec0', fontSize: 18, pointerEvents: 'none' }}>class</span>
+            <select
+              value={filterClass}
+              onChange={e => { setFilterClass(e.target.value); setStudent(null); setQuery(''); setSuggestions([]); }}
+              style={{ paddingLeft: 34, paddingRight: 32, paddingTop: 12, paddingBottom: 12, border: '2px solid #e2e8f0', borderRadius: 10, fontSize: 14, outline: 'none', background: '#fff', cursor: 'pointer', minWidth: 160, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', appearance: 'none', color: filterClass ? '#2d3748' : '#a0aec0' }}
+            >
+              <option value="">All Classes</option>
+              {classList.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <span className="material-icons" style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: '#a0aec0', fontSize: 18, pointerEvents: 'none' }}>expand_more</span>
+          </div>
+
+          {/* Search input */}
+          <div style={{ position: 'relative', flex: 1, minWidth: 240, maxWidth: 500 }}>
+            <span className="material-icons" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#a0aec0', fontSize: 20 }}>search</span>
+            <input
+              ref={searchRef}
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder={filterClass ? `Search in ${filterClass}…` : 'Search by name, roll number, or phone…'}
+              style={{ width: '100%', padding: '12px 14px 12px 40px', border: '2px solid #e2e8f0', borderRadius: 10, fontSize: 14, outline: 'none', boxSizing: 'border-box', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
+              onFocus={() => suggestions.length > 0 && setShowDrop(true)}
+              onBlur={() => setTimeout(() => setShowDrop(false), 180)}
+            />
+            {searching && <span style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', color: '#a0aec0', fontSize: 12 }}>Searching...</span>}
+            {showDrop && suggestions.length > 0 && (
+              <div style={{ position: 'absolute', left: 0, right: 0, top: '100%', marginTop: 4, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.14)', zIndex: 100, maxHeight: 260, overflowY: 'auto' }}>
+                {suggestions.map(s => (
+                  <div key={s.id} onMouseDown={() => selectStudent(s)}
+                       style={{ padding: '11px 16px', cursor: 'pointer', borderBottom: '1px solid #f0f4f8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                       onMouseEnter={e => e.currentTarget.style.background = '#f7fafc'}
+                       onMouseLeave={e => e.currentTarget.style.background = '#fff'}>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: 14, color: '#2d3748' }}>{s.name}</div>
+                      <div style={{ fontSize: 12, color: '#a0aec0' }}>
+                        {s.className}{s.section ? ` - ${s.section}` : ''} · Roll: {s.rollNumber}
+                      </div>
+                    </div>
+                    <span className="material-icons" style={{ color: '#0de1e8', fontSize: 18 }}>chevron_right</span>
                   </div>
-                  <span className="material-icons" style={{ color: '#0de1e8', fontSize: 18 }}>chevron_right</span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Clear button — shown when a class or student is selected */}
+          {(filterClass || student) && (
+            <button
+              onClick={() => { setFilterClass(''); setQuery(''); setStudent(null); setSuggestions([]); setAssignment(null); setInstallments([]); setPayments([]); setSelectedInstallment(null); }}
+              style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '12px 14px', border: '1.5px solid #e2e8f0', borderRadius: 10, background: '#fff', color: '#718096', fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
+            >
+              <span className="material-icons" style={{ fontSize: 16 }}>close</span>
+              Clear
+            </button>
           )}
         </div>
 
@@ -299,7 +345,8 @@ export default function CollectFee() {
         {!student ? (
           <div style={{ textAlign: 'center', padding: '60px 20px', color: '#a0aec0' }}>
             <span className="material-icons" style={{ fontSize: 56, display: 'block', marginBottom: 12, color: '#e2e8f0' }}>point_of_sale</span>
-            <p style={{ fontSize: 15, fontWeight: 600 }}>Search for a student to begin fee collection</p>
+            <p style={{ fontSize: 15, fontWeight: 600 }}>Select a class or search for a student to begin</p>
+          <p style={{ fontSize: 13, color: '#cbd5e0', marginTop: 6 }}>Use the class dropdown to browse by class, or type a name to search</p>
           </div>
         ) : loadingFee ? (
           <div style={{ textAlign: 'center', padding: 40, color: '#a0aec0' }}>Loading fee details...</div>
