@@ -46,7 +46,7 @@ jobs:
 
             # Session pooler — extract region from host or default to ap-southeast-1
             # Supabase ap-southeast-1 projects all use this pooler endpoint:
-            CONNECT_HOST="aws-0-ap-southeast-1.pooler.supabase.com"
+            CONNECT_HOST="aws-1-ap-southeast-1.pooler.supabase.com"
             CONNECT_PORT="5432"
 
             # Pooler requires project ref appended to the username
