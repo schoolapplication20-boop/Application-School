@@ -112,11 +112,6 @@ public class User {
     @Builder.Default
     private Integer failedLoginAttempts = 0;
 
-    /** UTC timestamp of the most recent failed password attempt. Used to apply a
-     *  30-minute sliding window: if no failure for 30 min, counter auto-resets. */
-    @Column(name = "last_failed_attempt_at")
-    private LocalDateTime lastFailedAttemptAt;
-
     /** Account is locked until this timestamp (UTC). Null means not locked. */
     @Column(name = "locked_until")
     private LocalDateTime lockedUntil;
