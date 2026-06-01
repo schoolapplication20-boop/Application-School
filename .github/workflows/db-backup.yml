@@ -18,18 +18,38 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends postgresql-client
 
-      # ── 2. Dump the database ─────────────────────────────────────────────────
+      # ── 2. Resolve host to IPv4 ──────────────────────────────────────────────
       #
-      # Use Supabase's SESSION pooler (IPv4, pg_dump-compatible):
+      # GitHub Actions runners CANNOT reach IPv6 addresses.
+      # Supabase direct hosts (db.*.supabase.co) resolve to IPv6 in ap-southeast-1.
+      #
+      # Fix A (preferred) — update DB_HOST secret to the SESSION pooler:
       #   DB_HOST     = aws-0-ap-southeast-1.pooler.supabase.com
       #   DB_PORT     = 5432
-      #   DB_USERNAME = postgres.<PROJECT_REF>   ← note: includes project ref
-      #   DB_NAME     = postgres
+      #   DB_USERNAME = postgres.<PROJECT_REF>   ← project ref required for pooler
       #
-      # The direct host (db.*.supabase.co) resolves to IPv6 in ap-southeast-1
-      # which GitHub Actions runners cannot reach.
-      # The TRANSACTION pooler (port 6543) breaks pg_dump — use SESSION (5432).
+      # Fix B (automatic, used here) — resolve the configured host to its IPv4
+      # address so pg_dump never dials IPv6, regardless of the secret value.
       #
+      - name: Resolve DB host to IPv4
+        run: |
+          CONFIGURED_HOST="${{ secrets.DB_HOST }}"
+          # Try to get an IPv4 address for the host
+          RESOLVED=$(getent ahostsv4 "$CONFIGURED_HOST" 2>/dev/null | awk 'NR==1{print $1}')
+
+          if [ -n "$RESOLVED" ]; then
+            echo "DB_CONNECT_HOST=${RESOLVED}" >> "$GITHUB_ENV"
+            echo "✅ Resolved ${CONFIGURED_HOST} → ${RESOLVED} (IPv4)"
+          else
+            # No IPv4 record — fall back to hostname and hope for the best,
+            # but print a clear warning so the operator knows to update DB_HOST
+            echo "DB_CONNECT_HOST=${CONFIGURED_HOST}" >> "$GITHUB_ENV"
+            echo "⚠️  Could not resolve ${CONFIGURED_HOST} to IPv4."
+            echo "   Update DB_HOST to the Supabase SESSION pooler:"
+            echo "   aws-0-ap-southeast-1.pooler.supabase.com"
+          fi
+
+      # ── 3. Dump the database ─────────────────────────────────────────────────
       - name: Create compressed backup
         env:
           PGPASSWORD: ${{ secrets.DB_PASSWORD }}
@@ -38,7 +58,7 @@ jobs:
           FILENAME="myskoolz_${TIMESTAMP}.dump"
 
           pg_dump \
-            --host="${{ secrets.DB_HOST }}" \
+            --host="${DB_CONNECT_HOST}" \
             --port="${{ secrets.DB_PORT }}" \
             --username="${{ secrets.DB_USERNAME }}" \
             --dbname="${{ secrets.DB_NAME }}" \
@@ -54,7 +74,7 @@ jobs:
           echo "BACKUP_SIZE=${SIZE}"     >> "$GITHUB_ENV"
           echo "✅ Backup created: ${FILENAME} (${SIZE})"
 
-      # ── 3. Upload to Backblaze B2 ─────────────────────────────────────────────
+      # ── 4. Upload to Backblaze B2 ─────────────────────────────────────────────
       #
       # Backblaze B2 is S3-compatible, so we reuse the AWS CLI that is
       # pre-installed on every GitHub Actions runner.
@@ -74,7 +94,7 @@ jobs:
 
           echo "✅ Uploaded to B2: backups/${BACKUP_FILE} (${BACKUP_SIZE})"
 
-      # ── 4. Delete backups older than 30 days from B2 ─────────────────────────
+      # ── 5. Delete backups older than 30 days from B2 ─────────────────────────
       #
       # Keeps your B2 bucket clean. Lists all objects, finds ones older than
       # 30 days, and deletes them one by one.
@@ -105,7 +125,7 @@ jobs:
 
           echo "✅ Pruning complete"
 
-      # ── 5. Summary ───────────────────────────────────────────────────────────
+      # ── 6. Summary ───────────────────────────────────────────────────────────
       - name: Print summary
         if: success()
         run: |
@@ -118,7 +138,7 @@ jobs:
           echo "  Time   : $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
           echo "============================================"
 
-      # ── 6. Notify on failure via email (GitHub built-in) ─────────────────────
+      # ── 7. Notify on failure via email (GitHub built-in) ─────────────────────
       #
       # GitHub automatically emails the repo owner when a scheduled workflow
       # fails — no extra setup needed.  The step below just makes the failure
