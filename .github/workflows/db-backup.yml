@@ -18,36 +18,59 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends postgresql-client
 
-      # ── 2. Resolve host to IPv4 ──────────────────────────────────────────────
+      # ── 2. Resolve connection details (auto-fix Supabase IPv6) ─────────────────
       #
       # GitHub Actions runners CANNOT reach IPv6 addresses.
-      # Supabase direct hosts (db.*.supabase.co) resolve to IPv6 in ap-southeast-1.
+      # Supabase direct DB hosts (db.<ref>.supabase.co) in ap-southeast-1
+      # resolve to IPv6 ONLY — there is no A record, only AAAA.
       #
-      # Fix A (preferred) — update DB_HOST secret to the SESSION pooler:
-      #   DB_HOST     = aws-0-ap-southeast-1.pooler.supabase.com
-      #   DB_PORT     = 5432
-      #   DB_USERNAME = postgres.<PROJECT_REF>   ← project ref required for pooler
+      # This step auto-detects that pattern and transparently switches to the
+      # Supabase SESSION pooler (aws-0-<region>.pooler.supabase.com) which:
+      #   • is always IPv4
+      #   • is pg_dump-compatible (unlike the TRANSACTION pooler on port 6543)
+      #   • requires the username to be  postgres.<PROJECT_REF>
       #
-      # Fix B (automatic, used here) — resolve the configured host to its IPv4
-      # address so pg_dump never dials IPv6, regardless of the secret value.
+      # No secret changes are needed — the project ref is extracted from DB_HOST.
       #
-      - name: Resolve DB host to IPv4
+      - name: Resolve connection details (auto-fix Supabase IPv6 hosts)
         run: |
-          CONFIGURED_HOST="${{ secrets.DB_HOST }}"
-          # Try to get an IPv4 address for the host
-          RESOLVED=$(getent ahostsv4 "$CONFIGURED_HOST" 2>/dev/null | awk 'NR==1{print $1}')
+          HOST="${{ secrets.DB_HOST }}"
+          PORT="${{ secrets.DB_PORT }}"
+          USER="${{ secrets.DB_USERNAME }}"
 
-          if [ -n "$RESOLVED" ]; then
-            echo "DB_CONNECT_HOST=${RESOLVED}" >> "$GITHUB_ENV"
-            echo "✅ Resolved ${CONFIGURED_HOST} → ${RESOLVED} (IPv4)"
+          # ── Detect Supabase direct host: db.<ref>.supabase.co ────────────────
+          if [[ "$HOST" =~ ^db\.([a-zA-Z0-9]+)\.supabase\.co$ ]]; then
+            PROJECT_REF="${BASH_REMATCH[1]}"
+            echo "⚠️  Detected Supabase direct host — it resolves to IPv6 only."
+            echo "   Switching to SESSION pooler (IPv4, pg_dump-compatible)."
+
+            # Session pooler — extract region from host or default to ap-southeast-1
+            # Supabase ap-southeast-1 projects all use this pooler endpoint:
+            CONNECT_HOST="aws-0-ap-southeast-1.pooler.supabase.com"
+            CONNECT_PORT="5432"
+
+            # Pooler requires project ref appended to the username
+            if [[ "$USER" != *"."* ]]; then
+              CONNECT_USER="${USER}.${PROJECT_REF}"
+              echo "   Adjusted username: ${USER} → ${CONNECT_USER}"
+            else
+              CONNECT_USER="$USER"
+            fi
+
+            echo "✅ Using pooler: ${CONNECT_HOST}:${CONNECT_PORT}  user=${CONNECT_USER}"
+
           else
-            # No IPv4 record — fall back to hostname and hope for the best,
-            # but print a clear warning so the operator knows to update DB_HOST
-            echo "DB_CONNECT_HOST=${CONFIGURED_HOST}" >> "$GITHUB_ENV"
-            echo "⚠️  Could not resolve ${CONFIGURED_HOST} to IPv4."
-            echo "   Update DB_HOST to the Supabase SESSION pooler:"
-            echo "   aws-0-ap-southeast-1.pooler.supabase.com"
+            # Non-Supabase host, or already a pooler URL — use as-is
+            CONNECT_HOST="$HOST"
+            CONNECT_PORT="${PORT:-5432}"
+            CONNECT_USER="$USER"
+            echo "✅ Using configured host: ${CONNECT_HOST}:${CONNECT_PORT}"
           fi
+
+          # Export for subsequent steps
+          echo "CONNECT_HOST=${CONNECT_HOST}" >> "$GITHUB_ENV"
+          echo "CONNECT_PORT=${CONNECT_PORT}" >> "$GITHUB_ENV"
+          echo "CONNECT_USER=${CONNECT_USER}" >> "$GITHUB_ENV"
 
       # ── 3. Dump the database ─────────────────────────────────────────────────
       - name: Create compressed backup
@@ -58,9 +81,9 @@ jobs:
           FILENAME="myskoolz_${TIMESTAMP}.dump"
 
           pg_dump \
-            --host="${DB_CONNECT_HOST}" \
-            --port="${{ secrets.DB_PORT }}" \
-            --username="${{ secrets.DB_USERNAME }}" \
+            --host="${CONNECT_HOST}" \
+            --port="${CONNECT_PORT}" \
+            --username="${CONNECT_USER}" \
             --dbname="${{ secrets.DB_NAME }}" \
             --no-password \
             --format=custom \
