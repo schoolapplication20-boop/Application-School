@@ -124,16 +124,28 @@ public class AuthService {
             if (request.getPassword() == null || request.getPassword().isBlank())
                 return ApiResponse.error("Password is required.");
             if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+                LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
+
+                // ── 30-minute sliding window ───────────────────────────────────────────
+                // If the most recent failure was more than 30 minutes ago, treat this as
+                // a fresh session and reset the counter.  This prevents accumulated
+                // failures from different days or sessions from causing an unexpected lock.
+                LocalDateTime lastFailed = user.getLastFailedAttemptAt();
+                if (lastFailed == null || lastFailed.isBefore(now.minusMinutes(30))) {
+                    user.setFailedLoginAttempts(0);
+                }
+
                 int attempts = (user.getFailedLoginAttempts() == null ? 0 : user.getFailedLoginAttempts()) + 1;
                 user.setFailedLoginAttempts(attempts);
+                user.setLastFailedAttemptAt(now);
+
                 if (attempts >= 5) {
                     // Lock permanently — cleared only when user completes a password reset via OTP.
-                    // Use a far-future sentinel so any time-based lock check added later still works.
-                    user.setLockedUntil(LocalDateTime.now(ZoneOffset.UTC).plusYears(100));
+                    user.setLockedUntil(now.plusYears(100));
                     user.setFailedLoginAttempts(0);
+                    user.setLastFailedAttemptAt(null);
                     userRepository.save(user);
                     log.warn("[login] Account locked after 5 failed attempts: {}", user.getEmail());
-                    // Notify the user by email (fire-and-forget; skip auto-generated @my-skoolz.com addresses)
                     String lockedEmail = user.getEmail();
                     if (lockedEmail != null && !lockedEmail.endsWith("@my-skoolz.com")) {
                         try { emailService.sendAccountLockedEmail(lockedEmail, user.getName()); }
@@ -145,9 +157,11 @@ public class AuthService {
                 userRepository.save(user);
                 return ApiResponse.error("Incorrect password. " + (5 - attempts) + " attempt(s) remaining before account lock.");
             }
-            // Reset counter on successful password match
-            if (user.getFailedLoginAttempts() != null && user.getFailedLoginAttempts() > 0) {
+            // Reset counter and timestamp on successful password match
+            if ((user.getFailedLoginAttempts() != null && user.getFailedLoginAttempts() > 0)
+                    || user.getLastFailedAttemptAt() != null) {
                 user.setFailedLoginAttempts(0);
+                user.setLastFailedAttemptAt(null);
                 userRepository.save(user);
             }
 
@@ -632,11 +646,12 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(newPassword));
         user.setResetOtp(null);
         user.setOtpExpiry(null);
-        user.setTempPassword(null);       // remove plaintext credential now that user has a real password
-        user.setFirstLogin(false);        // password was explicitly set by the user — no longer first-login
-        // Clear any lockout so user can log in with new password
+        user.setTempPassword(null);
+        user.setFirstLogin(false);
+        // Clear lockout and failure tracking so the fresh password works on the first try
         user.setLockedUntil(null);
         user.setFailedLoginAttempts(0);
+        user.setLastFailedAttemptAt(null);
         userRepository.save(user);
         return ApiResponse.success("Password reset successfully", "Password updated");
     }

@@ -468,6 +468,9 @@ public class DatabaseMigration implements CommandLineRunner {
 
         // ── users: widen reset_otp from VARCHAR(10) to VARCHAR(64) for hashed OTPs ──
         exec("ALTER TABLE users ALTER COLUMN reset_otp TYPE VARCHAR(64)");
+
+        // ── users: add last_failed_attempt_at for 30-min sliding window lockout ─
+        exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_failed_attempt_at TIMESTAMP");
         log.debug("users.reset_otp column widened to VARCHAR(64) for hashed storage.");
 
         // ── Production performance indexes ───────────────────────────────────────
