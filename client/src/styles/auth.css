@@ -628,4 +628,28 @@
   .auth-right { padding: 24px 16px; padding-top: 36px; }
   .otp-input { width: 40px; height: 46px; font-size: 18px; }
   .otp-container { gap: 6px; }
+
+  .auth-form-header h1 { font-size: 22px; }
+  .auth-form-header p  { font-size: 13px; }
+
+  .btn-auth-submit {
+    padding: 14px 20px;
+    font-size: 14px;
+  }
+
+  /* Keep role-selector 2-column on small phones */
+  .auth-role-grid-4 { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
+  .auth-role-grid-4 > button { padding: 12px 6px 10px !important; }
+}
+
+@media (max-width: 360px) {
+  .auth-right { padding: 20px 12px; padding-top: 28px; }
+
+  .otp-input { width: 36px; height: 42px; font-size: 16px; border-radius: 10px; }
+  .otp-container { gap: 4px; }
+
+  .auth-form-header h1 { font-size: 20px; }
+
+  /* On very small phones stack role selector to 2 cols and make buttons compact */
+  .auth-role-grid-4 > button { padding: 10px 4px 8px !important; gap: 4px !important; }
 }

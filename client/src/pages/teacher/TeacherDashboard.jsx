@@ -302,13 +302,13 @@ export default function TeacherDashboard() {
           </div>
 
           {/* Banner stats */}
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <div className="dashboard-banner-stats">
             {[
               { label: "Today's Classes", value: todaySchedule.length, icon: 'today' },
               { label: 'My Students', value: classStudents.filter(s => s.status !== 'Inactive').length, icon: 'school' },
               { label: 'Assigned Classes', value: assignedClasses.length, icon: 'class' },
             ].map(b => (
-              <div key={b.label} style={{ background: 'rgba(255,255,255,0.12)', borderRadius: 12, padding: '12px 18px', textAlign: 'center', minWidth: 80, border: '1px solid rgba(255,255,255,0.15)' }}>
+              <div key={b.label} style={{ background: 'rgba(255,255,255,0.12)', borderRadius: 12, padding: '12px 18px', textAlign: 'center', flex: '1 1 80px', border: '1px solid rgba(255,255,255,0.15)' }}>
                 <span className="material-icons" style={{ fontSize: 18, color: bannerAccent, display: 'block', marginBottom: 4 }}>{b.icon}</span>
                 <div style={{ fontSize: 22, fontWeight: 900, color: '#fff', lineHeight: 1 }}>{b.value}</div>
                 <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', marginTop: 3, fontWeight: 600 }}>{b.label}</div>
@@ -362,7 +362,7 @@ export default function TeacherDashboard() {
           <div style={{ width: 4, height: 20, background: 'linear-gradient(180deg,#0de1e8,#4361ee)', borderRadius: 2 }} />
           <span style={{ fontSize: 15, fontWeight: 700, color: '#1a202c' }}>Quick Actions</span>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 12 }}>
+        <div className="quick-actions-grid">
           {QUICK_ACTIONS.map(action => (
             <div
               key={action.label}
@@ -493,7 +493,7 @@ export default function TeacherDashboard() {
             <div style={{ fontSize: 12, marginTop: 4 }}>Ask your admin to assign classes to your profile</div>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16, padding: 20 }}>
+          <div className="teacher-classes-grid">
             {assignedClasses.map((cls) => {
               const clsKey = `${cls.name}-${cls.section || 'A'}`;
               const clsStudents = studentsByClass[clsKey] || [];

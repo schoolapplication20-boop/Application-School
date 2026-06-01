@@ -37,6 +37,16 @@ body {
   background-color: var(--bg-light);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;   /* prevent any child from causing horizontal scroll */
+}
+
+html {
+  overflow-x: hidden;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
 }
 
 a {

@@ -915,3 +915,147 @@
   .filter-select,
   .search-input { font-size: 13px; }
 }
+
+/* ── Welcome banner stats row ────────────────────────────────────────── */
+/* Used in AdminDashboard welcome banner */
+.dashboard-banner-stats {
+  display: flex;
+  gap: 16px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+@media (max-width: 768px) {
+  .dashboard-banner-stats {
+    width: 100%;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .dashboard-banner-stats > div {
+    flex: 1 1 80px;
+    padding: 10px 12px !important;
+  }
+  .dashboard-banner-stats > button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* ── Tablet: 2-column stat grid ──────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+  }
+}
+
+/* ── Charts + activity grid ──────────────────────────────────────────── */
+/* Inline 2fr 1fr chart layout replaced with this class */
+.charts-inline-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+  margin-bottom: 28px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .charts-inline-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Quick actions grid ──────────────────────────────────────────────── */
+.quick-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 480px) {
+  .quick-actions-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+}
+
+/* ── Assigned-classes / teacher card grid ────────────────────────────── */
+.teacher-classes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 14px;
+  padding: 16px;
+}
+
+@media (max-width: 600px) {
+  .teacher-classes-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 380px) {
+  .teacher-classes-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Action buttons — larger touch targets on mobile ─────────────────── */
+@media (max-width: 768px) {
+  .action-btn {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px;
+  }
+
+  .action-btns { gap: 6px; }
+
+  /* Page buttons */
+  .page-btn {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px;
+  }
+
+  /* Filter / search inputs full-width */
+  .filter-select,
+  .search-input-wrapper {
+    width: 100% !important;
+  }
+
+  /* Reduce chart min-height to avoid giant empty areas on mobile */
+  .chart-card {
+    padding: 14px !important;
+  }
+
+  /* Tables: make sure overflow-x works — remove any hidden overflow on cards */
+  .data-table-card {
+    overflow: visible !important;
+  }
+
+  .data-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media (max-width: 480px) {
+  .action-btn {
+    width: 34px !important;
+    height: 34px !important;
+  }
+
+  /* Modal nearly full screen with safe padding */
+  .modal-container {
+    max-width: calc(100vw - 16px) !important;
+    margin: 0 8px !important;
+    border-radius: 14px !important;
+  }
+
+  /* Modal content padding tighter */
+  .modal-body {
+    padding: 0 14px 14px !important;
+    max-height: 70vh;
+  }
+}

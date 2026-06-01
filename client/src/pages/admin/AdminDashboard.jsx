@@ -193,7 +193,7 @@ export default function AdminDashboard() {
             {lastRefresh && <span style={{ marginLeft: 10, fontSize: 11, opacity: 0.6 }}>Updated {lastRefresh.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })}</span>}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 20, flexShrink: 0 }}>
+        <div className="dashboard-banner-stats">
           {[
             { label: 'Students', val: dbStats?.totalStudents ?? '—', icon: 'school' },
             { label: 'Teachers', val: dbStats?.totalTeachers ?? '—', icon: 'person' },
@@ -233,7 +233,7 @@ export default function AdminDashboard() {
           <div style={{ width: 4, height: 20, borderRadius: 4, background: 'linear-gradient(180deg,#0de1e8,#0369a1)' }} />
           <span style={{ fontSize: 15, fontWeight: 700, color: '#1a202c' }}>Quick Actions</span>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 14 }}>
+        <div className="quick-actions-grid">
           {QUICK_ACTIONS.map(action => (
             <div key={action.label} onClick={() => navigate(action.path)}
               style={{ background: '#fff', borderRadius: 16, padding: '18px 12px', textAlign: 'center', cursor: 'pointer', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', border: '1px solid #f0f4f8', transition: 'all 0.2s' }}
@@ -251,7 +251,7 @@ export default function AdminDashboard() {
 
       {/* ── Super Admin: Admin Overview + Activity Log ────────────────────────── */}
       {isSuperAdmin && (
-        <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: 24, marginBottom: 28 }}>
+        <div className="grid-3-2">
           <div style={{ background: '#fff', borderRadius: 18, boxShadow: '0 2px 14px rgba(0,0,0,0.07)', overflow: 'hidden' }}>
             <div style={{ padding: '18px 22px', borderBottom: '1px solid #f0f4f8', display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{ width: 4, height: 20, borderRadius: 4, background: 'linear-gradient(180deg,#0de1e8,#0369a1)' }} />
@@ -330,7 +330,7 @@ export default function AdminDashboard() {
       )}
 
       {/* ── Charts Section ─────────────────────────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24, marginBottom: 28, alignItems: 'start' }}>
+      <div className="charts-inline-grid">
         <div style={{ background: '#fff', borderRadius: 18, boxShadow: '0 2px 14px rgba(0,0,0,0.07)', overflow: 'hidden' }}>
           <div style={{ padding: '18px 22px', borderBottom: '1px solid #f0f4f8', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>

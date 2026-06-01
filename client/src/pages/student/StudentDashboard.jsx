@@ -125,8 +125,8 @@ export default function StudentDashboard() {
         <div style={{ position: 'absolute', top: -40, right: -40, width: 200, height: 200, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', bottom: -60, right: 120, width: 140, height: 140, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }} />
 
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0, flex: 1 }}>
             <div style={{ width: 64, height: 64, borderRadius: 18, background: 'rgba(255,255,255,0.15)', border: '2px solid rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, fontWeight: 800, color: '#fff', flexShrink: 0 }}>
               {getInitials(displayName)}
             </div>
@@ -149,9 +149,9 @@ export default function StudentDashboard() {
           </div>
 
           {/* Overall grade badge */}
-          <div style={{ background: gradeGrad[overallGrade] || gradeGrad['—'], borderRadius: 16, padding: '16px 24px', textAlign: 'center', border: '2px solid rgba(255,255,255,0.2)', flexShrink: 0 }}>
-            <div style={{ fontSize: 42, fontWeight: 900, color: '#fff', lineHeight: 1 }}>{overallGrade}</div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', marginTop: 4, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Overall Grade</div>
+          <div style={{ background: gradeGrad[overallGrade] || gradeGrad['—'], borderRadius: 14, padding: '12px 18px', textAlign: 'center', border: '2px solid rgba(255,255,255,0.2)', flexShrink: 0 }}>
+            <div style={{ fontSize: 34, fontWeight: 900, color: '#fff', lineHeight: 1 }}>{overallGrade}</div>
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)', marginTop: 3, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Overall</div>
           </div>
         </div>
 

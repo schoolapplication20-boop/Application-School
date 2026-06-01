@@ -556,11 +556,27 @@
 @media (max-width: 480px) {
   .page-content {
     padding: 10px;
+    padding-bottom: max(16px, env(safe-area-inset-bottom, 16px));
   }
 
   .top-navbar {
     padding: constant(safe-area-inset-top) 10px 0;
     padding: env(safe-area-inset-top) 10px 0;
     min-height: calc(56px + env(safe-area-inset-top, 0px));
+  }
+}
+
+/* ── Safe-area padding for iPhone notch / home-bar ──────────────────── */
+.page-content {
+  padding-left: max(28px, env(safe-area-inset-left, 28px));
+  padding-right: max(28px, env(safe-area-inset-right, 28px));
+  padding-bottom: max(28px, env(safe-area-inset-bottom, 28px));
+}
+
+@media (max-width: 768px) {
+  .page-content {
+    padding-left: max(14px, env(safe-area-inset-left, 14px));
+    padding-right: max(14px, env(safe-area-inset-right, 14px));
+    padding-bottom: max(14px, env(safe-area-inset-bottom, 14px));
   }
 }
