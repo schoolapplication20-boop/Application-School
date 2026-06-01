@@ -12,11 +12,22 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      # ── 1. Install PostgreSQL client tools (pg_dump) ─────────────────────────
-      - name: Install pg_dump
+      # ── 1. Install PostgreSQL 17 client tools (pg_dump) ─────────────────────
+      # pg_dump must be >= the server version.  Supabase runs PostgreSQL 17,
+      # so the default postgresql-client (v14/16) will abort with a version
+      # mismatch.  Install from the official PGDG apt repo instead.
+      - name: Install pg_dump 17
         run: |
+          # Add the PostgreSQL Global Development Group apt repository
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc
+          sudo sh -c 'echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] \
+            https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+            > /etc/apt/sources.list.d/pgdg.list'
           sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends postgresql-client
+          sudo apt-get install -y --no-install-recommends postgresql-client-17
+          pg_dump --version
 
       # ── 2. Resolve connection details (auto-fix Supabase IPv6) ─────────────────
       #
