@@ -70,6 +70,11 @@ export default function AttendanceReport() {
   const [filterClass, setFilterClass] = useState('');
   const [absenteeThreshold, setAbsenteeThreshold] = useState(3);
 
+  // Range export state
+  const [rangeFrom, setRangeFrom]   = useState('');
+  const [rangeTo,   setRangeTo]     = useState('');
+  const [exporting, setExporting]   = useState(false);
+
   // Detail drill-down
   const [detailClass, setDetailClass]   = useState(null);
   const [detailRecords, setDetailRecords] = useState([]);
@@ -207,6 +212,51 @@ export default function AttendanceReport() {
     showToast('PDF report opened for printing');
   };
 
+  // ── Date-range export (fetches each day in the range sequentially) ─────────
+  const handleRangeExport = async () => {
+    if (!rangeFrom || !rangeTo) { showToast('Select both From and To dates', 'error'); return; }
+    if (rangeFrom > rangeTo)    { showToast('From date must be before To date', 'error'); return; }
+    setExporting(true);
+    try {
+      // Build array of dates in range
+      const dates = [];
+      let cursor = new Date(rangeFrom + 'T00:00:00');
+      const end  = new Date(rangeTo  + 'T00:00:00');
+      while (cursor <= end && dates.length <= 60) { // max 60 days
+        dates.push(cursor.toISOString().slice(0, 10));
+        cursor.setDate(cursor.getDate() + 1);
+      }
+      const rows = [];
+      for (const date of dates) {
+        const res = await adminAPI.getClassAttendanceSummaries({ date });
+        const sums = res.data?.data ?? [];
+        sums.forEach(s => {
+          const pct = s.total ? Math.round(((s.present || 0) / s.total) * 100) : 0;
+          rows.push({
+            Date:           fmtDate(date),
+            Class:          `${s.className}${s.section ? '-' + s.section : ''}`,
+            Teacher:        s.teacherName || '—',
+            Present:        s.present || 0,
+            Absent:         s.absent  || 0,
+            Leave:          s.leave   || 0,
+            Others:         s.others  || 0,
+            Total:          s.total   || 0,
+            'Attendance %': `${pct}%`,
+          });
+        });
+      }
+      if (rows.length === 0) { showToast('No data found for selected range', 'error'); return; }
+      const csv = [Object.keys(rows[0]).join(','), ...rows.map(r => Object.values(r).map(v => `"${v}"`).join(','))].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url; a.download = `attendance_${rangeFrom}_to_${rangeTo}.csv`; a.click();
+      URL.revokeObjectURL(url);
+      showToast(`Exported ${rows.length} records for ${dates.length} days`);
+    } catch { showToast('Export failed. Please try again.', 'error'); }
+    finally { setExporting(false); }
+  };
+
   const STATUS_COLORS = { PRESENT: '#0de1e8', ABSENT: '#e53e3e', LEAVE: '#ed8936', OTHERS: '#805ad5' };
 
   const TABS = [
@@ -236,6 +286,23 @@ export default function AttendanceReport() {
             <span className="material-icons" style={{ fontSize: 16, animation: loading ? 'spin 1s linear infinite' : 'none' }}>refresh</span> Refresh
           </button>
         </div>
+      </div>
+
+      {/* Date-range export panel */}
+      <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '14px 18px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <span className="material-icons" style={{ color: '#276749', fontSize: 20 }}>date_range</span>
+        <span style={{ fontSize: 13, fontWeight: 700, color: '#2d3748' }}>Range Export</span>
+        <input type="date" value={rangeFrom} max={TODAY} onChange={e => setRangeFrom(e.target.value)}
+          style={{ padding: '7px 10px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none' }} />
+        <span style={{ color: '#a0aec0', fontSize: 13 }}>to</span>
+        <input type="date" value={rangeTo} min={rangeFrom} max={TODAY} onChange={e => setRangeTo(e.target.value)}
+          style={{ padding: '7px 10px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none' }} />
+        <button onClick={handleRangeExport} disabled={exporting || !rangeFrom || !rangeTo}
+          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 16px', background: exporting ? '#a0aec0' : '#276749', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: exporting ? 'not-allowed' : 'pointer' }}>
+          <span className="material-icons" style={{ fontSize: 15 }}>{exporting ? 'hourglass_empty' : 'download'}</span>
+          {exporting ? 'Exporting…' : 'Export CSV'}
+        </button>
+        <span style={{ fontSize: 11, color: '#a0aec0' }}>Max 60 days</span>
       </div>
 
       {/* Filters */}

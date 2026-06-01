@@ -292,6 +292,22 @@ export default function Examination() {
     setSaving(true);
     const student = students.find(s => String(s.id) === String(htForm.studentId));
     if (!student) { showToast('Student not found', 'error'); setSaving(false); return; }
+
+    // Fee eligibility check — warn (not block) if student has outstanding dues
+    try {
+      const feeRes = await adminAPI.getStudentFeeAssignment(student.id);
+      const feeData = feeRes.data?.data;
+      if (feeData && String(feeData.status || '').toUpperCase() !== 'PAID') {
+        const due = Math.max(0, Number(feeData.totalFee || 0) - Number(feeData.paidAmount || 0));
+        if (due > 0) {
+          const proceed = window.confirm(
+            `⚠️ ${student.name} has an outstanding fee of ₹${due.toLocaleString('en-IN')}.\n\nDo you still want to generate the hall ticket?`
+          );
+          if (!proceed) { setSaving(false); return; }
+        }
+      }
+    } catch { /* fee check is advisory — don't block on API failure */ }
+
     const subjectList = schedules
       .filter(s => s.examName === htForm.examName && s.className === student.className)
       .map(s => ({ subject: s.subject, date: s.examDate, startTime: s.startTime, endTime: s.endTime, hall: s.hallNumber, maxMarks: s.maxMarks }));

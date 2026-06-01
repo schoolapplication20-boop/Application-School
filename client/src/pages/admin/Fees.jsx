@@ -406,7 +406,7 @@ export default function Fees() {
         {/* ── TAB 2: Student Fees ── */}
         {tab === 'students' && (
           <div>
-            {/* Filters */}
+            {/* Filters + Export */}
             <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
               <input
                 placeholder="Search student or roll no..."
@@ -424,6 +424,33 @@ export default function Fees() {
                 <option value="PAID">Paid</option>
                 <option value="OVERDUE">Overdue</option>
               </select>
+              <button
+                onClick={() => {
+                  const rows = filteredAssignments.map(a => ({
+                    'Student Name':   a.studentName,
+                    'Roll No':        a.rollNumber || '—',
+                    'Class':          a.className,
+                    'Academic Year':  a.academicYear,
+                    'Total Fee (₹)':  Number(a.totalFee || 0).toFixed(2),
+                    'Paid (₹)':       Number(a.paidAmount || 0).toFixed(2),
+                    'Due (₹)':        Math.max(0, Number(a.totalFee || 0) - Number(a.paidAmount || 0)).toFixed(2),
+                    'Status':         a.status || 'PENDING',
+                    'Due Date':       a.dueDate || '—',
+                    'Remarks':        a.remarks || '',
+                  }));
+                  const csv = [Object.keys(rows[0]).join(','), ...rows.map(r => Object.values(r).map(v => `"${v}"`).join(','))].join('\n');
+                  const blob = new Blob([csv], { type: 'text/csv' });
+                  const url  = URL.createObjectURL(blob);
+                  const a    = document.createElement('a');
+                  a.href = url; a.download = `fee_report_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+                  URL.revokeObjectURL(url);
+                  showToast('Fee report exported');
+                }}
+                style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 14px', background: '#0de1e8', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
+              >
+                <span className="material-icons" style={{ fontSize: 16 }}>download</span>
+                Export CSV
+              </button>
             </div>
 
             <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden' }}>

@@ -51,12 +51,17 @@
   <body>
     <div id="root"></div>
     <script>
-      window.addEventListener('error', function(e) {
-        document.body.innerHTML = '<div style="padding:30px;font-family:monospace;background:#fff1f2;color:#c53030;border:2px solid #fc8181;margin:20px;border-radius:8px"><b>JavaScript Error:</b><br><br>' + e.message + '<br><br><b>File:</b> ' + e.filename + '<br><b>Line:</b> ' + e.lineno + '</div>';
-      });
-      window.addEventListener('unhandledrejection', function(e) {
-        document.body.innerHTML = '<div style="padding:30px;font-family:monospace;background:#fff1f2;color:#c53030;border:2px solid #fc8181;margin:20px;border-radius:8px"><b>Unhandled Promise Error:</b><br><br>' + (e.reason?.message || e.reason) + '</div>';
-      });
+      // In production, silently log errors rather than destroying the page.
+      // The React ErrorBoundary handles recoverable component errors gracefully.
+      var _isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+      if (!_isDev) {
+        window.addEventListener('error', function(e) {
+          console.error('[GlobalError]', e.message, e.filename + ':' + e.lineno);
+        });
+        window.addEventListener('unhandledrejection', function(e) {
+          console.error('[UnhandledRejection]', e.reason);
+        });
+      }
     </script>
     <script type="module" src="/src/main.jsx"></script>
     <!-- Bootstrap JS -->

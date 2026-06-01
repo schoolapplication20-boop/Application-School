@@ -470,6 +470,26 @@ public class DatabaseMigration implements CommandLineRunner {
         exec("ALTER TABLE users ALTER COLUMN reset_otp TYPE VARCHAR(64)");
         log.debug("users.reset_otp column widened to VARCHAR(64) for hashed storage.");
 
+        // ── Production performance indexes ───────────────────────────────────────
+        // These cover the most common query patterns in production.
+        // All are IF NOT EXISTS so safe to re-run on every startup.
+        exec("CREATE INDEX IF NOT EXISTS idx_users_email          ON users(email)");
+        exec("CREATE INDEX IF NOT EXISTS idx_users_school_role    ON users(school_id, role)");
+        exec("CREATE INDEX IF NOT EXISTS idx_students_school      ON students(school_id)");
+        exec("CREATE INDEX IF NOT EXISTS idx_students_class       ON students(class_name, section, school_id)");
+        exec("CREATE INDEX IF NOT EXISTS idx_attendance_date      ON attendance(date, class_id)");
+        exec("CREATE INDEX IF NOT EXISTS idx_attendance_school_date ON attendance(school_id, date)");
+        exec("CREATE INDEX IF NOT EXISTS idx_fee_payments_student ON fee_payments(student_id)");
+        exec("CREATE INDEX IF NOT EXISTS idx_fee_payments_school  ON fee_payments(school_id, payment_date DESC)");
+        exec("CREATE INDEX IF NOT EXISTS idx_leave_requests_class ON leave_requests(class_section, school_id, requester_type)");
+        exec("CREATE INDEX IF NOT EXISTS idx_timetable_school     ON timetable(school_id, day)");
+        exec("CREATE INDEX IF NOT EXISTS idx_marks_student_school ON marks(student_id, school_id)");
+        exec("CREATE INDEX IF NOT EXISTS idx_salary_school_month  ON salaries(school_id, month, year)");
+        exec("CREATE INDEX IF NOT EXISTS idx_expenses_school_date ON expenses(school_id, date DESC)");
+        exec("CREATE INDEX IF NOT EXISTS idx_messages_school      ON messages(school_id, created_at DESC)");
+        exec("CREATE INDEX IF NOT EXISTS idx_notifications_user   ON app_notifications(user_id, created_at DESC, is_read)");
+        log.debug("Production performance indexes ensured.");
+
         log.info("DB migrations complete.");
     }
 

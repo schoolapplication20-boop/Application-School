@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import Layout from '../../components/Layout';
+import Toast from '../../components/Toast';
 import { teacherAttendanceAPI } from '../../services/api';
 
 const STATUS_CONFIG = {
@@ -32,7 +33,7 @@ export default function TeacherSelfAttendance() {
   }, []);
 
   const showToast = (msg, type = 'success') => {
-    setToast({ msg, type });
+    setToast({ message: msg, type });
     setTimeout(() => setToast(null), 3000);
   };
 
@@ -64,17 +65,7 @@ export default function TeacherSelfAttendance() {
     <Layout pageTitle="My Attendance">
       <div style={{ maxWidth: 700, margin: '0 auto', padding: '8px 0' }}>
 
-        {/* Toast */}
-        {toast && (
-          <div style={{
-            position: 'fixed', top: 20, right: 20, zIndex: 9999,
-            padding: '12px 20px', borderRadius: 10, fontWeight: 600, fontSize: 14,
-            background: toast.type === 'error' ? '#fef2f2' : '#f0fdf4',
-            color: toast.type === 'error' ? '#dc2626' : '#16a34a',
-            border: `1px solid ${toast.type === 'error' ? '#fca5a5' : '#86efac'}`,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-          }}>{toast.msg}</div>
-        )}
+        {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
         {/* Header */}
         <div style={{ marginBottom: 24 }}>

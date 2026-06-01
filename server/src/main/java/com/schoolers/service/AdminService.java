@@ -1810,11 +1810,16 @@ public class AdminService {
                 .findById(installment.getAssignmentId()).orElse(null);
         if (assignment == null) return ApiResponse.error("Fee assignment not found");
 
-        String receiptNumber = str(body, "receiptNumber", null);
-        if (receiptNumber == null || receiptNumber.isBlank()) return ApiResponse.error("Receipt number is required");
-        receiptNumber = receiptNumber.trim();
-        if (feePaymentRepository.existsByReceiptNumber(receiptNumber))
-            return ApiResponse.error("Duplicate receipt number: " + receiptNumber);
+        // Server-side sequential receipt: RCP-{schoolId}-{YYYY}-{6-digit-seq}
+        int receiptYear = java.time.LocalDate.now().getYear();
+        Long schoolIdForReceipt = assignment.getSchoolId() != null ? assignment.getSchoolId() : 0L;
+        long seqBase = feePaymentRepository.countBySchoolIdAndPaymentYear(schoolIdForReceipt, receiptYear);
+        String receiptNumber = String.format("RCP-%d-%d-%06d", schoolIdForReceipt, receiptYear, seqBase + 1);
+        int retries = 0;
+        while (feePaymentRepository.existsByReceiptNumber(receiptNumber) && retries++ < 10) {
+            receiptNumber = String.format("RCP-%d-%d-%06d-%03d", schoolIdForReceipt, receiptYear, seqBase + 1,
+                    new java.security.SecureRandom().nextInt(999));
+        }
 
         String paidDateStr = str(body, "paidDate", null);
         LocalDate paymentDate = LocalDate.now();

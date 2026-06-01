@@ -111,7 +111,13 @@ export default function Salaries() {
 
   // ── EDIT SALARY ───────────────────────────────────────────────────────────
 
-  const openEdit = (r) => { setEditForm({ ...r }); setEditModal(r); };
+  const openEdit = (r) => {
+    if (String(r.status || '').toUpperCase() === 'PAID') {
+      showToast('Paid salary records are locked and cannot be edited.', 'error');
+      return;
+    }
+    setEditForm({ ...r }); setEditModal(r);
+  };
 
   const handleEditSave = async () => {
     setSaving(true);
