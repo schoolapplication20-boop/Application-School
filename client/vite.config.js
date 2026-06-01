@@ -18,10 +18,12 @@ export default defineConfig({
     // Split vendor chunk so app code changes don't bust the large React bundle cache
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor:   ['react', 'react-dom', 'react-router-dom'],
-          charts:   ['recharts'],
-          ui:       ['xlsx'],
+        // Vite 8 (Rolldown) requires manualChunks as a function
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return;
+          if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) return 'vendor';
+          if (id.includes('recharts')) return 'charts';
+          if (id.includes('xlsx')) return 'ui';
         },
       },
     },
