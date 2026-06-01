@@ -15,15 +15,32 @@ const categoryColor = (cat) => {
   }
 };
 
+// Backend stores LocalDateTime without timezone (UTC). Append 'Z' so the
+// browser converts it to local time instead of treating it as already local.
+const toUtcDate = (dt) => {
+  if (!dt) return null;
+  const utc = typeof dt === 'string' && !dt.endsWith('Z') && !dt.includes('+') ? dt + 'Z' : dt;
+  return new Date(utc);
+};
+
 const formatDate = (dt) => {
-  if (!dt) return '';
-  const d = new Date(dt);
+  const d = toUtcDate(dt);
+  if (!d) return '';
   const now = new Date();
   const diff = now - d;
   if (diff < 60000) return 'just now';
   if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
   if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
   return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+};
+
+const formatFullDateTime = (dt) => {
+  const d = toUtcDate(dt);
+  if (!d) return '';
+  return d.toLocaleString('en-IN', {
+    day: 'numeric', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: true,
+  });
 };
 
 export default function StudentMessages() {
@@ -204,7 +221,7 @@ export default function StudentMessages() {
                   </div>
                 </div>
                 <span style={{ fontSize: 13, color: '#a0aec0', whiteSpace: 'nowrap', marginLeft: 16 }}>
-                  {selected.createdAt ? new Date(selected.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' }) : ''}
+                  {formatFullDateTime(selected.createdAt)}
                 </span>
               </div>
 

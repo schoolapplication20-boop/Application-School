@@ -19,9 +19,12 @@ const categoryColor = (cat) => {
 
 const formatDate = (dt) => {
   if (!dt) return '';
-  return new Date(dt).toLocaleString('en-IN', {
+  // Backend stores LocalDateTime without timezone (UTC). Append 'Z' so the
+  // browser converts it to local time instead of treating it as already local.
+  const utc = typeof dt === 'string' && !dt.endsWith('Z') && !dt.includes('+') ? dt + 'Z' : dt;
+  return new Date(utc).toLocaleString('en-IN', {
     day: 'numeric', month: 'short', year: 'numeric',
-    hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata',
+    hour: '2-digit', minute: '2-digit', hour12: true,
   });
 };
 
