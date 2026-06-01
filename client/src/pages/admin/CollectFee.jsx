@@ -30,8 +30,10 @@ export default function CollectFee() {
 
   /* search */
   const [query, setQuery]               = useState('');
-  const [filterClass, setFilterClass]   = useState('');
-  const [classList, setClassList]       = useState([]);
+  const [filterClass, setFilterClass]   = useState('');   // display label e.g. "Class 10 - A"
+  const [filterClassName, setFilterClassName] = useState(''); // just the name e.g. "Class 10"
+  const [filterSection, setFilterSection]     = useState(''); // just the section e.g. "A"
+  const [classList, setClassList]       = useState([]);   // [{label, name, section}]
   const [classStudents, setClassStudents] = useState([]);   // full list for selected class
   const [loadingClass, setLoadingClass] = useState(false);  // loading class student list
   const [suggestions, setSuggestions]   = useState([]);     // name-search dropdown
@@ -64,17 +66,22 @@ export default function CollectFee() {
 
   const showToast = (msg, type = 'success') => setToast({ message: msg, type });
 
-  /* ── load class list for filter dropdown ── */
+  /* ── load class list ── */
   useEffect(() => {
     adminAPI.getClasses()
       .then(res => {
-        const list = res.data?.data ?? [];
-        const labels = [...new Set(
-          list
-            .map(c => c.name ? (c.section ? `${c.name} - ${c.section}` : c.name) : null)
-            .filter(Boolean)
-        )].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-        setClassList(labels);
+        const raw = res.data?.data ?? [];
+        const items = raw
+          .filter(c => c.name)
+          .map(c => ({
+            label:   c.section ? `${c.name} - ${c.section}` : c.name,
+            name:    c.name,
+            section: c.section || '',
+          }))
+          .sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }));
+        // Deduplicate by label
+        const seen = new Set();
+        setClassList(items.filter(i => { if (seen.has(i.label)) return false; seen.add(i.label); return true; }));
       })
       .catch(() => {});
   }, []);
@@ -84,13 +91,17 @@ export default function CollectFee() {
     if (!filterClass) { setClassStudents([]); return; }
     setLoadingClass(true);
     setClassStudents([]);
-    adminAPI.searchStudentsForFee('', filterClass)
+    // Pass className and section SEPARATELY so the backend does exact-field matching
+    adminAPI.searchStudentsForFee('', filterClassName, filterSection)
       .then(res => {
         let data = res.data?.data ?? [];
-        // Client-side guard: only keep students whose className contains the filter
-        const cls = filterClass.toLowerCase();
-        data = data.filter(s => s.className && s.className.toLowerCase().includes(cls));
-        // Sort by roll number
+        // Client-side safety: keep only students matching the class
+        const clsLc = filterClassName.toLowerCase();
+        data = data.filter(s => {
+          const nameMatch = !clsLc || (s.className && s.className.toLowerCase().includes(clsLc));
+          const secMatch  = !filterSection || (s.section || '').toLowerCase() === filterSection.toLowerCase();
+          return nameMatch && secMatch;
+        });
         data.sort((a, b) => {
           const n1 = parseInt(a.rollNumber) || 0;
           const n2 = parseInt(b.rollNumber) || 0;
@@ -100,7 +111,7 @@ export default function CollectFee() {
       })
       .catch(() => setClassStudents([]))
       .finally(() => setLoadingClass(false));
-  }, [filterClass]);
+  }, [filterClass, filterClassName, filterSection]);
 
   /* ── name-search dropdown (only when NO class filter is active) ── */
   useEffect(() => {
@@ -315,11 +326,17 @@ export default function CollectFee() {
             <span className="material-icons" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#a0aec0', fontSize: 18, pointerEvents: 'none' }}>class</span>
             <select
               value={filterClass}
-              onChange={e => { setFilterClass(e.target.value); setStudent(null); setQuery(''); setSuggestions([]); }}
+              onChange={e => {
+                const selected = classList.find(c => c.label === e.target.value);
+                setFilterClass(e.target.value);
+                setFilterClassName(selected?.name || '');
+                setFilterSection(selected?.section || '');
+                setStudent(null); setQuery(''); setSuggestions([]);
+              }}
               style={{ paddingLeft: 34, paddingRight: 32, paddingTop: 12, paddingBottom: 12, border: '2px solid #e2e8f0', borderRadius: 10, fontSize: 14, outline: 'none', background: '#fff', cursor: 'pointer', minWidth: 160, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', appearance: 'none', color: filterClass ? '#2d3748' : '#a0aec0' }}
             >
               <option value="">All Classes</option>
-              {classList.map(c => <option key={c} value={c}>{c}</option>)}
+              {classList.map(c => <option key={c.label} value={c.label}>{c.label}</option>)}
             </select>
             <span className="material-icons" style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: '#a0aec0', fontSize: 18, pointerEvents: 'none' }}>expand_more</span>
           </div>
@@ -369,7 +386,8 @@ export default function CollectFee() {
                   setSelectedInstallment(null); setQuery('');
                 } else {
                   // Clear everything
-                  setFilterClass(''); setQuery(''); setStudent(null); setSuggestions([]);
+                  setFilterClass(''); setFilterClassName(''); setFilterSection('');
+                  setQuery(''); setStudent(null); setSuggestions([]);
                   setClassStudents([]); setAssignment(null); setInstallments([]);
                   setPayments([]); setSelectedInstallment(null);
                 }

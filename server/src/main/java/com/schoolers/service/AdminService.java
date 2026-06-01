@@ -1238,34 +1238,48 @@ public class AdminService {
         return ApiResponse.success(feeRepository.findBySchoolId(schoolId));
     }
 
-    public ApiResponse<List<Student>> searchStudentsForFee(Long schoolId, String query, String className) {
-        // If no query and no class filter, return empty (avoid loading all students)
-        boolean hasQuery     = query != null && !query.trim().isEmpty();
-        boolean hasClassFilter = className != null && !className.trim().isEmpty();
+    public ApiResponse<List<Student>> searchStudentsForFee(Long schoolId, String query, String className, String section) {
+        boolean hasQuery  = query     != null && !query.trim().isEmpty();
+        boolean hasCls    = className != null && !className.trim().isEmpty();
+        boolean hasSec    = section   != null && !section.trim().isEmpty();
 
-        if (!hasQuery && !hasClassFilter) return ApiResponse.success(java.util.Collections.emptyList());
+        if (!hasQuery && !hasCls) return ApiResponse.success(java.util.Collections.emptyList());
 
         List<Student> results;
+
         if (hasQuery) {
+            // Name / roll / phone search
             results = (schoolId != null)
                     ? studentRepository.searchBySchoolAndNameRollOrPhone(schoolId, query.trim())
                     : studentRepository.searchByNameRollOrPhone(query.trim());
-        } else {
-            // Class filter only: use CONTAINS (case-insensitive) so "10" matches "Class 10",
-            // "Class 10 - A", etc. regardless of how the class name is stored.
-            results = (schoolId != null)
-                    ? studentRepository.findBySchoolIdAndClassNameContainsIgnoreCase(schoolId, className.trim())
-                    : studentRepository.findBySchoolId(schoolId != null ? schoolId : 0L).stream()
-                        .filter(s -> s.getClassName() != null && s.getClassName().toLowerCase().contains(className.trim().toLowerCase()))
-                        .toList();
-        }
 
-        // Apply class filter on top of query results when both are provided
-        if (hasQuery && hasClassFilter) {
-            final String cls = className.trim().toLowerCase();
-            results = results.stream()
-                    .filter(s -> s.getClassName() != null && s.getClassName().toLowerCase().contains(cls))
-                    .toList();
+            // Narrow by class + section if filters are also active
+            if (hasCls) {
+                final String clsLc = className.trim().toLowerCase();
+                results = results.stream()
+                        .filter(s -> s.getClassName() != null && s.getClassName().toLowerCase().contains(clsLc))
+                        .toList();
+            }
+            if (hasSec) {
+                final String secLc = section.trim().toLowerCase();
+                results = results.stream()
+                        .filter(s -> secLc.isEmpty() || (s.getSection() != null && s.getSection().toLowerCase().equals(secLc)))
+                        .toList();
+            }
+        } else {
+            // Class-only filter — Students store className and section as SEPARATE fields.
+            // Match className (CONTAINS for "10" vs "Class 10" tolerance) AND section exactly.
+            if (hasSec) {
+                results = (schoolId != null)
+                        ? studentRepository.findBySchoolIdAndClassNameContainsIgnoreCaseAndSectionIgnoreCase(
+                                schoolId, className.trim(), section.trim())
+                        : studentRepository.findByClassNameIgnoreCaseAndSectionIgnoreCase(
+                                className.trim(), section.trim());
+            } else {
+                results = (schoolId != null)
+                        ? studentRepository.findBySchoolIdAndClassNameContainsIgnoreCase(schoolId, className.trim())
+                        : studentRepository.findByClassName(className.trim());
+            }
         }
 
         return ApiResponse.success(results);

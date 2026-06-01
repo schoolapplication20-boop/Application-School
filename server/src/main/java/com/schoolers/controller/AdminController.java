@@ -278,8 +278,9 @@ public class AdminController {
     public ResponseEntity<?> searchStudentsForFee(
             @RequestParam(required = false) String q,
             @RequestParam(required = false) String className,
+            @RequestParam(required = false) String section,
             Authentication auth) {
-        return ResponseEntity.ok(adminService.searchStudentsForFee(getCurrentSchoolId(auth), q, className));
+        return ResponseEntity.ok(adminService.searchStudentsForFee(getCurrentSchoolId(auth), q, className, section));
     }
 
     @PostMapping("/fees")
