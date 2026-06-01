@@ -1251,13 +1251,16 @@ public class AdminService {
                     ? studentRepository.searchBySchoolAndNameRollOrPhone(schoolId, query.trim())
                     : studentRepository.searchByNameRollOrPhone(query.trim());
         } else {
-            // class filter only — return all students in that class
+            // Class filter only: use CONTAINS (case-insensitive) so "10" matches "Class 10",
+            // "Class 10 - A", etc. regardless of how the class name is stored.
             results = (schoolId != null)
-                    ? studentRepository.findBySchoolIdAndClassName(schoolId, className.trim())
-                    : studentRepository.findByClassName(className.trim());
+                    ? studentRepository.findBySchoolIdAndClassNameContainsIgnoreCase(schoolId, className.trim())
+                    : studentRepository.findBySchoolId(schoolId != null ? schoolId : 0L).stream()
+                        .filter(s -> s.getClassName() != null && s.getClassName().toLowerCase().contains(className.trim().toLowerCase()))
+                        .toList();
         }
 
-        // Apply class filter on top of query results if both provided
+        // Apply class filter on top of query results when both are provided
         if (hasQuery && hasClassFilter) {
             final String cls = className.trim().toLowerCase();
             results = results.stream()

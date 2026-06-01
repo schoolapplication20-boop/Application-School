@@ -28,6 +28,10 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
 
     List<Student> findBySchoolIdAndClassName(Long schoolId, String className);
 
+    /** Case-insensitive CONTAINS search on className — handles "10", "Class 10", "Class 10 - A" variants */
+    @Query("SELECT s FROM Student s WHERE s.schoolId = :schoolId AND LOWER(s.className) LIKE LOWER(CONCAT('%', :cls, '%'))")
+    List<Student> findBySchoolIdAndClassNameContainsIgnoreCase(@Param("schoolId") Long schoolId, @Param("cls") String cls);
+
     List<Student> findBySchoolIdAndClassNameAndSection(Long schoolId, String className, String section);
 
     List<Student> findBySchoolIdAndClassNameIgnoreCaseAndSectionIgnoreCase(Long schoolId, String className, String section);

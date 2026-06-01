@@ -63,12 +63,19 @@ export default function CollectFee() {
   const showToast = (msg, type = 'success') => setToast({ message: msg, type });
 
   /* ── load class list for filter dropdown ── */
+  // We build the list from ClassRoom names AND fall back gracefully.
+  // The backend CONTAINS search handles format mismatches.
   useEffect(() => {
     adminAPI.getClasses()
       .then(res => {
         const list = res.data?.data ?? [];
-        const names = [...new Set(list.map(c => c.name).filter(Boolean))].sort();
-        setClassList(names);
+        // Build unique sorted class labels (name + section if present)
+        const labels = [...new Set(
+          list
+            .map(c => c.name ? (c.section ? `${c.name} - ${c.section}` : c.name) : null)
+            .filter(Boolean)
+        )].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+        setClassList(labels);
       })
       .catch(() => {});
   }, []);
@@ -82,7 +89,14 @@ export default function CollectFee() {
       setSearching(true);
       try {
         const res = await adminAPI.searchStudentsForFee(hasQuery ? query : '', filterClass);
-        setSuggestions(res.data?.data ?? []);
+        let data = res.data?.data ?? [];
+        // Client-side guard: if a class filter is active, keep only students whose
+        // className contains the filter value (handles any backend case-mismatch)
+        if (filterClass) {
+          const cls = filterClass.toLowerCase();
+          data = data.filter(s => s.className && s.className.toLowerCase().includes(cls));
+        }
+        setSuggestions(data);
         setShowDrop(true);
       } catch { } finally { setSearching(false); }
     }, 300);
