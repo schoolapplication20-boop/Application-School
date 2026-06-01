@@ -112,13 +112,6 @@ public class User {
     @Builder.Default
     private Integer failedLoginAttempts = 0;
 
-    /** UTC timestamp of the most recent failed password attempt.
-     *  Drives the 30-minute sliding window: if no failure for 30 min,
-     *  the counter resets so stale failures from earlier sessions never
-     *  cause an unexpected lock. Column added by ddl-auto=update on first deploy. */
-    @Column(name = "last_failed_attempt_at")
-    private LocalDateTime lastFailedAttemptAt;
-
     /** Account is locked until this timestamp (UTC). Null means not locked. */
     @Column(name = "locked_until")
     private LocalDateTime lockedUntil;

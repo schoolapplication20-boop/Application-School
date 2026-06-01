@@ -133,9 +133,7 @@ class AuthServiceTest {
         @DisplayName("5th wrong password: account is locked permanently")
         void fiveWrongPasswords_locksAccount() {
             User user = activeAdmin();
-            user.setFailedLoginAttempts(4); // one more makes 5
-            // lastFailedAttemptAt within the 30-min window so the counter is NOT reset
-            user.setLastFailedAttemptAt(LocalDateTime.now(ZoneOffset.UTC).minusMinutes(5));
+            user.setFailedLoginAttempts(9); // one more makes 10 (new threshold)
             when(userRepository.findByEmailIgnoreCase("admin@school.com")).thenReturn(Optional.of(user));
             when(schoolRepository.findBySchoolId(5)).thenReturn(Optional.of(activeSchool()));
             when(passwordEncoder.matches(any(), any())).thenReturn(false);
