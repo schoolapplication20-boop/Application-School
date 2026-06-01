@@ -32,7 +32,9 @@ export default function CollectFee() {
   const [query, setQuery]               = useState('');
   const [filterClass, setFilterClass]   = useState('');
   const [classList, setClassList]       = useState([]);
-  const [suggestions, setSuggestions]   = useState([]);
+  const [classStudents, setClassStudents] = useState([]);   // full list for selected class
+  const [loadingClass, setLoadingClass] = useState(false);  // loading class student list
+  const [suggestions, setSuggestions]   = useState([]);     // name-search dropdown
   const [showDrop, setShowDrop]         = useState(false);
   const [searching, setSearching]       = useState(false);
   const [student, setStudent]           = useState(null);
@@ -63,13 +65,10 @@ export default function CollectFee() {
   const showToast = (msg, type = 'success') => setToast({ message: msg, type });
 
   /* ── load class list for filter dropdown ── */
-  // We build the list from ClassRoom names AND fall back gracefully.
-  // The backend CONTAINS search handles format mismatches.
   useEffect(() => {
     adminAPI.getClasses()
       .then(res => {
         const list = res.data?.data ?? [];
-        // Build unique sorted class labels (name + section if present)
         const labels = [...new Set(
           list
             .map(c => c.name ? (c.section ? `${c.name} - ${c.section}` : c.name) : null)
@@ -80,23 +79,38 @@ export default function CollectFee() {
       .catch(() => {});
   }, []);
 
-  /* ── student search (re-runs on query OR class filter change) ── */
+  /* ── load ALL students when class filter changes ── */
   useEffect(() => {
-    const hasQuery = query && query.length >= 2;
-    const hasClass = !!filterClass;
-    if (!hasQuery && !hasClass) { setSuggestions([]); setShowDrop(false); return; }
+    if (!filterClass) { setClassStudents([]); return; }
+    setLoadingClass(true);
+    setClassStudents([]);
+    adminAPI.searchStudentsForFee('', filterClass)
+      .then(res => {
+        let data = res.data?.data ?? [];
+        // Client-side guard: only keep students whose className contains the filter
+        const cls = filterClass.toLowerCase();
+        data = data.filter(s => s.className && s.className.toLowerCase().includes(cls));
+        // Sort by roll number
+        data.sort((a, b) => {
+          const n1 = parseInt(a.rollNumber) || 0;
+          const n2 = parseInt(b.rollNumber) || 0;
+          return n1 !== n2 ? n1 - n2 : (a.name || '').localeCompare(b.name || '');
+        });
+        setClassStudents(data);
+      })
+      .catch(() => setClassStudents([]))
+      .finally(() => setLoadingClass(false));
+  }, [filterClass]);
+
+  /* ── name-search dropdown (only when NO class filter is active) ── */
+  useEffect(() => {
+    if (filterClass) { setSuggestions([]); setShowDrop(false); return; }
+    if (!query || query.length < 2) { setSuggestions([]); setShowDrop(false); return; }
     const t = setTimeout(async () => {
       setSearching(true);
       try {
-        const res = await adminAPI.searchStudentsForFee(hasQuery ? query : '', filterClass);
-        let data = res.data?.data ?? [];
-        // Client-side guard: if a class filter is active, keep only students whose
-        // className contains the filter value (handles any backend case-mismatch)
-        if (filterClass) {
-          const cls = filterClass.toLowerCase();
-          data = data.filter(s => s.className && s.className.toLowerCase().includes(cls));
-        }
-        setSuggestions(data);
+        const res = await adminAPI.searchStudentsForFee(query, '');
+        setSuggestions(res.data?.data ?? []);
         setShowDrop(true);
       } catch { } finally { setSearching(false); }
     }, 300);
@@ -310,59 +324,152 @@ export default function CollectFee() {
             <span className="material-icons" style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: '#a0aec0', fontSize: 18, pointerEvents: 'none' }}>expand_more</span>
           </div>
 
-          {/* Search input */}
-          <div style={{ position: 'relative', flex: 1, minWidth: 240, maxWidth: 500 }}>
-            <span className="material-icons" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#a0aec0', fontSize: 20 }}>search</span>
-            <input
-              ref={searchRef}
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              placeholder={filterClass ? `Search in ${filterClass}…` : 'Search by name, roll number, or phone…'}
-              style={{ width: '100%', padding: '12px 14px 12px 40px', border: '2px solid #e2e8f0', borderRadius: 10, fontSize: 14, outline: 'none', boxSizing: 'border-box', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
-              onFocus={() => suggestions.length > 0 && setShowDrop(true)}
-              onBlur={() => setTimeout(() => setShowDrop(false), 180)}
-            />
-            {searching && <span style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', color: '#a0aec0', fontSize: 12 }}>Searching...</span>}
-            {showDrop && suggestions.length > 0 && (
-              <div style={{ position: 'absolute', left: 0, right: 0, top: '100%', marginTop: 4, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.14)', zIndex: 100, maxHeight: 260, overflowY: 'auto' }}>
-                {suggestions.map(s => (
-                  <div key={s.id} onMouseDown={() => selectStudent(s)}
-                       style={{ padding: '11px 16px', cursor: 'pointer', borderBottom: '1px solid #f0f4f8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-                       onMouseEnter={e => e.currentTarget.style.background = '#f7fafc'}
-                       onMouseLeave={e => e.currentTarget.style.background = '#fff'}>
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: 14, color: '#2d3748' }}>{s.name}</div>
-                      <div style={{ fontSize: 12, color: '#a0aec0' }}>
-                        {s.className}{s.section ? ` - ${s.section}` : ''} · Roll: {s.rollNumber}
+          {/* Name-search input — only shown when no class filter is active */}
+          {!filterClass && (
+            <div style={{ position: 'relative', flex: 1, minWidth: 240, maxWidth: 500 }}>
+              <span className="material-icons" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#a0aec0', fontSize: 20 }}>search</span>
+              <input
+                ref={searchRef}
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                placeholder="Search by name, roll number, or phone…"
+                style={{ width: '100%', padding: '12px 14px 12px 40px', border: '2px solid #e2e8f0', borderRadius: 10, fontSize: 14, outline: 'none', boxSizing: 'border-box', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
+                onFocus={() => suggestions.length > 0 && setShowDrop(true)}
+                onBlur={() => setTimeout(() => setShowDrop(false), 180)}
+              />
+              {searching && <span style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', color: '#a0aec0', fontSize: 12 }}>Searching...</span>}
+              {showDrop && suggestions.length > 0 && (
+                <div style={{ position: 'absolute', left: 0, right: 0, top: '100%', marginTop: 4, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.14)', zIndex: 100, maxHeight: 260, overflowY: 'auto' }}>
+                  {suggestions.map(s => (
+                    <div key={s.id} onMouseDown={() => selectStudent(s)}
+                         style={{ padding: '11px 16px', cursor: 'pointer', borderBottom: '1px solid #f0f4f8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                         onMouseEnter={e => e.currentTarget.style.background = '#f7fafc'}
+                         onMouseLeave={e => e.currentTarget.style.background = '#fff'}>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: 14, color: '#2d3748' }}>{s.name}</div>
+                        <div style={{ fontSize: 12, color: '#a0aec0' }}>
+                          {s.className}{s.section ? ` - ${s.section}` : ''} · Roll: {s.rollNumber}
+                        </div>
                       </div>
+                      <span className="material-icons" style={{ color: '#0de1e8', fontSize: 18 }}>chevron_right</span>
                     </div>
-                    <span className="material-icons" style={{ color: '#0de1e8', fontSize: 18 }}>chevron_right</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
-          {/* Clear button — shown when a class or student is selected */}
+          {/* Clear / Back button */}
           {(filterClass || student) && (
             <button
-              onClick={() => { setFilterClass(''); setQuery(''); setStudent(null); setSuggestions([]); setAssignment(null); setInstallments([]); setPayments([]); setSelectedInstallment(null); }}
+              onClick={() => {
+                if (student && filterClass) {
+                  // Go back to class list, keep filter
+                  setStudent(null); setAssignment(null); setInstallments([]); setPayments([]);
+                  setSelectedInstallment(null); setQuery('');
+                } else {
+                  // Clear everything
+                  setFilterClass(''); setQuery(''); setStudent(null); setSuggestions([]);
+                  setClassStudents([]); setAssignment(null); setInstallments([]);
+                  setPayments([]); setSelectedInstallment(null);
+                }
+              }}
               style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '12px 14px', border: '1.5px solid #e2e8f0', borderRadius: 10, background: '#fff', color: '#718096', fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
             >
-              <span className="material-icons" style={{ fontSize: 16 }}>close</span>
-              Clear
+              <span className="material-icons" style={{ fontSize: 16 }}>{student && filterClass ? 'arrow_back' : 'close'}</span>
+              {student && filterClass ? 'Back to list' : 'Clear'}
             </button>
           )}
         </div>
 
+        {/* ── Class student list ───────────────────────────────────────── */}
+        {filterClass && !student && (
+          <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, overflow: 'hidden', marginBottom: 24 }}>
+            {/* Panel header */}
+            <div style={{ padding: '14px 18px', background: '#f7fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span className="material-icons" style={{ fontSize: 18, color: '#0369a1' }}>group</span>
+                <span style={{ fontWeight: 700, fontSize: 14, color: '#1a202c' }}>{filterClass}</span>
+                {!loadingClass && (
+                  <span style={{ background: '#ebf8ff', color: '#2b6cb0', borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 700 }}>
+                    {classStudents.length} student{classStudents.length !== 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
+              {/* Inline search within class */}
+              <div style={{ position: 'relative' }}>
+                <span className="material-icons" style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: '#a0aec0', fontSize: 16 }}>search</span>
+                <input
+                  value={query}
+                  onChange={e => setQuery(e.target.value)}
+                  placeholder="Filter by name or roll…"
+                  style={{ paddingLeft: 30, paddingRight: 10, paddingTop: 7, paddingBottom: 7, border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none', width: 200 }}
+                />
+              </div>
+            </div>
+
+            {/* Student rows */}
+            {loadingClass ? (
+              <div style={{ padding: '30px', textAlign: 'center', color: '#a0aec0', fontSize: 13 }}>
+                <span className="material-icons" style={{ fontSize: 28, display: 'block', marginBottom: 6, animation: 'spin 1s linear infinite' }}>autorenew</span>
+                Loading students…
+              </div>
+            ) : classStudents.length === 0 ? (
+              <div style={{ padding: '40px', textAlign: 'center', color: '#a0aec0', fontSize: 13 }}>
+                <span className="material-icons" style={{ fontSize: 36, display: 'block', marginBottom: 8, color: '#e2e8f0' }}>person_search</span>
+                No students found in {filterClass}
+              </div>
+            ) : (
+              <div style={{ maxHeight: 360, overflowY: 'auto' }}>
+                {classStudents
+                  .filter(s => {
+                    if (!query) return true;
+                    const q = query.toLowerCase();
+                    return (s.name || '').toLowerCase().includes(q) ||
+                           (s.rollNumber || '').toLowerCase().includes(q);
+                  })
+                  .map((s, idx) => (
+                    <div
+                      key={s.id}
+                      onClick={() => selectStudent(s)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 14,
+                        padding: '12px 18px', cursor: 'pointer',
+                        borderBottom: '1px solid #f7fafc',
+                        background: idx % 2 === 0 ? '#fff' : '#fafcff',
+                        transition: 'background 0.15s',
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#eff6ff'}
+                      onMouseLeave={e => e.currentTarget.style.background = idx % 2 === 0 ? '#fff' : '#fafcff'}
+                    >
+                      {/* Avatar */}
+                      <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,#0de1e8,#0369a1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 13, fontWeight: 700, flexShrink: 0 }}>
+                        {(s.name || '?')[0].toUpperCase()}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: 14, color: '#1a202c' }}>{s.name}</div>
+                        <div style={{ fontSize: 12, color: '#718096' }}>
+                          Roll: {s.rollNumber}
+                          {s.parentMobile ? <> · {s.parentMobile}</> : ''}
+                        </div>
+                      </div>
+                      <span className="material-icons" style={{ color: '#0de1e8', fontSize: 20, flexShrink: 0 }}>chevron_right</span>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Main content */}
-        {!student ? (
+        {!student && !filterClass ? (
           <div style={{ textAlign: 'center', padding: '60px 20px', color: '#a0aec0' }}>
             <span className="material-icons" style={{ fontSize: 56, display: 'block', marginBottom: 12, color: '#e2e8f0' }}>point_of_sale</span>
             <p style={{ fontSize: 15, fontWeight: 600 }}>Select a class or search for a student to begin</p>
-          <p style={{ fontSize: 13, color: '#cbd5e0', marginTop: 6 }}>Use the class dropdown to browse by class, or type a name to search</p>
+            <p style={{ fontSize: 13, color: '#cbd5e0', marginTop: 6 }}>Use the class dropdown to browse by class, or type a name to search</p>
           </div>
-        ) : loadingFee ? (
+        ) : !student ? null
+        : loadingFee ? (
           <div style={{ textAlign: 'center', padding: 40, color: '#a0aec0' }}>Loading fee details...</div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: '380px 1fr', gap: 20, alignItems: 'start' }}>
