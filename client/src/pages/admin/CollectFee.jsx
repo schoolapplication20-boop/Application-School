@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Layout from '../../components/Layout';
 import Toast from '../../components/Toast';
-import { adminAPI } from '../../services/api';
+import { adminAPI, BASE_URL } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { useSchool } from '../../context/SchoolContext';
 
 /* ── helpers ── */
 const todayStr = () => {
@@ -27,6 +28,7 @@ const StatusBadge = ({ status }) => {
 /* ══════════════════════════════════════════════════════════════════ */
 export default function CollectFee() {
   const { user } = useAuth();
+  const { school, logoVersion } = useSchool();
 
   /* search */
   const [query, setQuery]               = useState('');
@@ -243,11 +245,24 @@ export default function CollectFee() {
     if (!receiptData) return;
     const w = window.open('', '_blank');
     const d = receiptData;
+    const schoolName = school?.name || 'School Management System';
+    const rawLogo    = school?.logoUrl;
+    const logoSrc    = rawLogo
+      ? (rawLogo.startsWith('http') ? rawLogo : `${BASE_URL}${rawLogo}`) + `?v=${logoVersion}`
+      : null;
+    const headerHtml = logoSrc
+      ? `<div class="school-header">
+           <img src="${logoSrc}" class="school-logo" alt="${schoolName}" onerror="this.style.display='none'" />
+           <div class="school-name">${schoolName}</div>
+         </div>`
+      : `<div class="school-name">${schoolName}</div>`;
     w.document.write(`
       <!DOCTYPE html><html><head><title>Fee Receipt</title>
       <style>
         * { margin:0;padding:0;box-sizing:border-box; }
         body { font-family: 'Arial', sans-serif; padding: 30px; color: #1a202c; }
+        .school-header { display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:4px; }
+        .school-logo { width:52px; height:52px; object-fit:contain; }
         .school-name { font-size:22px; font-weight:800; color:#276749; text-align:center; }
         .receipt-title { font-size:15px; font-weight:600; text-align:center; color:#718096; margin:4px 0 20px; }
         .divider { border:none; border-top:2px solid #e2e8f0; margin:14px 0; }
@@ -264,7 +279,7 @@ export default function CollectFee() {
         @media print { body { padding: 20px; } }
       </style>
       </head><body>
-      <div class="school-name">SCHOOL MANAGEMENT SYSTEM</div>
+      ${headerHtml}
       <div class="receipt-title">Fee Payment Receipt</div>
       <hr class="divider"/>
       <div class="row"><span class="label">Receipt No.</span><span class="value" style="font-family:monospace">${d.receiptNo}</span></div>
