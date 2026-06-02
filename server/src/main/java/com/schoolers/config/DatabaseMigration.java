@@ -500,12 +500,6 @@ public class DatabaseMigration implements CommandLineRunner {
         exec("CREATE INDEX IF NOT EXISTS idx_notifications_user   ON app_notifications(user_id, created_at DESC, is_read)");
         log.debug("Production performance indexes ensured.");
 
-        // ── fee_installments: add paid_amount for partial payment tracking ────
-        exec("ALTER TABLE fee_installments ADD COLUMN IF NOT EXISTS paid_amount DECIMAL(10,2) DEFAULT 0");
-        // Allow PARTIAL as a valid status value (existing CHECK constraint may only allow PENDING/PAID)
-        exec("ALTER TABLE fee_installments DROP CONSTRAINT IF EXISTS fee_installments_status_check");
-        log.debug("fee_installments partial payment columns ensured.");
-
         log.info("DB migrations complete.");
     }
 

@@ -165,9 +165,7 @@ export default function CollectFee() {
   /* ── select an installment for payment ── */
   const pickInstallment = (inst) => {
     setSelectedInstallment(inst);
-    // Pre-fill remaining due for this installment (supports partial payments)
-    const remaining = Number(inst.amount) - Number(inst.paidAmount || 0);
-    setAmount(String(remaining > 0 ? remaining : inst.amount));
+    setAmount(String(inst.amount));
     setPaymentMode('Cash');
     setReceiptNo(genReceipt());
     setRemarks('');
@@ -189,9 +187,8 @@ export default function CollectFee() {
 
     const amt = Number(amount);
     if (!amt || amt <= 0) { showToast('Enter a valid amount', 'error'); return; }
-    const instRemaining = Number(selectedInstallment.amount) - Number(selectedInstallment.paidAmount || 0);
-    if (amt > instRemaining) {
-      showToast(`Amount exceeds remaining due ₹${fmt(instRemaining)} for this installment`, 'error'); return;
+    if (amt > Number(selectedInstallment.amount)) {
+      showToast(`Amount exceeds installment amount ₹${fmt(selectedInstallment.amount)}`, 'error'); return;
     }
 
     setPaying(true);
@@ -574,18 +571,15 @@ export default function CollectFee() {
                   </div>
                   <div style={{ padding: '8px 0' }}>
                     {installments.map(inst => {
-                      const status    = String(inst.status || '').toUpperCase();
-                      const isPaid    = status === 'PAID';
-                      const isPartial = status === 'PARTIAL';
+                      const isPaid    = String(inst.status || '').toUpperCase() === 'PAID';
                       const overdue   = !isPaid && isOverdue(inst.dueDate);
                       const selected  = selectedInstallment?.id === inst.id;
-                      const remaining = Number(inst.amount) - Number(inst.paidAmount || 0);
                       return (
                         <div key={inst.id}
                           onClick={() => !isPaid && pickInstallment(inst)}
                           style={{
                             padding: '10px 16px',
-                            borderLeft: selected ? '3px solid #0de1e8' : isPartial ? '3px solid #ed8936' : '3px solid transparent',
+                            borderLeft: selected ? '3px solid #0de1e8' : '3px solid transparent',
                             background: selected ? '#f0fff4' : isPaid ? '#fafafa' : '#fff',
                             cursor: isPaid ? 'default' : 'pointer',
                             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -602,23 +596,14 @@ export default function CollectFee() {
                               Due: {inst.dueDate}
                               {overdue && <span style={{ marginLeft: 4, fontWeight: 700 }}>· OVERDUE</span>}
                             </div>
-                            {isPartial && (
-                              <div style={{ fontSize: 11, color: '#b45309', fontWeight: 600, marginTop: 2 }}>
-                                Paid ₹{fmt(inst.paidAmount)} · Remaining ₹{fmt(remaining)}
-                              </div>
-                            )}
                           </div>
                           <div style={{ textAlign: 'right' }}>
                             <div style={{ fontWeight: 800, fontSize: 13, color: isPaid ? '#276749' : '#2d3748' }}>₹{fmt(inst.amount)}</div>
                             {isPaid
                               ? <span style={{ fontSize: 10, color: '#276749', fontWeight: 700 }}>✓ PAID</span>
-                              : isPartial
-                                ? <span style={{ fontSize: 10, color: selected ? '#276749' : '#b45309', fontWeight: 700 }}>
-                                    {selected ? '▶ Selected' : '◑ PARTIAL'}
-                                  </span>
-                                : <span style={{ fontSize: 10, color: selected ? '#276749' : '#f6ad55', fontWeight: 700 }}>
-                                    {selected ? '▶ Selected' : 'Tap to pay'}
-                                  </span>
+                              : <span style={{ fontSize: 10, color: selected ? '#276749' : '#f6ad55', fontWeight: 700 }}>
+                                  {selected ? '▶ Selected' : 'Tap to pay'}
+                                </span>
                             }
                           </div>
                         </div>

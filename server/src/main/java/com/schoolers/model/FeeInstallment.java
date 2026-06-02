@@ -43,11 +43,6 @@ public class FeeInstallment {
     @Builder.Default
     private Status status = Status.PENDING;
 
-    /** Total amount paid so far towards this installment (supports partial payments) */
-    @Column(name = "paid_amount", precision = 10, scale = 2)
-    @Builder.Default
-    private BigDecimal paidAmount = BigDecimal.ZERO;
-
     /** Populated when admin records a cash payment for this installment */
     @Column(name = "paid_date")
     private LocalDate paidDate;
@@ -65,6 +60,6 @@ public class FeeInstallment {
     private LocalDateTime updatedAt;
 
     public enum Status {
-        PENDING, PARTIAL, PAID
+        PENDING, PAID
     }
 }
