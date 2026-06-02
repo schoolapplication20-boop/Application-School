@@ -129,7 +129,7 @@ public class AuthService {
                 int attempts = (user.getFailedLoginAttempts() == null ? 0 : user.getFailedLoginAttempts()) + 1;
                 user.setFailedLoginAttempts(attempts);
 
-                if (attempts >= 10) {
+                if (attempts >= 5) {
                     // Lock permanently — cleared only when user completes a password reset via OTP.
                     user.setLockedUntil(now.plusYears(100));
                     user.setFailedLoginAttempts(0);
@@ -140,11 +140,12 @@ public class AuthService {
                         try { emailService.sendAccountLockedEmail(lockedEmail, user.getName()); }
                         catch (Exception ignored) {}
                     }
-                    return ApiResponse.error("Account locked after 10 failed attempts. "
+                    return ApiResponse.error("Account locked after 5 failed attempts. "
                             + "Please use 'Forgot Password' to reset your password and unlock your account.");
                 }
                 userRepository.save(user);
-                return ApiResponse.error("Incorrect password. " + (10 - attempts) + " attempt(s) remaining before account lock.");
+                int remaining = 5 - attempts;
+                return ApiResponse.error("Invalid password. " + remaining + " attempt" + (remaining == 1 ? "" : "s") + " remaining.");
             }
             // Reset counter on successful password match
             if (user.getFailedLoginAttempts() != null && user.getFailedLoginAttempts() > 0) {

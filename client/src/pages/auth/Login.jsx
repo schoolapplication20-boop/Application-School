@@ -161,7 +161,7 @@ const Login = () => {
         const msg = err.isColdStart
           ? 'Server took too long to respond. Please wait a moment and try again.'
           : (err.message || 'Login failed. Please try again.');
-        const isLocked = msg.toLowerCase().includes('locked') || msg.toLowerCase().includes('lock');
+        const isLocked = msg.toLowerCase().includes('account locked') || msg.toLowerCase().includes('has been locked');
         setAccountLocked(isLocked);
         setError(msg);
       }
