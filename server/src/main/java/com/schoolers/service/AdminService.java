@@ -1843,7 +1843,7 @@ public class AdminService {
         FeeInstallment installment = feeInstallmentRepository.findById(installmentId).orElse(null);
         if (installment == null) return ApiResponse.error("Installment not found");
         if (installment.getStatus() == FeeInstallment.Status.PAID)
-            return ApiResponse.error("This installment is already paid");
+            return ApiResponse.error("This installment is already fully paid");
 
         StudentFeeAssignment assignment = studentFeeAssignmentRepository
                 .findById(installment.getAssignmentId()).orElse(null);
@@ -1860,26 +1860,47 @@ public class AdminService {
                     new java.security.SecureRandom().nextInt(999));
         }
 
+        // Read and validate the actual amount being paid now
+        BigDecimal amountPaid;
+        try {
+            amountPaid = new BigDecimal(body.get("amountPaid").toString());
+        } catch (Exception e) {
+            return ApiResponse.error("Invalid amount");
+        }
+        if (amountPaid.compareTo(BigDecimal.ZERO) <= 0) return ApiResponse.error("Amount must be greater than zero");
+
+        // Remaining due for this installment (supports multiple partial payments)
+        BigDecimal alreadyPaidOnInst = installment.getPaidAmount() != null ? installment.getPaidAmount() : BigDecimal.ZERO;
+        BigDecimal instRemaining = installment.getAmount().subtract(alreadyPaidOnInst);
+        if (amountPaid.compareTo(instRemaining) > 0)
+            return ApiResponse.error("Amount exceeds remaining installment due of ₹" + instRemaining);
+
         String paidDateStr = str(body, "paidDate", null);
         LocalDate paymentDate = LocalDate.now();
         if (paidDateStr != null && !paidDateStr.isBlank()) {
             try { paymentDate = LocalDate.parse(paidDateStr); } catch (Exception ignored) {}
         }
 
-        // Mark installment paid
-        installment.setStatus(FeeInstallment.Status.PAID);
-        installment.setPaidDate(paymentDate);
+        // Update installment: accumulate paid amount, set status correctly
+        BigDecimal newInstPaid = alreadyPaidOnInst.add(amountPaid);
+        installment.setPaidAmount(newInstPaid);
+        if (newInstPaid.compareTo(installment.getAmount()) >= 0) {
+            installment.setStatus(FeeInstallment.Status.PAID);
+            installment.setPaidDate(paymentDate);
+        } else {
+            installment.setStatus(FeeInstallment.Status.PARTIAL);
+        }
         FeeInstallment savedInst = feeInstallmentRepository.save(installment);
 
-        // Update assignment totals
+        // Update assignment totals with the actual amount paid (not full installment amount)
         BigDecimal currentPaid = assignment.getPaidAmount() != null ? assignment.getPaidAmount() : BigDecimal.ZERO;
-        BigDecimal newPaid = currentPaid.add(installment.getAmount());
-        assignment.setPaidAmount(newPaid);
-        if (newPaid.compareTo(assignment.getTotalFee()) >= 0) assignment.setStatus(StudentFeeAssignment.Status.PAID);
+        BigDecimal newTotalPaid = currentPaid.add(amountPaid);
+        assignment.setPaidAmount(newTotalPaid);
+        if (newTotalPaid.compareTo(assignment.getTotalFee()) >= 0) assignment.setStatus(StudentFeeAssignment.Status.PAID);
         else assignment.setStatus(StudentFeeAssignment.Status.PARTIAL);
         studentFeeAssignmentRepository.save(assignment);
 
-        // Record in fee_payments table
+        // Record actual amount paid in fee_payments table
         feePaymentRepository.save(FeePayment.builder()
                 .feeId(0L)
                 .assignmentId(assignment.getId())
@@ -1890,7 +1911,7 @@ public class AdminService {
                 .className(assignment.getClassName())
                 .feeType("Fee Payment")
                 .term(installment.getTermName())
-                .amountPaid(installment.getAmount())
+                .amountPaid(amountPaid)
                 .paymentDate(paymentDate)
                 .paymentMode(str(body, "paymentMode", "CASH"))
                 .receiptNumber(receiptNumber)
