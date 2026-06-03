@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '../../components/Layout';
 import { teacherAPI } from '../../services/api';
+import { sortClasses } from '../../utils/classOrder';
 
 const DEFAULT_PW = (rollNumber) => `${rollNumber}@123`;
 
@@ -23,7 +24,7 @@ export default function MyStudents() {
     try {
       const res = await teacherAPI.getMyClasses();
       const list = res.data?.data ?? [];
-      setClasses(list);
+      setClasses(list.slice().sort(sortClasses));
       if (list.length > 0) setSelectedClass(list[0]);
     } catch { setClasses([]); }
     finally  { setLoadingClass(false); }

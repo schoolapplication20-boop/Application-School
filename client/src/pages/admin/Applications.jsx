@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import Toast from '../../components/Toast';
 import { applicationAPI, adminAPI } from '../../services/api';
+import { sortClasses } from '../../utils/classOrder';
 
 // Normalize API response: convert PENDING→Pending, format dateApplied from createdAt
 const normalizeApp = (app) => ({
@@ -113,7 +114,7 @@ const Applications = () => {
   useEffect(() => {
     adminAPI.getClasses().then(res => {
       const data = res.data?.data ?? res.data ?? [];
-      setClassList(Array.isArray(data) ? data : []);
+      setClassList(Array.isArray(data) ? data.slice().sort(sortClasses) : []);
     }).catch(() => setClassList([]));
   }, []);
 

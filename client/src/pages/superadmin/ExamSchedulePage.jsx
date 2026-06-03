@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '../../components/Layout';
 import { examinationAPI, adminAPI } from '../../services/api';
+import { sortClassNames } from '../../utils/classOrder';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const EXAM_TYPES = ['ANNUAL', 'HALFYEARLY', 'QUARTERLY', 'MIDTERM', 'UNIT_TEST'];
@@ -456,7 +457,7 @@ export default function ExamSchedulePage() {
 
   // DB-fetched classes
   const [classrooms,  setClassrooms]   = useState([]); // raw list from /api/admin/classes
-  const dbClasses  = [...new Set(classrooms.map(c => c.name))].sort((a, b) => Number(a) - Number(b));
+  const dbClasses  = [...new Set(classrooms.map(c => c.name))].sort(sortClassNames);
   const dbSections = [...new Set(classrooms.map(c => c.section).filter(Boolean))].sort();
 
   const [search,       setSearch]       = useState('');

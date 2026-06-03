@@ -3,6 +3,7 @@ import Layout from '../../components/Layout';
 import Toast from '../../components/Toast';
 import { useAuth } from '../../context/AuthContext';
 import { messageAPI, teacherAPI, adminAPI } from '../../services/api';
+import { sortClasses } from '../../utils/classOrder';
 
 const CATEGORIES = ['GENERAL', 'ACADEMIC', 'ANNOUNCEMENT', 'EXAM', 'FEE', 'URGENT'];
 
@@ -66,7 +67,7 @@ export default function TeacherMessages() {
 
     const [clRes, bcRes] = await Promise.all([classPromise, bcPromise]);
 
-    setClassList(clRes?.data?.data ?? []);
+    setClassList((clRes?.data?.data ?? []).slice().sort(sortClasses));
     setBroadcasts(bcRes?.data?.data ?? []);
     setLoading(false);
   }, [isAdmin]);

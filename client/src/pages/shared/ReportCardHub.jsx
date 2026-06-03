@@ -3,6 +3,7 @@ import Layout from '../../components/Layout';
 import { reportCardAPI, adminAPI, teacherAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { BASE_URL } from '../../services/api';
+import { sortClasses } from '../../utils/classOrder';
 
 const pct = (m, max) => (max > 0 ? Math.round((m / max) * 100) : 0);
 const fmt = (n) => Number(n || 0).toFixed(1);
@@ -136,7 +137,7 @@ export default function ReportCardHub() {
   // Load class list and exam types on mount
   useEffect(() => {
     adminAPI.getClasses()
-      .then(res => setClasses(res.data?.data ?? []))
+      .then(res => setClasses((res.data?.data ?? []).slice().sort(sortClasses)))
       .catch(() => {});
     reportCardAPI.getSchoolFilters()
       .then(res => setExamTypes(res.data?.data?.examTypes ?? []))

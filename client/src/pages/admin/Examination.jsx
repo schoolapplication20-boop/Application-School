@@ -4,6 +4,7 @@ import Toast from '../../components/Toast';
 import HallTicketDocument from '../../components/HallTicketDocument';
 import { examinationAPI, adminAPI, BASE_URL } from '../../services/api';
 import { useSchool } from '../../context/SchoolContext';
+import { sortClassNames } from '../../utils/classOrder';
 import '../../styles/examination.css';
 
 const EXAM_TYPES   = ['ANNUAL', 'HALFYEARLY', 'QUARTERLY', 'MIDTERM', 'UNIT_TEST'];
@@ -88,7 +89,7 @@ export default function Examination() {
   const [toast,      setToast]      = useState(null);
 
   // DB-derived class/section lists (replaces hardcoded constants)
-  const dbClasses  = [...new Set(classrooms.map(c => c.name))].sort((a, b) => Number(a) - Number(b));
+  const dbClasses  = [...new Set(classrooms.map(c => c.name))].sort(sortClassNames);
   const dbSections = [...new Set(classrooms.map(c => c.section).filter(Boolean))].sort();
 
   // Filters

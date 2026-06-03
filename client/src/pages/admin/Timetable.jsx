@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '../../components/Layout';
 import Toast from '../../components/Toast';
+import { classOrder } from '../../utils/classOrder';
 import {
   fetchTimetable,
   createTimetableEntry,
@@ -187,8 +188,11 @@ export default function Timetable() {
       const raw = cls?.data?.data ?? cls?.data ?? cls ?? [];
       const formatted = raw
         .filter(c => c.isActive !== false)
-        .map(c => c.section ? `${c.name}-${c.section}` : c.name)
-        .sort();
+        .sort((a, b) => {
+          const d = classOrder(a.name) - classOrder(b.name);
+          return d !== 0 ? d : (a.section || '').localeCompare(b.section || '');
+        })
+        .map(c => c.section ? `${c.name}-${c.section}` : c.name);
       setClasses([...new Set(formatted)]);
     } finally {
       setLoading(false);

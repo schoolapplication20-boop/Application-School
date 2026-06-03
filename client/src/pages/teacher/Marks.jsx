@@ -3,6 +3,7 @@ import Layout from '../../components/Layout';
 import Toast from '../../components/Toast';
 import { useAuth } from '../../context/AuthContext';
 import { teacherAPI, examTypeAPI, gradeScaleAPI, reportCardAPI } from '../../services/api';
+import { sortClasses } from '../../utils/classOrder';
 
 const FALLBACK_EXAM_TYPES = ['Unit Test 1', 'Unit Test 2', 'Mid Term', 'Final Exam', 'Annual Exam'];
 const SUBJECTS = [
@@ -195,7 +196,7 @@ ADM002,Mathematics,92,100`;
     teacherAPI.getMyClasses(user.id)
       .then(r => {
         const cls = r?.data?.data ?? r?.data ?? [];
-        setClasses(Array.isArray(cls) ? cls : []);
+        setClasses(Array.isArray(cls) ? cls.slice().sort(sortClasses) : []);
       })
       .catch(() => showToast('Failed to load classes', 'error'))
       .finally(() => setLoading(false));

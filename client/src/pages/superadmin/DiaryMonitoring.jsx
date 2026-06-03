@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '../../components/Layout';
 import Toast from '../../components/Toast';
 import { diaryAPI, adminAPI } from '../../services/api';
+import { sortClassNames } from '../../utils/classOrder';
 
 const STATUS_COLOR  = { PENDING: '#ed8936', APPROVED: '#0de1e8', REJECTED: '#e53e3e' };
 const STATUS_BG     = { PENDING: '#fff7ed', APPROVED: '#f0fff4', REJECTED: '#fff5f5' };
@@ -59,7 +60,7 @@ export default function DiaryMonitoring() {
   }, []);
 
   // Unique classes derived from loaded entries
-  const classes = [...new Set(entries.map(e => e.className).filter(Boolean))].sort();
+  const classes = [...new Set(entries.map(e => e.className).filter(Boolean))].sort(sortClassNames);
 
   const openReview = (entry) => {
     setReviewing(entry);
