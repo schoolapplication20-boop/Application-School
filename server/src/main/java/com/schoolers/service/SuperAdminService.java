@@ -356,18 +356,30 @@ public class SuperAdminService {
                     dto.put("schoolActive",       Boolean.TRUE.equals(school.getIsActive()));
                     dto.put("userLimit",          school.getUserLimit());
                     dto.put("pricePerUser",       school.getPricePerUser());
-                    // Single batch query for all role counts — avoids 5 separate DB round-trips
+                    // Use sa.getSchoolId() (the value stored in users.school_id after DB migration)
+                    // rather than school.getId() (DB PK which may differ after the FK migration
+                    // updated users.school_id from PK to display number).
+                    Long userSchoolId = sa.getSchoolId(); // this IS what users.school_id contains
+
                     java.util.Map<String,Long> roleCounts = new java.util.HashMap<>();
-                    for (Object[] row : userRepository.countByRoleForSchool(school.getId())) {
+                    for (Object[] row : userRepository.countByRoleForSchool(userSchoolId)) {
                         roleCounts.put(row[0].toString(), (Long) row[1]);
                     }
+                    // Fallback: if nothing found with display number, try DB PK
+                    if (roleCounts.isEmpty() && !school.getId().equals(userSchoolId)) {
+                        for (Object[] row : userRepository.countByRoleForSchool(school.getId())) {
+                            roleCounts.put(row[0].toString(), (Long) row[1]);
+                        }
+                        if (!roleCounts.isEmpty()) userSchoolId = school.getId();
+                    }
+
                     long adminCount   = roleCounts.getOrDefault("ADMIN",   0L);
                     long teacherCount = roleCounts.getOrDefault("TEACHER", 0L);
                     long studentCount = roleCounts.getOrDefault("STUDENT", 0L);
                     long superAdminC  = roleCounts.getOrDefault("SUPER_ADMIN", 0L);
                     long totalUsers   = roleCounts.values().stream().mapToLong(Long::longValue).sum();
                     dto.put("userCount",       totalUsers);
-                    dto.put("activeUserCount", userRepository.countActiveBySchoolId(school.getId()));
+                    dto.put("activeUserCount", userRepository.countActiveBySchoolId(userSchoolId));
                     dto.put("paymentPlan",     school.getPaymentPlan());
                     dto.put("adminCount",      adminCount);
                     dto.put("teacherCount",    teacherCount);

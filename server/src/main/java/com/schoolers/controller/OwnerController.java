@@ -140,12 +140,20 @@ public class OwnerController {
             years.add(item);
         }
 
-        // User counts
-        long activeUsers = userRepository.countActiveBySchoolId(school.getId());
+        // Determine which schoolId users actually store (display number OR DB PK, depending on migration state).
+        // Try DB PK first; if returns 0 for all roles, fall back to display school_id.
+        Long userSchoolId = school.getId();
         java.util.Map<String,Long> roleCounts = new java.util.HashMap<>();
-        for (Object[] row : userRepository.countByRoleForSchool(school.getId())) {
+        for (Object[] row : userRepository.countByRoleForSchool(userSchoolId)) {
             roleCounts.put(row[0].toString(), (Long) row[1]);
         }
+        if (roleCounts.isEmpty() && school.getSchoolId() != null && !school.getId().equals(school.getSchoolId().longValue())) {
+            userSchoolId = school.getSchoolId().longValue();
+            for (Object[] row : userRepository.countByRoleForSchool(userSchoolId)) {
+                roleCounts.put(row[0].toString(), (Long) row[1]);
+            }
+        }
+        long activeUsers = userRepository.countActiveBySchoolId(userSchoolId);
 
         // Platform billing
         java.math.BigDecimal pricePerUser = school.getPricePerUser();
