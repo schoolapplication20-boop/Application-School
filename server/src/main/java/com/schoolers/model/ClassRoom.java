@@ -31,7 +31,7 @@ public class ClassRoom {
     @Column(name = "class_name", nullable = false, length = 20)
     private String name;
 
-    @Column(length = 5)
+    @Column(length = 15)
     private String section;
 
     @Column(name = "teacher_id")

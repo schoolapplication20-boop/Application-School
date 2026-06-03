@@ -144,6 +144,10 @@ const AiChat = () => {
   const [showQuick, setShowQuick] = useState(true);
   const [initialized, setInitialized] = useState(false);
 
+  /* draggable position — bottom/right offset from viewport edges */
+  const [pos, setPos] = useState({ bottom: 80, right: 28 });
+  const hasDragged    = useRef(false);
+
   const bottomRef  = useRef(null);
   const inputRef   = useRef(null);
   const sessTabRef = useRef(null);
@@ -349,20 +353,52 @@ const AiChat = () => {
     }
   };
 
+  /* ── Drag logic (mouse + touch) ─────────────────────────────────── */
+  const startDrag = (clientX, clientY, currentRight, currentBottom) => {
+    hasDragged.current = false;
+    const startX = clientX, startY = clientY;
+    const startR = currentRight, startB = currentBottom;
+
+    const onMove = (ex, ey) => {
+      const dx = ex - startX, dy = ey - startY;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) hasDragged.current = true;
+      setPos({
+        right:  Math.max(0, Math.min(window.innerWidth  - 64, startR - dx)),
+        bottom: Math.max(0, Math.min(window.innerHeight - 64, startB - dy)),
+      });
+    };
+
+    const onMouseMove = (e) => onMove(e.clientX, e.clientY);
+    const onTouchMove = (e) => { e.preventDefault(); onMove(e.touches[0].clientX, e.touches[0].clientY); };
+    const cleanup = () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup',   cleanup);
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('touchend',  cleanup);
+    };
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup',   cleanup);
+    window.addEventListener('touchmove', onTouchMove, { passive: false });
+    window.addEventListener('touchend',  cleanup);
+  };
+
   return (
     <>
-      {/* FAB */}
+      {/* FAB — draggable */}
       <button
         className={`ai-fab ${open ? 'ai-fab--open' : ''}`}
-        onClick={() => setOpen(o => !o)}
-        title="My-Skoolz AI"
+        style={{ bottom: pos.bottom, right: pos.right }}
+        onMouseDown={(e) => { if (e.button !== 0) return; e.preventDefault(); startDrag(e.clientX, e.clientY, pos.right, pos.bottom); }}
+        onTouchStart={(e) => { startDrag(e.touches[0].clientX, e.touches[0].clientY, pos.right, pos.bottom); }}
+        onClick={() => { if (!hasDragged.current) setOpen(o => !o); }}
+        title="My-Skoolz AI — drag to move"
       >
         {open ? '✕' : '💬'}
         {!open && <span className="ai-fab__label">My-Skoolz AI</span>}
       </button>
 
       {open && (
-        <div className="ai-panel">
+        <div className="ai-panel" style={{ bottom: pos.bottom + 64, right: pos.right }}>
 
           {/* Header */}
           <div className="ai-panel__header">

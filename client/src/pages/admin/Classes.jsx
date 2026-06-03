@@ -522,7 +522,7 @@ const Classes = () => {
                   placeholder="e.g., A, B, C, D"
                   value={formData.section || ''}
                   onChange={e => setFormData({ ...formData, section: e.target.value.toUpperCase() })}
-                  maxLength={5}
+                  maxLength={15}
                 />
               </div>
 

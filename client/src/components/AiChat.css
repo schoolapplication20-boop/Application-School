@@ -1,8 +1,7 @@
 /* ── Floating action button ─────────────────────────────────────── */
 .ai-fab {
   position: fixed;
-  bottom: 80px;
-  right: 28px;
+  /* bottom/right set via inline style from React state */
   z-index: 1000;
   display: flex;
   align-items: center;
@@ -15,20 +14,22 @@
   border-radius: 26px;
   font-size: 20px;
   font-weight: 600;
-  cursor: pointer;
+  cursor: grab;
   box-shadow: 0 4px 20px rgba(37, 99, 235, 0.45);
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: box-shadow 0.2s;
   white-space: nowrap;
+  touch-action: none;
+  user-select: none;
 }
-.ai-fab:hover { transform: translateY(-2px); box-shadow: 0 6px 28px rgba(37,99,235,0.55); }
+.ai-fab:active { cursor: grabbing; }
+.ai-fab:hover { box-shadow: 0 6px 28px rgba(37,99,235,0.55); }
 .ai-fab--open { width: 52px; padding: 0; justify-content: center; border-radius: 50%; }
 .ai-fab__label { font-size: 14px; font-weight: 600; letter-spacing: 0.01em; }
 
 /* ── Chat panel ─────────────────────────────────────────────────── */
 .ai-panel {
   position: fixed;
-  bottom: 92px;
-  right: 28px;
+  /* bottom/right set via inline style from React state */
   z-index: 999;
   width: 460px;
   max-height: 680px;
@@ -365,6 +366,5 @@
 
 /* ── Mobile ─────────────────────────────────────────────────────── */
 @media (max-width: 520px) {
-  .ai-panel { right: 10px; left: 10px; width: auto; bottom: 80px; max-height: 75vh; }
-  .ai-fab   { right: 16px; bottom: 70px; }
+  .ai-panel { width: calc(100vw - 20px); max-height: 75vh; }
 }

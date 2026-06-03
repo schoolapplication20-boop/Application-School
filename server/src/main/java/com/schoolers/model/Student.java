@@ -43,7 +43,7 @@ public class Student {
     @Column(name = "class_name", nullable = false, length = 50)
     private String className;
 
-    @Column(length = 5)
+    @Column(length = 15)
     private String section;
 
     @Column(name = "student_user_id")
