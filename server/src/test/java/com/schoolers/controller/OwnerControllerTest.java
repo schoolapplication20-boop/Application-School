@@ -70,7 +70,7 @@ class OwnerControllerTest {
             when(schoolRepository.findById(1L)).thenReturn(Optional.of(school));
             when(schoolRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-            var resp = controller.setPricePerUser(1L, body("pricePerUser", "50"), auth);
+            var resp = controller.setPricePerUser(1L, body("pricePerUser", "50"));
             assertThat(resp.getStatusCode().value()).isEqualTo(200);
             verify(schoolRepository).save(argThat(s -> new BigDecimal("50").compareTo(s.getPricePerUser()) == 0));
         }
@@ -81,7 +81,7 @@ class OwnerControllerTest {
             when(schoolRepository.findById(1L)).thenReturn(Optional.of(school));
             when(schoolRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-            var resp = controller.setPricePerUser(1L, body(), auth);
+            var resp = controller.setPricePerUser(1L, body());
             assertThat(resp.getStatusCode().value()).isEqualTo(200);
             verify(schoolRepository).save(argThat(s -> s.getPricePerUser() == null));
         }
@@ -89,7 +89,7 @@ class OwnerControllerTest {
         @Test @DisplayName("rejects negative price")
         void rejectsNegative() {
             when(schoolRepository.findById(1L)).thenReturn(Optional.of(school));
-            var resp = controller.setPricePerUser(1L, body("pricePerUser", "-10"), auth);
+            var resp = controller.setPricePerUser(1L, body("pricePerUser", "-10"));
             assertThat(resp.getStatusCode().value()).isEqualTo(400);
             verify(schoolRepository, never()).save(any());
         }
@@ -97,14 +97,14 @@ class OwnerControllerTest {
         @Test @DisplayName("rejects non-numeric value")
         void rejectsNonNumeric() {
             when(schoolRepository.findById(1L)).thenReturn(Optional.of(school));
-            var resp = controller.setPricePerUser(1L, body("pricePerUser", "abc"), auth);
+            var resp = controller.setPricePerUser(1L, body("pricePerUser", "abc"));
             assertThat(resp.getStatusCode().value()).isEqualTo(400);
         }
 
         @Test @DisplayName("returns 404 for unknown school")
         void notFound() {
             when(schoolRepository.findById(99L)).thenReturn(Optional.empty());
-            var resp = controller.setPricePerUser(99L, body("pricePerUser", "50"), auth);
+            var resp = controller.setPricePerUser(99L, body("pricePerUser", "50"));
             assertThat(resp.getStatusCode().value()).isEqualTo(404);
         }
     }
@@ -119,7 +119,7 @@ class OwnerControllerTest {
             when(schoolRepository.findById(1L)).thenReturn(Optional.of(school));
             when(schoolRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-            var resp = controller.setPaymentPlan(1L, body("paymentPlan", "QUARTERLY"), auth);
+            var resp = controller.setPaymentPlan(1L, body("paymentPlan", "QUARTERLY"));
             assertThat(resp.getStatusCode().value()).isEqualTo(200);
             verify(schoolRepository).save(argThat(s -> "QUARTERLY".equals(s.getPaymentPlan())));
         }
@@ -129,7 +129,7 @@ class OwnerControllerTest {
             for (String plan : new String[]{"MONTHLY", "QUARTERLY", "HALF_YEARLY", "YEARLY"}) {
                 when(schoolRepository.findById(1L)).thenReturn(Optional.of(school));
                 when(schoolRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-                var resp = controller.setPaymentPlan(1L, body("paymentPlan", plan), auth);
+                var resp = controller.setPaymentPlan(1L, body("paymentPlan", plan));
                 assertThat(resp.getStatusCode().value()).isEqualTo(200);
             }
         }
@@ -137,14 +137,14 @@ class OwnerControllerTest {
         @Test @DisplayName("rejects unknown plan")
         void rejectsUnknown() {
             when(schoolRepository.findById(1L)).thenReturn(Optional.of(school));
-            var resp = controller.setPaymentPlan(1L, body("paymentPlan", "WEEKLY"), auth);
+            var resp = controller.setPaymentPlan(1L, body("paymentPlan", "WEEKLY"));
             assertThat(resp.getStatusCode().value()).isEqualTo(400);
         }
 
         @Test @DisplayName("rejects null / absent plan")
         void rejectsNull() {
             when(schoolRepository.findById(1L)).thenReturn(Optional.of(school));
-            var resp = controller.setPaymentPlan(1L, body(), auth);
+            var resp = controller.setPaymentPlan(1L, body());
             assertThat(resp.getStatusCode().value()).isEqualTo(400);
         }
     }
@@ -159,7 +159,7 @@ class OwnerControllerTest {
             when(schoolRepository.findById(1L)).thenReturn(Optional.of(school));
             when(schoolRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-            var resp = controller.setUserLimit(1L, body("userLimit", "500"), auth);
+            var resp = controller.setUserLimit(1L, body("userLimit", "500"));
             assertThat(resp.getStatusCode().value()).isEqualTo(200);
             verify(schoolRepository).save(argThat(s -> Integer.valueOf(500).equals(s.getUserLimit())));
         }
@@ -170,7 +170,7 @@ class OwnerControllerTest {
             when(schoolRepository.findById(1L)).thenReturn(Optional.of(school));
             when(schoolRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-            var resp = controller.setUserLimit(1L, body(), auth);
+            var resp = controller.setUserLimit(1L, body());
             assertThat(resp.getStatusCode().value()).isEqualTo(200);
             verify(schoolRepository).save(argThat(s -> s.getUserLimit() == null));
         }
@@ -178,7 +178,7 @@ class OwnerControllerTest {
         @Test @DisplayName("rejects zero limit")
         void rejectsZero() {
             when(schoolRepository.findById(1L)).thenReturn(Optional.of(school));
-            var resp = controller.setUserLimit(1L, body("userLimit", "0"), auth);
+            var resp = controller.setUserLimit(1L, body("userLimit", "0"));
             assertThat(resp.getStatusCode().value()).isEqualTo(400);
         }
     }
