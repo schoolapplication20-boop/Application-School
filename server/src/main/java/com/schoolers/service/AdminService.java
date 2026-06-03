@@ -2594,7 +2594,7 @@ public class AdminService {
                     classFeeStructureRepository.findBySchoolId(school.getId());
             oldStructures = oldStructures.stream()
                     .filter(s -> oldYear.equals(s.getAcademicYear()))
-                    .collect(Collectors.toList());
+                    .collect(java.util.stream.Collectors.toList());
 
             for (com.schoolers.model.ClassFeeStructure old : oldStructures) {
                 // Skip if a structure for this class already exists in the new year
