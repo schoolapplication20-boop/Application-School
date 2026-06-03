@@ -424,7 +424,7 @@ const AiChat = () => {
         onClick={() => { if (!hasDragged.current) setOpen(o => !o); }}
         title="My-Skoolz AI — drag to move"
       >
-        {open ? '✕' : '💬'}
+        {open ? '✕' : '✦'}
         {!open && <span className="ai-fab__label">My-Skoolz AI</span>}
       </button>
 
@@ -434,14 +434,17 @@ const AiChat = () => {
           {/* Header */}
           <div className="ai-panel__header">
             <div className="ai-panel__header-left">
-              <div className="ai-panel__avatar">🤖</div>
+              <div className="ai-panel__avatar">✦</div>
               <div>
                 <div className="ai-panel__title">My-Skoolz AI</div>
-                <div className="ai-panel__subtitle">{t.subtitle}</div>
+                <div className="ai-panel__subtitle">
+                  <span className="ai-status-dot" />
+                  {t.subtitle}
+                </div>
               </div>
             </div>
             <div className="ai-header-right">
-              <span className="ai-powered-badge">✦ Groq AI</span>
+              <span className="ai-powered-badge">⚡ Groq AI</span>
             </div>
           </div>
 
@@ -485,7 +488,7 @@ const AiChat = () => {
             {histLoading ? (
               <div className="ai-hist-loading">
                 <div className="ai-msg ai-msg--bot">
-                  <div className="ai-msg__avatar">🤖</div>
+                  <div className="ai-msg__avatar">✦</div>
                   <div className="ai-msg__bubble ai-msg__bubble--typing">
                     <span /><span /><span />
                   </div>
@@ -495,12 +498,16 @@ const AiChat = () => {
               <>
                 {messages.map((m, i) => (
                   <div key={i} className={`ai-msg ai-msg--${m.role} ${m.error ? 'ai-msg--error' : ''}`}>
-                    {m.role === 'bot' && <div className="ai-msg__avatar">🤖</div>}
+                    {m.role === 'bot' && <div className="ai-msg__avatar">✦</div>}
                     <div className="ai-msg__bubble">
                       {renderMd(m.text)}
                       {m.animating && <span className="ai-cursor">▍</span>}
                     </div>
-                    {m.role === 'user' && <div className="ai-msg__avatar ai-msg__avatar--user">👤</div>}
+                    {m.role === 'user' && (
+                      <div className="ai-msg__avatar ai-msg__avatar--user">
+                        {(user?.name || 'U')[0].toUpperCase()}
+                      </div>
+                    )}
                   </div>
                 ))}
 
@@ -529,7 +536,7 @@ const AiChat = () => {
 
                 {loading && (
                   <div className="ai-msg ai-msg--bot">
-                    <div className="ai-msg__avatar">🤖</div>
+                    <div className="ai-msg__avatar">✦</div>
                     <div className="ai-msg__bubble ai-msg__bubble--typing">
                       <span /><span /><span />
                     </div>
@@ -556,7 +563,7 @@ const AiChat = () => {
               className="ai-panel__send"
               onClick={() => sendMessage(input)}
               disabled={loading || !input.trim()}
-            >➤</button>
+            >↑</button>
           </div>
           <div className="ai-panel__footer">{t.footer}</div>
         </div>
