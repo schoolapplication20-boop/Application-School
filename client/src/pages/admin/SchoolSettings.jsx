@@ -230,6 +230,7 @@ const SchoolSettings = () => {
   const currentLogoSrc = resolvedLogoUrl ? `${resolvedLogoUrl}?v=${logoVersion}` : null;
 
   return (
+    <>
     <Layout pageTitle="School Settings">
       <div style={{ maxWidth: 680, margin: '0 auto', padding: '32px 20px' }}>
 
@@ -801,6 +802,7 @@ const SchoolSettings = () => {
         </div>
       </div>
     )}
+    </>
   );
 };
 

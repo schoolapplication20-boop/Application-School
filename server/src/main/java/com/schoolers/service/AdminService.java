@@ -2577,7 +2577,7 @@ public class AdminService {
      *   1. Updates school.academicYear to newAcademicYear
      *   2. Optionally copies class fee structures from the old year to the new year
      */
-    @org.springframework.transaction.annotation.Transactional
+    @Transactional
     public ApiResponse<Map<String, Object>> yearRollover(Long schoolId, String newAcademicYear, boolean copyFeeStructures) {
         if (schoolId == null) return ApiResponse.error("School not found.");
 
