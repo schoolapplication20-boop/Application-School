@@ -525,6 +525,19 @@ public class DatabaseMigration implements CommandLineRunner {
         execRaw("UPDATE users SET is_active = TRUE WHERE is_active IS NULL");
         log.debug("users.is_active NULL values set to TRUE.");
 
+        // ── platform_payments table ───────────────────────────────────────────────
+        exec("CREATE TABLE IF NOT EXISTS platform_payments (" +
+             "id BIGSERIAL PRIMARY KEY, " +
+             "school_id BIGINT NOT NULL, " +
+             "amount NUMERIC(12,2) NOT NULL, " +
+             "paid_date DATE NOT NULL, " +
+             "payment_mode VARCHAR(30), " +
+             "notes VARCHAR(500), " +
+             "created_at TIMESTAMP DEFAULT NOW()" +
+             ")");
+        exec("CREATE INDEX IF NOT EXISTS idx_platform_payments_school_id ON platform_payments(school_id)");
+        log.debug("platform_payments table ensured.");
+
         // ── issue_reports table ───────────────────────────────────────────────────
         exec("CREATE TABLE IF NOT EXISTS issue_reports (" +
              "id BIGSERIAL PRIMARY KEY, " +

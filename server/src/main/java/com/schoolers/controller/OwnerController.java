@@ -26,9 +26,10 @@ import java.util.Map;
 public class OwnerController {
 
     @Autowired private UserRepository               userRepository;
-    @Autowired private SchoolRepository             schoolRepository;
+    @Autowired private SchoolRepository               schoolRepository;
     @Autowired private StudentFeeAssignmentRepository feeAssignmentRepository;
-    @Autowired private EmailService                 emailService;
+    @Autowired private com.schoolers.repository.PlatformPaymentRepository platformPaymentRepository;
+    @Autowired private EmailService                   emailService;
 
     private static final SecureRandom RANDOM = new SecureRandom();
 
@@ -155,10 +156,16 @@ public class OwnerController {
         }
         long activeUsers = userRepository.countActiveBySchoolId(userSchoolId);
 
-        // Platform billing
+        // Platform billing — annual fee
         java.math.BigDecimal pricePerUser = school.getPricePerUser();
-        java.math.BigDecimal billingTotal = pricePerUser != null
+        java.math.BigDecimal billingTotal = (pricePerUser != null && activeUsers > 0)
                 ? pricePerUser.multiply(java.math.BigDecimal.valueOf(activeUsers)) : null;
+
+        // Platform payments received from this school
+        java.math.BigDecimal platformPaid    = platformPaymentRepository.sumAmountBySchoolId(school.getId());
+        java.math.BigDecimal platformPending = (billingTotal != null)
+                ? billingTotal.subtract(platformPaid).max(java.math.BigDecimal.ZERO)
+                : java.math.BigDecimal.ZERO;
 
         Map<String, Object> response = new java.util.LinkedHashMap<>();
         response.put("years",          years);
@@ -169,11 +176,60 @@ public class OwnerController {
         response.put("paymentPlan",    school.getPaymentPlan() != null ? school.getPaymentPlan() : "YEARLY");
         response.put("activeUsers",    activeUsers);
         response.put("billingTotal",   billingTotal);
+        response.put("platformPaid",   platformPaid);
+        response.put("platformPending",platformPending);
         response.put("adminCount",     roleCounts.getOrDefault("ADMIN",       0L));
         response.put("teacherCount",   roleCounts.getOrDefault("TEACHER",     0L));
         response.put("studentCount",   roleCounts.getOrDefault("STUDENT",     0L));
         response.put("superAdminCount",roleCounts.getOrDefault("SUPER_ADMIN", 0L));
         return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    /** List platform payments received from a school */
+    @GetMapping("/schools/{schoolDbId}/platform-payments")
+    public ResponseEntity<ApiResponse<java.util.List<com.schoolers.model.PlatformPayment>>> listPlatformPayments(
+            @PathVariable Long schoolDbId) {
+        School school = schoolRepository.findById(schoolDbId).orElse(null);
+        if (school == null) return ResponseEntity.status(404).body(ApiResponse.error("School not found."));
+        return ResponseEntity.ok(ApiResponse.success(
+                platformPaymentRepository.findBySchoolIdOrderByPaidDateDesc(school.getId())));
+    }
+
+    /** Record a platform payment received from a school.
+     *  Body: { "amount": 5000, "paidDate": "2026-06-01", "paymentMode": "BANK_TRANSFER", "notes": "..." } */
+    @PostMapping("/schools/{schoolDbId}/platform-payments")
+    public ResponseEntity<ApiResponse<com.schoolers.model.PlatformPayment>> recordPlatformPayment(
+            @PathVariable Long schoolDbId,
+            @RequestBody Map<String, Object> body) {
+
+        School school = schoolRepository.findById(schoolDbId).orElse(null);
+        if (school == null) return ResponseEntity.status(404).body(ApiResponse.error("School not found."));
+
+        Object amtRaw = body.get("amount");
+        if (amtRaw == null) return ResponseEntity.badRequest().body(ApiResponse.error("amount is required."));
+        java.math.BigDecimal amount;
+        try {
+            amount = new java.math.BigDecimal(amtRaw.toString());
+            if (amount.compareTo(java.math.BigDecimal.ZERO) <= 0)
+                return ResponseEntity.badRequest().body(ApiResponse.error("amount must be greater than 0."));
+        } catch (NumberFormatException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("amount must be a number."));
+        }
+
+        String paidDateStr = body.get("paidDate") != null ? body.get("paidDate").toString() : null;
+        java.time.LocalDate paidDate;
+        try { paidDate = paidDateStr != null ? java.time.LocalDate.parse(paidDateStr) : java.time.LocalDate.now(); }
+        catch (Exception e) { paidDate = java.time.LocalDate.now(); }
+
+        com.schoolers.model.PlatformPayment payment = com.schoolers.model.PlatformPayment.builder()
+                .schoolId(school.getId())
+                .amount(amount)
+                .paidDate(paidDate)
+                .paymentMode(body.get("paymentMode") != null ? body.get("paymentMode").toString() : null)
+                .notes(body.get("notes") != null ? body.get("notes").toString() : null)
+                .build();
+
+        return ResponseEntity.ok(ApiResponse.success(platformPaymentRepository.save(payment)));
     }
 
     /** Update payment plan. Body: { "paymentPlan": "QUARTERLY" } */

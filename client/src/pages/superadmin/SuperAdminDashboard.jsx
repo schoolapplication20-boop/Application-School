@@ -108,6 +108,30 @@ function OwnerDashboard() {
     } finally { setPlanSaving(prev => ({ ...prev, [sa.schoolDbId]: false })); }
   };
 
+  // ── Platform payment recording ───────────────────────────────────────────
+  const [paymentModal, setPaymentModal] = useState(null); // { sa, amount:'', paidDate:'', mode:'BANK_TRANSFER', notes:'' }
+  const [recordingPayment, setRecordingPayment] = useState(false);
+
+  const openPaymentModal = (sa) => setPaymentModal({
+    sa, amount: '', paidDate: new Date().toISOString().split('T')[0], mode: 'BANK_TRANSFER', notes: ''
+  });
+
+  const submitPlatformPayment = async () => {
+    if (!paymentModal || !paymentModal.amount || Number(paymentModal.amount) <= 0) return;
+    setRecordingPayment(true);
+    try {
+      await ownerAPI.recordPlatformPayment(paymentModal.sa.schoolActualId ?? paymentModal.sa.schoolDbId, {
+        amount: Number(paymentModal.amount), paidDate: paymentModal.paidDate,
+        paymentMode: paymentModal.mode, notes: paymentModal.notes || null,
+      });
+      // Refresh fee summary for this school
+      setFeeSummaryMap(prev => { const n = { ...prev }; delete n[paymentModal.sa.schoolDbId]; return n; });
+      loadFeeSummary(paymentModal.sa.schoolDbId, paymentModal.sa.schoolActualId ?? paymentModal.sa.schoolDbId);
+      setPaymentModal(null);
+    } catch (e) { alert(e.response?.data?.message || 'Failed to record payment.'); }
+    finally { setRecordingPayment(false); }
+  };
+
   const openLimitEdit  = (sa) => setLimitEdit(prev => ({ ...prev, [sa.schoolDbId]: String(sa.userLimit ?? '') }));
   const closeLimitEdit = (id) => setLimitEdit(prev => { const n = { ...prev }; delete n[id]; return n; });
 
@@ -575,7 +599,9 @@ function OwnerDashboard() {
                           {sa.mobile && <div style={{ fontSize: 11, color: '#718096' }}>{sa.mobile}</div>}
                         </td>
                         <td style={{ fontSize: 12, color: '#718096' }}>
-                          {sa.createdAt
+                          {sa.onboardedAt
+                            ? <div>Onboarded {new Date(sa.onboardedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                            : sa.createdAt
                             ? <div>Joined {new Date(sa.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
                             : '—'}
                           <div style={{ fontSize: 11, color: '#a0aec0' }}>ID #{sa.schoolDbId}</div>
@@ -713,9 +739,10 @@ function OwnerDashboard() {
                               {/* School info + User Limit */}
                               <div style={{ background: '#fff', borderRadius: 10, padding: '12px 14px', border: '1.5px solid #e2e8f0' }}>
                                 <div style={{ fontSize: 11, fontWeight: 700, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>School Info</div>
-                                <InfoRow icon="school"           label="Name"   value={sa.schoolName || '—'} />
-                                <InfoRow icon="tag"              label="Code"   value={<span style={{ fontFamily:'monospace', fontWeight:700 }}>{sa.schoolCode || '—'}</span>} />
-                                <InfoRow icon="fingerprint"      label="DB ID"  value={`#${sa.schoolDbId}`} />
+                                <InfoRow icon="school"           label="Name"       value={sa.schoolName || '—'} />
+                                <InfoRow icon="tag"              label="Code"       value={<span style={{ fontFamily:'monospace', fontWeight:700 }}>{sa.schoolCode || '—'}</span>} />
+                                <InfoRow icon="fingerprint"      label="DB ID"      value={`#${sa.schoolDbId}`} />
+                                <InfoRow icon="event"            label="Onboarded"  value={sa.onboardedAt ? new Date(sa.onboardedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'} />
                                 {/* Role-wise user counts */}
                                 <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #f1f5f9', display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6 }}>
                                   {[
@@ -825,29 +852,55 @@ function OwnerDashboard() {
 
                               {/* ── Platform Billing ─────────────────────── */}
                               <div style={{ background: '#fff', borderRadius: 10, padding: '12px 14px', border: '1.5px solid #e2e8f0' }}>
-                                <div style={{ fontSize: 11, fontWeight: 700, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Platform Billing</div>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                                  <div style={{ fontSize: 11, fontWeight: 700, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: 1 }}>Platform Billing</div>
+                                  {sa.pricePerUser != null && (
+                                    <button onClick={() => openPaymentModal(sa)} style={{ padding: '3px 9px', borderRadius: 6, border: 'none', background: '#4f46e5', color: '#fff', fontSize: 10, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3 }}>
+                                      <span className="material-icons" style={{ fontSize: 12 }}>add</span>Record Payment
+                                    </button>
+                                  )}
+                                </div>
 
-                                {/* Billing summary */}
+                                {/* Billing summary with total/paid/pending */}
                                 {(() => {
                                   const price       = Number(sa.pricePerUser || 0);
                                   const activeUsers = sa.activeUserCount ?? 0;
                                   const total       = price * activeUsers;
-                                  const fmt = n => '₹' + Number(n).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+                                  const fs          = feeSummaryMap[sa.schoolDbId] ?? {};
+                                  const paid        = Number(fs.platformPaid    || 0);
+                                  const pending     = Number(fs.platformPending || 0) || Math.max(0, total - paid);
+                                  const fmt = n => '₹' + Number(n).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+                                  const pct = total > 0 ? Math.round((paid / total) * 100) : 0;
                                   return (
                                     <div style={{ marginBottom: 10 }}>
                                       {sa.pricePerUser != null ? (
                                         <>
-                                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
-                                            <span style={{ color: '#64748b' }}>Price per user</span>
-                                            <span style={{ fontWeight: 700, color: '#1e293b' }}>{fmt(price)}</span>
-                                          </div>
-                                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
-                                            <span style={{ color: '#64748b' }}>Active users</span>
-                                            <span style={{ fontWeight: 700, color: '#1e293b' }}>{activeUsers.toLocaleString()}</span>
-                                          </div>
-                                          <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 8, marginTop: 4, display: 'flex', justifyContent: 'space-between' }}>
-                                            <span style={{ fontSize: 12, fontWeight: 700, color: '#64748b' }}>Total Billing</span>
-                                            <span style={{ fontSize: 15, fontWeight: 800, color: '#4f46e5' }}>{fmt(total)}</span>
+                                          {[
+                                            ['Price / user', fmt(price), '#64748b'],
+                                            ['Active users', activeUsers.toLocaleString(), '#64748b'],
+                                            ['Plan', (sa.paymentPlan || 'YEARLY').replace('_',' '), '#64748b'],
+                                          ].map(([lbl, val, c]) => (
+                                            <div key={lbl} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
+                                              <span style={{ color: '#94a3b8' }}>{lbl}</span>
+                                              <span style={{ fontWeight: 600, color: c }}>{val}</span>
+                                            </div>
+                                          ))}
+                                          <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 8, marginTop: 6 }}>
+                                            {[
+                                              ['Total Fee',  fmt(total), '#1e293b', false],
+                                              ['Paid',       fmt(paid),  '#16a34a', false],
+                                              ['Pending',    fmt(pending), pending > 0 ? '#dc2626' : '#94a3b8', true],
+                                            ].map(([lbl, val, c, bold]) => (
+                                              <div key={lbl} style={{ display: 'flex', justifyContent: 'space-between', fontSize: bold ? 13 : 12, marginBottom: 5 }}>
+                                                <span style={{ color: '#64748b', fontWeight: bold ? 700 : 400 }}>{lbl}</span>
+                                                <span style={{ fontWeight: 800, color: c }}>{val}</span>
+                                              </div>
+                                            ))}
+                                            {total > 0 && (
+                                              <div style={{ marginTop: 6, height: 6, background: '#f1f5f9', borderRadius: 4, overflow: 'hidden' }}>
+                                                <div style={{ width: `${pct}%`, height: '100%', background: pct >= 100 ? '#16a34a' : pct >= 50 ? '#f59e0b' : '#4f46e5', borderRadius: 4 }} />
+                                              </div>
+                                            )}
                                           </div>
                                         </>
                                       ) : (
@@ -1798,6 +1851,50 @@ function OwnerDashboard() {
       )}
     </Layout>
 
+      {/* ── Record Platform Payment Modal ────────────────────────────────────── */}
+      {paymentModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', zIndex: 10100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+          onClick={e => e.target === e.currentTarget && setPaymentModal(null)}>
+          <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 400, boxShadow: '0 24px 64px rgba(0,0,0,0.2)', overflow: 'hidden' }}>
+            <div style={{ background: 'linear-gradient(135deg,#1e1b4b,#4f46e5)', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ color: '#fff', fontWeight: 800, fontSize: 15 }}>Record Platform Payment</div>
+              <button onClick={() => setPaymentModal(null)} style={{ background: 'rgba(255,255,255,0.12)', border: 'none', borderRadius: 8, width: 28, height: 28, color: '#fff', cursor: 'pointer', fontSize: 15 }}>✕</button>
+            </div>
+            <div style={{ padding: 20 }}>
+              <div style={{ fontSize: 12, color: '#64748b', marginBottom: 14 }}>
+                Recording payment from <strong>{paymentModal.sa.schoolName}</strong>
+              </div>
+              {[
+                { label: 'Amount (₹) *', key: 'amount', type: 'number', placeholder: 'e.g. 5000' },
+                { label: 'Payment Date *', key: 'paidDate', type: 'date', placeholder: '' },
+                { label: 'Notes', key: 'notes', type: 'text', placeholder: 'Optional' },
+              ].map(({ label, key, type, placeholder }) => (
+                <div key={key} style={{ marginBottom: 12 }}>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 4 }}>{label}</label>
+                  <input type={type} value={paymentModal[key]} placeholder={placeholder}
+                    onChange={e => setPaymentModal(p => ({ ...p, [key]: e.target.value }))}
+                    style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
+                </div>
+              ))}
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ fontSize: 11, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 4 }}>Payment Mode</label>
+                <select value={paymentModal.mode} onChange={e => setPaymentModal(p => ({ ...p, mode: e.target.value }))}
+                  style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none', background: '#fff' }}>
+                  {['BANK_TRANSFER','UPI','CHEQUE','CASH','OTHER'].map(m => <option key={m} value={m}>{m.replace('_',' ')}</option>)}
+                </select>
+              </div>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                <button onClick={() => setPaymentModal(null)} style={{ padding: '9px 18px', border: '1.5px solid #e2e8f0', borderRadius: 8, background: '#fff', fontSize: 13, cursor: 'pointer', fontWeight: 600 }}>Cancel</button>
+                <button onClick={submitPlatformPayment} disabled={recordingPayment || !paymentModal.amount}
+                  style={{ padding: '9px 20px', border: 'none', borderRadius: 8, background: '#4f46e5', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: recordingPayment ? 0.7 : 1 }}>
+                  {recordingPayment ? 'Saving…' : 'Record Payment'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── OTP Confirmation Modal for all destructive owner actions ─────────── */}
       {otpAction && (
         <OwnerActionOtpModal
@@ -1833,6 +1930,7 @@ const WIZARD_INIT = {
   totalClasses: '', sections: 'A,B,C,D',
   adminName: '', adminEmail: '', adminMobile: '',
   subscriptionPlan: 'STANDARD', subscriptionExpiry: '',
+  pricePerUser: '', paymentPlan: 'YEARLY',
 };
 
 const inp = (err) => ({
@@ -2037,6 +2135,8 @@ function CreateSuperAdminWizard({ onClose, onCreated }) {
             sections:           form.sections.trim() || 'A,B,C,D',
             subscriptionPlan:   form.subscriptionPlan,
             subscriptionExpiry: form.subscriptionExpiry || null,
+            pricePerUser:       form.pricePerUser ? Number(form.pricePerUser) : null,
+            paymentPlan:        form.paymentPlan || 'YEARLY',
             features:           JSON.stringify({
               attendance: perms.attendance ?? true,
               transport:  perms.transport  ?? true,
@@ -2389,7 +2489,7 @@ function CreateSuperAdminWizard({ onClose, onCreated }) {
             </div>
           )}
 
-          {/* ── Step 7: Subscription ──────────────────────────────────────────── */}
+          {/* ── Step 7: Subscription & Billing ────────────────────────────────── */}
           {step === 7 && (
             <div>
               <WizardField label="Subscription Plan">
@@ -2400,7 +2500,19 @@ function CreateSuperAdminWizard({ onClose, onCreated }) {
               <WizardField label="Expiry Date" hint="Leave blank for no expiry">
                 <input type="date" value={form.subscriptionExpiry} onChange={on('subscriptionExpiry')} style={inp(false)} />
               </WizardField>
-              <div style={{ marginTop: 8, padding: '12px 14px', background: '#f8fafc', borderRadius: 8, fontSize: 12, color: '#718096' }}>
+              <div style={{ borderTop: '1px solid #e2e8f0', margin: '16px 0', paddingTop: 16 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#4f46e5', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '.05em' }}>Platform Billing</div>
+                <WizardField label="Price per User (₹/year)" hint="Annual platform fee per active user">
+                  <input type="number" min="0" step="0.01" placeholder="e.g. 600"
+                    value={form.pricePerUser} onChange={on('pricePerUser')} style={inp(false)} />
+                </WizardField>
+                <WizardField label="Billing Frequency" hint="How often the school is invoiced">
+                  <select value={form.paymentPlan} onChange={on('paymentPlan')} style={sel}>
+                    {[['MONTHLY','Monthly (12×/year)'],['QUARTERLY','Quarterly (4×/year)'],['HALF_YEARLY','Half-Yearly (2×/year)'],['YEARLY','Yearly (1×/year)']].map(([v,l]) => <option key={v} value={v}>{l}</option>)}
+                  </select>
+                </WizardField>
+              </div>
+              <div style={{ padding: '12px 14px', background: '#f8fafc', borderRadius: 8, fontSize: 12, color: '#718096' }}>
                 <strong>BASIC</strong> — Core modules · <strong>STANDARD</strong> — All modules · <strong>PREMIUM</strong> — Priority support · <strong>ENTERPRISE</strong> — Custom SLA
               </div>
             </div>

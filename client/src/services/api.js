@@ -681,7 +681,9 @@ export const ownerAPI = {
   verifyActionOtp:  (otp)                    => api.post('/api/owner/confirm/verify-otp', { otp }),
   setUserLimit:     (schoolDbId, userLimit)    => api.patch(`/api/owner/schools/${schoolDbId}/user-limit`, { userLimit }),
   setPricePerUser:  (schoolDbId, pricePerUser) => api.patch(`/api/owner/schools/${schoolDbId}/price-per-user`, { pricePerUser }),
-  setPaymentPlan:   (schoolDbId, paymentPlan)  => api.patch(`/api/owner/schools/${schoolDbId}/payment-plan`, { paymentPlan }),
+  setPaymentPlan:      (schoolDbId, paymentPlan)  => api.patch(`/api/owner/schools/${schoolDbId}/payment-plan`, { paymentPlan }),
+  getPlatformPayments: (schoolDbId)              => api.get(`/api/owner/schools/${schoolDbId}/platform-payments`),
+  recordPlatformPayment:(schoolDbId, data)       => api.post(`/api/owner/schools/${schoolDbId}/platform-payments`, data),
   getFeeSummary:    (schoolDbId)             => api.get(`/api/owner/schools/${schoolDbId}/fee-summary`),
 };
 

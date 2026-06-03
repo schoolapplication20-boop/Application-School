@@ -288,6 +288,12 @@ public class SchoolService {
         if (data.containsKey("subscriptionPlan")) school.setSubscriptionPlan(str(data, "subscriptionPlan"));
         if (data.containsKey("subscriptionExpiry"))
             school.setSubscriptionExpiry(parseDate(data, "subscriptionExpiry"));
+        if (data.containsKey("pricePerUser") && data.get("pricePerUser") != null) {
+            try { school.setPricePerUser(new java.math.BigDecimal(data.get("pricePerUser").toString())); }
+            catch (Exception ignored) {}
+        }
+        if (data.containsKey("paymentPlan") && data.get("paymentPlan") != null)
+            school.setPaymentPlan(data.get("paymentPlan").toString());
         if (data.containsKey("features"))          school.setFeatures(str(data, "features"));
         if (data.containsKey("isActive"))          school.setIsActive((Boolean) data.get("isActive"));
         if (data.containsKey("schoolId")) {

@@ -354,6 +354,7 @@ public class SuperAdminService {
                     dto.put("permissions",        sa.getPermissions());
                     dto.put("schoolFeatures",     school.getFeatures()); // raw JSON string — parsed on frontend
                     dto.put("schoolActive",       Boolean.TRUE.equals(school.getIsActive()));
+                    dto.put("onboardedAt",        school.getCreatedAt() != null ? school.getCreatedAt().toLocalDate().toString() : null);
                     dto.put("userLimit",          school.getUserLimit());
                     dto.put("pricePerUser",       school.getPricePerUser());
                     // Use sa.getSchoolId() (the value stored in users.school_id after DB migration)
