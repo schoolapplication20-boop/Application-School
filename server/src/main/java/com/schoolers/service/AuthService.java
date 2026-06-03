@@ -39,6 +39,8 @@ public class AuthService {
     @Autowired private PasswordEncoder   passwordEncoder;
     @Autowired private EmailService      emailService;
 
+    private static final int MAX_LOGIN_ATTEMPTS = 5;
+
     // All OTP data is persisted directly on the User record in the database.
     // No in-memory caches — restarts and multi-instance deployments are safe.
 
@@ -129,22 +131,22 @@ public class AuthService {
                 int attempts = (user.getFailedLoginAttempts() == null ? 0 : user.getFailedLoginAttempts()) + 1;
                 user.setFailedLoginAttempts(attempts);
 
-                if (attempts >= 5) {
+                if (attempts >= MAX_LOGIN_ATTEMPTS) {
                     // Lock permanently — cleared only when user completes a password reset via OTP.
                     user.setLockedUntil(now.plusYears(100));
                     user.setFailedLoginAttempts(0);
                     userRepository.save(user);
-                    log.warn("[login] Account locked after 5 failed attempts: {}", user.getEmail());
+                    log.warn("[login] Account locked after {} failed attempts: {}", MAX_LOGIN_ATTEMPTS, user.getEmail());
                     String lockedEmail = user.getEmail();
                     if (lockedEmail != null && !lockedEmail.endsWith("@my-skoolz.com")) {
                         try { emailService.sendAccountLockedEmail(lockedEmail, user.getName()); }
                         catch (Exception ignored) {}
                     }
-                    return ApiResponse.error("Account locked after 5 failed attempts. "
+                    return ApiResponse.error("Account locked after " + MAX_LOGIN_ATTEMPTS + " failed attempts. "
                             + "Please use 'Forgot Password' to reset your password and unlock your account.");
                 }
                 userRepository.save(user);
-                int remaining = 5 - attempts;
+                int remaining = MAX_LOGIN_ATTEMPTS - attempts;
                 return ApiResponse.error("Invalid password. " + remaining + " attempt" + (remaining == 1 ? "" : "s") + " remaining.");
             }
             // Reset counter on successful password match

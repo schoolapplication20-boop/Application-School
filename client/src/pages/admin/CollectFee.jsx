@@ -10,6 +10,7 @@ const todayStr = () => {
   const d = new Date();
   return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }); // en-CA gives YYYY-MM-DD
 };
+const escHtml = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');
 const fmt = (n) => Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const genReceipt = () => `RCP-${Date.now().toString().slice(-7)}-${Math.random().toString(36).slice(2,5).toUpperCase()}`;
 const isOverdue = (dueDateStr) => dueDateStr && new Date(dueDateStr) < new Date(todayStr());
@@ -91,28 +92,30 @@ export default function CollectFee() {
   /* ── load ALL students when class filter changes ── */
   useEffect(() => {
     if (!filterClass) { setClassStudents([]); return; }
+    let cancelled = false;
     setLoadingClass(true);
     setClassStudents([]);
-    // Pass className and section SEPARATELY so the backend does exact-field matching
     adminAPI.searchStudentsForFee('', filterClassName, filterSection)
       .then(res => {
+        if (cancelled) return;
         let data = res.data?.data ?? [];
-        // Client-side safety: keep only students matching the class
+        // Safety guard: exact-match filter in case backend returns broader results
         const clsLc = filterClassName.toLowerCase();
+        const secLc = filterSection.toLowerCase();
         data = data.filter(s => {
-          const nameMatch = !clsLc || (s.className && s.className.toLowerCase().includes(clsLc));
-          const secMatch  = !filterSection || (s.section || '').toLowerCase() === filterSection.toLowerCase();
+          const sClassName = (s.className || '').toLowerCase();
+          const sSection   = (s.section   || '').toLowerCase();
+          const nameMatch = !clsLc || sClassName === clsLc || sClassName === (clsLc + (secLc ? ' - ' + secLc : ''));
+          const secMatch  = !secLc || sSection === secLc;
           return nameMatch && secMatch;
         });
-        data.sort((a, b) => {
-          const n1 = parseInt(a.rollNumber) || 0;
-          const n2 = parseInt(b.rollNumber) || 0;
-          return n1 !== n2 ? n1 - n2 : (a.name || '').localeCompare(b.name || '');
-        });
-        setClassStudents(data);
+        const parsed = data.map(s => ({ ...s, _roll: parseInt(s.rollNumber) || 0 }));
+        parsed.sort((a, b) => a._roll !== b._roll ? a._roll - b._roll : (a.name || '').localeCompare(b.name || ''));
+        setClassStudents(parsed.map(({ _roll, ...s }) => s));
       })
-      .catch(() => setClassStudents([]))
-      .finally(() => setLoadingClass(false));
+      .catch(() => { if (!cancelled) setClassStudents([]); })
+      .finally(() => { if (!cancelled) setLoadingClass(false); });
+    return () => { cancelled = true; };
   }, [filterClass, filterClassName, filterSection]);
 
   /* ── name-search dropdown (only when NO class filter is active) ── */
@@ -250,12 +253,14 @@ export default function CollectFee() {
     const logoSrc    = rawLogo
       ? (rawLogo.startsWith('http') ? rawLogo : `${BASE_URL}${rawLogo}`) + `?v=${logoVersion}`
       : null;
-    const headerHtml = logoSrc
+    const safeSchoolName = escHtml(schoolName);
+    const safeLogoSrc    = logoSrc ? escHtml(logoSrc) : null;
+    const headerHtml = safeLogoSrc
       ? `<div class="school-header">
-           <img src="${logoSrc}" class="school-logo" alt="${schoolName}" onerror="this.style.display='none'" />
-           <div class="school-name">${schoolName}</div>
+           <img src="${safeLogoSrc}" class="school-logo" alt="${safeSchoolName}" onerror="this.style.display='none'" />
+           <div class="school-name">${safeSchoolName}</div>
          </div>`
-      : `<div class="school-name">${schoolName}</div>`;
+      : `<div class="school-name">${safeSchoolName}</div>`;
     w.document.write(`
       <!DOCTYPE html><html><head><title>Fee Receipt</title>
       <style>
@@ -282,12 +287,12 @@ export default function CollectFee() {
       ${headerHtml}
       <div class="receipt-title">Fee Payment Receipt</div>
       <hr class="divider"/>
-      <div class="row"><span class="label">Receipt No.</span><span class="value" style="font-family:monospace">${d.receiptNo}</span></div>
-      <div class="row"><span class="label">Date</span><span class="value">${d.date}</span></div>
+      <div class="row"><span class="label">Receipt No.</span><span class="value" style="font-family:monospace">${escHtml(d.receiptNo)}</span></div>
+      <div class="row"><span class="label">Date</span><span class="value">${escHtml(d.date)}</span></div>
       <hr class="dashed"/>
-      <div class="row"><span class="label">Student Name</span><span class="value">${d.studentName}</span></div>
-      <div class="row"><span class="label">Roll Number</span><span class="value">${d.rollNo || '—'}</span></div>
-      <div class="row"><span class="label">Class</span><span class="value">${d.className}</span></div>
+      <div class="row"><span class="label">Student Name</span><span class="value">${escHtml(d.studentName)}</span></div>
+      <div class="row"><span class="label">Roll Number</span><span class="value">${escHtml(d.rollNo || '—')}</span></div>
+      <div class="row"><span class="label">Class</span><span class="value">${escHtml(d.className)}</span></div>
       <hr class="dashed"/>
       <div class="row"><span class="label">Total Assigned Fee</span><span class="value">₹${fmt(d.totalFee)}</span></div>
       <div class="row"><span class="label">Previously Paid</span><span class="value">₹${fmt(Number(d.paidSoFar) - Number(d.amountPaid))}</span></div>
@@ -298,13 +303,13 @@ export default function CollectFee() {
       </div>
       <div class="row"><span class="label">Total Paid to Date</span><span class="value">₹${fmt(d.paidSoFar)}</span></div>
       <div class="row"><span class="label">Balance Due</span><span class="value" style="color:${d.dueAmount > 0 ? '#e53e3e':'#276749'}">${d.dueAmount > 0 ? '₹'+fmt(d.dueAmount) : 'NIL'}</span></div>
-      <div class="row"><span class="label">Payment Mode</span><span class="value">${d.paymentMode || 'Cash'}</span></div>
-      ${d.term ? `<div class="row"><span class="label">Term / Installment</span><span class="value" style="color:#2b6cb0;font-weight:700">${d.term}</span></div>` : ''}
-      ${d.remarks ? `<div class="row"><span class="label">Remarks</span><span class="value">${d.remarks}</span></div>` : ''}
+      <div class="row"><span class="label">Payment Mode</span><span class="value">${escHtml(d.paymentMode || 'Cash')}</span></div>
+      ${d.term ? `<div class="row"><span class="label">Term / Installment</span><span class="value" style="color:#2b6cb0;font-weight:700">${escHtml(d.term)}</span></div>` : ''}
+      ${d.remarks ? `<div class="row"><span class="label">Remarks</span><span class="value">${escHtml(d.remarks)}</span></div>` : ''}
       <div class="footer">
         <span>Generated: ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</span>
         <div>
-          <div class="sig-line">Received By: ${d.receivedBy}</div>
+          <div class="sig-line">Received By: ${escHtml(d.receivedBy)}</div>
         </div>
       </div>
       </body></html>

@@ -1253,33 +1253,29 @@ public class AdminService {
                     ? studentRepository.searchBySchoolAndNameRollOrPhone(schoolId, query.trim())
                     : studentRepository.searchByNameRollOrPhone(query.trim());
 
-            // Narrow by class + section if filters are also active
+            // Narrow by class + section using exact matching (not CONTAINS)
             if (hasCls) {
-                final String clsLc = className.trim().toLowerCase();
+                final String clsLc  = className.trim().toLowerCase();
+                final String secLc  = hasSec ? section.trim().toLowerCase() : "";
+                final String combined = clsLc + (hasSec ? " - " + secLc : "");
                 results = results.stream()
-                        .filter(s -> s.getClassName() != null && s.getClassName().toLowerCase().contains(clsLc))
-                        .toList();
-            }
-            if (hasSec) {
-                final String secLc = section.trim().toLowerCase();
-                results = results.stream()
-                        .filter(s -> secLc.isEmpty() || (s.getSection() != null && s.getSection().toLowerCase().equals(secLc)))
+                        .filter(s -> {
+                            String sc = s.getClassName() != null ? s.getClassName().toLowerCase() : "";
+                            return sc.equals(clsLc) || sc.equals(combined);
+                        })
+                        .filter(s -> !hasSec || (s.getSection() != null && s.getSection().toLowerCase().equals(secLc)))
                         .toList();
             }
         } else {
-            // Class-only filter — Students store className and section as SEPARATE fields.
-            // Match className (CONTAINS for "10" vs "Class 10" tolerance) AND section exactly.
-            if (hasSec) {
-                results = (schoolId != null)
-                        ? studentRepository.findBySchoolIdAndClassNameContainsIgnoreCaseAndSectionIgnoreCase(
-                                schoolId, className.trim(), section.trim())
-                        : studentRepository.findByClassNameIgnoreCaseAndSectionIgnoreCase(
-                                className.trim(), section.trim());
-            } else {
-                results = (schoolId != null)
-                        ? studentRepository.findBySchoolIdAndClassNameContainsIgnoreCase(schoolId, className.trim())
-                        : studentRepository.findByClassName(className.trim());
-            }
+            // Class-only filter — use the flexible query that handles both storage formats:
+            //   separate fields (className="Class 10", section="A") and
+            //   combined className ("Class 10 - A")
+            String cls      = className.trim();
+            String sec      = hasSec ? section.trim() : "";
+            String combined = cls + (hasSec ? " - " + sec : "");
+            results = (schoolId != null)
+                    ? studentRepository.findBySchoolIdAndClassFlexible(schoolId, combined, cls, sec)
+                    : studentRepository.findByClassFlexible(combined, cls, sec);
         }
 
         return ApiResponse.success(results);

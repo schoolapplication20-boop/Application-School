@@ -12,9 +12,15 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "students", uniqueConstraints = {
-    @UniqueConstraint(name = "uq_roll_class_section_school", columnNames = {"roll_number", "class_name", "section", "school_id"})
-})
+@Table(name = "students",
+    uniqueConstraints = {
+        @UniqueConstraint(name = "uq_roll_class_section_school", columnNames = {"roll_number", "class_name", "section", "school_id"})
+    },
+    indexes = {
+        @Index(name = "idx_students_school_id",    columnList = "school_id"),
+        @Index(name = "idx_students_school_class",  columnList = "school_id, class_name")
+    }
+)
 @Data
 @Builder
 @NoArgsConstructor
