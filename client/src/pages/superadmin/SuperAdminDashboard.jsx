@@ -110,8 +110,9 @@ function OwnerDashboard() {
         s.schoolDbId === sa.schoolDbId ? { ...s, pricePerUser } : s
       ));
       closePriceEdit(sa.schoolDbId);
-    } catch { /* silent — leave input open */ }
-    finally { setPriceSaving(prev => ({ ...prev, [sa.schoolDbId]: false })); }
+    } catch (e) {
+      alert(e.response?.data?.message || 'Failed to save price. Please try again.');
+    } finally { setPriceSaving(prev => ({ ...prev, [sa.schoolDbId]: false })); }
   };
 
   const saveLimitFor = async (sa) => {
@@ -125,8 +126,9 @@ function OwnerDashboard() {
         s.schoolDbId === sa.schoolDbId ? { ...s, userLimit } : s
       ));
       closeLimitEdit(sa.schoolDbId);
-    } catch { /* silent — leave input open */ }
-    finally { setLimitSaving(prev => ({ ...prev, [sa.schoolDbId]: false })); }
+    } catch (e) {
+      alert(e.response?.data?.message || 'Failed to save limit. Please try again.');
+    } finally { setLimitSaving(prev => ({ ...prev, [sa.schoolDbId]: false })); }
   };
 
   // ── Reported Issues ──────────────────────────────────────────────────────────

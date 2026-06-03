@@ -323,11 +323,11 @@ export default function AdminManagement() {
       setShowSaPassword(false);
       resetSaOtp();
       setSaSuccessModal({
-        name:       result.name,
-        email:      result.email,
+        name:       result.name       || saForm.name.trim(),
+        email:      result.email      || saForm.email.trim().toLowerCase(),
         password:   result.generatedPassword || null,
-        schoolName: saForm.schoolName.trim(),
-        schoolCode: saForm.schoolCode.trim().toUpperCase(),
+        schoolName: result.schoolName || saForm.schoolName.trim(),
+        schoolCode: result.schoolCode || saForm.schoolCode.trim().toUpperCase(),
       });
       loadSuperAdmins();
     } catch (err) {

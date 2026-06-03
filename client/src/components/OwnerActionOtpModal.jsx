@@ -85,11 +85,19 @@ export default function OwnerActionOtpModal({ title, description, onConfirmed, o
     setError('');
     try {
       await ownerAPI.verifyActionOtp(code);
+    } catch (e) {
+      setError(e.response?.data?.message || 'Invalid OTP. Please try again.');
+      setRunning(false);
+      return;
+    }
+    // OTP verified — now execute the destructive action
+    try {
       setStep('confirmed');
       await onConfirmed();
       onClose();
     } catch (e) {
-      setError(e.response?.data?.message || 'Invalid OTP. Please try again.');
+      setStep('otp'); // revert to OTP step so user can see the error
+      setError(e.response?.data?.message || 'Action failed. Please try again.');
     } finally {
       setRunning(false);
     }

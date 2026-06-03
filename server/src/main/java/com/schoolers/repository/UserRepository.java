@@ -41,6 +41,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
     /** Count users by school and role */
     long countBySchoolIdAndRole(Long schoolId, User.Role role);
 
+    /** Batch role counts for a school: returns [role, count] pairs — avoids N+1 */
+    @org.springframework.data.jpa.repository.Query(
+        "SELECT u.role, COUNT(u) FROM User u WHERE u.schoolId = :schoolId GROUP BY u.role")
+    java.util.List<Object[]> countByRoleForSchool(@Param("schoolId") Long schoolId);
+
     @org.springframework.data.jpa.repository.Modifying
     @org.springframework.transaction.annotation.Transactional
     void deleteBySchoolId(Long schoolId);

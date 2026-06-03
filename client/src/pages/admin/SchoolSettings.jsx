@@ -21,14 +21,15 @@ const SchoolSettings = () => {
 
   const suggestNextYear = () => {
     const current = school?.academicYear || '';
-    // Supports both "2025-26" and "2025-2026" formats
     const match = current.match(/(\d{4})/);
     if (match) {
-      const start = parseInt(match[1]);
-      const nextStart = start + 1;
-      // Match the same format as current year
-      if (/\d{4}-\d{2}$/.test(current)) return `${nextStart}-${String(nextStart + 1).slice(-2)}`;
-      return `${nextStart}-${nextStart + 1}`;
+      const start    = parseInt(match[1]);
+      const next     = start + 1;
+      const nextEnd  = next + 1;
+      // 2-digit suffix format e.g. "2025-26" → "2026-27"
+      if (/\d{4}-\d{2}$/.test(current)) return `${next}-${String(nextEnd % 100).padStart(2, '0')}`;
+      // 4-digit suffix format e.g. "2025-2026" → "2026-2027"
+      return `${next}-${nextEnd}`;
     }
     return '';
   };
@@ -206,7 +207,7 @@ const SchoolSettings = () => {
     setDragging(false);
     const f = e.dataTransfer.files?.[0];
     if (f) validateAndSet(f);
-  }, [preview]);
+  }, []);
 
   const handleUpload = async () => {
     if (!file || !school?.schoolId) return;
@@ -663,7 +664,7 @@ const SchoolSettings = () => {
                 </p>
               </div>
               <button
-                onClick={() => { setShowRollover(true); setRolloverYear(suggestNextYear()); setRolloverResult(null); setRolloverError(''); }}
+                onClick={() => { setShowRollover(true); setRolloverYear(suggestNextYear()); setRolloverResult(null); setRolloverError(''); setCopyFees(true); }}
                 style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', background: 'linear-gradient(135deg,#4f46e5,#7c3aed)', border: 'none', borderRadius: 9, color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
               >
                 <span className="material-icons" style={{ fontSize: 17 }}>calendar_today</span>

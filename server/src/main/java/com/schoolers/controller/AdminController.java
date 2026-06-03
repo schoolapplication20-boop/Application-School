@@ -358,8 +358,8 @@ public class AdminController {
         java.math.BigDecimal grandPending = java.math.BigDecimal.ZERO;
 
         for (Object[] row : rows) {
-            java.math.BigDecimal total   = (java.math.BigDecimal) row[1];
-            java.math.BigDecimal paid    = (java.math.BigDecimal) row[2];
+            java.math.BigDecimal total   = row[1] != null ? (java.math.BigDecimal) row[1] : java.math.BigDecimal.ZERO;
+            java.math.BigDecimal paid    = row[2] != null ? (java.math.BigDecimal) row[2] : java.math.BigDecimal.ZERO;
             java.math.BigDecimal pending = total.subtract(paid).max(java.math.BigDecimal.ZERO);
             grandTotal   = grandTotal.add(total);
             grandPaid    = grandPaid.add(paid);

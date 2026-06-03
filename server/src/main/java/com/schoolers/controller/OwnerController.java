@@ -121,8 +121,8 @@ public class OwnerController {
         java.util.List<Map<String, Object>> result = new java.util.ArrayList<>();
         for (Object[] row : rows) {
             Map<String, Object> item = new java.util.LinkedHashMap<>();
-            java.math.BigDecimal total  = (java.math.BigDecimal) row[1];
-            java.math.BigDecimal paid   = (java.math.BigDecimal) row[2];
+            java.math.BigDecimal total  = row[1] != null ? (java.math.BigDecimal) row[1] : java.math.BigDecimal.ZERO;
+            java.math.BigDecimal paid   = row[2] != null ? (java.math.BigDecimal) row[2] : java.math.BigDecimal.ZERO;
             java.math.BigDecimal pending = total.subtract(paid).max(java.math.BigDecimal.ZERO);
             item.put("year",          row[0]);
             item.put("totalFee",      total);

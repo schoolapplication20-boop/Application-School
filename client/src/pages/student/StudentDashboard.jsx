@@ -76,8 +76,9 @@ export default function StudentDashboard() {
   }));
 
   const overallGrade = (() => {
-    if (!marks.length) return '—';
-    const avg = marks.reduce((s, m) => s + (m.maxMarks > 0 ? (m.marks / m.maxMarks) * 100 : 0), 0) / marks.length;
+    const validMarks = marks.filter(m => m.maxMarks > 0);
+    if (!validMarks.length) return '—';
+    const avg = validMarks.reduce((s, m) => s + (m.marks / m.maxMarks) * 100, 0) / validMarks.length;
     if (avg >= 90) return 'A+';
     if (avg >= 80) return 'A';
     if (avg >= 70) return 'B+';

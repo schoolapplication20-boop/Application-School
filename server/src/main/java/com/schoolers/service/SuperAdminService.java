@@ -356,14 +356,21 @@ public class SuperAdminService {
                     dto.put("schoolActive",       Boolean.TRUE.equals(school.getIsActive()));
                     dto.put("userLimit",          school.getUserLimit());
                     dto.put("pricePerUser",       school.getPricePerUser());
-                    long totalUsers   = userRepository.countBySchoolId(school.getId());
-                    long activeUsers  = userRepository.countBySchoolIdAndIsActive(school.getId(), true);
-                    dto.put("userCount",           totalUsers);
-                    dto.put("activeUserCount",     activeUsers);
-                    // Role-wise breakdown for owner dashboard
-                    dto.put("adminCount",   userRepository.countBySchoolIdAndRole(school.getId(), com.schoolers.model.User.Role.ADMIN));
-                    dto.put("teacherCount", userRepository.countBySchoolIdAndRole(school.getId(), com.schoolers.model.User.Role.TEACHER));
-                    dto.put("studentCount", userRepository.countBySchoolIdAndRole(school.getId(), com.schoolers.model.User.Role.STUDENT));
+                    // Single batch query for all role counts — avoids 5 separate DB round-trips
+                    java.util.Map<String,Long> roleCounts = new java.util.HashMap<>();
+                    for (Object[] row : userRepository.countByRoleForSchool(school.getId())) {
+                        roleCounts.put(row[0].toString(), (Long) row[1]);
+                    }
+                    long adminCount   = roleCounts.getOrDefault("ADMIN",   0L);
+                    long teacherCount = roleCounts.getOrDefault("TEACHER", 0L);
+                    long studentCount = roleCounts.getOrDefault("STUDENT", 0L);
+                    long superAdminC  = roleCounts.getOrDefault("SUPER_ADMIN", 0L);
+                    long totalUsers   = roleCounts.values().stream().mapToLong(Long::longValue).sum();
+                    dto.put("userCount",       totalUsers);
+                    dto.put("activeUserCount", userRepository.countBySchoolIdAndIsActive(school.getId(), true));
+                    dto.put("adminCount",      adminCount);
+                    dto.put("teacherCount",    teacherCount);
+                    dto.put("studentCount",    studentCount);
                 } else {
                     dto.put("needsSchoolSetup", true);
                 }

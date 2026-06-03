@@ -999,7 +999,7 @@ export default function Students() {
                               className={`form-control form-control-sm ${errors.studentEmail ? 'is-invalid' : ''}`}
                               placeholder="student@example.com"
                               value={formData.studentEmail || ''}
-                              onChange={e => { setFormData(fd => ({ ...fd, studentEmail: e.target.value.replace(/\s/g, '') })); resetStudentOtp(); }}
+                              onChange={e => { setFormData(fd => ({ ...fd, studentEmail: e.target.value.replace(/\s/g, '') })); if (!editStudent) resetStudentOtp(); }}
                             />
                             {!studentOtp.verified && (
                               <button type="button" onClick={handleStudentSendOtp} disabled={studentOtp.sending}

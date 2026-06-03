@@ -1775,6 +1775,7 @@ public class AdminService {
         if (amountPaid.compareTo(BigDecimal.ZERO) <= 0) return ApiResponse.error("Amount must be greater than zero");
 
         BigDecimal currentPaid = assignment.getPaidAmount() != null ? assignment.getPaidAmount() : BigDecimal.ZERO;
+        if (assignment.getTotalFee() == null) return ApiResponse.error("Fee assignment is incomplete — no total fee set.");
         BigDecimal due = assignment.getTotalFee().subtract(currentPaid);
         if (amountPaid.compareTo(due) > 0) return ApiResponse.error("Amount exceeds due balance of ₹" + due);
 
@@ -2579,12 +2580,16 @@ public class AdminService {
     @Transactional
     public ApiResponse<Map<String, Object>> yearRollover(Long schoolId, String newAcademicYear, boolean copyFeeStructures) {
         if (schoolId == null) return ApiResponse.error("School not found.");
+        if (newAcademicYear == null || !newAcademicYear.matches("\\d{4}-\\d{2,4}"))
+            return ApiResponse.error("Academic year must be in format YYYY-YY (e.g. 2026-27).");
 
         com.schoolers.model.School school = schoolRepository.findById(schoolId).orElse(null);
         if (school == null) school = schoolRepository.findBySchoolId(schoolId.intValue()).orElse(null);
         if (school == null) return ApiResponse.error("School record not found.");
 
         String oldYear = school.getAcademicYear();
+        if (newAcademicYear.equals(oldYear))
+            return ApiResponse.error("New academic year must differ from the current year (" + oldYear + ").");
         school.setAcademicYear(newAcademicYear);
         schoolRepository.save(school);
 

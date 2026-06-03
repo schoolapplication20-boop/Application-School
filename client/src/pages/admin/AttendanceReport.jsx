@@ -229,7 +229,7 @@ export default function AttendanceReport() {
       }
       const rows = [];
       for (const date of dates) {
-        const res = await adminAPI.getClassAttendanceSummaries({ date });
+        const res = await adminAPI.getClassAttendanceSummaries(date);
         const sums = res.data?.data ?? [];
         sums.forEach(s => {
           const pct = s.total ? Math.round(((s.present || 0) / s.total) * 100) : 0;

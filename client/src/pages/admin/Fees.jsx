@@ -172,6 +172,8 @@ export default function Fees() {
       const res = await adminAPI.saveClassFeeStructure({ className: feeModalClassName, academicYear: CURRENT_YEAR, ...feeForm });
       showToast(res.data?.message || 'Fee structure saved');
       setShowFeeModal(false);
+      setFeeModalClassName('');
+      setFeeForm({ tuitionFee: '', transportFee: '', labFee: '', examFee: '', sportsFee: '', otherFee: '' });
       loadStructures();
       loadAssignments();
     } catch { showToast('Failed to save fee structure', 'error'); } finally { setSaving(false); }
@@ -273,6 +275,13 @@ export default function Fees() {
       });
       showToast(assignTarget ? 'Fee updated' : 'Fee assigned');
       setShowAssignModal(false);
+      // Reset form so next open starts clean
+      setAssignTarget(null);
+      setAssignStudent(null);
+      setAssignForm({ totalFee: '', dueDate: '', remarks: '', academicYear: CURRENT_YEAR });
+      setAssignStudentSearch('');
+      setAssignStudentResults([]);
+      setInstallments([{ termName: 'Term 1', amount: '', dueDate: '' }, { termName: 'Term 2', amount: '', dueDate: '' }, { termName: 'Term 3', amount: '', dueDate: '' }]);
       loadAssignments();
     } catch (err) {
       const msg = err?.response?.data?.message || err?.response?.data?.error || 'Failed to save assignment';
