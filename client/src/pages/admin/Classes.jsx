@@ -13,6 +13,16 @@ const getCategory = (name) => {
   return 'Secondary';
 };
 
+// Sort key: Nursery → LKG → UKG → Class 1 … Class 12 → others
+const classOrder = (name) => {
+  const n = (name || '').toLowerCase();
+  if (n.includes('nursery')) return -3;
+  if (n.includes('lkg'))     return -2;
+  if (n.includes('ukg'))     return -1;
+  const num = parseInt(n.replace(/\D/g, ''));
+  return isNaN(num) ? 999 : num;
+};
+
 // Used by the category filter in the table — derived automatically from class names via getCategory()
 const CATEGORIES = ['Pre-Primary', 'Primary', 'Secondary'];
 
@@ -111,18 +121,23 @@ const Classes = () => {
   const sectionOptions = useMemo(() =>
     [...new Set(withEnrolled.map(c => c.section))].sort(), [withEnrolled]);
 
-  // ── Main table filtered list ──────────────────────────────────────────────
-  const filtered = useMemo(() => withEnrolled.filter(c => {
-    const q = searchTerm.toLowerCase();
-    const matchSearch = !q ||
-      c.name.toLowerCase().includes(q) ||
-      (c.teacher || '').toLowerCase().includes(q) ||
-      (c.teacher || '').toLowerCase().includes(q);
-    const matchClass   = !filterClass    || c.name     === filterClass;
-    const matchSection = !filterSection  || c.section  === filterSection;
-    const matchCat     = !filterCategory || c.category === filterCategory;
-    return matchSearch && matchClass && matchSection && matchCat;
-  }), [withEnrolled, searchTerm, filterClass, filterSection, filterCategory]);
+  // ── Main table filtered + sorted list ────────────────────────────────────
+  const filtered = useMemo(() => withEnrolled
+    .filter(c => {
+      const q = searchTerm.toLowerCase();
+      const matchSearch = !q ||
+        c.name.toLowerCase().includes(q) ||
+        (c.teacher || '').toLowerCase().includes(q);
+      const matchClass   = !filterClass    || c.name     === filterClass;
+      const matchSection = !filterSection  || c.section  === filterSection;
+      const matchCat     = !filterCategory || c.category === filterCategory;
+      return matchSearch && matchClass && matchSection && matchCat;
+    })
+    .sort((a, b) => {
+      const diff = classOrder(a.name) - classOrder(b.name);
+      return diff !== 0 ? diff : (a.section || '').localeCompare(b.section || '');
+    }),
+  [withEnrolled, searchTerm, filterClass, filterSection, filterCategory]);
 
   // ── Students shown in the view panel ─────────────────────────────────────
   const viewStudents = useMemo(() => {
