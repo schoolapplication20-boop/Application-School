@@ -30,6 +30,8 @@ public class AdminController {
     @Autowired private UserRepository userRepository;
     @Autowired private IdempotencyKeyRepository idempotencyKeyRepository;
     @Autowired private EmailVerificationRepository emailVerificationRepository;
+    @Autowired private com.schoolers.repository.StudentFeeAssignmentRepository feeAssignmentRepository;
+    @Autowired private com.schoolers.repository.SchoolRepository schoolRepository;
 
     private static final java.util.regex.Pattern EMAIL_RE =
             java.util.regex.Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
@@ -332,6 +334,52 @@ public class AdminController {
     public ResponseEntity<?> deleteClassFeeStructure(@PathVariable Long id, Authentication auth) {
         var response = adminService.deleteClassFeeStructure(id, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
+    }
+
+    /** Year-wise fee summary for the calling school — accessible to ADMIN and SUPER_ADMIN. */
+    @GetMapping("/fee-summary")
+    public ResponseEntity<?> getSchoolFeeSummary(Authentication auth) {
+        Long schoolId = getCurrentSchoolId(auth);
+        if (schoolId == null) return ResponseEntity.status(403).body(com.schoolers.dto.ApiResponse.error("School not found."));
+
+        // Try DB PK first; if empty try display school_id (handles both migration states)
+        java.util.List<Object[]> rows = feeAssignmentRepository.feeSummaryByYear(schoolId);
+        if (rows.isEmpty()) {
+            com.schoolers.model.School school = schoolRepository.findById(schoolId)
+                    .orElseGet(() -> schoolRepository.findBySchoolId(schoolId.intValue()).orElse(null));
+            if (school != null && school.getSchoolId() != null && !school.getId().equals(school.getSchoolId().longValue())) {
+                rows = feeAssignmentRepository.feeSummaryByYear(school.getSchoolId().longValue());
+            }
+        }
+
+        java.util.List<java.util.Map<String, Object>> result = new java.util.ArrayList<>();
+        java.math.BigDecimal grandTotal   = java.math.BigDecimal.ZERO;
+        java.math.BigDecimal grandPaid    = java.math.BigDecimal.ZERO;
+        java.math.BigDecimal grandPending = java.math.BigDecimal.ZERO;
+
+        for (Object[] row : rows) {
+            java.math.BigDecimal total   = (java.math.BigDecimal) row[1];
+            java.math.BigDecimal paid    = (java.math.BigDecimal) row[2];
+            java.math.BigDecimal pending = total.subtract(paid).max(java.math.BigDecimal.ZERO);
+            grandTotal   = grandTotal.add(total);
+            grandPaid    = grandPaid.add(paid);
+            grandPending = grandPending.add(pending);
+
+            java.util.Map<String, Object> item = new java.util.LinkedHashMap<>();
+            item.put("year",          row[0]);
+            item.put("totalFee",      total);
+            item.put("paidAmount",    paid);
+            item.put("pendingAmount", pending);
+            item.put("studentCount",  row[3]);
+            result.add(item);
+        }
+
+        java.util.Map<String, Object> response = new java.util.LinkedHashMap<>();
+        response.put("years",        result);
+        response.put("grandTotal",   grandTotal);
+        response.put("grandPaid",    grandPaid);
+        response.put("grandPending", grandPending);
+        return ResponseEntity.ok(com.schoolers.dto.ApiResponse.success(response));
     }
 
     // ===== Student Fee Assignments =====

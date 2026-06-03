@@ -221,6 +221,9 @@ export const adminAPI = {
   // Academic Year Rollover
   yearRollover: (data) => api.post('/api/admin/year-rollover', data),
 
+  // School fee summary (SUPER_ADMIN / ADMIN)
+  getSchoolFeeSummary: () => api.get('/api/admin/fee-summary'),
+
   // Expenses
   getExpenses: (params) => api.get('/api/admin/expenses', { params }),
   getExpense: (id) => api.get(`/api/admin/expenses/${id}`),

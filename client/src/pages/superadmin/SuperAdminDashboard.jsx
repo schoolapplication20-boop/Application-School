@@ -2894,6 +2894,7 @@ function SchoolDashboard() {
   const [admins,   setAdmins]   = useState([]);
   const [teachers, setTeachers] = useState([]);
   const [students, setStudents] = useState([]);
+  const [feeSummary, setFeeSummary] = useState(null); // { grandTotal, grandPaid, grandPending, years[] }
 
   useEffect(() => {
     superAdminAPI.getAdmins()
@@ -2908,6 +2909,9 @@ function SchoolDashboard() {
         setStudents(page?.content ?? (Array.isArray(page) ? page : []));
       })
       .catch(() => setStudents([]));
+    adminAPI.getSchoolFeeSummary()
+      .then(res => setFeeSummary(res.data?.data ?? null))
+      .catch(() => setFeeSummary(null));
   }, []);
 
   const [logs] = useState(() => getLogs().slice(0, 10));
@@ -2923,6 +2927,89 @@ function SchoolDashboard() {
         <h1>Super Admin Dashboard</h1>
         <p>Overview of your school management platform</p>
       </div>
+
+      {/* ── Fee Summary Card ──────────────────────────────────────────────────── */}
+      {feeSummary && (
+        <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #e2e8f0', padding: '20px 24px', marginBottom: 24, boxShadow: '0 1px 6px rgba(0,0,0,0.06)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18, flexWrap: 'wrap', gap: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ width: 4, height: 22, background: 'linear-gradient(180deg,#16a34a,#22c55e)', borderRadius: 2 }} />
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 16, color: '#1e293b' }}>Fee Collection Overview</div>
+                <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>Across all students and academic years</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Grand totals */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: feeSummary.years?.length > 0 ? 20 : 0 }}>
+            {[
+              { label: 'Total Fees Assigned', value: feeSummary.grandTotal,   color: '#1e293b', bg: '#f8faff',   icon: 'receipt_long' },
+              { label: 'Total Collected',     value: feeSummary.grandPaid,    color: '#16a34a', bg: '#f0fdf4',   icon: 'check_circle' },
+              { label: 'Total Pending',       value: feeSummary.grandPending, color: Number(feeSummary.grandPending) > 0 ? '#dc2626' : '#94a3b8', bg: Number(feeSummary.grandPending) > 0 ? '#fff5f5' : '#f8faff', icon: 'pending_actions' },
+            ].map(({ label, value, color, bg, icon }) => {
+              const num = Number(value || 0);
+              const fmt = n => '₹' + n.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+              const grandT = Number(feeSummary.grandTotal || 0);
+              const pct = label === 'Total Collected' && grandT > 0 ? Math.round((num / grandT) * 100) : null;
+              return (
+                <div key={label} style={{ background: bg, borderRadius: 12, padding: '16px 18px', border: `1px solid ${color}18` }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                    <span className="material-icons" style={{ fontSize: 18, color }}>{icon}</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '.05em' }}>{label}</span>
+                  </div>
+                  <div style={{ fontSize: 24, fontWeight: 800, color, letterSpacing: '-0.02em' }}>{fmt(num)}</div>
+                  {pct !== null && (
+                    <div style={{ marginTop: 8 }}>
+                      <div style={{ height: 6, background: '#e2e8f0', borderRadius: 4, overflow: 'hidden' }}>
+                        <div style={{ width: `${pct}%`, height: '100%', background: pct >= 80 ? '#16a34a' : pct >= 50 ? '#f59e0b' : '#dc2626', borderRadius: 4 }} />
+                      </div>
+                      <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>{pct}% collected</div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Year-wise breakdown */}
+          {feeSummary.years?.length > 0 && (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ background: '#f8faff' }}>
+                    {['Academic Year', 'Students', 'Total Fees', 'Collected', 'Pending', 'Collection %'].map(h => (
+                      <th key={h} style={{ padding: '8px 14px', textAlign: h === 'Academic Year' || h === 'Students' ? 'left' : 'right', color: '#64748b', fontWeight: 700, fontSize: 11, textTransform: 'uppercase', letterSpacing: '.04em', borderBottom: '1px solid #e2e8f0', whiteSpace: 'nowrap' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {feeSummary.years.map((row, i) => {
+                    const total   = Number(row.totalFee   || 0);
+                    const paid    = Number(row.paidAmount || 0);
+                    const pending = Number(row.pendingAmount || 0);
+                    const pct     = total > 0 ? Math.round((paid / total) * 100) : 0;
+                    const pctColor = pct >= 90 ? '#16a34a' : pct >= 60 ? '#f59e0b' : '#dc2626';
+                    const fmt = n => '₹' + Number(n).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+                    return (
+                      <tr key={i} style={{ borderBottom: '1px solid #f1f5f9', background: i % 2 === 0 ? '#fff' : '#fafcff' }}>
+                        <td style={{ padding: '9px 14px', fontWeight: 700, color: '#1e293b' }}>{row.year || '—'}</td>
+                        <td style={{ padding: '9px 14px', color: '#64748b' }}>{row.studentCount}</td>
+                        <td style={{ padding: '9px 14px', textAlign: 'right', fontWeight: 600, color: '#1e293b' }}>{fmt(total)}</td>
+                        <td style={{ padding: '9px 14px', textAlign: 'right', fontWeight: 700, color: '#16a34a' }}>{fmt(paid)}</td>
+                        <td style={{ padding: '9px 14px', textAlign: 'right', fontWeight: 700, color: pending > 0 ? '#dc2626' : '#94a3b8' }}>{pending > 0 ? fmt(pending) : '—'}</td>
+                        <td style={{ padding: '9px 14px', textAlign: 'right' }}>
+                          <span style={{ padding: '2px 9px', borderRadius: 20, fontSize: 11, fontWeight: 800, background: pctColor + '18', color: pctColor }}>{pct}%</span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '16px', marginBottom: '24px' }}>
         {[
