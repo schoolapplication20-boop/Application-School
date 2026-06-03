@@ -143,6 +143,34 @@ ADM002,Mathematics,92,100`;
     URL.revokeObjectURL(url);
   };
 
+  // Download a pre-filled CSV with this teacher's primary class students
+  const downloadClassDraftCsv = async () => {
+    try {
+      // Find the teacher's primary class from their assigned classes
+      const myClasses = classes; // already loaded
+      const primaryClass = myClasses[0]; // class teacher has one primary class
+      if (!primaryClass) { showToast('No class assigned to you', 'error'); return; }
+
+      const res = await teacherAPI.getClassStudents(primaryClass.id);
+      const students = res?.data?.data ?? res?.data ?? [];
+      if (!students.length) { showToast('No students in your class', 'error'); return; }
+
+      // Build CSV: one row per student, marks columns empty
+      const header = 'AdmissionNumber,StudentName,Subject,Marks,MaxMarks';
+      const rows = students.map(s =>
+        `${s.admissionNumber || ''},${s.name || ''},,,`
+      );
+      const csv = [header, ...rows].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const label = `${primaryClass.name}${primaryClass.section ? '-' + primaryClass.section : ''}`;
+      const a = document.createElement('a'); a.href = url; a.download = `${label}_marks_draft.csv`; a.click();
+      URL.revokeObjectURL(url);
+    } catch { showToast('Failed to download draft CSV', 'error'); }
+  };
+
+  const isClassTeacher = user?.teacherType === 'CLASS_TEACHER' || user?.teacherType === 'BOTH';
+
   const parseCsvFile = (file) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -452,10 +480,18 @@ ADM002,Mathematics,92,100`;
             <option value="">All Exams</option>
             {examTypes.map(et => <option key={et} value={et}>{et}</option>)}
           </select>
-          <button onClick={() => { setShowCsvModal(true); setCsvRows([]); setCsvErrors([]); setCsvResults(null); setCsvExamType(''); setCsvDate(''); }}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 8, color: '#16a34a', fontWeight: 700, fontSize: 13, cursor: 'pointer', marginRight: 6 }}>
-            <span className="material-icons" style={{ fontSize: 16 }}>upload_file</span> Import CSV
-          </button>
+          {isClassTeacher && (
+            <>
+              <button onClick={downloadClassDraftCsv}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', background: '#eff6ff', border: '1.5px solid #bfdbfe', borderRadius: 8, color: '#2563eb', fontWeight: 700, fontSize: 13, cursor: 'pointer', marginRight: 4 }}>
+                <span className="material-icons" style={{ fontSize: 16 }}>download</span> Download Class Draft
+              </button>
+              <button onClick={() => { setShowCsvModal(true); setCsvRows([]); setCsvErrors([]); setCsvResults(null); setCsvExamType(''); setCsvDate(''); }}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 8, color: '#16a34a', fontWeight: 700, fontSize: 13, cursor: 'pointer', marginRight: 6 }}>
+                <span className="material-icons" style={{ fontSize: 16 }}>upload_file</span> Import CSV
+              </button>
+            </>
+          )}
           <button className="btn-add" onClick={openModal}>
             <span className="material-icons">add</span> Add Marks
           </button>
@@ -844,8 +880,13 @@ ADM002,Mathematics,92,100`;
                   ADM001,Science,78,100
                 </code>
                 <div style={{ display: 'flex', gap: 8 }}>
+                  {isClassTeacher && (
+                    <button onClick={downloadClassDraftCsv} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', border: '1px solid #bfdbfe', borderRadius: 7, background: '#eff6ff', color: '#2563eb', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                      <span className="material-icons" style={{ fontSize: 15 }}>download</span>Download Class Draft
+                    </button>
+                  )}
                   <button onClick={downloadSampleCsv} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', border: '1px solid #c7d2fe', borderRadius: 7, background: '#eef2ff', color: '#4f46e5', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                    <span className="material-icons" style={{ fontSize: 15 }}>download</span>Download Sample
+                    <span className="material-icons" style={{ fontSize: 15 }}>download</span>Sample Format
                   </button>
                   <button onClick={() => csvFileRef.current?.click()} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', border: '1px solid #d1fae5', borderRadius: 7, background: '#ecfdf5', color: '#16a34a', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                     <span className="material-icons" style={{ fontSize: 15 }}>upload_file</span>Select CSV File

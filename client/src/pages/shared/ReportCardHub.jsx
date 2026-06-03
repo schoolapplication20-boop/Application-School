@@ -133,6 +133,7 @@ export default function ReportCardHub() {
   const [loadingClass,setLoadingClass]= useState(false);
   const [searchResults,setSearchResults]= useState([]);
   const [searching,  setSearching]  = useState(false);
+  const [printingAll,setPrintingAll] = useState(false);
 
   // Load class list and exam types on mount
   useEffect(() => {
@@ -202,8 +203,87 @@ export default function ReportCardHub() {
   const sections = [...new Set(classes.map(c => c.section).filter(Boolean))].sort();
   const visibleClasses = classes.filter(c => !filterSection || c.section === filterSection);
 
-  const handlePrint = () => {
-    window.print();
+  const handlePrint = () => { window.print(); };
+
+  // Print all students in the selected class as one multi-page A4 document
+  const printAllReportCards = async () => {
+    if (!classStudents.length) return;
+    setPrintingAll(true);
+    try {
+      const params = filterExam ? { examType: filterExam } : {};
+      const cards = await Promise.all(
+        classStudents.map(s =>
+          reportCardAPI.getAnyStudentCard(s.studentId, params)
+            .then(r => ({ student: s, data: r.data?.data }))
+            .catch(() => ({ student: s, data: null }))
+        )
+      );
+
+      const w = window.open('', '_blank');
+      const buildCard = (data) => {
+        if (!data) return '<div class="page"><p style="color:#999">No data</p></div>';
+        const { student, school, marksByExam, attendance } = data;
+        const allExams = Object.entries(marksByExam || {});
+        const gTotal = allExams.flatMap(([,r])=>r).reduce((s,r)=>s+Number(r.marks||0),0);
+        const gMax   = allExams.flatMap(([,r])=>r).reduce((s,r)=>s+Number(r.maxMarks||0),0);
+        const overallPct = gMax > 0 ? Math.round((gTotal/gMax)*100) : 0;
+        const pctBar = (p) => `<div style="background:#f1f5f9;border-radius:4px;height:5px;width:60px;display:inline-block;vertical-align:middle;margin-left:4px"><div style="width:${p}%;height:100%;background:${p>=80?'#16a34a':p>=50?'#f59e0b':'#dc2626'};border-radius:4px"></div></div>`;
+        const logoSrc = school?.logoUrl ? (school.logoUrl.startsWith('http') ? school.logoUrl : `${window.location.origin}${school.logoUrl}`) : null;
+        const examsHtml = allExams.map(([et, rows]) => {
+          const tot = rows.reduce((s,r)=>s+Number(r.marks||0),0);
+          const mx  = rows.reduce((s,r)=>s+Number(r.maxMarks||0),0);
+          const p   = mx > 0 ? Math.round((tot/mx)*100) : 0;
+          return `<div class="exam-section">
+            <div class="exam-header"><span>${et}</span><span>${tot}/${mx} (${p}%)</span></div>
+            <table class="marks-table"><thead><tr><th>Subject</th><th>Marks</th><th>Max</th><th>%</th><th>Grade</th><th>Date</th></tr></thead><tbody>
+            ${rows.map(r=>`<tr><td>${r.subject||''}</td><td style="text-align:center;font-weight:700">${r.marks??''}</td><td style="text-align:center;color:#64748b">${r.maxMarks??''}</td><td style="text-align:center">${r.maxMarks>0?Math.round((r.marks/r.maxMarks)*100):'—'}%</td><td style="text-align:center;font-weight:700;color:${p>=80?'#16a34a':p>=50?'#f59e0b':'#dc2626'}">${r.grade||'—'}</td><td style="text-align:center;color:#94a3b8;font-size:10px">${r.examDate||'—'}</td></tr>`).join('')}
+            </tbody></table></div>`;
+        }).join('');
+
+        return `<div class="page">
+          <div class="school-header">
+            ${logoSrc ? `<img src="${logoSrc}" class="logo" onerror="this.style.display='none'">` : ''}
+            <div class="school-name">${school?.name||'School'}</div>
+            <div class="school-sub">${[school?.address,school?.board,school?.academicYear].filter(Boolean).join(' · ')}</div>
+            <div class="report-title">ACADEMIC REPORT CARD <span class="overall-badge">${overallPct}%</span></div>
+          </div>
+          <div class="student-grid">
+            ${[['Name',student?.name],['Roll No.',student?.rollNumber],['Admission No.',student?.admissionNumber||'—'],['Class',`${student?.className||''}${student?.section?' - '+student.section:''}`],['Parent',student?.parentName||'—'],['Attendance',`${attendance?.presentDays||0}/${attendance?.totalDays||0} (${Number(attendance?.percentage||0).toFixed(1)}%)`]].map(([l,v])=>`<div class="info-cell"><div class="info-label">${l}</div><div class="info-val">${v||'—'}</div></div>`).join('')}
+          </div>
+          ${examsHtml || '<div style="padding:20px;text-align:center;color:#94a3b8;font-size:13px">No marks recorded</div>'}
+          <div class="signature-row"><div class="sig-line">Class Teacher</div><div class="sig-line">Principal</div><div class="sig-line">Parent / Guardian</div></div>
+        </div>`;
+      };
+
+      w.document.write(`<!DOCTYPE html><html><head><title>Class Report Cards</title>
+      <style>
+        @page{size:A4 portrait;margin:15mm}
+        *{margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif}
+        body{background:#fff;font-size:12px}
+        .page{page-break-after:always;min-height:267mm;padding:0;display:flex;flex-direction:column;gap:8px}
+        .page:last-child{page-break-after:avoid}
+        .school-header{text-align:center;border-bottom:2px solid #1e1b4b;padding-bottom:10px;margin-bottom:10px}
+        .logo{width:52px;height:52px;object-fit:contain;display:block;margin:0 auto 6px}
+        .school-name{font-size:18px;font-weight:900;color:#1e1b4b}
+        .school-sub{font-size:10px;color:#718096;margin:3px 0}
+        .report-title{font-size:12px;font-weight:700;color:#4f46e5;letter-spacing:.05em;margin-top:6px;text-transform:uppercase}
+        .overall-badge{background:#eef2ff;color:#4f46e5;border-radius:12px;padding:2px 8px;font-size:11px;margin-left:8px}
+        .student-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px 8px;border:1px solid #e2e8f0;border-radius:6px;padding:8px}
+        .info-cell{padding:4px 6px}
+        .info-label{font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.04em}
+        .info-val{font-size:12px;font-weight:600;color:#1e293b;margin-top:1px}
+        .exam-section{border:1px solid #e2e8f0;border-radius:6px;overflow:hidden;margin-bottom:6px}
+        .exam-header{display:flex;justify-content:space-between;background:#f8faff;padding:5px 10px;font-size:11px;font-weight:700;color:#4f46e5;border-bottom:1px solid #e2e8f0}
+        .marks-table{width:100%;border-collapse:collapse;font-size:11px}
+        .marks-table th{padding:4px 8px;background:#fafcff;color:#64748b;font-weight:700;font-size:10px;text-transform:uppercase;border-bottom:1px solid #f1f5f9}
+        .marks-table td{padding:4px 8px;border-bottom:1px solid #f9fafb}
+        .signature-row{display:flex;justify-content:space-between;margin-top:auto;padding-top:24px}
+        .sig-line{width:28%;border-top:1px solid #2d3748;padding-top:4px;text-align:center;font-size:10px;color:#718096}
+        @media print{.page{page-break-after:always}}
+      </style></head><body>${cards.map(c=>buildCard(c.data)).join('')}</body></html>`);
+      w.document.close();
+      setTimeout(() => { w.focus(); w.print(); }, 600);
+    } finally { setPrintingAll(false); }
   };
 
   return (
@@ -271,7 +351,16 @@ export default function ReportCardHub() {
         <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, marginBottom: 20, overflow: 'hidden' }}>
           <div style={{ padding: '12px 16px', background: '#f8faff', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontWeight: 700, fontSize: 14, color: '#1e293b' }}>Students in class</span>
-            <span style={{ fontSize: 12, color: '#64748b' }}>{loadingClass ? 'Loading…' : `${classStudents.length} students`}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 12, color: '#64748b' }}>{loadingClass ? 'Loading…' : `${classStudents.length} students`}</span>
+              {classStudents.length > 0 && !loadingClass && (
+                <button onClick={printAllReportCards} disabled={printingAll}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', border: 'none', borderRadius: 7, background: printingAll ? '#a5b4fc' : 'linear-gradient(135deg,#4f46e5,#7c3aed)', color: '#fff', fontWeight: 700, fontSize: 11, cursor: printingAll ? 'not-allowed' : 'pointer' }}>
+                  <span className="material-icons" style={{ fontSize: 14 }}>print</span>
+                  {printingAll ? 'Preparing…' : 'Print All (A4)'}
+                </button>
+              )}
+            </div>
           </div>
           {loadingClass ? (
             <div style={{ padding: 24, textAlign: 'center', color: '#94a3b8' }}>Loading…</div>

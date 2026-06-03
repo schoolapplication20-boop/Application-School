@@ -402,29 +402,6 @@ function OwnerDashboard() {
     });
   };
 
-  // Open OTP modal for delete school — close confirmation modal first
-  const handleSchoolDeleteConfirm = () => {
-    if (!schoolDeleteTarget) return;
-    const target = schoolDeleteTarget;
-    setSchoolDeleteTarget(null); // close confirmation modal before opening OTP modal
-    setSchoolDeleteConfirmName('');
-    setOtpAction({
-      title: 'Delete Entire School',
-      description: (
-        <div>
-          <div style={{ fontSize: 13, color: '#2d3748', marginBottom: 6 }}>You are about to <strong>permanently delete the entire school</strong> and all its data:</div>
-          <div style={{ fontWeight: 700, fontSize: 15, color: '#dc2626' }}>{target.schoolName || '—'}</div>
-          <div style={{ fontSize: 12, color: '#718096', marginTop: 3 }}>{target.name} · {target.email}</div>
-          <div style={{ fontSize: 11, color: '#a0aec0', marginTop: 8 }}>All students, teachers, fees, and records will be wiped. This cannot be undone.</div>
-        </div>
-      ),
-      onConfirmed: async () => {
-        await superAdminAPI.deleteSchool(target.schoolActualId ?? target.schoolDbId);
-        load();
-      },
-    });
-  };
-
   const handleSuspendConfirm = async () => {
     if (!schoolSuspendTarget) return;
     setSchoolSuspending(true);
@@ -720,13 +697,7 @@ function OwnerDashboard() {
                             >
                               <span className="material-icons" style={{ fontSize: 15, color: '#e53e3e' }}>person_remove</span>
                             </button>
-                            <button
-                              onClick={() => { setSchoolDeleteTarget(sa); setSchoolDeleteConfirmName(''); }}
-                              title="Permanently delete school and all data"
-                              style={{ border: 'none', background: '#fff0f0', borderRadius: 7, width: 28, height: 28, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-                            >
-                              <span className="material-icons" style={{ fontSize: 15, color: '#c53030' }}>delete_forever</span>
-                            </button>
+                            {/* Delete school removed — use Suspend to deactivate */}
                           </div>
                         </td>
                       </tr>
@@ -1782,73 +1753,6 @@ function OwnerDashboard() {
         </div>
       )}
 
-      {/* ── Delete School Confirmation Modal ────────────────────────────────── */}
-      {schoolDeleteTarget && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div className="modal-card" style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 460, width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.25)', maxHeight: '90vh', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-              <div style={{ width: 48, height: 48, borderRadius: 12, background: '#fff0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <span className="material-icons" style={{ color: '#c53030', fontSize: 28 }}>domain_disabled</span>
-              </div>
-              <div>
-                <div style={{ fontWeight: 800, fontSize: 17, color: '#1a202c' }}>Delete Entire School</div>
-                <div style={{ fontSize: 12, color: '#e53e3e', marginTop: 2, fontWeight: 600 }}>⚠ This is permanent and cannot be undone</div>
-              </div>
-            </div>
-
-            <div style={{ background: '#fff0f0', borderRadius: 10, padding: '14px 16px', marginBottom: 16, border: '1.5px solid #feb2b2' }}>
-              <div style={{ fontSize: 13, color: '#2d3748', marginBottom: 6 }}>You are about to permanently delete:</div>
-              <div style={{ fontWeight: 800, fontSize: 16, color: '#c53030' }}>{schoolDeleteTarget.schoolName || '—'}</div>
-              <div style={{ fontSize: 12, color: '#718096', marginTop: 2 }}>Code: {schoolDeleteTarget.schoolCode || '—'}</div>
-              <div style={{ fontSize: 12, color: '#718096', marginTop: 1 }}>{schoolDeleteTarget.name} · {schoolDeleteTarget.email}</div>
-            </div>
-
-            <div style={{ background: '#fffbeb', borderRadius: 8, padding: '10px 14px', marginBottom: 16, border: '1px solid #fcd34d', fontSize: 12, color: '#92400e', lineHeight: 1.6 }}>
-              This will delete <strong>ALL data</strong> — students, teachers, attendance, marks, fees, salary, transport, messages, and the school record itself. This cannot be undone.
-            </div>
-
-            <div style={{ marginBottom: 20 }}>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#c53030', marginBottom: 6 }}>
-                Type the school name to confirm: <strong>{schoolDeleteTarget.schoolName}</strong>
-              </label>
-              <input
-                type="text"
-                value={schoolDeleteConfirmName}
-                onChange={e => setSchoolDeleteConfirmName(e.target.value)}
-                placeholder="Type school name exactly"
-                style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #feb2b2', borderRadius: 8, fontSize: 14, color: '#2d3748', outline: 'none', boxSizing: 'border-box' }}
-              />
-            </div>
-
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => { setSchoolDeleteTarget(null); setSchoolDeleteConfirmName(''); }}
-                disabled={schoolDeleting}
-                style={{ padding: '9px 20px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: '#fff', color: '#4a5568', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSchoolDeleteConfirm}
-                disabled={schoolDeleting || schoolDeleteConfirmName !== schoolDeleteTarget.schoolName}
-                style={{ padding: '9px 22px', borderRadius: 8, border: 'none', background: '#c53030', color: '#fff', fontWeight: 700, fontSize: 13, cursor: (schoolDeleting || schoolDeleteConfirmName !== schoolDeleteTarget.schoolName) ? 'not-allowed' : 'pointer', opacity: (schoolDeleting || schoolDeleteConfirmName !== schoolDeleteTarget.schoolName) ? 0.5 : 1, display: 'flex', alignItems: 'center', gap: 6 }}
-              >
-                {schoolDeleting ? (
-                  <>
-                    <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />
-                    Deleting…
-                  </>
-                ) : (
-                  <>
-                    <span className="material-icons" style={{ fontSize: 16 }}>delete_forever</span>
-                    Delete Everything
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </Layout>
 
       {/* ── Record Platform Payment Modal ────────────────────────────────────── */}
