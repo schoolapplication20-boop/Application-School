@@ -3,6 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   AreaChart, Area,
 } from 'recharts';
+import { sortClasses } from '../../utils/classOrder';
 import Layout from '../../components/Layout';
 import Toast from '../../components/Toast';
 import { adminAPI } from '../../services/api';
@@ -85,7 +86,7 @@ export default function AttendanceReport() {
   // ── Load all classes once ─────────────────────────────────────────────────
   useEffect(() => {
     adminAPI.getClasses()
-      .then(res => setClasses(res.data?.data ?? []))
+      .then(res => setClasses((res.data?.data ?? []).slice().sort(sortClasses)))
       .catch(() => {});
   }, []);
 

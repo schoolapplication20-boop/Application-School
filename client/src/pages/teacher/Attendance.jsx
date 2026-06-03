@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import Layout from '../../components/Layout';
 import Toast from '../../components/Toast';
 import { teacherAPI } from '../../services/api';
+import { sortClasses } from '../../utils/classOrder';
 import { exportCSV } from '../../services/attendanceStore';
 
 const TODAY = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }); // YYYY-MM-DD in IST
@@ -57,7 +58,7 @@ export default function Attendance() {
       const resolvedType = profile?.teacherType || 'SUBJECT_TEACHER';
 
       setTeacherType(resolvedType);
-      setClasses(list);
+      setClasses(list.slice().sort(sortClasses));
 
       if (!list.length) {
         setNoClassAssigned(true);

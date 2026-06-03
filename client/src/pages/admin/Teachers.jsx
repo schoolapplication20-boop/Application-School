@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '../../components/Layout';
 import Toast from '../../components/Toast';
 import { useAuth } from '../../context/AuthContext';
+import { sortClasses } from '../../utils/classOrder';
 import {
   fetchTeachers as apiFetchTeachers,
   createTeacher as apiCreateTeacher,
@@ -327,7 +328,7 @@ export default function Teachers() {
       if (data && data.length > 0) setTeachers(data);
     });
     adminAPI.getClasses().then(res => {
-      const list = res.data?.data ?? [];
+      const list = (res.data?.data ?? []).slice().sort(sortClasses);
       setClassList(list);
     }).catch(() => {});
   }, []);

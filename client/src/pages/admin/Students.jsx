@@ -3,6 +3,7 @@ import Layout from '../../components/Layout';
 import Toast from '../../components/Toast';
 import StudentExportModal from '../../components/StudentExportModal';
 import BulkImportModal from '../../components/BulkImportModal';
+import { sortClassNames } from '../../utils/classOrder';
 import {
   fetchStudents as apiFetchStudents,
   createStudent as apiCreateStudent,
@@ -209,7 +210,7 @@ export default function Students() {
 
   // Unique class names for the Class dropdown
   const classNames = useMemo(
-    () => [...new Set(availableClasses.map(c => c.name))].sort(),
+    () => [...new Set(availableClasses.map(c => c.name))].sort(sortClassNames),
     [availableClasses]
   );
 
@@ -564,11 +565,7 @@ export default function Students() {
 
   // Class filter options — built from classes added in the Classes module
   const filterClassOptions = useMemo(
-    () => [...new Set(availableClasses.map(c => c.name))].sort((a, b) => {
-      const na = parseInt(a.replace(/\D/g, '')) || 0;
-      const nb = parseInt(b.replace(/\D/g, '')) || 0;
-      return na - nb;
-    }),
+    () => [...new Set(availableClasses.map(c => c.name))].sort(sortClassNames),
     [availableClasses]
   );
 

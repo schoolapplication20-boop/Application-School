@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Layout from '../../components/Layout';
 import Toast from '../../components/Toast';
 import { adminAPI } from '../../services/api';
+import { sortClassNames } from '../../utils/classOrder';
 
 /* ── helpers ── */
 const fmt = (n) => Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
@@ -122,7 +123,7 @@ export default function Fees() {
   useEffect(() => { if (tab === 'history') loadPayments(); }, [tab, loadPayments]);
 
   /* ── unique class names from created classes ── */
-  const uniqueClasses = useMemo(() => [...new Set(classList.map(c => c.name))].sort(), [classList]);
+  const uniqueClasses = useMemo(() => [...new Set(classList.map(c => c.name))].sort(sortClassNames), [classList]);
 
   /* ── structure map: className → ClassFeeStructure ── */
   const structureMap = useMemo(() => {

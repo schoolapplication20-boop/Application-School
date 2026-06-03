@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '../../components/Layout';
 import { messageAPI, adminAPI } from '../../services/api';
 import Toast from '../../components/Toast';
+import { sortClasses } from '../../utils/classOrder';
 
 const CATEGORIES = ['GENERAL', 'ACADEMIC', 'ANNOUNCEMENT', 'EXAM', 'FEE', 'URGENT'];
 
@@ -39,7 +40,7 @@ export default function AdminMessages() {
       adminAPI.getClasses().catch(() => null),
     ]);
     setBroadcasts(bcRes?.data?.data ?? []);
-    const classes = clRes?.data?.data ?? [];
+    const classes = (clRes?.data?.data ?? []).slice().sort(sortClasses);
     setClassList(classes.map(c => ({
       id: c.id,
       label: c.name + (c.section ? ` - ${c.section}` : ''),
