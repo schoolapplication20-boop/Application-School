@@ -131,8 +131,9 @@ export default function Marks() {
   const [csvResults,    setCsvResults]    = useState(null);
   const csvFileRef = useRef(null);
 
-  const SAMPLE_CSV = `AdmissionNumber,Subject,Marks,MaxMarks
-ADM001,Mathematics,85,100
+  const SAMPLE_CSV = `AdmissionNumber,StudentName,MaxMarks,Mathematics,Science,English
+ADM001,Alice Johnson,100,85,78,90
+ADM002,Bob Smith,100
 ADM001,Science,78,100
 ADM002,Mathematics,92,100`;
 
@@ -168,7 +169,7 @@ ADM002,Mathematics,92,100`;
     setShowSubjectSelector(true);
   };
 
-  // Step 2: actually build and download the CSV with selected subjects
+  // Step 2: build and download wide-format CSV (one row per student, subjects as columns)
   const downloadClassDraftCsv = async () => {
     if (!myClassAssignment?.classId) return;
     if (!draftSubjects.length) { showToast('Select at least one subject', 'error'); return; }
@@ -177,12 +178,13 @@ ADM002,Mathematics,92,100`;
       const students = res?.data?.data ?? res?.data ?? [];
       if (!students.length) { showToast('No students in your assigned class', 'error'); return; }
 
-      // One row per student × subject: pre-fill AdmissionNumber + StudentName + Subject, leave Marks/MaxMarks blank
-      const header = 'AdmissionNumber,StudentName,Subject,Marks,MaxMarks';
-      const rows = students.flatMap(s =>
-        draftSubjects.map(sub =>
-          `${s.admissionNumber || ''},${(s.name || '').replace(/,/g, ' ')},${sub},,`
-        )
+      // Wide format: AdmissionNumber, StudentName, MaxMarks, Subject1, Subject2, ...
+      // MaxMarks is shared across all subjects (teacher enters once per row)
+      const subjectCols = draftSubjects.join(',');
+      const header = `AdmissionNumber,StudentName,MaxMarks,${subjectCols}`;
+      const emptyMarks = draftSubjects.map(() => '').join(',');
+      const rows = students.map(s =>
+        `${s.admissionNumber || ''},${(s.name || '').replace(/,/g, ' ')},,${emptyMarks}`
       );
       const csv = [header, ...rows].join('\n');
       const blob = new Blob([csv], { type: 'text/csv' });
@@ -192,7 +194,7 @@ ADM002,Mathematics,92,100`;
       a.download = `${label.replace(/\s/g,'_')}_marks_draft.csv`; a.click();
       URL.revokeObjectURL(url);
       setShowSubjectSelector(false);
-      showToast(`Draft CSV downloaded — ${students.length} students × ${draftSubjects.length} subjects = ${students.length * draftSubjects.length} rows`);
+      showToast(`Draft downloaded — ${students.length} students, ${draftSubjects.length} subject columns`);
     } catch { showToast('Failed to download draft CSV', 'error'); }
   };
 
@@ -203,22 +205,53 @@ ADM002,Mathematics,92,100`;
       const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
       const rows = [];
       const errors = [];
+
+      // Detect format: wide (has maxmarks column + subject columns) vs narrow (has 'subject' column)
+      const hasSubjectCol = headers.includes('subject');
+      const maxMarksIdx   = headers.findIndex(h => h === 'maxmarks' || h === 'max_marks' || h === 'max marks');
+      const admIdx        = headers.findIndex(h => h === 'admissionnumber' || h === 'admission_number' || h === 'admno');
+      const nameIdx       = headers.findIndex(h => h === 'studentname' || h === 'name' || h === 'student name');
+
+      // Wide format: columns after MaxMarks are subject names
+      const subjectHeaders = !hasSubjectCol && maxMarksIdx >= 0
+        ? headers.slice(maxMarksIdx + 1)
+        : [];
+
       for (let i = 1; i < lines.length; i++) {
         const vals = lines[i].split(',').map(v => v.trim());
-        if (vals.length < 4) { errors.push(`Row ${i + 1}: insufficient columns`); continue; }
-        const row = {};
-        headers.forEach((h, idx) => { row[h] = vals[idx] || ''; });
-        // Normalise header names
-        const r = {
-          admissionNumber: row['admissionnumber'] || row['admission_number'] || row['admno'] || '',
-          subject:         row['subject'] || '',
-          marks:           row['marks'] || '',
-          maxMarks:        row['maxmarks'] || row['max_marks'] || row['maxmark'] || '100',
-        };
-        if (!r.admissionNumber) { errors.push(`Row ${i + 1}: missing admission number`); continue; }
-        if (!r.subject)         { errors.push(`Row ${i + 1}: missing subject`); continue; }
-        if (!r.marks)           { errors.push(`Row ${i + 1}: missing marks`); continue; }
-        rows.push(r);
+
+        if (subjectHeaders.length > 0) {
+          // ── Wide format: one row → multiple marks records ─────────────────
+          const admNum  = admIdx >= 0 ? vals[admIdx] : '';
+          const maxStr  = maxMarksIdx >= 0 ? vals[maxMarksIdx] : '100';
+          if (!admNum) { errors.push(`Row ${i + 1}: missing admission number`); continue; }
+
+          subjectHeaders.forEach((sub, si) => {
+            const marksStr = vals[maxMarksIdx + 1 + si] || '';
+            if (!marksStr) return; // skip empty subject columns
+            rows.push({
+              admissionNumber: admNum,
+              subject:         sub.charAt(0).toUpperCase() + sub.slice(1), // capitalise
+              marks:           marksStr,
+              maxMarks:        maxStr || '100',
+            });
+          });
+        } else {
+          // ── Narrow format: one row = one marks record ──────────────────────
+          if (vals.length < 4) { errors.push(`Row ${i + 1}: insufficient columns`); continue; }
+          const row = {};
+          headers.forEach((h, idx) => { row[h] = vals[idx] || ''; });
+          const r = {
+            admissionNumber: row['admissionnumber'] || row['admission_number'] || row['admno'] || '',
+            subject:         row['subject'] || '',
+            marks:           row['marks'] || '',
+            maxMarks:        row['maxmarks'] || row['max_marks'] || row['max marks'] || '100',
+          };
+          if (!r.admissionNumber) { errors.push(`Row ${i + 1}: missing admission number`); continue; }
+          if (!r.subject)         { errors.push(`Row ${i + 1}: missing subject`); continue; }
+          if (!r.marks)           { errors.push(`Row ${i + 1}: missing marks`); continue; }
+          rows.push(r);
+        }
       }
       setCsvRows(rows);
       setCsvErrors(errors);
@@ -973,10 +1006,13 @@ ADM002,Mathematics,92,100`;
               <div style={{ background: '#f8faff', border: '1.5px dashed #c7d2fe', borderRadius: 10, padding: 16, marginBottom: 14 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: '#4f46e5', marginBottom: 8 }}>CSV Format</div>
                 <code style={{ fontSize: 11, color: '#374151', display: 'block', background: '#fff', padding: 10, borderRadius: 6, marginBottom: 10, lineHeight: 1.7 }}>
-                  AdmissionNumber,Subject,Marks,MaxMarks<br/>
-                  ADM001,Mathematics,85,100<br/>
-                  ADM001,Science,78,100
+                  AdmissionNumber,StudentName,MaxMarks,Mathematics,Science,English<br/>
+                  ADM001,Alice Johnson,100,85,78,90<br/>
+                  ADM002,Bob Smith,100,72,80,88
                 </code>
+                <div style={{ fontSize: 11, color: '#64748b', marginBottom: 8 }}>
+                  One row per student · Subject names are column headers · MaxMarks applies to all subjects in that row
+                </div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   {isClassTeacher && myClassAssignment?.classId && (
                     <>
@@ -1009,23 +1045,25 @@ ADM002,Mathematics,92,100`;
               {/* Preview */}
               {csvRows.length > 0 && !csvResults && (
                 <div style={{ overflowX: 'auto', marginBottom: 12 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 6 }}>{csvRows.length} rows ready to import</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 6 }}>{csvRows.length} mark records parsed (ready to import)</div>
+                  <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                     <thead><tr style={{ background: '#f8faff' }}>
-                      {['Admission No.','Subject','Marks','Max Marks'].map(h => <th key={h} style={{ padding: '6px 10px', textAlign: 'left', fontWeight: 700, color: '#64748b', fontSize: 11, textTransform: 'uppercase', borderBottom: '1px solid #e2e8f0' }}>{h}</th>)}
+                      {['Admission No.','Subject','Marks','Max Marks'].map(h => <th key={h} style={{ padding: '6px 10px', textAlign: 'left', fontWeight: 700, color: '#64748b', fontSize: 11, textTransform: 'uppercase', borderBottom: '1px solid #e2e8f0', whiteSpace: 'nowrap' }}>{h}</th>)}
                     </tr></thead>
                     <tbody>
                       {csvRows.slice(0, 10).map((r, i) => (
                         <tr key={i} style={{ borderBottom: '1px solid #f9fafb' }}>
                           <td style={{ padding: '5px 10px' }}>{r.admissionNumber}</td>
-                          <td style={{ padding: '5px 10px' }}>{r.subject}</td>
+                          <td style={{ padding: '5px 10px', fontWeight: 600, color: '#4f46e5' }}>{r.subject}</td>
                           <td style={{ padding: '5px 10px' }}>{r.marks}</td>
                           <td style={{ padding: '5px 10px' }}>{r.maxMarks}</td>
                         </tr>
                       ))}
-                      {csvRows.length > 10 && <tr><td colSpan={4} style={{ padding: '5px 10px', color: '#94a3b8', fontSize: 11 }}>…and {csvRows.length - 10} more rows</td></tr>}
+                      {csvRows.length > 10 && <tr><td colSpan={4} style={{ padding: '5px 10px', color: '#94a3b8', fontSize: 11 }}>…and {csvRows.length - 10} more mark records</td></tr>}
                     </tbody>
                   </table>
+                  </div>
                 </div>
               )}
 
