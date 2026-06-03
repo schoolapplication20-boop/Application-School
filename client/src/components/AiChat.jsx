@@ -145,8 +145,10 @@ const AiChat = () => {
   const [initialized, setInitialized] = useState(false);
 
   /* draggable position — bottom/right offset from viewport edges */
-  const [pos, setPos] = useState({ bottom: 80, right: 28 });
-  const hasDragged    = useRef(false);
+  const [pos, setPos]   = useState({ bottom: 80, right: 28 });
+  const posRef          = useRef({ bottom: 80, right: 28 }); // always-current mirror for touch handler
+  const hasDragged      = useRef(false);
+  const fabRef          = useRef(null);
 
   const bottomRef  = useRef(null);
   const inputRef   = useRef(null);
@@ -353,43 +355,72 @@ const AiChat = () => {
     }
   };
 
-  /* ── Drag logic (mouse + touch) ─────────────────────────────────── */
-  const startDrag = (clientX, clientY, currentRight, currentBottom) => {
+  /* ── Mouse drag ─────────────────────────────────────────────────── */
+  const onFabMouseDown = (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
     hasDragged.current = false;
-    const startX = clientX, startY = clientY;
-    const startR = currentRight, startB = currentBottom;
-
-    const onMove = (ex, ey) => {
-      const dx = ex - startX, dy = ey - startY;
+    const startX = e.clientX, startY = e.clientY;
+    const startR = posRef.current.right, startB = posRef.current.bottom;
+    const onMove = (ev) => {
+      const dx = ev.clientX - startX, dy = ev.clientY - startY;
       if (Math.abs(dx) > 3 || Math.abs(dy) > 3) hasDragged.current = true;
-      setPos({
+      const next = {
         right:  Math.max(0, Math.min(window.innerWidth  - 64, startR - dx)),
         bottom: Math.max(0, Math.min(window.innerHeight - 64, startB - dy)),
-      });
+      };
+      posRef.current = next;
+      setPos(next);
     };
-
-    const onMouseMove = (e) => onMove(e.clientX, e.clientY);
-    const onTouchMove = (e) => { e.preventDefault(); onMove(e.touches[0].clientX, e.touches[0].clientY); };
-    const cleanup = () => {
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup',   cleanup);
-      window.removeEventListener('touchmove', onTouchMove);
-      window.removeEventListener('touchend',  cleanup);
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
     };
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup',   cleanup);
-    window.addEventListener('touchmove', onTouchMove, { passive: false });
-    window.addEventListener('touchend',  cleanup);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
   };
+
+  /* ── Touch drag — attached as non-passive via ref so preventDefault works ── */
+  useEffect(() => {
+    const el = fabRef.current;
+    if (!el) return;
+    const onTouchStart = (e) => {
+      e.preventDefault(); // stops browser scroll hijack — only works on non-passive listener
+      hasDragged.current = false;
+      const t0 = e.touches[0];
+      const startX = t0.clientX, startY = t0.clientY;
+      const startR = posRef.current.right, startB = posRef.current.bottom;
+      const onMove = (ev) => {
+        ev.preventDefault();
+        const t = ev.touches[0];
+        const dx = t.clientX - startX, dy = t.clientY - startY;
+        if (Math.abs(dx) > 3 || Math.abs(dy) > 3) hasDragged.current = true;
+        const next = {
+          right:  Math.max(0, Math.min(window.innerWidth  - 64, startR - dx)),
+          bottom: Math.max(0, Math.min(window.innerHeight - 64, startB - dy)),
+        };
+        posRef.current = next;
+        setPos(next);
+      };
+      const onEnd = () => {
+        window.removeEventListener('touchmove', onMove);
+        window.removeEventListener('touchend',  onEnd);
+      };
+      window.addEventListener('touchmove', onMove, { passive: false });
+      window.addEventListener('touchend',  onEnd);
+    };
+    el.addEventListener('touchstart', onTouchStart, { passive: false });
+    return () => el.removeEventListener('touchstart', onTouchStart);
+  }, []); // posRef is always current — no dep needed
 
   return (
     <>
       {/* FAB — draggable */}
       <button
+        ref={fabRef}
         className={`ai-fab ${open ? 'ai-fab--open' : ''}`}
         style={{ bottom: pos.bottom, right: pos.right }}
-        onMouseDown={(e) => { if (e.button !== 0) return; e.preventDefault(); startDrag(e.clientX, e.clientY, pos.right, pos.bottom); }}
-        onTouchStart={(e) => { startDrag(e.touches[0].clientX, e.touches[0].clientY, pos.right, pos.bottom); }}
+        onMouseDown={onFabMouseDown}
         onClick={() => { if (!hasDragged.current) setOpen(o => !o); }}
         title="My-Skoolz AI — drag to move"
       >
