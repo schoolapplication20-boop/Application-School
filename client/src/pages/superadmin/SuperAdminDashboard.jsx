@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '../../components/Layout';
 import { superAdminAPI, adminAPI, schoolAPI, marketingAPI, systemAPI, onboardingVerifyAPI, issueAPI } from '../../services/api';
+import OwnerActionOtpModal from '../../components/OwnerActionOtpModal';
 import { getLogs } from '../../services/activityLog';
 import { useAuth } from '../../context/AuthContext';
 import SEOMeta from '../../components/SEOMeta';
@@ -55,6 +56,8 @@ function OwnerDashboard() {
   const [deleting,           setDeleting]           = useState(false);
   const [schoolDeleteTarget,     setSchoolDeleteTarget]     = useState(null); // sa object — delete entire school
   const [schoolDeleting,         setSchoolDeleting]         = useState(false);
+  // OTP confirmation modal for destructive actions
+  const [otpAction, setOtpAction] = useState(null); // { title, description, onConfirmed }
   const [schoolSuspendTarget,    setSchoolSuspendTarget]    = useState(null); // sa object — suspend school
   const [schoolSuspending,       setSchoolSuspending]       = useState(false);
   const [schoolReactivateTarget, setSchoolReactivateTarget] = useState(null); // sa object — reactivate school
@@ -176,13 +179,23 @@ function OwnerDashboard() {
     finally { setSavingIssue(false); }
   };
 
-  const handleIssueDelete = async (id) => {
-    if (!window.confirm('Delete this issue permanently?')) return;
-    try {
-      await issueAPI.deleteIssue(id);
-      setIssues(prev => prev.filter(i => i.id !== id));
-      if (expandedIssue === id) setExpandedIssue(null);
-    } catch { /* ignore */ }
+  const handleIssueDelete = (id) => {
+    const issue = issues.find(i => i.id === id);
+    setOtpAction({
+      title: 'Delete Reported Issue',
+      description: (
+        <div>
+          <div style={{ fontSize: 13, color: '#2d3748', marginBottom: 6 }}>You are about to permanently delete this reported issue:</div>
+          <div style={{ fontWeight: 700, fontSize: 14, color: '#dc2626' }}>{issue?.title || `Issue #${id}`}</div>
+          <div style={{ fontSize: 12, color: '#718096', marginTop: 3 }}>{issue?.reporterName} · {issue?.category}</div>
+        </div>
+      ),
+      onConfirmed: async () => {
+        await issueAPI.deleteIssue(id);
+        setIssues(prev => prev.filter(i => i.id !== id));
+        if (expandedIssue === id) setExpandedIssue(null);
+      },
+    });
   };
 
   const markBookingContacted = async (id) => {
@@ -261,33 +274,49 @@ function OwnerDashboard() {
     load();
   };
 
-  const handleDeleteConfirm = async () => {
+  // Open OTP modal for delete super admin — close confirmation modal first
+  const handleDeleteConfirm = () => {
     if (!deleteTarget) return;
-    setDeleting(true);
-    try {
-      await superAdminAPI.deleteSuperAdmin(deleteTarget.id);
-      setDeleteTarget(null);
-      load();
-    } catch (err) {
-      alert(err.response?.data?.message || 'Failed to delete. Please try again.');
-    } finally {
-      setDeleting(false);
-    }
+    const target = deleteTarget;
+    setDeleteTarget(null); // close confirmation modal before opening OTP modal
+    setOtpAction({
+      title: 'Delete Super Admin',
+      description: (
+        <div>
+          <div style={{ fontSize: 13, color: '#2d3748', marginBottom: 6 }}>You are about to permanently delete the Super Admin account for:</div>
+          <div style={{ fontWeight: 700, fontSize: 15, color: '#dc2626' }}>{target.schoolName || '—'}</div>
+          <div style={{ fontSize: 12, color: '#718096', marginTop: 3 }}>{target.name} · {target.email}</div>
+          <div style={{ fontSize: 11, color: '#a0aec0', marginTop: 8 }}>The school record will be preserved. Only the login account will be removed.</div>
+        </div>
+      ),
+      onConfirmed: async () => {
+        await superAdminAPI.deleteSuperAdmin(target.id);
+        load();
+      },
+    });
   };
 
-  const handleSchoolDeleteConfirm = async () => {
+  // Open OTP modal for delete school — close confirmation modal first
+  const handleSchoolDeleteConfirm = () => {
     if (!schoolDeleteTarget) return;
-    setSchoolDeleting(true);
-    try {
-      await superAdminAPI.deleteSchool(schoolDeleteTarget.schoolActualId ?? schoolDeleteTarget.schoolDbId);
-      setSchoolDeleteTarget(null);
-      setSchoolDeleteConfirmName('');
-      load();
-    } catch (err) {
-      alert(err.response?.data?.message || 'Failed to delete school. Please try again.');
-    } finally {
-      setSchoolDeleting(false);
-    }
+    const target = schoolDeleteTarget;
+    setSchoolDeleteTarget(null); // close confirmation modal before opening OTP modal
+    setSchoolDeleteConfirmName('');
+    setOtpAction({
+      title: 'Delete Entire School',
+      description: (
+        <div>
+          <div style={{ fontSize: 13, color: '#2d3748', marginBottom: 6 }}>You are about to <strong>permanently delete the entire school</strong> and all its data:</div>
+          <div style={{ fontWeight: 700, fontSize: 15, color: '#dc2626' }}>{target.schoolName || '—'}</div>
+          <div style={{ fontSize: 12, color: '#718096', marginTop: 3 }}>{target.name} · {target.email}</div>
+          <div style={{ fontSize: 11, color: '#a0aec0', marginTop: 8 }}>All students, teachers, fees, and records will be wiped. This cannot be undone.</div>
+        </div>
+      ),
+      onConfirmed: async () => {
+        await superAdminAPI.deleteSchool(target.schoolActualId ?? target.schoolDbId);
+        load();
+      },
+    });
   };
 
   const handleSuspendConfirm = async () => {
@@ -329,6 +358,7 @@ function OwnerDashboard() {
   });
 
   return (
+    <>
     <Layout pageTitle="Platform Dashboard">
       <SEOMeta title="Platform Dashboard" description="Application owner overview — manage all schools on the My-Skoolz platform." />
 
@@ -1411,6 +1441,17 @@ function OwnerDashboard() {
         </div>
       )}
     </Layout>
+
+      {/* ── OTP Confirmation Modal for all destructive owner actions ─────────── */}
+      {otpAction && (
+        <OwnerActionOtpModal
+          title={otpAction.title}
+          description={otpAction.description}
+          onConfirmed={otpAction.onConfirmed}
+          onClose={() => setOtpAction(null)}
+        />
+      )}
+    </>
   );
 }
 

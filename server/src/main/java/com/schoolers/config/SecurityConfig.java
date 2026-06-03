@@ -141,6 +141,9 @@ public class SecurityConfig {
                 // ── Issue reporting — any authenticated user can submit; GET gated by @PreAuthorize ──
                 .requestMatchers("/api/issues/**").authenticated()
 
+                // ── Owner-only action confirmation (OTP for destructive operations) ──
+                .requestMatchers("/api/owner/**").hasRole("APPLICATION_OWNER")
+
                 .anyRequest().authenticated()
             )
 

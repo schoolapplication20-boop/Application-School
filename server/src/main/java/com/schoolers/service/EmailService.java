@@ -277,6 +277,35 @@ public class EmailService {
         }
     }
 
+    // ── Owner action confirmation OTP (critical — re-throws on failure) ─────
+
+    public void sendOwnerActionOtp(String ownerEmail, String otp) {
+        requireApiKey();
+        send(ownerEmail, "My-Skoolz — Action Confirmation OTP", buildOwnerActionOtpHtml(otp));
+        log.info("[EmailService] Owner action OTP sent to: " + ownerEmail);
+    }
+
+    private String buildOwnerActionOtpHtml(String otp) {
+        return "<!DOCTYPE html><html><body style='margin:0;padding:0;background:#f7fafc;font-family:Poppins,Arial,sans-serif;'>"
+            + "<div style='max-width:480px;margin:32px auto;background:#fff;border-radius:16px;padding:40px 36px;box-shadow:0 4px 24px rgba(0,0,0,0.08);'>"
+            + "<div style='text-align:center;margin-bottom:24px;'>"
+            + "<div style='width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,#dc2626,#991b1b);display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px;'>"
+            + "<span style='color:#fff;font-size:26px;'>⚠️</span></div>"
+            + "<h2 style='margin:0;color:#1a202c;font-size:20px;font-weight:800;'>Action Confirmation Required</h2>"
+            + "<p style='color:#718096;font-size:13px;margin:6px 0 0;'>My-Skoolz Platform — Owner Portal</p>"
+            + "</div>"
+            + "<p style='color:#4a5568;font-size:14px;line-height:1.7;'>You requested a one-time verification code to confirm a <strong>destructive action</strong> (such as deleting a school or admin account) on the My-Skoolz platform.</p>"
+            + "<p style='color:#4a5568;font-size:14px;'>Your confirmation code is:</p>"
+            + "<div style='background:#fff5f5;border:2px dashed #fc8181;border-radius:12px;padding:20px;text-align:center;margin:20px 0;'>"
+            + "<div style='font-size:38px;font-weight:800;letter-spacing:10px;color:#dc2626;font-family:monospace;'>" + otp + "</div>"
+            + "<div style='font-size:12px;color:#e53e3e;margin-top:8px;font-weight:600;'>Valid for 10 minutes</div>"
+            + "</div>"
+            + "<div style='background:#fff5f5;border-radius:8px;padding:12px 16px;border-left:4px solid #dc2626;'>"
+            + "<p style='margin:0;font-size:13px;color:#c53030;'><strong>⚠️ If you did not request this,</strong> your account may be at risk. Change your password immediately.</p>"
+            + "</div>"
+            + "</div></body></html>";
+    }
+
     // ── Issue report notification (fire-and-forget) ──────────────────────────
 
     public void sendIssueReportNotification(com.schoolers.model.IssueReport issue) {

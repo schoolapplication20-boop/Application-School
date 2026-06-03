@@ -688,7 +688,7 @@ public class AuthService {
      * 5-attempt limit and 10-min expiry still apply online).
      * The "VERIFIED" sentinel is stored as-is (no hash).
      */
-    static String hashOtp(String otp, String salt) {
+    public static String hashOtp(String otp, String salt) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             String input = (salt != null ? salt.toLowerCase() : "") + ":" + otp;

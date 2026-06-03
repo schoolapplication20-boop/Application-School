@@ -660,6 +660,15 @@ export const appointmentAPI = {
 };
 
 // ============================================
+// OWNER ACTION CONFIRMATION APIs
+// ============================================
+
+export const ownerAPI = {
+  requestActionOtp: ()      => api.post('/api/owner/confirm/request-otp'),
+  verifyActionOtp:  (otp)   => api.post('/api/owner/confirm/verify-otp', { otp }),
+};
+
+// ============================================
 // ISSUE REPORT APIs
 // ============================================
 
