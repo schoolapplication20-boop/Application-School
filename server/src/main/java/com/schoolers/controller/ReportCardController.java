@@ -21,6 +21,8 @@ public class ReportCardController {
     @Autowired private MarksRepository      marksRepository;
     @Autowired private AttendanceRepository attendanceRepository;
     @Autowired private SchoolRepository     schoolRepository;
+    @Autowired private com.schoolers.repository.TeacherRepository    teacherRepository;
+    @Autowired private com.schoolers.repository.ClassRoomRepository  classRoomRepository;
 
     /** Student fetches available exam filters (distinct exam types from their marks) */
     @GetMapping("/api/student/report-card/filters")
@@ -139,9 +141,35 @@ public class ReportCardController {
     public ResponseEntity<?> bulkImportMarksCsv(
             @org.springframework.web.bind.annotation.RequestBody Map<String, Object> body,
             Authentication auth) {
-        Long schoolId = userRepository.findByEmailIgnoreCase(auth.getName()).map(User::getSchoolId).orElse(null);
-        Long teacherId = userRepository.findByEmailIgnoreCase(auth.getName()).map(User::getId).orElse(null);
+        User caller = userRepository.findByEmailIgnoreCase(auth.getName()).orElse(null);
+        if (caller == null) return ResponseEntity.status(403).body(ApiResponse.error("User not found"));
+        Long schoolId = caller.getSchoolId();
+        Long teacherId = caller.getId();
         if (schoolId == null) return ResponseEntity.status(403).body(ApiResponse.error("School not found"));
+
+        // For TEACHER role: enforce class-teacher-only restriction and scope to their assigned class
+        String allowedClassName = null;
+        String allowedSection   = null;
+        if (caller.getRole() == User.Role.TEACHER) {
+            com.schoolers.model.Teacher teacher = teacherRepository.findByUserId(teacherId).orElse(null);
+            if (teacher == null) return ResponseEntity.status(403).body(ApiResponse.error("Teacher profile not found"));
+            String type = teacher.getTeacherType() != null ? teacher.getTeacherType() : "SUBJECT_TEACHER";
+            if (!"CLASS_TEACHER".equalsIgnoreCase(type) && !"BOTH".equalsIgnoreCase(type))
+                return ResponseEntity.status(403).body(ApiResponse.error("Only class teachers can do bulk CSV import of marks."));
+            // Find their assigned classroom
+            com.schoolers.model.ClassRoom room = null;
+            if (teacher.getPrimaryClassId() != null)
+                room = classRoomRepository.findById(teacher.getPrimaryClassId()).orElse(null);
+            if (room == null) {
+                java.util.List<com.schoolers.model.ClassRoom> byTeacher = schoolId != null
+                        ? classRoomRepository.findBySchoolIdAndTeacherId(schoolId, teacherId)
+                        : classRoomRepository.findByTeacherId(teacherId);
+                if (!byTeacher.isEmpty()) room = byTeacher.get(0);
+            }
+            if (room == null) return ResponseEntity.status(403).body(ApiResponse.error("No class assigned to you as class teacher."));
+            allowedClassName = room.getName();
+            allowedSection   = room.getSection();
+        }
 
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> rows = (List<Map<String, Object>>) body.get("rows");
@@ -171,6 +199,19 @@ public class ReportCardController {
             found = found.stream().filter(s -> schoolId.equals(s.getSchoolId())).collect(Collectors.toList());
             if (found.isEmpty()) { res.put("status", "error"); res.put("message", "Student not found"); results.add(res); continue; }
             com.schoolers.model.Student student = found.get(0);
+
+            // Enforce class-teacher scope: student must be in the teacher's assigned class
+            if (allowedClassName != null) {
+                boolean classMatch = allowedClassName.equalsIgnoreCase(student.getClassName());
+                boolean sectionMatch = allowedSection == null || allowedSection.isBlank()
+                        || allowedSection.equalsIgnoreCase(student.getSection() != null ? student.getSection() : "");
+                if (!classMatch || !sectionMatch) {
+                    String allowed = allowedClassName + (allowedSection != null && !allowedSection.isBlank() ? " - " + allowedSection : "");
+                    res.put("status", "error");
+                    res.put("message", "Student not in your class (" + allowed + ")");
+                    results.add(res); continue;
+                }
+            }
 
             double marksVal, maxVal;
             try { marksVal = Double.parseDouble(marksS); maxVal = Double.parseDouble(maxS); }
