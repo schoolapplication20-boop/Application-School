@@ -16,9 +16,10 @@ const COL_MAP = {
   "mother's phone": 'motherPhone', 'mother phone': 'motherPhone', 'mother mobile': 'motherPhone',
   'permanent address': 'address', 'address': 'address',
   'id proof file name': 'idProofFileName', 'id proof': 'idProofFileName',
+  'student email': 'studentEmail', 'email': 'studentEmail', 'student email id': 'studentEmail',
 };
 
-const REQUIRED = ['fullName', 'rollNumber', 'className'];
+const REQUIRED = ['fullName', 'rollNumber', 'className', 'studentEmail'];
 const PHONE_RE  = /^\d{10}$/;
 
 const STEPS = ['Upload', 'Preview', 'Results'];
@@ -28,8 +29,10 @@ function validateRow(row, idx, seenAdmNos, seenRollKeys) {
   const errors = [];
 
   REQUIRED.forEach(f => {
-    if (!row[f] || String(row[f]).trim() === '')
-      errors.push(`${f === 'fullName' ? 'Full Name' : f === 'rollNumber' ? 'Roll Number' : 'Class'} is required`);
+    if (!row[f] || String(row[f]).trim() === '') {
+      const label = f === 'fullName' ? 'Full Name' : f === 'rollNumber' ? 'Roll Number' : f === 'studentEmail' ? 'Student Email' : 'Class';
+      errors.push(`${label} is required`);
+    }
   });
 
   if (row.fatherPhone && !PHONE_RE.test(String(row.fatherPhone).replace(/\s/g, '')))
@@ -95,11 +98,13 @@ function parseFile(file) {
 function downloadTemplate() {
   const headers = [
     'Admission Number', 'Full Name', 'Roll Number', 'Class', 'Section',
+    'Student Email',
     "Father's Name", "Father's Phone", "Mother's Name", "Mother's Phone",
     'Permanent Address', 'ID Proof File Name',
   ];
   const sample = [
     'ADM001', 'Rahul Sharma', '1', 'Class 10', 'A',
+    'rahul.sharma@email.com',
     'Raj Sharma', '9876543210', 'Priya Sharma', '9876543211',
     '123 Main Street, Hyderabad', 'aadhar.pdf',
   ];

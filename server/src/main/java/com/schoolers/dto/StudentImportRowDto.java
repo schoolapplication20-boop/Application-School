@@ -20,4 +20,5 @@ public class StudentImportRowDto {
     private String motherPhone;
     private String address;
     private String idProofFileName;
+    private String studentEmail;  // optional — if provided, account is created and activation email is sent
 }

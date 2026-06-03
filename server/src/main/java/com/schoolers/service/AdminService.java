@@ -287,6 +287,7 @@ public class AdminService {
         String name = str(body, "name", null);
         if (name == null || name.isBlank()) return ApiResponse.<Map<String, Object>>error("Student name is required");
 
+        boolean isBulkImport = Boolean.TRUE.equals(body.get("bulkImport"));
         String studentEmailRaw = str(body, "studentEmail", null);
         if (studentEmailRaw == null || studentEmailRaw.isBlank())
             return ApiResponse.<Map<String, Object>>error("Student email is required");
@@ -294,6 +295,9 @@ public class AdminService {
             return ApiResponse.<Map<String, Object>>error("A valid student email address is required");
         if (userRepository.existsByEmailIgnoreCase(studentEmailRaw.trim()))
             return ApiResponse.<Map<String, Object>>error("Email '" + studentEmailRaw.trim().toLowerCase() + "' is already registered. Use a different email.");
+        // For bulk import: OTP verification is bypassed — account is created with isActive=false
+        // and activation OTP is sent by BulkImportService after this call returns.
+        // For individual creation via UI: OTP is verified by AdminController before calling here.
 
         String parentMobileRaw = str(body, "parentMobile", str(body, "fatherPhone", str(body, "mobile", null)));
         if (parentMobileRaw == null || parentMobileRaw.isBlank())

@@ -18,10 +18,12 @@ public class BulkImportService {
 
     private static final Logger log = Logger.getLogger(BulkImportService.class.getName());
 
-    @Autowired private AdminService         adminService;
-    @Autowired private ImportLogRepository  importLogRepo;
-    @Autowired private StudentRepository    studentRepo;
-    @Autowired private ObjectMapper         objectMapper;
+    @Autowired private AdminService              adminService;
+    @Autowired private ImportLogRepository       importLogRepo;
+    @Autowired private StudentRepository         studentRepo;
+    @Autowired private com.schoolers.repository.UserRepository userRepository;
+    @Autowired private EmailService              emailService;
+    @Autowired private ObjectMapper              objectMapper;
 
     public BulkImportResult importStudents(BulkImportRequest request,
                                            Long schoolId,
@@ -65,8 +67,20 @@ public class BulkImportService {
                 continue;
             }
 
+            // Validate email is present for bulk import (mandatory)
+            String emailRaw = row.getStudentEmail() != null ? row.getStudentEmail().trim() : null;
+            if (emailRaw == null || emailRaw.isBlank()) {
+                failed.add(new FailedRowDto(row.getRowNumber(), row.getFullName(),
+                    row.getAdmissionNumber(), row.getRollNumber(), row.getClassName(),
+                    "Student email is required for bulk import"));
+                if (!skipInvalid) break;
+                continue;
+            }
+
             try {
                 Map<String, Object> body = buildStudentMap(row, schoolId);
+                // Pass a flag so createStudent skips OTP check (admin is vouching)
+                body.put("bulkImport", true);
                 ApiResponse<Map<String, Object>> result = adminService.createStudent(body);
 
                 if (result.isSuccess()) {
@@ -74,6 +88,18 @@ public class BulkImportService {
                     if (admNo != null) {
                         batchAdmNos.add(admNo);
                         existingAdmNos.add(admNo);
+                    }
+
+                    // After import: set account as inactive + send activation OTP
+                    com.schoolers.model.User studentUser = userRepository.findByEmailIgnoreCase(emailRaw.toLowerCase()).orElse(null);
+                    if (studentUser != null) {
+                        String otp = String.format("%06d", 100000 + new java.util.Random().nextInt(900000));
+                        studentUser.setIsActive(false);
+                        studentUser.setResetOtp(otp); // plain OTP for verifyRegistrationEmail
+                        studentUser.setOtpExpiry(java.time.LocalDateTime.now().plusDays(7)); // 7-day window
+                        userRepository.save(studentUser);
+                        try { emailService.sendRegistrationOtp(emailRaw.toLowerCase(), row.getFullName(), otp); }
+                        catch (Exception ignored) { /* non-critical */ }
                     }
                 } else {
                     failed.add(new FailedRowDto(row.getRowNumber(), row.getFullName(),
@@ -153,6 +179,8 @@ public class BulkImportService {
         map.put("motherMobile",   row.getMotherPhone());
         map.put("address",        row.getAddress());
         map.put("idProofName",    row.getIdProofFileName());
+        if (row.getStudentEmail() != null && !row.getStudentEmail().isBlank())
+            map.put("studentEmail", row.getStudentEmail().trim());
         return map;
     }
 

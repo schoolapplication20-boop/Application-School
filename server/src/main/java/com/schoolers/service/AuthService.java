@@ -86,9 +86,9 @@ public class AuthService {
 
             // ── Step 2: Status checks ──────────────────────────────────────
             if (!Boolean.TRUE.equals(user.getIsActive())) {
-                // Self-registered SUPER_ADMIN whose email verification is still pending
-                if (user.getRole() == User.Role.SUPER_ADMIN && user.getResetOtp() != null) {
-                    return ApiResponse.error("Please verify your email before logging in. Check your inbox for the verification OTP.");
+                // Account pending email verification (SUPER_ADMIN self-registered OR student bulk-imported)
+                if (user.getResetOtp() != null) {
+                    return ApiResponse.error("Please verify your email before logging in. Check your inbox for the 6-digit activation OTP.");
                 }
                 return ApiResponse.error("Your account has been deactivated. Please contact admin.");
             }
