@@ -664,8 +664,9 @@ export const appointmentAPI = {
 // ============================================
 
 export const ownerAPI = {
-  requestActionOtp: ()      => api.post('/api/owner/confirm/request-otp'),
-  verifyActionOtp:  (otp)   => api.post('/api/owner/confirm/verify-otp', { otp }),
+  requestActionOtp: ()                       => api.post('/api/owner/confirm/request-otp'),
+  verifyActionOtp:  (otp)                    => api.post('/api/owner/confirm/verify-otp', { otp }),
+  setUserLimit:     (schoolDbId, userLimit)  => api.patch(`/api/owner/schools/${schoolDbId}/user-limit`, { userLimit }),
 };
 
 // ============================================

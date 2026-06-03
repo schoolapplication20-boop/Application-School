@@ -42,7 +42,8 @@ public class AdminService {
     @Autowired private FeeRepository feeRepository;
     @Autowired private FeePaymentRepository feePaymentRepository;
     @Autowired private ExpenseRepository expenseRepository;
-    @Autowired private UserRepository userRepository;
+    @Autowired private UserRepository  userRepository;
+    @Autowired private SchoolRepository schoolRepository;
     @Autowired private ParentProfileRepository parentProfileRepository;
     @Autowired private AttendanceRepository attendanceRepository;
     @Autowired private PasswordEncoder passwordEncoder;
@@ -301,6 +302,10 @@ public class AdminService {
         // Extract schoolId injected by AdminController from authenticated user
         Long schoolId = body.get("schoolId") != null
                 ? Long.parseLong(body.get("schoolId").toString()) : null;
+
+        // Enforce per-school user limit
+        ApiResponse<Map<String, Object>> limitErr = checkUserLimit(schoolId);
+        if (limitErr != null) return limitErr;
 
         String className = resolveClassName(str(body, "className", str(body, "class", "")));
         String section   = normalizeSection(str(body, "section", ""));
@@ -737,6 +742,10 @@ public class AdminService {
 
         String normalizedEmail  = req.getEmail().trim().toLowerCase();
         String normalizedMobile = req.getMobile().trim();
+
+        // Enforce per-school user limit
+        ApiResponse<Map<String, Object>> limitErr = checkUserLimit(req.getSchoolId());
+        if (limitErr != null) return limitErr;
 
         // Case-insensitive pre-check — prevents duplicate accounts regardless of email casing
         if (userRepository.existsByEmailIgnoreCase(normalizedEmail))
@@ -2323,6 +2332,18 @@ public class AdminService {
     }
 
     @SuppressWarnings("unchecked")
+    /** Returns an error ApiResponse if the school's user limit would be exceeded, null if OK. */
+    private <T> ApiResponse<T> checkUserLimit(Long schoolId) {
+        if (schoolId == null) return null;
+        com.schoolers.model.School school = schoolRepository.findById(schoolId).orElse(null);
+        if (school == null || school.getUserLimit() == null) return null; // no limit set
+        long current = userRepository.countBySchoolId(schoolId);
+        if (current >= school.getUserLimit())
+            return ApiResponse.error("User limit reached (" + current + "/" + school.getUserLimit()
+                    + "). Please ask the platform owner to increase the limit.");
+        return null;
+    }
+
     private String str(Map<String, Object> map, String key, String fallback) {
         Object v = map.get(key);
         return v instanceof String ? (String) v : fallback;

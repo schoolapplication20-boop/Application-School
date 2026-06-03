@@ -1,7 +1,9 @@
 package com.schoolers.controller;
 
 import com.schoolers.dto.ApiResponse;
+import com.schoolers.model.School;
 import com.schoolers.model.User;
+import com.schoolers.repository.SchoolRepository;
 import com.schoolers.repository.UserRepository;
 import com.schoolers.service.AuthService;
 import com.schoolers.service.EmailService;
@@ -22,8 +24,9 @@ import java.util.Map;
 @PreAuthorize("hasRole('APPLICATION_OWNER')")
 public class OwnerController {
 
-    @Autowired private UserRepository userRepository;
-    @Autowired private EmailService   emailService;
+    @Autowired private UserRepository  userRepository;
+    @Autowired private SchoolRepository schoolRepository;
+    @Autowired private EmailService    emailService;
 
     private static final SecureRandom RANDOM = new SecureRandom();
 
@@ -93,6 +96,40 @@ public class OwnerController {
         userRepository.save(owner);
 
         return ResponseEntity.ok(ApiResponse.success("OTP verified."));
+    }
+
+    /**
+     * Set or clear the user limit for a school.
+     * Body: { "userLimit": 1000 }  — send null to remove the limit.
+     */
+    @PatchMapping("/schools/{schoolDbId}/user-limit")
+    public ResponseEntity<ApiResponse<String>> setUserLimit(
+            @PathVariable Long schoolDbId,
+            @RequestBody Map<String, Object> body) {
+
+        School school = schoolRepository.findById(schoolDbId).orElse(null);
+        if (school == null)
+            return ResponseEntity.status(404).body(ApiResponse.error("School not found."));
+
+        Object raw = body.get("userLimit");
+        if (raw == null) {
+            school.setUserLimit(null); // remove limit
+        } else {
+            try {
+                int limit = Integer.parseInt(raw.toString());
+                if (limit < 1)
+                    return ResponseEntity.badRequest().body(ApiResponse.error("User limit must be at least 1."));
+                school.setUserLimit(limit);
+            } catch (NumberFormatException e) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("userLimit must be a number."));
+            }
+        }
+
+        schoolRepository.save(school);
+        String msg = school.getUserLimit() == null
+                ? "User limit removed — school now has no limit."
+                : "User limit set to " + school.getUserLimit() + ".";
+        return ResponseEntity.ok(ApiResponse.success(msg));
     }
 
     private User resolve(Authentication auth) {

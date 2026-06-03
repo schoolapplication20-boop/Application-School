@@ -113,6 +113,10 @@ public class School {
     @Builder.Default
     private Boolean isSetupCompleted = false;
 
+    // ── User Limit (set by platform owner; null = unlimited) ─────────────────
+    @Column(name = "user_limit")
+    private Integer userLimit;
+
     // ── Status ───────────────────────────────────────────────────────────────
     @Column(name = "is_active")
     @Builder.Default

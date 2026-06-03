@@ -505,6 +505,10 @@ public class DatabaseMigration implements CommandLineRunner {
         exec("CREATE INDEX IF NOT EXISTS idx_users_username       ON users(username)");
         log.debug("Production performance indexes ensured.");
 
+        // ── schools: user_limit column ────────────────────────────────────────────
+        exec("ALTER TABLE schools ADD COLUMN IF NOT EXISTS user_limit INTEGER");
+        log.debug("schools.user_limit column ensured.");
+
         // ── issue_reports table ───────────────────────────────────────────────────
         exec("CREATE TABLE IF NOT EXISTS issue_reports (" +
              "id BIGSERIAL PRIMARY KEY, " +

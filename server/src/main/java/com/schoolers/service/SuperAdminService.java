@@ -98,6 +98,18 @@ public class SuperAdminService {
         String normalizedEmail  = email.trim().toLowerCase();
         String normalizedMobile = mobile.trim();
 
+        // Enforce per-school user limit
+        if (schoolId != null) {
+            School school = schoolRepository.findById(schoolId)
+                    .orElseGet(() -> schoolRepository.findBySchoolId(schoolId.intValue()).orElse(null));
+            if (school != null && school.getUserLimit() != null) {
+                long current = userRepository.countBySchoolId(schoolId);
+                if (current >= school.getUserLimit())
+                    return ApiResponse.error("User limit reached (" + current + "/" + school.getUserLimit()
+                            + "). Please ask the platform owner to increase the limit.");
+            }
+        }
+
         // Case-insensitive pre-check — prevents duplicate accounts regardless of email casing
         if (userRepository.existsByEmailIgnoreCase(normalizedEmail))
             return ApiResponse.error("Email '" + normalizedEmail + "' is already registered. Use a different email.");
@@ -342,6 +354,8 @@ public class SuperAdminService {
                     dto.put("permissions",        sa.getPermissions());
                     dto.put("schoolFeatures",     school.getFeatures()); // raw JSON string — parsed on frontend
                     dto.put("schoolActive",       Boolean.TRUE.equals(school.getIsActive()));
+                    dto.put("userLimit",          school.getUserLimit());
+                    dto.put("userCount",          userRepository.countBySchoolId(school.getId()));
                 } else {
                     dto.put("needsSchoolSetup", true);
                 }

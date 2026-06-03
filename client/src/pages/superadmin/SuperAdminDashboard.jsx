@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '../../components/Layout';
-import { superAdminAPI, adminAPI, schoolAPI, marketingAPI, systemAPI, onboardingVerifyAPI, issueAPI } from '../../services/api';
+import { superAdminAPI, adminAPI, schoolAPI, marketingAPI, systemAPI, onboardingVerifyAPI, issueAPI, ownerAPI } from '../../services/api';
 import OwnerActionOtpModal from '../../components/OwnerActionOtpModal';
 import { getLogs } from '../../services/activityLog';
 import { useAuth } from '../../context/AuthContext';
@@ -67,6 +67,28 @@ function OwnerDashboard() {
   const [editTarget,   setEditTarget]   = useState(null); // sa object being edited
   const [demoBookings, setDemoBookings] = useState([]);
   const [bookingsLoading, setBookingsLoading] = useState(true);
+
+  // ── User limit editing (per school) ─────────────────────────────────────────
+  const [limitEdit,    setLimitEdit]    = useState({});  // { [schoolDbId]: string input value }
+  const [limitSaving,  setLimitSaving]  = useState({});  // { [schoolDbId]: bool }
+
+  const openLimitEdit  = (sa) => setLimitEdit(prev => ({ ...prev, [sa.schoolDbId]: String(sa.userLimit ?? '') }));
+  const closeLimitEdit = (id) => setLimitEdit(prev => { const n = { ...prev }; delete n[id]; return n; });
+
+  const saveLimitFor = async (sa) => {
+    const raw = limitEdit[sa.schoolDbId];
+    const userLimit = raw === '' ? null : Number(raw);
+    if (raw !== '' && (isNaN(userLimit) || userLimit < 1)) return;
+    setLimitSaving(prev => ({ ...prev, [sa.schoolDbId]: true }));
+    try {
+      await ownerAPI.setUserLimit(sa.schoolActualId ?? sa.schoolDbId, userLimit);
+      setSuperAdmins(prev => prev.map(s =>
+        s.schoolDbId === sa.schoolDbId ? { ...s, userLimit } : s
+      ));
+      closeLimitEdit(sa.schoolDbId);
+    } catch { /* silent — leave input open */ }
+    finally { setLimitSaving(prev => ({ ...prev, [sa.schoolDbId]: false })); }
+  };
 
   // ── Reported Issues ──────────────────────────────────────────────────────────
   const [issues,         setIssues]         = useState([]);
@@ -502,6 +524,13 @@ function OwnerDashboard() {
                           <span style={{ padding: '3px 10px', background: '#3182ce18', color: '#2c5282', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>
                             {enabledCount} / {ALL_MODULES.length}
                           </span>
+                          <div style={{ marginTop: 4, fontSize: 11, color: '#64748b', fontWeight: 600 }}>
+                            <span className="material-icons" style={{ fontSize: 11, verticalAlign: 'middle', marginRight: 3 }}>people</span>
+                            {(sa.userCount ?? 0).toLocaleString()}
+                            {sa.userLimit
+                              ? <span style={{ color: '#94a3b8' }}> / {sa.userLimit.toLocaleString()}</span>
+                              : <span style={{ color: '#cbd5e0' }}> / ∞</span>}
+                          </div>
                         </td>
                         <td>
                           {sa.needsSchoolSetup ? (
@@ -610,12 +639,73 @@ function OwnerDashboard() {
                         <tr>
                           <td colSpan={8} style={{ padding: 0, background: '#fafbff', borderTop: '1px dashed #e2e8f0' }}>
                             <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
-                              {/* School info */}
+                              {/* School info + User Limit */}
                               <div style={{ background: '#fff', borderRadius: 10, padding: '12px 14px', border: '1.5px solid #e2e8f0' }}>
                                 <div style={{ fontSize: 11, fontWeight: 700, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>School Info</div>
                                 <InfoRow icon="school"           label="Name"   value={sa.schoolName || '—'} />
                                 <InfoRow icon="tag"              label="Code"   value={<span style={{ fontFamily:'monospace', fontWeight:700 }}>{sa.schoolCode || '—'}</span>} />
                                 <InfoRow icon="fingerprint"      label="DB ID"  value={`#${sa.schoolDbId}`} />
+
+                                {/* ── User Count / Limit ── */}
+                                <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #f1f5f9' }}>
+                                  <div style={{ fontSize: 11, fontWeight: 700, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>User Limit</div>
+
+                                  {/* Count / limit bar */}
+                                  {(() => {
+                                    const count = sa.userCount ?? 0;
+                                    const limit = sa.userLimit;
+                                    const pct   = limit ? Math.min(100, Math.round((count / limit) * 100)) : 0;
+                                    const color = pct >= 90 ? '#dc2626' : pct >= 70 ? '#f59e0b' : '#22c55e';
+                                    return (
+                                      <div style={{ marginBottom: 8 }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                                          <span style={{ fontSize: 13, fontWeight: 800, color: '#1e293b' }}>
+                                            {count.toLocaleString()}
+                                            {limit ? <span style={{ color: '#94a3b8', fontWeight: 400 }}> / {limit.toLocaleString()}</span> : <span style={{ color: '#94a3b8', fontSize: 11, fontWeight: 400 }}> / ∞ unlimited</span>}
+                                          </span>
+                                          {limit && <span style={{ fontSize: 11, fontWeight: 700, color }}>{pct}%</span>}
+                                        </div>
+                                        {limit && (
+                                          <div style={{ height: 6, background: '#f1f5f9', borderRadius: 4, overflow: 'hidden' }}>
+                                            <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 4, transition: 'width 0.4s' }} />
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })()}
+
+                                  {/* Edit limit inline */}
+                                  {limitEdit[sa.schoolDbId] !== undefined ? (
+                                    <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+                                      <input
+                                        type="number" min="1"
+                                        placeholder="e.g. 1000"
+                                        value={limitEdit[sa.schoolDbId]}
+                                        onChange={e => setLimitEdit(prev => ({ ...prev, [sa.schoolDbId]: e.target.value }))}
+                                        style={{ width: 80, padding: '4px 8px', fontSize: 12, border: '1.5px solid #e2e8f0', borderRadius: 6, outline: 'none' }}
+                                        onKeyDown={e => { if (e.key === 'Enter') saveLimitFor(sa); if (e.key === 'Escape') closeLimitEdit(sa.schoolDbId); }}
+                                        autoFocus
+                                      />
+                                      <button onClick={() => saveLimitFor(sa)} disabled={limitSaving[sa.schoolDbId]}
+                                        style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: '#4f46e5', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                                        {limitSaving[sa.schoolDbId] ? '…' : 'Save'}
+                                      </button>
+                                      <button onClick={() => saveLimitFor({ ...sa, userLimit: null })} disabled={limitSaving[sa.schoolDbId]}
+                                        title="Remove limit (unlimited)"
+                                        style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#fff', color: '#94a3b8', fontSize: 11, cursor: 'pointer' }}>
+                                        ∞
+                                      </button>
+                                      <button onClick={() => closeLimitEdit(sa.schoolDbId)}
+                                        style={{ padding: '4px 6px', borderRadius: 6, border: 'none', background: 'none', color: '#94a3b8', fontSize: 14, cursor: 'pointer' }}>✕</button>
+                                    </div>
+                                  ) : (
+                                    <button onClick={() => openLimitEdit(sa)}
+                                      style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#f8faff', color: '#4f46e5', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                                      <span className="material-icons" style={{ fontSize: 13 }}>edit</span>
+                                      {sa.userLimit ? 'Edit Limit' : 'Set Limit'}
+                                    </button>
+                                  )}
+                                </div>
                               </div>
                               {/* Super admin */}
                               <div style={{ background: '#fff', borderRadius: 10, padding: '12px 14px', border: '1.5px solid #e2e8f0' }}>
