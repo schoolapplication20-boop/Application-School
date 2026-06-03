@@ -22,6 +22,7 @@ const adminNavItems = [
   { path: '/admin/attendance-report',  icon: 'fact_check',              label: 'Attendance Report',  permKey: 'attendance' },
   { path: '/admin/teacher-attendance', icon: 'co_present',              label: 'Teacher Attendance',  permKey: null },
   { path: '/admin/timetable',          icon: 'schedule',                label: 'Timetable',          permKey: 'timetable' },
+  { path: '/report-cards',              icon: 'assessment',              label: 'Report Cards',        permKey: 'examination' },
   { path: '/admin/examination',        icon: 'verified',                label: 'Exam & Certificates', permKey: 'examination' },
   { path: '/admin/messages',            icon: 'campaign',                label: 'Messages',            permKey: 'messages' },
   { path: '/school/calendar',           icon: 'event',                   label: 'School Calendar',      permKey: null },
@@ -54,6 +55,7 @@ const teacherNavItems = [
   { path: '/teacher/leave-approval',  icon: 'how_to_reg',     label: 'Leave Approval',      moduleKey: 'leave' },
   { path: '/teacher/leave-request',   icon: 'event_busy',     label: 'Leave Request',       moduleKey: 'leave' },
   { path: '/teacher/my-attendance',   icon: 'co_present',     label: 'My Attendance',       moduleKey: 'attendance' },
+  { path: '/report-cards',             icon: 'assessment',     label: 'Report Cards',        moduleKey: 'examination' },
   { path: '/teacher/examination',     icon: 'verified',       label: 'Exam & Certificates', moduleKey: 'examination' },
   { path: '/school/calendar',         icon: 'event',          label: 'School Calendar',     moduleKey: null },
 ];

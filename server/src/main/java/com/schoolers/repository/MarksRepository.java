@@ -35,6 +35,18 @@ public interface MarksRepository extends JpaRepository<Marks, Long> {
 
     long countByStudentId(Long studentId);
 
+    /** All marks for a school, optionally filtered by exam type */
+    @Query("SELECT m FROM Marks m WHERE m.schoolId = :schoolId AND (:examType IS NULL OR m.examType = :examType) ORDER BY m.examDate DESC")
+    List<Marks> findBySchoolIdAndExamTypeOptional(@Param("schoolId") Long schoolId, @Param("examType") String examType);
+
+    /** All marks for a set of student IDs, optionally filtered by exam type */
+    @Query("SELECT m FROM Marks m WHERE m.studentId IN :studentIds AND (:examType IS NULL OR m.examType = :examType)")
+    List<Marks> findByStudentIdsAndExamType(@Param("studentIds") List<Long> studentIds, @Param("examType") String examType);
+
+    /** Distinct exam types for a school */
+    @Query("SELECT DISTINCT m.examType FROM Marks m WHERE m.schoolId = :schoolId AND m.examType IS NOT NULL ORDER BY m.examType")
+    List<String> findDistinctExamTypesBySchoolId(@Param("schoolId") Long schoolId);
+
     @Modifying @Transactional
     void deleteByStudentId(Long studentId);
 

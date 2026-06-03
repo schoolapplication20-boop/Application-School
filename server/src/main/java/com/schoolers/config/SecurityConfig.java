@@ -138,6 +138,9 @@ public class SecurityConfig {
                 // ── User profile ──────────────────────────────────────────────
                 .requestMatchers("/api/user/**").authenticated()
 
+                // ── Report cards — shared endpoints gated by @PreAuthorize ─────────
+                .requestMatchers("/api/report-cards/**").authenticated()
+
                 // ── Issue reporting — any authenticated user can submit; GET gated by @PreAuthorize ──
                 .requestMatchers("/api/issues/**").authenticated()
 

@@ -636,9 +636,16 @@ export const examTypeAPI = {
 // REPORT CARD APIs
 // ============================================
 export const reportCardAPI = {
+  // Student
   getMyReportCard:      (examType)  => api.get('/api/student/report-card', { params: examType ? { examType } : {} }),
   getMyFilters:         ()          => api.get('/api/student/report-card/filters'),
+  // Admin (legacy)
   getStudentReportCard: (studentId, examType) => api.get(`/api/admin/students/${studentId}/report-card`, { params: examType ? { examType } : {} }),
+  // Shared (admin, super admin, teacher)
+  getSchoolFilters:     ()          => api.get('/api/report-cards/filters'),
+  getClassReportCards:  (params)    => api.get('/api/report-cards/class', { params }),
+  getAnyStudentCard:    (studentId, params) => api.get(`/api/report-cards/student/${studentId}`, { params }),
+  bulkImportMarksCsv:   (data)      => api.post('/api/teacher/marks/bulk-csv', data),
 };
 
 export const meetingAPI = {

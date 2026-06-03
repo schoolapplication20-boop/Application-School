@@ -88,6 +88,7 @@ import MeetingBookings       from './pages/student/MeetingBookings';
 
 // Shared pages
 import SchoolCalendar        from './pages/shared/SchoolCalendar';
+import ReportCardHub         from './pages/shared/ReportCardHub';
 
 // Public pages
 import ParentAcknowledge     from './pages/auth/ParentAcknowledge';
@@ -203,6 +204,7 @@ function App() {
             {/* SUPER_ADMIN-only school management routes.
                 APPLICATION_OWNER is blocked here by ProtectedRoute — they manage
                 schools via the platform dashboard, not these school-level pages. */}
+            <Route path="/report-cards"                 element={<ProtectedRoute allowedRoles={['ADMIN','SUPER_ADMIN','TEACHER']}><ReportCardHub /></ProtectedRoute>} />
             <Route path="/superadmin/admins"            element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']}><AdminManagement /></ProtectedRoute>} />
             <Route path="/superadmin/exam-schedule"     element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']}><ExamSchedulePage /></ProtectedRoute>} />
             <Route path="/superadmin/setup-school"      element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']}><SetupSchool /></ProtectedRoute>} />

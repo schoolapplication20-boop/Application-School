@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Layout from '../../components/Layout';
 import Toast from '../../components/Toast';
 import { useAuth } from '../../context/AuthContext';
-import { teacherAPI, examTypeAPI, gradeScaleAPI } from '../../services/api';
+import { teacherAPI, examTypeAPI, gradeScaleAPI, reportCardAPI } from '../../services/api';
 
 const FALLBACK_EXAM_TYPES = ['Unit Test 1', 'Unit Test 2', 'Mid Term', 'Final Exam', 'Annual Exam'];
 const SUBJECTS = [
@@ -119,6 +119,74 @@ export default function Marks() {
   // grid[studentId][subject] = marks string value
   const [grid, setGrid]                       = useState({});
   const [saving, setSaving]                   = useState(false);
+
+  // ── CSV Import state ────────────────────────────────────────────────────────
+  const [showCsvModal,  setShowCsvModal]  = useState(false);
+  const [csvExamType,   setCsvExamType]   = useState('');
+  const [csvDate,       setCsvDate]       = useState('');
+  const [csvRows,       setCsvRows]       = useState([]); // parsed rows
+  const [csvErrors,     setCsvErrors]     = useState([]);
+  const [csvImporting,  setCsvImporting]  = useState(false);
+  const [csvResults,    setCsvResults]    = useState(null);
+  const csvFileRef = useRef(null);
+
+  const SAMPLE_CSV = `AdmissionNumber,Subject,Marks,MaxMarks
+ADM001,Mathematics,85,100
+ADM001,Science,78,100
+ADM002,Mathematics,92,100`;
+
+  const downloadSampleCsv = () => {
+    const blob = new Blob([SAMPLE_CSV], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'marks_import_sample.csv'; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const parseCsvFile = (file) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const lines = e.target.result.split('\n').map(l => l.trim()).filter(Boolean);
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+      const rows = [];
+      const errors = [];
+      for (let i = 1; i < lines.length; i++) {
+        const vals = lines[i].split(',').map(v => v.trim());
+        if (vals.length < 4) { errors.push(`Row ${i + 1}: insufficient columns`); continue; }
+        const row = {};
+        headers.forEach((h, idx) => { row[h] = vals[idx] || ''; });
+        // Normalise header names
+        const r = {
+          admissionNumber: row['admissionnumber'] || row['admission_number'] || row['admno'] || '',
+          subject:         row['subject'] || '',
+          marks:           row['marks'] || '',
+          maxMarks:        row['maxmarks'] || row['max_marks'] || row['maxmark'] || '100',
+        };
+        if (!r.admissionNumber) { errors.push(`Row ${i + 1}: missing admission number`); continue; }
+        if (!r.subject)         { errors.push(`Row ${i + 1}: missing subject`); continue; }
+        if (!r.marks)           { errors.push(`Row ${i + 1}: missing marks`); continue; }
+        rows.push(r);
+      }
+      setCsvRows(rows);
+      setCsvErrors(errors);
+      setCsvResults(null);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleCsvImport = async () => {
+    if (!csvRows.length) return;
+    if (!csvExamType.trim()) { showToast('Please enter an exam type', 'error'); return; }
+    setCsvImporting(true);
+    try {
+      const res = await reportCardAPI.bulkImportMarksCsv({ rows: csvRows, examType: csvExamType.trim(), examDate: csvDate || null });
+      setCsvResults(res.data?.data);
+      showToast(`${res.data?.data?.saved || 0} marks imported successfully`);
+      loadAllData(classes); // refresh marks list
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Import failed', 'error');
+    } finally { setCsvImporting(false); }
+  };
+
 
   // ── Load teacher's classes on mount ───────────────────────────────────────────
   useEffect(() => {
@@ -381,6 +449,10 @@ export default function Marks() {
             <option value="">All Exams</option>
             {examTypes.map(et => <option key={et} value={et}>{et}</option>)}
           </select>
+          <button onClick={() => { setShowCsvModal(true); setCsvRows([]); setCsvErrors([]); setCsvResults(null); setCsvExamType(''); setCsvDate(''); }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 8, color: '#16a34a', fontWeight: 700, fontSize: 13, cursor: 'pointer', marginRight: 6 }}>
+            <span className="material-icons" style={{ fontSize: 16 }}>upload_file</span> Import CSV
+          </button>
           <button className="btn-add" onClick={openModal}>
             <span className="material-icons">add</span> Add Marks
           </button>
@@ -734,6 +806,102 @@ export default function Marks() {
               </div>
             </div>
 
+          </div>
+        </div>
+      )}
+      {/* ── CSV Import Modal ─────────────────────────────────────────────── */}
+      {showCsvModal && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowCsvModal(false)}>
+          <div className="modal-container" style={{ maxWidth: 580 }}>
+            <div className="modal-header">
+              <span className="modal-title">Import Marks via CSV</span>
+              <button className="modal-close" onClick={() => setShowCsvModal(false)}><span className="material-icons">close</span></button>
+            </div>
+            <div className="modal-body">
+              {/* Config */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: '#4a5568', display: 'block', marginBottom: 4 }}>Exam Type *</label>
+                  <input value={csvExamType} onChange={e => setCsvExamType(e.target.value)} placeholder="e.g. Unit Test 1"
+                    style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #e2e8f0', borderRadius: 7, fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: '#4a5568', display: 'block', marginBottom: 4 }}>Exam Date</label>
+                  <input type="date" value={csvDate} onChange={e => setCsvDate(e.target.value)}
+                    style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #e2e8f0', borderRadius: 7, fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
+                </div>
+              </div>
+
+              {/* Sample + upload */}
+              <div style={{ background: '#f8faff', border: '1.5px dashed #c7d2fe', borderRadius: 10, padding: 16, marginBottom: 14 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#4f46e5', marginBottom: 8 }}>CSV Format</div>
+                <code style={{ fontSize: 11, color: '#374151', display: 'block', background: '#fff', padding: 10, borderRadius: 6, marginBottom: 10, lineHeight: 1.7 }}>
+                  AdmissionNumber,Subject,Marks,MaxMarks<br/>
+                  ADM001,Mathematics,85,100<br/>
+                  ADM001,Science,78,100
+                </code>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={downloadSampleCsv} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', border: '1px solid #c7d2fe', borderRadius: 7, background: '#eef2ff', color: '#4f46e5', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                    <span className="material-icons" style={{ fontSize: 15 }}>download</span>Download Sample
+                  </button>
+                  <button onClick={() => csvFileRef.current?.click()} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', border: '1px solid #d1fae5', borderRadius: 7, background: '#ecfdf5', color: '#16a34a', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                    <span className="material-icons" style={{ fontSize: 15 }}>upload_file</span>Select CSV File
+                  </button>
+                  <input ref={csvFileRef} type="file" accept=".csv" style={{ display: 'none' }}
+                    onChange={e => { if (e.target.files?.[0]) parseCsvFile(e.target.files[0]); e.target.value = ''; }} />
+                </div>
+              </div>
+
+              {/* Parse errors */}
+              {csvErrors.length > 0 && (
+                <div style={{ background: '#fff5f5', border: '1px solid #fecaca', borderRadius: 8, padding: '10px 14px', marginBottom: 12 }}>
+                  {csvErrors.map((e, i) => <div key={i} style={{ fontSize: 12, color: '#dc2626' }}>{e}</div>)}
+                </div>
+              )}
+
+              {/* Preview */}
+              {csvRows.length > 0 && !csvResults && (
+                <div style={{ overflowX: 'auto', marginBottom: 12 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 6 }}>{csvRows.length} rows ready to import</div>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                    <thead><tr style={{ background: '#f8faff' }}>
+                      {['Admission No.','Subject','Marks','Max Marks'].map(h => <th key={h} style={{ padding: '6px 10px', textAlign: 'left', fontWeight: 700, color: '#64748b', fontSize: 11, textTransform: 'uppercase', borderBottom: '1px solid #e2e8f0' }}>{h}</th>)}
+                    </tr></thead>
+                    <tbody>
+                      {csvRows.slice(0, 10).map((r, i) => (
+                        <tr key={i} style={{ borderBottom: '1px solid #f9fafb' }}>
+                          <td style={{ padding: '5px 10px' }}>{r.admissionNumber}</td>
+                          <td style={{ padding: '5px 10px' }}>{r.subject}</td>
+                          <td style={{ padding: '5px 10px' }}>{r.marks}</td>
+                          <td style={{ padding: '5px 10px' }}>{r.maxMarks}</td>
+                        </tr>
+                      ))}
+                      {csvRows.length > 10 && <tr><td colSpan={4} style={{ padding: '5px 10px', color: '#94a3b8', fontSize: 11 }}>…and {csvRows.length - 10} more rows</td></tr>}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Results */}
+              {csvResults && (
+                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '12px 14px', marginBottom: 12 }}>
+                  <div style={{ fontWeight: 700, color: '#16a34a', marginBottom: 6 }}>✓ Import complete: {csvResults.saved}/{csvResults.total} saved</div>
+                  {csvResults.results?.filter(r => r.status === 'error').map((r, i) => (
+                    <div key={i} style={{ fontSize: 11, color: '#dc2626' }}>• {r.admissionNumber} ({r.subject}): {r.message}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button onClick={() => setShowCsvModal(false)} style={{ padding: '9px 20px', border: '1.5px solid #e2e8f0', borderRadius: 8, background: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Close</button>
+              {csvRows.length > 0 && !csvResults && (
+                <button onClick={handleCsvImport} disabled={csvImporting || !csvExamType.trim()}
+                  style={{ padding: '9px 24px', background: (csvImporting || !csvExamType.trim()) ? '#a0aec0' : '#4f46e5', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span className="material-icons" style={{ fontSize: 16 }}>upload</span>
+                  {csvImporting ? 'Importing…' : `Import ${csvRows.length} Rows`}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
