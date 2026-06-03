@@ -184,7 +184,7 @@ public class ReportCardController {
             com.schoolers.model.Marks m = com.schoolers.model.Marks.builder()
                 .studentId(student.getId()).studentName(student.getName())
                 .subject(subject).examType(examType != null ? examType : "General")
-                .marks(marksVal).maxMarks(maxVal).grade(grade)
+                .marks((int) marksVal).maxMarks((int) maxVal).grade(grade)
                 .teacherId(teacherId).schoolId(schoolId).examDate(examDate).build();
             marksRepository.save(m);
             saved++;
