@@ -2571,7 +2571,6 @@ public class AdminService {
         }
     }
 
-    @Transactional(rollbackFor = Exception.class)
     /**
      * Year-end rollover:
      *   1. Updates school.academicYear to newAcademicYear
@@ -2626,6 +2625,7 @@ public class AdminService {
         return ApiResponse.success("Academic year updated to " + newAcademicYear, result);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public ApiResponse<Map<String, Object>> promoteStudents(
             Long schoolId, String fromClass, String fromSection, String toClass, String toSection) {
 
