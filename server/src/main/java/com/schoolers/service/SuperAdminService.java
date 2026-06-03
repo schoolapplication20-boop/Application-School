@@ -356,10 +356,14 @@ public class SuperAdminService {
                     dto.put("schoolActive",       Boolean.TRUE.equals(school.getIsActive()));
                     dto.put("userLimit",          school.getUserLimit());
                     dto.put("pricePerUser",       school.getPricePerUser());
-                    long totalUsers  = userRepository.countBySchoolId(school.getId());
-                    long activeUsers = userRepository.countBySchoolIdAndIsActive(school.getId(), true);
-                    dto.put("userCount",          totalUsers);
-                    dto.put("activeUserCount",    activeUsers);
+                    long totalUsers   = userRepository.countBySchoolId(school.getId());
+                    long activeUsers  = userRepository.countBySchoolIdAndIsActive(school.getId(), true);
+                    dto.put("userCount",           totalUsers);
+                    dto.put("activeUserCount",     activeUsers);
+                    // Role-wise breakdown for owner dashboard
+                    dto.put("adminCount",   userRepository.countBySchoolIdAndRole(school.getId(), com.schoolers.model.User.Role.ADMIN));
+                    dto.put("teacherCount", userRepository.countBySchoolIdAndRole(school.getId(), com.schoolers.model.User.Role.TEACHER));
+                    dto.put("studentCount", userRepository.countBySchoolIdAndRole(school.getId(), com.schoolers.model.User.Role.STUDENT));
                 } else {
                     dto.put("needsSchoolSetup", true);
                 }

@@ -563,12 +563,20 @@ function OwnerDashboard() {
                           <span style={{ padding: '3px 10px', background: '#3182ce18', color: '#2c5282', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>
                             {enabledCount} / {ALL_MODULES.length}
                           </span>
-                          <div style={{ marginTop: 4, fontSize: 11, color: '#64748b', fontWeight: 600 }}>
-                            <span className="material-icons" style={{ fontSize: 11, verticalAlign: 'middle', marginRight: 3 }}>people</span>
-                            {(sa.userCount ?? 0).toLocaleString()}
-                            {sa.userLimit
-                              ? <span style={{ color: '#94a3b8' }}> / {sa.userLimit.toLocaleString()}</span>
-                              : <span style={{ color: '#cbd5e0' }}> / ∞</span>}
+                          <div style={{ marginTop: 4, fontSize: 11, color: '#64748b', fontWeight: 600, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                            {[
+                              { icon: 'badge',  val: sa.adminCount   ?? 0, color: '#7c3aed' },
+                              { icon: 'school', val: sa.teacherCount ?? 0, color: '#0369a1' },
+                              { icon: 'person', val: sa.studentCount ?? 0, color: '#16a34a' },
+                            ].map(({ icon, val, color }) => (
+                              <span key={icon} style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                <span className="material-icons" style={{ fontSize: 10, color }}>{icon}</span>
+                                <span style={{ color }}>{val.toLocaleString()}</span>
+                              </span>
+                            ))}
+                            {sa.userLimit && (
+                              <span style={{ color: '#94a3b8' }}>/ {sa.userLimit.toLocaleString()}</span>
+                            )}
                           </div>
                         </td>
                         <td>
@@ -687,6 +695,20 @@ function OwnerDashboard() {
                                 <InfoRow icon="school"           label="Name"   value={sa.schoolName || '—'} />
                                 <InfoRow icon="tag"              label="Code"   value={<span style={{ fontFamily:'monospace', fontWeight:700 }}>{sa.schoolCode || '—'}</span>} />
                                 <InfoRow icon="fingerprint"      label="DB ID"  value={`#${sa.schoolDbId}`} />
+                                {/* Role-wise user counts */}
+                                <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #f1f5f9', display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6 }}>
+                                  {[
+                                    { label: 'Admins',   count: sa.adminCount   ?? 0, color: '#7c3aed', icon: 'badge' },
+                                    { label: 'Teachers', count: sa.teacherCount ?? 0, color: '#0369a1', icon: 'school' },
+                                    { label: 'Students', count: sa.studentCount ?? 0, color: '#16a34a', icon: 'person' },
+                                  ].map(({ label, count, color, icon }) => (
+                                    <div key={label} style={{ background: color + '0f', borderRadius: 8, padding: '8px 10px', textAlign: 'center', border: `1px solid ${color}20` }}>
+                                      <span className="material-icons" style={{ fontSize: 14, color, display: 'block' }}>{icon}</span>
+                                      <div style={{ fontSize: 16, fontWeight: 800, color, marginTop: 2 }}>{count.toLocaleString()}</div>
+                                      <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600 }}>{label}</div>
+                                    </div>
+                                  ))}
+                                </div>
 
                                 {/* ── User Count / Limit ── */}
                                 <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #f1f5f9' }}>
