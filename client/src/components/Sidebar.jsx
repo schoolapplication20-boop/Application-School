@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSchool } from '../context/SchoolContext';
 import { schoolAPI, BASE_URL } from '../services/api';
+import ReportIssueModal from './ReportIssueModal';
 import '../styles/sidebar.css';
 
 const adminNavItems = [
@@ -78,6 +79,7 @@ const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
   const [logoError, setLogoError]           = useState(false);
   const [logoHover, setLogoHover]           = useState(false);
   const [uploading,  setUploading]          = useState(false);
+  const [showIssueModal, setShowIssueModal] = useState(false);
   const logoInputRef                        = useRef(null);
 
   const canChangeLogo = (user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN') && school?.schoolId != null;
@@ -348,13 +350,31 @@ const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
           </div>
         </div>
 
+        {/* Report Issue button */}
+        <button
+          onClick={() => setShowIssueModal(true)}
+          data-tooltip="Report an Issue"
+          style={{
+            display: 'flex', alignItems: 'center', gap: '10px',
+            width: '100%', marginTop: '4px', padding: '10px 12px',
+            background: 'none', border: 'none', borderRadius: '10px',
+            cursor: 'pointer', color: '#a78bfa', fontSize: '13px',
+            fontWeight: 600, transition: 'background 0.2s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.background = 'rgba(167,139,250,0.1)'}
+          onMouseLeave={e => e.currentTarget.style.background = 'none'}
+        >
+          <span className="material-icons" style={{ fontSize: '20px', flexShrink: 0 }}>bug_report</span>
+          <span className="nav-label">Report Issue</span>
+        </button>
+
         {/* Logout button */}
         <button
           onClick={() => { logout(); navigate('/login'); }}
           data-tooltip="Logout"
           style={{
             display: 'flex', alignItems: 'center', gap: '10px',
-            width: '100%', marginTop: '8px', padding: '10px 12px',
+            width: '100%', marginTop: '4px', padding: '10px 12px',
             background: 'none', border: 'none', borderRadius: '10px',
             cursor: 'pointer', color: '#fc8181', fontSize: '13px',
             fontWeight: 600, transition: 'background 0.2s',
@@ -366,6 +386,8 @@ const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
           <span className="nav-label">Logout</span>
         </button>
       </div>
+
+      {showIssueModal && <ReportIssueModal onClose={() => setShowIssueModal(false)} />}
     </aside>
   );
 };
