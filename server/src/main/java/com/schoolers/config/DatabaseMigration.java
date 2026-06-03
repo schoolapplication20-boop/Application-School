@@ -505,6 +505,27 @@ public class DatabaseMigration implements CommandLineRunner {
         exec("CREATE INDEX IF NOT EXISTS idx_users_username       ON users(username)");
         log.debug("Production performance indexes ensured.");
 
+        // ── issue_reports table ───────────────────────────────────────────────────
+        exec("CREATE TABLE IF NOT EXISTS issue_reports (" +
+             "id BIGSERIAL PRIMARY KEY, " +
+             "title VARCHAR(200) NOT NULL, " +
+             "description TEXT NOT NULL, " +
+             "category VARCHAR(50) NOT NULL DEFAULT 'BUG', " +
+             "priority VARCHAR(20) NOT NULL DEFAULT 'MEDIUM', " +
+             "status VARCHAR(20) NOT NULL DEFAULT 'OPEN', " +
+             "reporter_name VARCHAR(100), " +
+             "reporter_email VARCHAR(150), " +
+             "reporter_role VARCHAR(30), " +
+             "school_id BIGINT, " +
+             "school_name VARCHAR(200), " +
+             "owner_note TEXT, " +
+             "created_at TIMESTAMP DEFAULT NOW(), " +
+             "updated_at TIMESTAMP DEFAULT NOW()" +
+             ")");
+        exec("CREATE INDEX IF NOT EXISTS idx_issue_reports_status     ON issue_reports(status)");
+        exec("CREATE INDEX IF NOT EXISTS idx_issue_reports_created_at ON issue_reports(created_at DESC)");
+        log.debug("issue_reports table ensured.");
+
         log.info("DB migrations complete.");
     }
 
