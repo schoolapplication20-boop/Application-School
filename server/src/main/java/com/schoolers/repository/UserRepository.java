@@ -39,6 +39,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
     /** Count active/inactive users for a school */
     long countBySchoolIdAndIsActive(Long schoolId, Boolean isActive);
 
+    /** Count active users treating NULL is_active as active */
+    @org.springframework.data.jpa.repository.Query(
+        "SELECT COUNT(u) FROM User u WHERE u.schoolId = :schoolId AND (u.isActive = true OR u.isActive IS NULL)")
+    long countActiveBySchoolId(@Param("schoolId") Long schoolId);
+
     /** Count users by school and role */
     long countBySchoolIdAndRole(Long schoolId, User.Role role);
 

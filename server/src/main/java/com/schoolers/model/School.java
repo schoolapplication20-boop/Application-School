@@ -121,6 +121,11 @@ public class School {
     @Column(name = "price_per_user", precision = 10, scale = 2)
     private java.math.BigDecimal pricePerUser;
 
+    /** Platform billing frequency: MONTHLY, QUARTERLY, HALF_YEARLY, YEARLY */
+    @Column(name = "payment_plan", length = 20)
+    @Builder.Default
+    private String paymentPlan = "YEARLY";
+
     // ── Status ───────────────────────────────────────────────────────────────
     @Column(name = "is_active")
     @Builder.Default

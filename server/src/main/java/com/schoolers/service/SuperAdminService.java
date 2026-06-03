@@ -367,7 +367,8 @@ public class SuperAdminService {
                     long superAdminC  = roleCounts.getOrDefault("SUPER_ADMIN", 0L);
                     long totalUsers   = roleCounts.values().stream().mapToLong(Long::longValue).sum();
                     dto.put("userCount",       totalUsers);
-                    dto.put("activeUserCount", userRepository.countBySchoolIdAndIsActive(school.getId(), true));
+                    dto.put("activeUserCount", userRepository.countActiveBySchoolId(school.getId()));
+                    dto.put("paymentPlan",     school.getPaymentPlan());
                     dto.put("adminCount",      adminCount);
                     dto.put("teacherCount",    teacherCount);
                     dto.put("studentCount",    studentCount);

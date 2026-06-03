@@ -73,20 +73,35 @@ function OwnerDashboard() {
   const [limitSaving,  setLimitSaving]  = useState({});  // { [schoolDbId]: bool }
 
   // ── Fee summary (lazy-loaded per school on expand) ──────────────────────────
-  const [feeSummaryMap,     setFeeSummaryMap]     = useState({});  // { [schoolDbId]: rows[] | null }
-  const [feeSummaryLoading, setFeeSummaryLoading] = useState({});  // { [schoolDbId]: bool }
+  const [feeSummaryMap,     setFeeSummaryMap]     = useState({});  // { [schoolDbId]: full data object }
+  const [feeSummaryLoading, setFeeSummaryLoading] = useState({});
+  const [selectedYearMap,   setSelectedYearMap]   = useState({});  // { [schoolDbId]: yearString }
+  const [planSaving,        setPlanSaving]         = useState({});
 
   const loadFeeSummary = async (schoolDbId, schoolActualId) => {
     if (feeSummaryMap[schoolDbId] !== undefined) return; // already loaded
     setFeeSummaryLoading(prev => ({ ...prev, [schoolDbId]: true }));
     try {
       const res = await ownerAPI.getFeeSummary(schoolActualId);
-      setFeeSummaryMap(prev => ({ ...prev, [schoolDbId]: res.data?.data ?? [] }));
+      const data = res.data?.data ?? {};
+      setFeeSummaryMap(prev => ({ ...prev, [schoolDbId]: data }));
+      // Pre-select the latest year
+      const years = data.years ?? [];
+      if (years.length > 0) setSelectedYearMap(prev => ({ ...prev, [schoolDbId]: years[0].year }));
     } catch {
-      setFeeSummaryMap(prev => ({ ...prev, [schoolDbId]: [] }));
+      setFeeSummaryMap(prev => ({ ...prev, [schoolDbId]: { years: [] } }));
     } finally {
       setFeeSummaryLoading(prev => ({ ...prev, [schoolDbId]: false }));
     }
+  };
+
+  const savePaymentPlan = async (sa, plan) => {
+    setPlanSaving(prev => ({ ...prev, [sa.schoolDbId]: true }));
+    try {
+      await ownerAPI.setPaymentPlan(sa.schoolActualId ?? sa.schoolDbId, plan);
+      setSuperAdmins(prev => prev.map(s => s.schoolDbId === sa.schoolDbId ? { ...s, paymentPlan: plan } : s));
+    } catch (e) { alert(e.response?.data?.message || 'Failed to save payment plan.'); }
+    finally { setPlanSaving(prev => ({ ...prev, [sa.schoolDbId]: false })); }
   };
 
   const openLimitEdit  = (sa) => setLimitEdit(prev => ({ ...prev, [sa.schoolDbId]: String(sa.userLimit ?? '') }));
@@ -872,50 +887,117 @@ function OwnerDashboard() {
                                 )}
                               </div>
 
-                              {/* ── Fee Summary (full-width, 3-col span) ───── */}
-                              <div style={{ gridColumn: '1 / -1', background: '#fff', borderRadius: 10, padding: '14px 16px', border: '1.5px solid #e2e8f0' }}>
-                                <div style={{ fontSize: 11, fontWeight: 700, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>
-                                  Fee Summary — Year-wise
-                                </div>
+                              {/* ── Fee Summary — enhanced full-width panel ── */}
+                              <div style={{ gridColumn: '1 / -1', background: '#fff', borderRadius: 10, padding: '16px', border: '1.5px solid #e2e8f0' }}>
                                 {feeSummaryLoading[sa.schoolDbId] || feeSummaryMap[sa.schoolDbId] === undefined ? (
-                                  <div style={{ textAlign: 'center', padding: 16, color: '#a0aec0', fontSize: 12 }}>Loading fee data…</div>
-                                ) : feeSummaryMap[sa.schoolDbId].length === 0 ? (
-                                  <div style={{ textAlign: 'center', padding: 14, color: '#cbd5e0', fontSize: 12 }}>No fee assignments found for this school.</div>
-                                ) : (
-                                  <div style={{ overflowX: 'auto' }}>
-                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-                                      <thead>
-                                        <tr style={{ background: '#f8faff' }}>
-                                          {['Academic Year', 'Students', 'Total Fees', 'Collected', 'Pending', 'Collection %'].map(h => (
-                                            <th key={h} style={{ padding: '7px 12px', textAlign: h === 'Academic Year' || h === 'Students' ? 'left' : 'right', color: '#64748b', fontWeight: 700, fontSize: 11, textTransform: 'uppercase', letterSpacing: '.04em', borderBottom: '1px solid #e2e8f0', whiteSpace: 'nowrap' }}>{h}</th>
-                                          ))}
-                                        </tr>
-                                      </thead>
-                                      <tbody>
-                                        {feeSummaryMap[sa.schoolDbId].map((row, i) => {
-                                          const total   = Number(row.totalFee   || 0);
-                                          const paid    = Number(row.paidAmount || 0);
-                                          const pending = Number(row.pendingAmount || 0);
-                                          const pct     = total > 0 ? Math.round((paid / total) * 100) : 0;
-                                          const pctColor = pct >= 90 ? '#16a34a' : pct >= 60 ? '#f59e0b' : '#dc2626';
-                                          const fmt = (n) => '₹' + Number(n).toLocaleString('en-IN', { maximumFractionDigits: 0 });
-                                          return (
-                                            <tr key={i} style={{ borderBottom: '1px solid #f1f5f9', background: i % 2 === 0 ? '#fff' : '#fafcff' }}>
-                                              <td style={{ padding: '8px 12px', fontWeight: 700, color: '#1e293b' }}>{row.year || '—'}</td>
-                                              <td style={{ padding: '8px 12px', color: '#64748b' }}>{row.studentCount}</td>
-                                              <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 600, color: '#1e293b' }}>{fmt(total)}</td>
-                                              <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, color: '#16a34a' }}>{fmt(paid)}</td>
-                                              <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, color: pending > 0 ? '#dc2626' : '#94a3b8' }}>{pending > 0 ? fmt(pending) : '—'}</td>
-                                              <td style={{ padding: '8px 12px', textAlign: 'right' }}>
-                                                <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 800, background: pctColor + '18', color: pctColor }}>{pct}%</span>
-                                              </td>
-                                            </tr>
-                                          );
-                                        })}
-                                      </tbody>
-                                    </table>
-                                  </div>
-                                )}
+                                  <div style={{ textAlign: 'center', padding: 16, color: '#a0aec0', fontSize: 12 }}>Loading fee summary…</div>
+                                ) : (() => {
+                                  const fs = feeSummaryMap[sa.schoolDbId] ?? {};
+                                  const years = fs.years ?? [];
+                                  const selYear = selectedYearMap[sa.schoolDbId] || years[0]?.year;
+                                  const yr = years.find(y => y.year === selYear) ?? {};
+                                  const fmt = n => '₹' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+                                  const total = Number(yr.totalFee || 0), paid = Number(yr.paidAmount || 0), pending = Number(yr.pendingAmount || 0);
+                                  const pct = total > 0 ? Math.round((paid / total) * 100) : 0;
+                                  const pctColor = pct >= 90 ? '#16a34a' : pct >= 60 ? '#f59e0b' : '#dc2626';
+                                  const activeU = Number(fs.activeUsers || 0);
+                                  const price = Number(fs.pricePerUser || 0);
+                                  const billing = price > 0 ? price * activeU : null;
+                                  const PLANS = ['MONTHLY','QUARTERLY','HALF_YEARLY','YEARLY'];
+                                  return (
+                                    <>
+                                      {/* Header row: title + year dropdown + payment plan */}
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
+                                        <div style={{ fontSize: 11, fontWeight: 700, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: 1 }}>Fee Summary</div>
+                                        {years.length > 0 && (
+                                          <select value={selYear || ''} onChange={e => setSelectedYearMap(prev => ({ ...prev, [sa.schoolDbId]: e.target.value }))}
+                                            style={{ padding: '3px 8px', fontSize: 12, border: '1.5px solid #e2e8f0', borderRadius: 6, fontWeight: 700, color: '#4f46e5', background: '#f8faff', outline: 'none' }}>
+                                            {years.map(y => <option key={y.year} value={y.year}>{y.year}</option>)}
+                                          </select>
+                                        )}
+                                        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                          <span style={{ fontSize: 11, color: '#64748b' }}>Payment Plan:</span>
+                                          <select value={sa.paymentPlan || 'YEARLY'} disabled={planSaving[sa.schoolDbId]}
+                                            onChange={e => savePaymentPlan(sa, e.target.value)}
+                                            style={{ padding: '3px 8px', fontSize: 12, border: '1.5px solid #4f46e5', borderRadius: 6, fontWeight: 700, color: '#4f46e5', background: '#eef2ff', outline: 'none', cursor: 'pointer' }}>
+                                            {PLANS.map(p => <option key={p} value={p}>{p.replace('_', ' ')}</option>)}
+                                          </select>
+                                        </div>
+                                      </div>
+
+                                      {/* Stats grid */}
+                                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, marginBottom: 14 }}>
+                                        {/* User counts */}
+                                        {[
+                                          { label: 'Active Users', val: activeU,                             color: '#4f46e5' },
+                                          { label: 'Super Admin',  val: Number(fs.superAdminCount || 0),     color: '#7c3aed' },
+                                          { label: 'Admins',       val: Number(fs.adminCount     || 0),     color: '#0369a1' },
+                                          { label: 'Teachers',     val: Number(fs.teacherCount   || 0),     color: '#0891b2' },
+                                          { label: 'Students',     val: Number(yr.studentCount   || fs.studentCount || 0), color: '#16a34a' },
+                                          { label: 'Price/User',   val: price > 0 ? `₹${price.toLocaleString('en-IN')}` : '—', color: '#f59e0b', raw: true },
+                                          { label: 'Total Billing',val: billing != null ? fmt(billing) : '—', color: '#dc2626', raw: true },
+                                          { label: 'Plan',         val: (sa.paymentPlan || 'YEARLY').replace('_',' '), color: '#64748b', raw: true },
+                                        ].map(({ label, val, color, raw }) => (
+                                          <div key={label} style={{ background: color + '0d', borderRadius: 8, padding: '8px 10px', border: `1px solid ${color}20` }}>
+                                            <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em' }}>{label}</div>
+                                            <div style={{ fontSize: 15, fontWeight: 800, color, marginTop: 3 }}>{raw ? val : Number(val).toLocaleString()}</div>
+                                          </div>
+                                        ))}
+                                      </div>
+
+                                      {/* Fee bar */}
+                                      {total > 0 && (
+                                        <div style={{ marginBottom: 10 }}>
+                                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 5 }}>
+                                            <span style={{ fontWeight: 700, color: '#1e293b' }}>{fmt(paid)} collected</span>
+                                            <span style={{ color: pending > 0 ? '#dc2626' : '#16a34a', fontWeight: 700 }}>{pending > 0 ? `${fmt(pending)} pending` : '✓ Fully collected'}</span>
+                                            <span style={{ color: '#64748b' }}>Total: {fmt(total)}</span>
+                                          </div>
+                                          <div style={{ height: 8, background: '#f1f5f9', borderRadius: 4, overflow: 'hidden' }}>
+                                            <div style={{ width: `${pct}%`, height: '100%', background: pctColor, borderRadius: 4, transition: 'width 0.4s' }} />
+                                          </div>
+                                          <div style={{ fontSize: 11, color: pctColor, fontWeight: 700, marginTop: 4 }}>{pct}% collected for {selYear}</div>
+                                        </div>
+                                      )}
+
+                                      {/* Year table */}
+                                      {years.length > 1 && (
+                                        <div style={{ overflowX: 'auto' }}>
+                                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+                                            <thead>
+                                              <tr style={{ background: '#f8faff' }}>
+                                                {['Year','Students','Total Fees','Collected','Pending','%'].map(h => (
+                                                  <th key={h} style={{ padding: '5px 10px', textAlign: h === 'Year' || h === 'Students' ? 'left' : 'right', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', borderBottom: '1px solid #e2e8f0', whiteSpace: 'nowrap' }}>{h}</th>
+                                                ))}
+                                              </tr>
+                                            </thead>
+                                            <tbody>
+                                              {years.map((row, i) => {
+                                                const t = Number(row.totalFee || 0), p2 = Number(row.paidAmount || 0), pe = Number(row.pendingAmount || 0);
+                                                const pc = t > 0 ? Math.round((p2 / t) * 100) : 0;
+                                                const pc2 = pc >= 90 ? '#16a34a' : pc >= 60 ? '#f59e0b' : '#dc2626';
+                                                return (
+                                                  <tr key={i} onClick={() => setSelectedYearMap(prev => ({ ...prev, [sa.schoolDbId]: row.year }))}
+                                                    style={{ borderBottom: '1px solid #f1f5f9', background: row.year === selYear ? '#eef2ff' : i % 2 === 0 ? '#fff' : '#fafcff', cursor: 'pointer' }}>
+                                                    <td style={{ padding: '6px 10px', fontWeight: 700, color: row.year === selYear ? '#4f46e5' : '#1e293b' }}>{row.year || '—'}</td>
+                                                    <td style={{ padding: '6px 10px', color: '#64748b' }}>{row.studentCount}</td>
+                                                    <td style={{ padding: '6px 10px', textAlign: 'right', color: '#1e293b' }}>{fmt(t)}</td>
+                                                    <td style={{ padding: '6px 10px', textAlign: 'right', color: '#16a34a', fontWeight: 700 }}>{fmt(p2)}</td>
+                                                    <td style={{ padding: '6px 10px', textAlign: 'right', color: pe > 0 ? '#dc2626' : '#94a3b8', fontWeight: 700 }}>{pe > 0 ? fmt(pe) : '—'}</td>
+                                                    <td style={{ padding: '6px 10px', textAlign: 'right' }}>
+                                                      <span style={{ padding: '1px 7px', borderRadius: 20, fontSize: 10, fontWeight: 800, background: pc2 + '18', color: pc2 }}>{pc}%</span>
+                                                    </td>
+                                                  </tr>
+                                                );
+                                              })}
+                                            </tbody>
+                                          </table>
+                                        </div>
+                                      )}
+                                      {years.length === 0 && <div style={{ textAlign: 'center', padding: 12, color: '#cbd5e0', fontSize: 12 }}>No fee assignments found for this school.</div>}
+                                    </>
+                                  );
+                                })()}
                               </div>
                             </div>
                           </td>

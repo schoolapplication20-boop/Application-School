@@ -101,37 +101,88 @@ public class OwnerController {
     }
 
     /**
-     * Year-wise fee summary for a school.
-     * Returns: [{ year, totalFee, paidAmount, pendingAmount, studentCount }]
+     * Enhanced year-wise fee summary for a school.
+     * Returns: { years[], grandTotal, grandPaid, grandPending,
+     *            pricePerUser, paymentPlan, activeUsers, billingTotal,
+     *            adminCount, teacherCount, studentCount, superAdminCount }
      */
     @GetMapping("/schools/{schoolDbId}/fee-summary")
-    public ResponseEntity<ApiResponse<java.util.List<Map<String, Object>>>> getFeeSummary(
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getFeeSummary(
             @PathVariable Long schoolDbId) {
 
         School school = schoolRepository.findById(schoolDbId).orElse(null);
         if (school == null)
             return ResponseEntity.status(404).body(ApiResponse.error("School not found."));
 
-        // Try with the DB primary key first, then fall back to the display school_id
-        // (student_fee_assignments.school_id may store either value depending on migration state)
+        // Try DB PK first; fallback to display school_id
         java.util.List<Object[]> rows = feeAssignmentRepository.feeSummaryByYear(school.getId());
         if (rows.isEmpty() && school.getSchoolId() != null) {
             rows = feeAssignmentRepository.feeSummaryByYear(school.getSchoolId().longValue());
         }
-        java.util.List<Map<String, Object>> result = new java.util.ArrayList<>();
+
+        java.util.List<Map<String, Object>> years = new java.util.ArrayList<>();
+        java.math.BigDecimal grandTotal   = java.math.BigDecimal.ZERO;
+        java.math.BigDecimal grandPaid    = java.math.BigDecimal.ZERO;
+        java.math.BigDecimal grandPending = java.math.BigDecimal.ZERO;
         for (Object[] row : rows) {
-            Map<String, Object> item = new java.util.LinkedHashMap<>();
-            java.math.BigDecimal total  = row[1] != null ? (java.math.BigDecimal) row[1] : java.math.BigDecimal.ZERO;
-            java.math.BigDecimal paid   = row[2] != null ? (java.math.BigDecimal) row[2] : java.math.BigDecimal.ZERO;
+            java.math.BigDecimal total   = row[1] != null ? (java.math.BigDecimal) row[1] : java.math.BigDecimal.ZERO;
+            java.math.BigDecimal paid    = row[2] != null ? (java.math.BigDecimal) row[2] : java.math.BigDecimal.ZERO;
             java.math.BigDecimal pending = total.subtract(paid).max(java.math.BigDecimal.ZERO);
+            grandTotal   = grandTotal.add(total);
+            grandPaid    = grandPaid.add(paid);
+            grandPending = grandPending.add(pending);
+            Map<String, Object> item = new java.util.LinkedHashMap<>();
             item.put("year",          row[0]);
             item.put("totalFee",      total);
             item.put("paidAmount",    paid);
             item.put("pendingAmount", pending);
             item.put("studentCount",  row[3]);
-            result.add(item);
+            years.add(item);
         }
-        return ResponseEntity.ok(ApiResponse.success(result));
+
+        // User counts
+        long activeUsers = userRepository.countActiveBySchoolId(school.getId());
+        java.util.Map<String,Long> roleCounts = new java.util.HashMap<>();
+        for (Object[] row : userRepository.countByRoleForSchool(school.getId())) {
+            roleCounts.put(row[0].toString(), (Long) row[1]);
+        }
+
+        // Platform billing
+        java.math.BigDecimal pricePerUser = school.getPricePerUser();
+        java.math.BigDecimal billingTotal = pricePerUser != null
+                ? pricePerUser.multiply(java.math.BigDecimal.valueOf(activeUsers)) : null;
+
+        Map<String, Object> response = new java.util.LinkedHashMap<>();
+        response.put("years",          years);
+        response.put("grandTotal",     grandTotal);
+        response.put("grandPaid",      grandPaid);
+        response.put("grandPending",   grandPending);
+        response.put("pricePerUser",   pricePerUser);
+        response.put("paymentPlan",    school.getPaymentPlan() != null ? school.getPaymentPlan() : "YEARLY");
+        response.put("activeUsers",    activeUsers);
+        response.put("billingTotal",   billingTotal);
+        response.put("adminCount",     roleCounts.getOrDefault("ADMIN",       0L));
+        response.put("teacherCount",   roleCounts.getOrDefault("TEACHER",     0L));
+        response.put("studentCount",   roleCounts.getOrDefault("STUDENT",     0L));
+        response.put("superAdminCount",roleCounts.getOrDefault("SUPER_ADMIN", 0L));
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    /** Update payment plan. Body: { "paymentPlan": "QUARTERLY" } */
+    @PatchMapping("/schools/{schoolDbId}/payment-plan")
+    public ResponseEntity<ApiResponse<String>> setPaymentPlan(
+            @PathVariable Long schoolDbId,
+            @RequestBody Map<String, Object> body) {
+        School school = schoolRepository.findById(schoolDbId).orElse(null);
+        if (school == null)
+            return ResponseEntity.status(404).body(ApiResponse.error("School not found."));
+        String plan = body.get("paymentPlan") != null ? body.get("paymentPlan").toString().toUpperCase() : null;
+        java.util.Set<String> valid = java.util.Set.of("MONTHLY","QUARTERLY","HALF_YEARLY","YEARLY");
+        if (plan == null || !valid.contains(plan))
+            return ResponseEntity.badRequest().body(ApiResponse.error("paymentPlan must be MONTHLY, QUARTERLY, HALF_YEARLY, or YEARLY."));
+        school.setPaymentPlan(plan);
+        schoolRepository.save(school);
+        return ResponseEntity.ok(ApiResponse.success("Payment plan set to " + plan + "."));
     }
 
     /**

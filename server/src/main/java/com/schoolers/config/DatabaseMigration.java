@@ -515,10 +515,15 @@ public class DatabaseMigration implements CommandLineRunner {
         );
         log.debug("student_fee_assignments school_id backfilled.");
 
-        // ── schools: user_limit and price_per_user columns ───────────────────────
+        // ── schools: billing columns ──────────────────────────────────────────────
         exec("ALTER TABLE schools ADD COLUMN IF NOT EXISTS user_limit INTEGER");
         exec("ALTER TABLE schools ADD COLUMN IF NOT EXISTS price_per_user NUMERIC(10,2)");
-        log.debug("schools.user_limit and price_per_user columns ensured.");
+        exec("ALTER TABLE schools ADD COLUMN IF NOT EXISTS payment_plan VARCHAR(20) DEFAULT 'YEARLY'");
+        log.debug("schools billing columns ensured.");
+
+        // ── users: ensure is_active is never NULL (treat NULL as active) ──────────
+        execRaw("UPDATE users SET is_active = TRUE WHERE is_active IS NULL");
+        log.debug("users.is_active NULL values set to TRUE.");
 
         // ── issue_reports table ───────────────────────────────────────────────────
         exec("CREATE TABLE IF NOT EXISTS issue_reports (" +
