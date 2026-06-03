@@ -237,7 +237,7 @@ export default function TeacherLeaveRequest() {
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">Apply for Leave</h5>
-                <button className="btn-close" onClick={() => setShowModal(false)} />
+                <button className="btn-close" onClick={() => { setShowModal(false); setFormData({ leaveType: 'Medical', fromDate: '', toDate: '', reason: '' }); }} />
               </div>
               <form onSubmit={handleSubmit}>
                 <div className="modal-body">
@@ -273,7 +273,7 @@ export default function TeacherLeaveRequest() {
                 </div>
                 <div className="modal-footer">
                   <button type="button" className="btn btn-secondary"
-                    onClick={() => setShowModal(false)} disabled={submitting}>
+                    onClick={() => { setShowModal(false); setFormData({ leaveType: 'Medical', fromDate: '', toDate: '', reason: '' }); }} disabled={submitting}>
                     Cancel
                   </button>
                   <button type="submit" className="btn btn-primary" disabled={submitting}>

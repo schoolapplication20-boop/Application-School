@@ -382,7 +382,7 @@ export default function AdminManagement() {
             { id: 'admins',      label: 'School Admins',   icon: 'manage_accounts' },
             { id: 'superadmins', label: 'Super Admins',    icon: 'admin_panel_settings' },
           ].map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+            <button key={tab.id} onClick={() => { setActiveTab(tab.id); setSearch(''); setFilterStatus(''); }}
               style={{
                 padding: '10px 20px', border: 'none', cursor: 'pointer', fontWeight: 700,
                 fontSize: '13px', borderRadius: '8px 8px 0 0', display: 'flex', alignItems: 'center', gap: '6px',

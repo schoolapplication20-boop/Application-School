@@ -923,7 +923,8 @@ function StudentsPanel({ students, setStudents, routes, stops, buses, showToast 
   const openEdit = (item) => {
     setEditItem(item);
     const b = buses.find(b => String(b.id) === String(item.busId));
-    setBusCapacityFull(b ? (b.currentStudents ?? 0) >= (b.capacity ?? 0) : false);
+    // Subtract 1 from currentStudents because the student being edited is already counted
+    setBusCapacityFull(b ? (b.currentStudents ?? 0) - 1 >= (b.capacity ?? 0) : false);
     setForm({
       studentId:      item.studentId      || '',
       studentName:    item.studentName    || '',

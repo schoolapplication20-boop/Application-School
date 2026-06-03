@@ -205,7 +205,9 @@ export default function Fees() {
           setInstallments([{ termName: 'Term 1', amount: '', dueDate: '' }]);
         }
       } catch {
-        setInstallments([{ termName: 'Term 1', amount: '', dueDate: '' }]);
+        // Don't reset installments — keep modal closed and alert user
+        showToast('Failed to load existing installments. Please try again.', 'error');
+        return;
       }
     } else {
       setInstallments([

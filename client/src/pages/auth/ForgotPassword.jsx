@@ -24,11 +24,17 @@ const ForgotPassword = () => {
   const inputRefs = useRef([]);
 
   useEffect(() => {
-    if (!showOtpPopup) return;
-    if (timer <= 0) { setCanResend(true); return; }
-    const id = setInterval(() => setTimer(t => t - 1), 1000);
+    if (!showOtpPopup) { setCanResend(false); return; }
+    setTimer(OTP_EXPIRY_SECONDS);
+    setCanResend(false);
+    const id = setInterval(() => {
+      setTimer(t => {
+        if (t <= 1) { clearInterval(id); setCanResend(true); return 0; }
+        return t - 1;
+      });
+    }, 1000);
     return () => clearInterval(id);
-  }, [showOtpPopup, timer]);
+  }, [showOtpPopup]); // single interval per popup open — no stacking on resend
 
   const formatTime = (s) => {
     const m = Math.floor(s / 60).toString().padStart(2, '0');

@@ -203,7 +203,15 @@ export const AuthProvider = ({ children }) => {
           if (data?.permissions !== undefined) {
             const perms = parsePermissions(data.permissions);
             if (perms && typeof perms === 'object') {
-              setUser(prev => prev ? { ...prev, permissions: perms } : prev);
+              setUser(prev => {
+                if (!prev) return prev;
+                const updated = { ...prev, permissions: perms };
+                try {
+                  const raw = sessionStorage.getItem(SESSION_KEY);
+                  if (raw) sessionStorage.setItem(SESSION_KEY, JSON.stringify({ ...JSON.parse(raw), user: updated }));
+                } catch { /* ignore */ }
+                return updated;
+              });
               return;
             }
           }
@@ -212,7 +220,15 @@ export const AuthProvider = ({ children }) => {
           if (data && typeof data === 'object' && !data.name && !data.email && !Array.isArray(data)) {
             const perms = parsePermissions(data);
             if (perms && Object.keys(perms).length > 0) {
-              setUser(prev => prev ? { ...prev, permissions: perms } : prev);
+              setUser(prev => {
+                if (!prev) return prev;
+                const updated = { ...prev, permissions: perms };
+                try {
+                  const raw = sessionStorage.getItem(SESSION_KEY);
+                  if (raw) sessionStorage.setItem(SESSION_KEY, JSON.stringify({ ...JSON.parse(raw), user: updated }));
+                } catch { /* ignore */ }
+                return updated;
+              });
               return;
             }
           }

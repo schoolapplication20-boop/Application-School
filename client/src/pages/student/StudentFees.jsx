@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Layout from '../../components/Layout';
 import { studentAPI } from '../../services/api';
 
@@ -51,12 +51,15 @@ export default function StudentFees() {
   useEffect(() => { load(); }, [load]);
 
   // Auto-refresh every 30s when fee is not yet fully paid
+  // Use a ref to the load function so the interval doesn't restart on every render
+  const loadRef = useRef(load);
+  useEffect(() => { loadRef.current = load; }, [load]);
   useEffect(() => {
     const status = feeData?.summary?.status;
     if (!status || String(status).toUpperCase() === 'PAID') return;
-    const t = setInterval(() => load(true), 30000);
+    const t = setInterval(() => loadRef.current(true), 30000);
     return () => clearInterval(t);
-  }, [feeData?.summary?.status, load]);
+  }, [feeData?.summary?.status]); // stable — no load dep, uses ref instead
 
   /* ── derived ── */
   const summary      = feeData?.summary          ?? {};

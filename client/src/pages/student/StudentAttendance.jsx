@@ -81,7 +81,7 @@ export default function StudentAttendance() {
   const tableRecords = useMemo(() => {
     const base = activeTab === 'month' ? monthRecords : records;
     const filtered = filterStatus ? base.filter(r => r.status === filterStatus) : base;
-    return [...filtered].sort((a, b) => b.date.localeCompare(a.date));
+    return [...filtered].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
   }, [activeTab, monthRecords, records, filterStatus]);
 
   // ── Calendar grid for selected month ───────────────────────────────────────

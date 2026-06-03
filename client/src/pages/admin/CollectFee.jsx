@@ -173,6 +173,7 @@ export default function CollectFee() {
     setReceiptNo(genReceipt());
     setRemarks('');
     setPayDate(todayStr());
+    setReceiptData(null); // clear previous receipt so old one doesn't persist alongside new
   };
 
   const clearInstallmentSelection = () => {
@@ -190,7 +191,7 @@ export default function CollectFee() {
 
     const amt = Number(amount);
     if (!amt || amt <= 0) { showToast('Enter a valid amount', 'error'); return; }
-    if (amt > Number(selectedInstallment.amount)) {
+    if (Math.round(amt * 100) > Math.round(Number(selectedInstallment.amount) * 100)) {
       showToast(`Amount exceeds installment amount ₹${fmt(selectedInstallment.amount)}`, 'error'); return;
     }
 

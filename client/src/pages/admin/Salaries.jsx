@@ -97,6 +97,12 @@ export default function Salaries() {
 
   const handleAddSave = async () => {
     if (!addForm.staffName.trim()) { showToast('Staff name is required', 'error'); return; }
+    // Prevent duplicate salary record for same staff/month/year
+    const duplicate = records.find(r =>
+      r.staffName?.toLowerCase() === addForm.staffName.trim().toLowerCase() &&
+      r.month === selMonth && r.year === selYear
+    );
+    if (duplicate) { showToast(`A salary record for ${addForm.staffName.trim()} in ${selMonth} ${selYear} already exists.`, 'error'); return; }
     setSaving(true);
     try {
       await salaryAPI.create({ ...addForm, month: selMonth, year: selYear });
@@ -138,9 +144,13 @@ export default function Salaries() {
   };
 
   const handleLeavesSave = async () => {
+    const taken = Number(leavesForm.leavesTaken);
+    const maxDays = leavesModal.totalWorkingDays || 31;
+    if (isNaN(taken) || taken < 0) { showToast('Leave days must be a non-negative number', 'error'); return; }
+    if (taken > maxDays) { showToast(`Leave days cannot exceed working days (${maxDays})`, 'error'); return; }
     setSaving(true);
     try {
-      await salaryAPI.updateLeaves(leavesModal.id, { leavesTaken: Number(leavesForm.leavesTaken) });
+      await salaryAPI.updateLeaves(leavesModal.id, { leavesTaken: taken });
       showToast('Leaves updated');
       setLeavesModal(null);
       loadRecords();
@@ -795,7 +805,7 @@ export default function Salaries() {
                         <tbody>
                           <tr><td>Provident Fund</td><td className="text-end">{fmt(slipModal.pf)}</td></tr>
                           <tr><td>Income Tax</td><td className="text-end">{fmt(slipModal.tax)}</td></tr>
-                          <tr><td>Leave Deduction</td><td className="text-end text-danger">{fmt(Math.max(Number(slipModal.calculatedSalary||(Number(slipModal.basic||0)+Number(slipModal.hra||0)+Number(slipModal.da||0)+Number(slipModal.medical||0))-Number(slipModal.pf||0)-Number(slipModal.tax||0)) - (Number(slipModal.calculatedSalary||0)), 0))}</td></tr>
+                          <tr><td>Leave Deduction</td><td className="text-end text-danger">{fmt(Math.max((Number(slipModal.basic||0)+Number(slipModal.hra||0)+Number(slipModal.da||0)+Number(slipModal.medical||0))-Number(slipModal.pf||0)-Number(slipModal.tax||0)-Number(slipModal.calculatedSalary||0), 0))}</td></tr>
                           <tr className="fw-bold border-top"><td>Total Deductions</td><td className="text-end text-danger">{fmt(Number(slipModal.pf||0)+Number(slipModal.tax||0))}</td></tr>
                         </tbody>
                       </table>

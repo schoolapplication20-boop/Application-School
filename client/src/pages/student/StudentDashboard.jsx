@@ -26,7 +26,11 @@ export default function StudentDashboard() {
 
   useEffect(() => {
     const today     = new Date();
-    const startDate = new Date(today.getFullYear(), today.getMonth() - 2, 1).toISOString().split('T')[0];
+    // Use Date constructor month arithmetic — negative month values wrap correctly across years
+    const twoMonthsAgo = new Date(today);
+    twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
+    twoMonthsAgo.setDate(1);
+    const startDate = twoMonthsAgo.toISOString().split('T')[0];
     const endDate   = today.toISOString().split('T')[0];
 
     Promise.all([

@@ -96,7 +96,9 @@ public class AdminController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             Authentication auth) {
-        return ResponseEntity.ok(adminService.getStudents(getCurrentSchoolId(auth), search, page, size));
+        int safePage = Math.max(0, page);
+        int safeSize = Math.min(Math.max(1, size), 200); // cap at 200 per page
+        return ResponseEntity.ok(adminService.getStudents(getCurrentSchoolId(auth), search, safePage, safeSize));
     }
 
     @GetMapping("/students/{id}")
@@ -153,10 +155,10 @@ public class AdminController {
     @PostMapping("/students/promote")
     public ResponseEntity<ApiResponse<Map<String, Object>>> promoteStudents(
             @RequestBody Map<String, Object> body, Authentication auth) {
-        String fromClass   = body.getOrDefault("fromClass",   "").toString().trim();
-        String fromSection = body.getOrDefault("fromSection", "").toString().trim();
-        String toClass     = body.getOrDefault("toClass",     "").toString().trim();
-        String toSection   = body.getOrDefault("toSection",   "").toString().trim();
+        String fromClass   = body.get("fromClass")   != null ? body.get("fromClass").toString().trim()   : "";
+        String fromSection = body.get("fromSection") != null ? body.get("fromSection").toString().trim() : "";
+        String toClass     = body.get("toClass")     != null ? body.get("toClass").toString().trim()     : "";
+        String toSection   = body.get("toSection")   != null ? body.get("toSection").toString().trim()   : "";
         ApiResponse<Map<String, Object>> response =
                 adminService.promoteStudents(getCurrentSchoolId(auth), fromClass, fromSection, toClass, toSection);
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
@@ -329,7 +331,7 @@ public class AdminController {
     @GetMapping("/student-fee-assignments/student/{studentId}")
     public ResponseEntity<?> getStudentFeeAssignment(@PathVariable Long studentId, Authentication auth) {
         var response = adminService.getStudentFeeAssignment(studentId, getCurrentSchoolId(auth));
-        return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.ok(response);
+        return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.status(404).body(response);
     }
 
     @GetMapping("/student-fee-assignments/{assignmentId}/payments")

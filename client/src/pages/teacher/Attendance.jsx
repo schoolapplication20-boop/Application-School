@@ -97,7 +97,7 @@ export default function Attendance() {
         const map = {};
         roster.forEach(s => { map[s.id] = { status: 'PRESENT', note: '' }; });
         if (attList.length) {
-          attList.forEach(a => { map[a.studentId] = { status: a.status, note: '' }; });
+          attList.forEach(a => { map[a.studentId] = { status: a.status, note: a.note || '' }; });
           setAlreadyMarked(true);
         }
         setAttendanceMap(map);
@@ -132,6 +132,7 @@ export default function Attendance() {
   const handleSave = async () => {
     if (!selectedClass || !students.length) return;
     setSaving(true);
+    const wasAlreadyMarked = alreadyMarked; // capture before async
     const payload = students.map(s => ({
       studentId: s.id,
       classId:   selectedClass.id,
@@ -142,7 +143,7 @@ export default function Attendance() {
     try {
       await teacherAPI.markAttendance(payload);
       setAlreadyMarked(true);
-      showToast(`Attendance ${alreadyMarked ? 'updated' : 'saved'} for ${classLabel(selectedClass)} — ${fmtDate(selectedDate)}`);
+      showToast(`Attendance ${wasAlreadyMarked ? 'updated' : 'saved'} for ${classLabel(selectedClass)} — ${fmtDate(selectedDate)}`);
     } catch {
       showToast('Failed to save attendance. Please try again.', 'error');
     } finally {

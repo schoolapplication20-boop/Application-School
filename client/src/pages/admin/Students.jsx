@@ -510,6 +510,7 @@ export default function Students() {
     setBulkDeleteConfirm(false);
     exitSelectionMode();
     showToast(`${ok} student${ok !== 1 ? 's' : ''} deleted`, ok > 0 ? 'warning' : 'error');
+    setCurrentPage(1);
     loadStudents();
   };
 
@@ -917,7 +918,12 @@ export default function Students() {
                       <select
                         className={`form-select form-select-sm ${errors.class ? 'is-invalid' : ''}`}
                         value={formData.class}
-                        onChange={e => setFormData(fd => ({ ...fd, class: e.target.value, section: '', rollNo: '' }))}
+                        onChange={e => {
+                          // Only clear section/rollNo when class actually changes (not on accidental same-class click)
+                          if (e.target.value !== formData.class) {
+                            setFormData(fd => ({ ...fd, class: e.target.value, section: '', rollNo: '' }));
+                          }
+                        }}
                       >
                         <option value="">Select Class</option>
                         {classNames.length === 0

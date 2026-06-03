@@ -70,10 +70,19 @@ const Login = () => {
 
   // Reset form when role changes
   const handleRoleSelect = (roleKey) => {
+    // Clear any in-flight retry timer
+    if (retryTimerRef.current) { clearInterval(retryTimerRef.current); retryTimerRef.current = null; }
+    retryCountRef.current = 0;
     setSelectedRole(roleKey);
     setEmailForm({ email: '', password: '' });
     setError('');
     setAccountLocked(false);
+    setServerWaking(false);
+    setRetryIn(0);
+    // Clear owner OTP state so a stale OTP screen can't persist across role changes
+    setOwnerOtpStep(false);
+    setOwnerEmail('');
+    setOwnerOtp('');
   };
 
   const isStudentRole  = selectedRole === 'STUDENT';
@@ -451,7 +460,7 @@ const Login = () => {
                   </span>
                 ) : 'VERIFY OTP'}
               </button>
-              <button type="button" onClick={() => { setOwnerOtpStep(false); setOwnerOtp(''); setError(''); }}
+              <button type="button" onClick={() => { setOwnerOtpStep(false); setOwnerOtp(''); setOwnerEmail(''); setError(''); }}
                 style={{ width: '100%', marginTop: 10, background: 'none', border: '1px solid #e2e8f0', borderRadius: 8, padding: '9px 0', fontSize: 13, color: '#64748b', cursor: 'pointer' }}>
                 ← Back to login
               </button>

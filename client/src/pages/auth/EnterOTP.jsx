@@ -107,6 +107,7 @@ const EnterOTP = () => {
     setError('');
     try {
       await authAPI.verifyOTP({ mobile, otp: otpString });
+      sessionStorage.removeItem('otp_mobile'); // clear so next reset flow starts fresh
       setVerified(true);
       setTimeout(() => navigate('/set-new-password', { state: { mobile } }), 1000);
     } catch (err) {

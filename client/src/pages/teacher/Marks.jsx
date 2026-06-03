@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Layout from '../../components/Layout';
 import Toast from '../../components/Toast';
 import { useAuth } from '../../context/AuthContext';
@@ -32,8 +32,9 @@ const buildGetGrade = (scale) => {
   };
 };
 
-// Initial fallback — replaced once API loads
-let getGrade = buildGetGrade(DEFAULT_SCALE);
+// Fallback used before API resolves — stored in a module-level ref-like pattern
+// but replaced per-component via useRef so multiple instances don't share state
+const _defaultGetGrade = buildGetGrade(DEFAULT_SCALE);
 
 
 // Colours by tier: top 25% = green, middle 50% = blue/yellow, bottom 25% = red
@@ -60,6 +61,9 @@ const sel = (extra = {}) => ({
 
 export default function Marks() {
   const { user } = useAuth();
+  // Per-component grade function — updated when school grade scale loads from API
+  const getGradeRef = useRef(_defaultGetGrade);
+  const getGrade = (...args) => getGradeRef.current(...args);
 
   // ── Main data ─────────────────────────────────────────────────────────────────
   const [classes, setClasses]           = useState([]);
@@ -97,7 +101,7 @@ export default function Marks() {
         const data = r.data?.data || [];
         if (data.length > 0) {
           setGradeScale(data);
-          getGrade = buildGetGrade(data);
+          getGradeRef.current = buildGetGrade(data);
         }
       })
       .catch(() => {});

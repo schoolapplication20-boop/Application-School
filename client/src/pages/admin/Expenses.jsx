@@ -70,8 +70,8 @@ function ExpenseModal({ initial, addedBy, addedById, onClose, onSaved, onError }
 
   const validate = () => {
     if (!form.title.trim())            return 'Expense title is required.';
-    if (!form.amount)                  return 'Amount is required.';
-    if (parseFloat(form.amount) <= 0)  return 'Amount must be greater than 0.';
+    if (!form.amount)                                               return 'Amount is required.';
+    if (isNaN(parseFloat(form.amount)) || parseFloat(form.amount) <= 0) return 'Amount must be a valid number greater than 0.';
     if (!form.date)                    return 'Date is required.';
     return '';
   };
@@ -253,10 +253,12 @@ function ExpenseModal({ initial, addedBy, addedById, onClose, onSaved, onError }
 
 function DeleteModal({ expense, onClose, onDeleted }) {
   const [busy, setBusy] = useState(false);
+  const [deleteErr, setDeleteErr] = useState('');
   const go = async () => {
     setBusy(true);
+    setDeleteErr('');
     try { await adminAPI.deleteExpense(expense.id); onDeleted(); }
-    catch { setBusy(false); }
+    catch { setBusy(false); setDeleteErr('Failed to delete. Please try again.'); }
   };
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -273,6 +275,7 @@ function DeleteModal({ expense, onClose, onDeleted }) {
             Delete <strong>"{expense.title}"</strong>?
           </p>
           <p style={{ margin: '8px 0 0', color: '#a0aec0', fontSize: '13px' }}>This cannot be undone.</p>
+          {deleteErr && <p style={{ margin: '10px 0 0', color: '#e53e3e', fontSize: '13px', fontWeight: 600 }}>{deleteErr}</p>}
         </div>
         <div className="modal-footer">
           <button onClick={onClose} disabled={busy}

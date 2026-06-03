@@ -180,6 +180,8 @@ export default function Parents() {
     try {
       await adminAPI.updateParent(p.id, { isActive: !(p.isActive ?? true) });
       showToast(`Parent ${!(p.isActive ?? true) ? 'activated' : 'deactivated'}`);
+      // Close edit modal if it's open for this same parent to avoid showing stale data
+      if (editParent?.id === p.id) { setShowModal(false); setEditParent(null); setForm(EMPTY_FORM()); }
       loadParents();
     } catch {
       showToast('Failed to update status', 'error');
