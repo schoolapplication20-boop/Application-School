@@ -13,7 +13,7 @@ import { adminAPI, onboardingVerifyAPI } from '../../services/api';
 
 
 const EMPTY_FORM = {
-  name: '', rollNo: '', admissionNumber: '', class: '', section: '', dob: '', status: 'Active', gender: '', photo: null,
+  name: '', rollNo: '', admissionNumber: '', class: '', section: '', dob: '', status: 'Active', photo: null,
   studentEmail: '',
   fatherName: '', fatherPhone: '',
   motherName: '', motherPhone: '',
@@ -398,7 +398,6 @@ export default function Students() {
       section:          formData.section,
       dob:              formData.dob,
       status:           formData.status,
-      gender:           formData.gender,
       photo:            formData.photo,
       fatherName:       formData.fatherName,
       fatherPhone:      formData.fatherPhone,
@@ -984,15 +983,6 @@ export default function Students() {
                         <option>Inactive</option>
                       </select>
                     </div>
-                    <div className="col-md-4">
-                      <label className="form-label fw-medium small">Gender</label>
-                      <select className="form-select form-select-sm" value={formData.gender} onChange={set('gender')}>
-                        <option value="">Select Gender</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Other">Other</option>
-                      </select>
-                    </div>
                     {/* Student email — required, OTP-verified */}
                     <div className="col-12">
                       <label className="form-label fw-medium small">
@@ -1248,7 +1238,6 @@ export default function Students() {
                   <ViewRow label="Class / Section" value={`Class ${(selectedStudent.class || '').replace(/^class\s+/i, '')}${selectedStudent.section ? `-${selectedStudent.section}` : ''}`} />
                   <ViewRow label="Roll Number" value={selectedStudent.rollNo} mono />
                   <ViewRow label="Admission Number" value={selectedStudent.admissionNumber} mono />
-                  {selectedStudent.gender && <ViewRow label="Gender" value={selectedStudent.gender} />}
                   {selectedStudent.bloodGroup && <ViewRow label="Blood Group" value={selectedStudent.bloodGroup} />}
                 </ViewSection>
 

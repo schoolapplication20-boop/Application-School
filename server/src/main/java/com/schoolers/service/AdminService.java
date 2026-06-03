@@ -353,7 +353,6 @@ public class AdminService {
                 .guardianName(str(body, "guardianName", null))
                 .guardianMobile(str(body, "guardianMobile", str(body, "guardianPhone", null)))
                 .dateOfBirth(parseDate(str(body, "dateOfBirth", str(body, "dob", null))))
-                .gender(str(body, "gender", null))
                 .address(str(body, "address", str(body, "permanentAddress", "")))
                 .alternateAddress(str(body, "alternateAddress", null))
                 .photoUrl(str(body, "photo", str(body, "photoUrl", null)))
@@ -502,8 +501,6 @@ public class AdminService {
                         student.setGuardianMobile(str(body, "guardianMobile", str(body, "guardianPhone", student.getGuardianMobile())));
                     if (body.containsKey("dateOfBirth") || body.containsKey("dob"))
                         student.setDateOfBirth(parseDate(str(body, "dateOfBirth", str(body, "dob", null))));
-                    if (body.containsKey("gender"))
-                        student.setGender(str(body, "gender", student.getGender()));
                     if (body.containsKey("address") || body.containsKey("permanentAddress"))
                         student.setAddress(str(body, "address", str(body, "permanentAddress", student.getAddress())));
                     if (body.containsKey("alternateAddress"))

@@ -79,9 +79,6 @@ public class Student {
     @Column(name = "date_of_birth")
     private LocalDate dateOfBirth;
 
-    @Column(name = "gender", length = 10)
-    private String gender;
-
     @Column(columnDefinition = "TEXT")
     private String address;
 
