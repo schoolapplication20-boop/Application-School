@@ -72,6 +72,23 @@ function OwnerDashboard() {
   const [limitEdit,    setLimitEdit]    = useState({});  // { [schoolDbId]: string input value }
   const [limitSaving,  setLimitSaving]  = useState({});  // { [schoolDbId]: bool }
 
+  // ── Fee summary (lazy-loaded per school on expand) ──────────────────────────
+  const [feeSummaryMap,     setFeeSummaryMap]     = useState({});  // { [schoolDbId]: rows[] | null }
+  const [feeSummaryLoading, setFeeSummaryLoading] = useState({});  // { [schoolDbId]: bool }
+
+  const loadFeeSummary = async (schoolDbId, schoolActualId) => {
+    if (feeSummaryMap[schoolDbId] !== undefined) return; // already loaded
+    setFeeSummaryLoading(prev => ({ ...prev, [schoolDbId]: true }));
+    try {
+      const res = await ownerAPI.getFeeSummary(schoolActualId);
+      setFeeSummaryMap(prev => ({ ...prev, [schoolDbId]: res.data?.data ?? [] }));
+    } catch {
+      setFeeSummaryMap(prev => ({ ...prev, [schoolDbId]: [] }));
+    } finally {
+      setFeeSummaryLoading(prev => ({ ...prev, [schoolDbId]: false }));
+    }
+  };
+
   const openLimitEdit  = (sa) => setLimitEdit(prev => ({ ...prev, [sa.schoolDbId]: String(sa.userLimit ?? '') }));
   const closeLimitEdit = (id) => setLimitEdit(prev => { const n = { ...prev }; delete n[id]; return n; });
 
@@ -582,7 +599,10 @@ function OwnerDashboard() {
                               <span className="material-icons" style={{ fontSize: 15, color: '#16a34a' }}>tune</span>
                             </button>
                             <button
-                              onClick={() => setExpandedRow(isExpanded ? null : sa.schoolDbId)}
+                              onClick={() => {
+                                setExpandedRow(isExpanded ? null : sa.schoolDbId);
+                                if (!isExpanded) loadFeeSummary(sa.schoolDbId, sa.schoolActualId ?? sa.schoolDbId);
+                              }}
                               title={isExpanded ? 'Collapse' : 'View details'}
                               style={{ border: 'none', background: isExpanded ? '#ede9fe' : '#f8fafc', borderRadius: 7, width: 28, height: 28, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
                             >
@@ -638,7 +658,7 @@ function OwnerDashboard() {
                       {isExpanded && (
                         <tr>
                           <td colSpan={8} style={{ padding: 0, background: '#fafbff', borderTop: '1px dashed #e2e8f0' }}>
-                            <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
+                            <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, gridTemplateRows: 'auto auto' }}>
                               {/* School info + User Limit */}
                               <div style={{ background: '#fff', borderRadius: 10, padding: '12px 14px', border: '1.5px solid #e2e8f0' }}>
                                 <div style={{ fontSize: 11, fontWeight: 700, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>School Info</div>
@@ -736,6 +756,52 @@ function OwnerDashboard() {
                                     );
                                   })}
                                 </div>
+                              </div>
+
+                              {/* ── Fee Summary (full-width, 3-col span) ───── */}
+                              <div style={{ gridColumn: '1 / -1', background: '#fff', borderRadius: 10, padding: '14px 16px', border: '1.5px solid #e2e8f0' }}>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>
+                                  Fee Summary — Year-wise
+                                </div>
+                                {feeSummaryLoading[sa.schoolDbId] ? (
+                                  <div style={{ textAlign: 'center', padding: 16, color: '#a0aec0', fontSize: 12 }}>Loading fee data…</div>
+                                ) : !feeSummaryMap[sa.schoolDbId] || feeSummaryMap[sa.schoolDbId].length === 0 ? (
+                                  <div style={{ textAlign: 'center', padding: 14, color: '#cbd5e0', fontSize: 12 }}>No fee assignments found for this school.</div>
+                                ) : (
+                                  <div style={{ overflowX: 'auto' }}>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                                      <thead>
+                                        <tr style={{ background: '#f8faff' }}>
+                                          {['Academic Year', 'Students', 'Total Fees', 'Collected', 'Pending', 'Collection %'].map(h => (
+                                            <th key={h} style={{ padding: '7px 12px', textAlign: h === 'Academic Year' || h === 'Students' ? 'left' : 'right', color: '#64748b', fontWeight: 700, fontSize: 11, textTransform: 'uppercase', letterSpacing: '.04em', borderBottom: '1px solid #e2e8f0', whiteSpace: 'nowrap' }}>{h}</th>
+                                          ))}
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {feeSummaryMap[sa.schoolDbId].map((row, i) => {
+                                          const total   = Number(row.totalFee   || 0);
+                                          const paid    = Number(row.paidAmount || 0);
+                                          const pending = Number(row.pendingAmount || 0);
+                                          const pct     = total > 0 ? Math.round((paid / total) * 100) : 0;
+                                          const pctColor = pct >= 90 ? '#16a34a' : pct >= 60 ? '#f59e0b' : '#dc2626';
+                                          const fmt = (n) => '₹' + Number(n).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+                                          return (
+                                            <tr key={i} style={{ borderBottom: '1px solid #f1f5f9', background: i % 2 === 0 ? '#fff' : '#fafcff' }}>
+                                              <td style={{ padding: '8px 12px', fontWeight: 700, color: '#1e293b' }}>{row.year || '—'}</td>
+                                              <td style={{ padding: '8px 12px', color: '#64748b' }}>{row.studentCount}</td>
+                                              <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 600, color: '#1e293b' }}>{fmt(total)}</td>
+                                              <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, color: '#16a34a' }}>{fmt(paid)}</td>
+                                              <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, color: pending > 0 ? '#dc2626' : '#94a3b8' }}>{pending > 0 ? fmt(pending) : '—'}</td>
+                                              <td style={{ padding: '8px 12px', textAlign: 'right' }}>
+                                                <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 800, background: pctColor + '18', color: pctColor }}>{pct}%</span>
+                                              </td>
+                                            </tr>
+                                          );
+                                        })}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </td>

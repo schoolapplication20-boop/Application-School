@@ -667,6 +667,7 @@ export const ownerAPI = {
   requestActionOtp: ()                       => api.post('/api/owner/confirm/request-otp'),
   verifyActionOtp:  (otp)                    => api.post('/api/owner/confirm/verify-otp', { otp }),
   setUserLimit:     (schoolDbId, userLimit)  => api.patch(`/api/owner/schools/${schoolDbId}/user-limit`, { userLimit }),
+  getFeeSummary:    (schoolDbId)             => api.get(`/api/owner/schools/${schoolDbId}/fee-summary`),
 };
 
 // ============================================

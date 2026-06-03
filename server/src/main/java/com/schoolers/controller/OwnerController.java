@@ -4,6 +4,7 @@ import com.schoolers.dto.ApiResponse;
 import com.schoolers.model.School;
 import com.schoolers.model.User;
 import com.schoolers.repository.SchoolRepository;
+import com.schoolers.repository.StudentFeeAssignmentRepository;
 import com.schoolers.repository.UserRepository;
 import com.schoolers.service.AuthService;
 import com.schoolers.service.EmailService;
@@ -24,9 +25,10 @@ import java.util.Map;
 @PreAuthorize("hasRole('APPLICATION_OWNER')")
 public class OwnerController {
 
-    @Autowired private UserRepository  userRepository;
-    @Autowired private SchoolRepository schoolRepository;
-    @Autowired private EmailService    emailService;
+    @Autowired private UserRepository               userRepository;
+    @Autowired private SchoolRepository             schoolRepository;
+    @Autowired private StudentFeeAssignmentRepository feeAssignmentRepository;
+    @Autowired private EmailService                 emailService;
 
     private static final SecureRandom RANDOM = new SecureRandom();
 
@@ -96,6 +98,35 @@ public class OwnerController {
         userRepository.save(owner);
 
         return ResponseEntity.ok(ApiResponse.success("OTP verified."));
+    }
+
+    /**
+     * Year-wise fee summary for a school.
+     * Returns: [{ year, totalFee, paidAmount, pendingAmount, studentCount }]
+     */
+    @GetMapping("/schools/{schoolDbId}/fee-summary")
+    public ResponseEntity<ApiResponse<java.util.List<Map<String, Object>>>> getFeeSummary(
+            @PathVariable Long schoolDbId) {
+
+        School school = schoolRepository.findById(schoolDbId).orElse(null);
+        if (school == null)
+            return ResponseEntity.status(404).body(ApiResponse.error("School not found."));
+
+        java.util.List<Object[]> rows = feeAssignmentRepository.feeSummaryByYear(schoolDbId);
+        java.util.List<Map<String, Object>> result = new java.util.ArrayList<>();
+        for (Object[] row : rows) {
+            Map<String, Object> item = new java.util.LinkedHashMap<>();
+            java.math.BigDecimal total  = (java.math.BigDecimal) row[1];
+            java.math.BigDecimal paid   = (java.math.BigDecimal) row[2];
+            java.math.BigDecimal pending = total.subtract(paid).max(java.math.BigDecimal.ZERO);
+            item.put("year",          row[0]);
+            item.put("totalFee",      total);
+            item.put("paidAmount",    paid);
+            item.put("pendingAmount", pending);
+            item.put("studentCount",  row[3]);
+            result.add(item);
+        }
+        return ResponseEntity.ok(ApiResponse.success(result));
     }
 
     /**

@@ -35,6 +35,12 @@ public interface StudentFeeAssignmentRepository extends JpaRepository<StudentFee
     @Query("SELECT COALESCE(SUM(s.totalFee - s.paidAmount), 0) FROM StudentFeeAssignment s WHERE s.status <> 'PAID'")
     BigDecimal sumTotalDue();
 
+    /** Year-wise fee summary for a school: [academicYear, totalFee, paidAmount, studentCount] */
+    @Query("SELECT s.academicYear, COALESCE(SUM(s.totalFee),0), COALESCE(SUM(s.paidAmount),0), COUNT(s) " +
+           "FROM StudentFeeAssignment s WHERE s.schoolId = :schoolId " +
+           "GROUP BY s.academicYear ORDER BY s.academicYear DESC")
+    List<Object[]> feeSummaryByYear(@Param("schoolId") Long schoolId);
+
     @org.springframework.data.jpa.repository.Modifying
     @org.springframework.transaction.annotation.Transactional
     void deleteBySchoolId(Long schoolId);
