@@ -763,9 +763,9 @@ function OwnerDashboard() {
                                 <div style={{ fontSize: 11, fontWeight: 700, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>
                                   Fee Summary — Year-wise
                                 </div>
-                                {feeSummaryLoading[sa.schoolDbId] ? (
+                                {feeSummaryLoading[sa.schoolDbId] || feeSummaryMap[sa.schoolDbId] === undefined ? (
                                   <div style={{ textAlign: 'center', padding: 16, color: '#a0aec0', fontSize: 12 }}>Loading fee data…</div>
-                                ) : !feeSummaryMap[sa.schoolDbId] || feeSummaryMap[sa.schoolDbId].length === 0 ? (
+                                ) : feeSummaryMap[sa.schoolDbId].length === 0 ? (
                                   <div style={{ textAlign: 'center', padding: 14, color: '#cbd5e0', fontSize: 12 }}>No fee assignments found for this school.</div>
                                 ) : (
                                   <div style={{ overflowX: 'auto' }}>

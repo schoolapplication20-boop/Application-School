@@ -112,7 +112,12 @@ public class OwnerController {
         if (school == null)
             return ResponseEntity.status(404).body(ApiResponse.error("School not found."));
 
-        java.util.List<Object[]> rows = feeAssignmentRepository.feeSummaryByYear(schoolDbId);
+        // Try with the DB primary key first, then fall back to the display school_id
+        // (student_fee_assignments.school_id may store either value depending on migration state)
+        java.util.List<Object[]> rows = feeAssignmentRepository.feeSummaryByYear(school.getId());
+        if (rows.isEmpty() && school.getSchoolId() != null) {
+            rows = feeAssignmentRepository.feeSummaryByYear(school.getSchoolId().longValue());
+        }
         java.util.List<Map<String, Object>> result = new java.util.ArrayList<>();
         for (Object[] row : rows) {
             Map<String, Object> item = new java.util.LinkedHashMap<>();

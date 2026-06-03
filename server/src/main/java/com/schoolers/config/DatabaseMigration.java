@@ -505,6 +505,16 @@ public class DatabaseMigration implements CommandLineRunner {
         exec("CREATE INDEX IF NOT EXISTS idx_users_username       ON users(username)");
         log.debug("Production performance indexes ensured.");
 
+        // ── student_fee_assignments: backfill NULL school_id from the linked student ─
+        execRaw(
+            "UPDATE student_fee_assignments sfa " +
+            "SET school_id = st.school_id " +
+            "FROM students st " +
+            "WHERE sfa.student_id = st.id " +
+            "  AND (sfa.school_id IS NULL OR sfa.school_id = 0)"
+        );
+        log.debug("student_fee_assignments school_id backfilled.");
+
         // ── schools: user_limit column ────────────────────────────────────────────
         exec("ALTER TABLE schools ADD COLUMN IF NOT EXISTS user_limit INTEGER");
         log.debug("schools.user_limit column ensured.");
