@@ -92,6 +92,28 @@ function OwnerDashboard() {
   const openLimitEdit  = (sa) => setLimitEdit(prev => ({ ...prev, [sa.schoolDbId]: String(sa.userLimit ?? '') }));
   const closeLimitEdit = (id) => setLimitEdit(prev => { const n = { ...prev }; delete n[id]; return n; });
 
+  // ── Price per user editing ────────────────────────────────────────────────
+  const [priceEdit,   setPriceEdit]   = useState({});  // { [schoolDbId]: string }
+  const [priceSaving, setPriceSaving] = useState({});  // { [schoolDbId]: bool }
+
+  const openPriceEdit  = (sa) => setPriceEdit(prev => ({ ...prev, [sa.schoolDbId]: String(sa.pricePerUser ?? '') }));
+  const closePriceEdit = (id) => setPriceEdit(prev => { const n = { ...prev }; delete n[id]; return n; });
+
+  const savePriceFor = async (sa, clearPrice = false) => {
+    const raw = clearPrice ? null : priceEdit[sa.schoolDbId];
+    const pricePerUser = raw === '' || raw === null ? null : Number(raw);
+    if (raw !== '' && raw !== null && (isNaN(pricePerUser) || pricePerUser < 0)) return;
+    setPriceSaving(prev => ({ ...prev, [sa.schoolDbId]: true }));
+    try {
+      await ownerAPI.setPricePerUser(sa.schoolActualId ?? sa.schoolDbId, pricePerUser);
+      setSuperAdmins(prev => prev.map(s =>
+        s.schoolDbId === sa.schoolDbId ? { ...s, pricePerUser } : s
+      ));
+      closePriceEdit(sa.schoolDbId);
+    } catch { /* silent — leave input open */ }
+    finally { setPriceSaving(prev => ({ ...prev, [sa.schoolDbId]: false })); }
+  };
+
   const saveLimitFor = async (sa) => {
     const raw = limitEdit[sa.schoolDbId];
     const userLimit = raw === '' ? null : Number(raw);
@@ -756,6 +778,74 @@ function OwnerDashboard() {
                                     );
                                   })}
                                 </div>
+                              </div>
+
+                              {/* ── Platform Billing ─────────────────────── */}
+                              <div style={{ background: '#fff', borderRadius: 10, padding: '12px 14px', border: '1.5px solid #e2e8f0' }}>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Platform Billing</div>
+
+                                {/* Billing summary */}
+                                {(() => {
+                                  const price       = Number(sa.pricePerUser || 0);
+                                  const activeUsers = sa.activeUserCount ?? 0;
+                                  const total       = price * activeUsers;
+                                  const fmt = n => '₹' + Number(n).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+                                  return (
+                                    <div style={{ marginBottom: 10 }}>
+                                      {sa.pricePerUser != null ? (
+                                        <>
+                                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
+                                            <span style={{ color: '#64748b' }}>Price per user</span>
+                                            <span style={{ fontWeight: 700, color: '#1e293b' }}>{fmt(price)}</span>
+                                          </div>
+                                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
+                                            <span style={{ color: '#64748b' }}>Active users</span>
+                                            <span style={{ fontWeight: 700, color: '#1e293b' }}>{activeUsers.toLocaleString()}</span>
+                                          </div>
+                                          <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 8, marginTop: 4, display: 'flex', justifyContent: 'space-between' }}>
+                                            <span style={{ fontSize: 12, fontWeight: 700, color: '#64748b' }}>Total Billing</span>
+                                            <span style={{ fontSize: 15, fontWeight: 800, color: '#4f46e5' }}>{fmt(total)}</span>
+                                          </div>
+                                        </>
+                                      ) : (
+                                        <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 8 }}>No price set — school is billed at ₹0</div>
+                                      )}
+                                    </div>
+                                  );
+                                })()}
+
+                                {/* Edit price */}
+                                {priceEdit[sa.schoolDbId] !== undefined ? (
+                                  <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap' }}>
+                                    <span style={{ fontSize: 11, color: '#64748b', flexShrink: 0 }}>₹</span>
+                                    <input
+                                      type="number" min="0" step="0.01"
+                                      placeholder="e.g. 50"
+                                      value={priceEdit[sa.schoolDbId]}
+                                      onChange={e => setPriceEdit(prev => ({ ...prev, [sa.schoolDbId]: e.target.value }))}
+                                      style={{ width: 80, padding: '4px 8px', fontSize: 12, border: '1.5px solid #e2e8f0', borderRadius: 6, outline: 'none' }}
+                                      onKeyDown={e => { if (e.key === 'Enter') savePriceFor(sa); if (e.key === 'Escape') closePriceEdit(sa.schoolDbId); }}
+                                      autoFocus
+                                    />
+                                    <span style={{ fontSize: 10, color: '#94a3b8' }}>per user</span>
+                                    <button onClick={() => savePriceFor(sa)} disabled={priceSaving[sa.schoolDbId]}
+                                      style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: '#4f46e5', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                                      {priceSaving[sa.schoolDbId] ? '…' : 'Save'}
+                                    </button>
+                                    <button onClick={() => savePriceFor(sa, true)} disabled={priceSaving[sa.schoolDbId]}
+                                      title="Remove price" style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#fff', color: '#94a3b8', fontSize: 11, cursor: 'pointer' }}>
+                                      Free
+                                    </button>
+                                    <button onClick={() => closePriceEdit(sa.schoolDbId)}
+                                      style={{ padding: '4px 6px', borderRadius: 6, border: 'none', background: 'none', color: '#94a3b8', fontSize: 14, cursor: 'pointer' }}>✕</button>
+                                  </div>
+                                ) : (
+                                  <button onClick={() => openPriceEdit(sa)}
+                                    style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#f8faff', color: '#4f46e5', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                                    <span className="material-icons" style={{ fontSize: 13 }}>edit</span>
+                                    {sa.pricePerUser != null ? 'Edit Price' : 'Set Price'}
+                                  </button>
+                                )}
                               </div>
 
                               {/* ── Fee Summary (full-width, 3-col span) ───── */}
@@ -2927,6 +3017,30 @@ function SchoolDashboard() {
         <h1>Super Admin Dashboard</h1>
         <p>Overview of your school management platform</p>
       </div>
+
+      {/* ── Platform Billing Card ────────────────────────────────────────────── */}
+      {feeSummary && feeSummary.pricePerUser != null && (
+        <div style={{ background: 'linear-gradient(135deg,#f8faff,#eef2ff)', borderRadius: 16, border: '1.5px solid #e0e7ff', padding: '18px 24px', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 44, height: 44, borderRadius: 12, background: 'linear-gradient(135deg,#4f46e5,#7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <span className="material-icons" style={{ color: '#fff', fontSize: 22 }}>account_balance_wallet</span>
+            </div>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 15, color: '#1e293b' }}>My-Skoolz Platform Billing</div>
+              <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+                ₹{Number(feeSummary.pricePerUser).toLocaleString('en-IN', { maximumFractionDigits: 2 })} per user
+                &nbsp;×&nbsp;{(feeSummary.activeUsers ?? 0).toLocaleString()} active users
+              </div>
+            </div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: 11, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.05em', fontWeight: 700 }}>Total Owed</div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: '#4f46e5', letterSpacing: '-0.02em' }}>
+              ₹{Number(feeSummary.billingTotal ?? 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Fee Summary Card ──────────────────────────────────────────────────── */}
       {feeSummary && (

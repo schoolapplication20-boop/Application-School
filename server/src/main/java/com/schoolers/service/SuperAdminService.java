@@ -355,7 +355,11 @@ public class SuperAdminService {
                     dto.put("schoolFeatures",     school.getFeatures()); // raw JSON string — parsed on frontend
                     dto.put("schoolActive",       Boolean.TRUE.equals(school.getIsActive()));
                     dto.put("userLimit",          school.getUserLimit());
-                    dto.put("userCount",          userRepository.countBySchoolId(school.getId()));
+                    dto.put("pricePerUser",       school.getPricePerUser());
+                    long totalUsers  = userRepository.countBySchoolId(school.getId());
+                    long activeUsers = userRepository.countBySchoolIdAndIsActive(school.getId(), true);
+                    dto.put("userCount",          totalUsers);
+                    dto.put("activeUserCount",    activeUsers);
                 } else {
                     dto.put("needsSchoolSetup", true);
                 }

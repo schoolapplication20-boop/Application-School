@@ -135,6 +135,40 @@ public class OwnerController {
     }
 
     /**
+     * Set or clear the per-user price for a school.
+     * Body: { "pricePerUser": 50 }  — send null to remove the price.
+     */
+    @PatchMapping("/schools/{schoolDbId}/price-per-user")
+    public ResponseEntity<ApiResponse<String>> setPricePerUser(
+            @PathVariable Long schoolDbId,
+            @RequestBody Map<String, Object> body) {
+
+        School school = schoolRepository.findById(schoolDbId).orElse(null);
+        if (school == null)
+            return ResponseEntity.status(404).body(ApiResponse.error("School not found."));
+
+        Object raw = body.get("pricePerUser");
+        if (raw == null) {
+            school.setPricePerUser(null);
+        } else {
+            try {
+                java.math.BigDecimal price = new java.math.BigDecimal(raw.toString());
+                if (price.compareTo(java.math.BigDecimal.ZERO) < 0)
+                    return ResponseEntity.badRequest().body(ApiResponse.error("Price must be 0 or greater."));
+                school.setPricePerUser(price);
+            } catch (NumberFormatException e) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("pricePerUser must be a number."));
+            }
+        }
+
+        schoolRepository.save(school);
+        String msg = school.getPricePerUser() == null
+                ? "Price per user removed."
+                : "Price per user set to ₹" + school.getPricePerUser() + ".";
+        return ResponseEntity.ok(ApiResponse.success(msg));
+    }
+
+    /**
      * Set or clear the user limit for a school.
      * Body: { "userLimit": 1000 }  — send null to remove the limit.
      */

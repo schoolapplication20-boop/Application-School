@@ -374,11 +374,23 @@ public class AdminController {
             result.add(item);
         }
 
+        // Billing info — price per user set by the platform owner
+        com.schoolers.model.School school = schoolRepository.findById(schoolId)
+                .orElseGet(() -> schoolRepository.findBySchoolId(schoolId.intValue()).orElse(null));
+        long activeUsers  = school != null ? userRepository.countBySchoolIdAndIsActive(school.getId(), true) : 0L;
+        java.math.BigDecimal pricePerUser  = school != null ? school.getPricePerUser() : null;
+        java.math.BigDecimal billingTotal  = (pricePerUser != null)
+                ? pricePerUser.multiply(java.math.BigDecimal.valueOf(activeUsers))
+                : null;
+
         java.util.Map<String, Object> response = new java.util.LinkedHashMap<>();
         response.put("years",        result);
         response.put("grandTotal",   grandTotal);
         response.put("grandPaid",    grandPaid);
         response.put("grandPending", grandPending);
+        response.put("pricePerUser",  pricePerUser);
+        response.put("activeUsers",   activeUsers);
+        response.put("billingTotal",  billingTotal);
         return ResponseEntity.ok(com.schoolers.dto.ApiResponse.success(response));
     }
 

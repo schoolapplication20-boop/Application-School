@@ -515,9 +515,10 @@ public class DatabaseMigration implements CommandLineRunner {
         );
         log.debug("student_fee_assignments school_id backfilled.");
 
-        // ── schools: user_limit column ────────────────────────────────────────────
+        // ── schools: user_limit and price_per_user columns ───────────────────────
         exec("ALTER TABLE schools ADD COLUMN IF NOT EXISTS user_limit INTEGER");
-        log.debug("schools.user_limit column ensured.");
+        exec("ALTER TABLE schools ADD COLUMN IF NOT EXISTS price_per_user NUMERIC(10,2)");
+        log.debug("schools.user_limit and price_per_user columns ensured.");
 
         // ── issue_reports table ───────────────────────────────────────────────────
         exec("CREATE TABLE IF NOT EXISTS issue_reports (" +

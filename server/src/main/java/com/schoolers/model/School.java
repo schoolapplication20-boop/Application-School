@@ -113,9 +113,13 @@ public class School {
     @Builder.Default
     private Boolean isSetupCompleted = false;
 
-    // ── User Limit (set by platform owner; null = unlimited) ─────────────────
+    // ── Platform billing (set by platform owner) ─────────────────────────────
     @Column(name = "user_limit")
     private Integer userLimit;
+
+    /** Per-user price charged by the platform (null = not set / free). */
+    @Column(name = "price_per_user", precision = 10, scale = 2)
+    private java.math.BigDecimal pricePerUser;
 
     // ── Status ───────────────────────────────────────────────────────────────
     @Column(name = "is_active")
