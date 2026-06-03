@@ -498,6 +498,11 @@ public class DatabaseMigration implements CommandLineRunner {
         exec("CREATE INDEX IF NOT EXISTS idx_expenses_school_date ON expenses(school_id, date DESC)");
         exec("CREATE INDEX IF NOT EXISTS idx_messages_school      ON messages(school_id, created_at DESC)");
         exec("CREATE INDEX IF NOT EXISTS idx_notifications_user   ON app_notifications(user_id, created_at DESC, is_read)");
+        // ── Login-critical indexes: speed up user lookup and school-scoped queries ──
+        exec("CREATE INDEX IF NOT EXISTS idx_users_school_id      ON users(school_id)");
+        exec("CREATE INDEX IF NOT EXISTS idx_users_role           ON users(role)");
+        exec("CREATE INDEX IF NOT EXISTS idx_users_email          ON users(email)");
+        exec("CREATE INDEX IF NOT EXISTS idx_users_username       ON users(username)");
         log.debug("Production performance indexes ensured.");
 
         log.info("DB migrations complete.");

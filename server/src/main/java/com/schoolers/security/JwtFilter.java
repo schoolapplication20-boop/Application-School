@@ -37,27 +37,24 @@ public class JwtFilter extends OncePerRequestFilter {
             String username = jwtUtil.extractUsername(token);
 
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                try {
-                    UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-
-                    if (jwtUtil.validateToken(token, userDetails)) {
-                        UsernamePasswordAuthenticationToken authToken =
-                                new UsernamePasswordAuthenticationToken(
-                                        userDetails,
-                                        null,
-                                        userDetails.getAuthorities()
-                                );
-                        // Embed JWT claims (schoolId, role) in the details map so controllers
-                        // can read them without an extra DB round-trip on every request.
-                        Map<String, Object> details = new HashMap<>();
-                        details.put("schoolId", jwtUtil.extractSchoolId(token));
-                        details.put("role",     jwtUtil.extractRole(token));
-                        authToken.setDetails(details);
-                        SecurityContextHolder.getContext().setAuthentication(authToken);
-                    }
-                } catch (UsernameNotFoundException ignored) {
-                    // stale/invalid token — treat request as unauthenticated
-                }
+                // Build UserDetails from JWT claims — no DB hit needed.
+                // The JWT signature is already verified by isValidToken() above, and the token
+                // is confirmed not revoked, so the role claim is trustworthy.
+                String role = jwtUtil.extractRole(token);
+                String authority = (role != null && !role.isBlank()) ? "ROLE_" + role : "ROLE_USER";
+                UserDetails userDetails = new org.springframework.security.core.userdetails.User(
+                        username, "",
+                        java.util.Collections.singletonList(
+                                new org.springframework.security.core.authority.SimpleGrantedAuthority(authority)
+                        )
+                );
+                UsernamePasswordAuthenticationToken authToken =
+                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                Map<String, Object> claimsDetails = new HashMap<>();
+                claimsDetails.put("schoolId", jwtUtil.extractSchoolId(token));
+                claimsDetails.put("role",     role);
+                authToken.setDetails(claimsDetails);
+                SecurityContextHolder.getContext().setAuthentication(authToken);
             }
         }
 

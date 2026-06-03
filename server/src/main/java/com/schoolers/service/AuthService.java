@@ -103,18 +103,17 @@ public class AuthService {
                         + "Please use 'Forgot Password' to reset your password and unlock your account.");
             }
 
-            // Check if the school itself is active (skip for APPLICATION_OWNER)
+            // ── Single school lookup reused for subscription, branding, and setup checks ──
+            java.util.Optional<School> cachedSchoolOpt = java.util.Optional.empty();
             if (user.getRole() != User.Role.APPLICATION_OWNER && user.getSchoolId() != null) {
-                java.util.Optional<School> schoolOpt =
-                    schoolRepository.findBySchoolId(user.getSchoolId().intValue());
-                if (schoolOpt.isEmpty()) schoolOpt = schoolRepository.findById(user.getSchoolId());
-                boolean schoolActive = schoolOpt.map(s -> Boolean.TRUE.equals(s.getIsActive())).orElse(true);
+                cachedSchoolOpt = schoolRepository.findBySchoolId(user.getSchoolId().intValue());
+                if (cachedSchoolOpt.isEmpty()) cachedSchoolOpt = schoolRepository.findById(user.getSchoolId());
+
+                boolean schoolActive = cachedSchoolOpt.map(s -> Boolean.TRUE.equals(s.getIsActive())).orElse(true);
                 if (!schoolActive)
                     return ApiResponse.error("Your school's subscription has ended. Please reach out to the My-Skoolz team to reactivate.");
 
-                // Block all school users when subscription is expired (skip for APPLICATION_OWNER only)
-                // !isAfter(today) means expired if expiry date is today or in the past
-                boolean expired = schoolOpt.map(s ->
+                boolean expired = cachedSchoolOpt.map(s ->
                     s.getSubscriptionExpiry() != null &&
                     !s.getSubscriptionExpiry().isAfter(java.time.LocalDate.now())
                 ).orElse(false);
@@ -206,37 +205,13 @@ public class AuthService {
 
             String token = jwtUtil.generateToken(userDetails, claims);
 
-            // ── Step 5: Load school branding ───────────────────────────────
-            // user.getSchoolId() is normally the human-assigned display number (1, 2, 3…).
-            // For stub schools created by /register the DB PK is stored as schoolId and
-            // the school's display schoolId column is null, so findBySchoolId won't match.
-            // We capture the value in an effectively-final variable (required by javac for
-            // lambdas) and fall back to findById so the school is always resolved.
-            LoginResponse.SchoolDto schoolDto = null;
-            if (user.getSchoolId() != null) {
-                Long resolvedSchoolId = user.getSchoolId();
-                java.util.Optional<School> schoolOpt =
-                        schoolRepository.findBySchoolId(resolvedSchoolId.intValue());
-                if (schoolOpt.isEmpty()) {
-                    schoolOpt = schoolRepository.findById(resolvedSchoolId);
-                }
-                schoolDto = schoolOpt.map(this::toSchoolDto).orElse(null);
-            }
+            // ── Step 5: School branding + setup check (reuse cached lookup) ──────
+            LoginResponse.SchoolDto schoolDto = cachedSchoolOpt.map(this::toSchoolDto).orElse(null);
 
-            // ── Step 5b: Determine if SUPER_ADMIN still needs to set up their school ──
-            // Each SUPER_ADMIN owns exactly one school. Setup is required when:
-            //   a) No school is linked yet  (schoolId == null), OR
-            //   b) The linked school's isSetupCompleted flag is still false.
-            // user.getSchoolId() is the display number — look up by findBySchoolId.
             Boolean needsSchoolSetup = null;
             if (user.getRole() == User.Role.SUPER_ADMIN) {
-                if (user.getSchoolId() == null) {
-                    needsSchoolSetup = true;
-                } else {
-                    needsSchoolSetup = schoolRepository.findBySchoolId(user.getSchoolId().intValue())
-                            .map(s -> !Boolean.TRUE.equals(s.getIsSetupCompleted()))
-                            .orElse(true);
-                }
+                needsSchoolSetup = user.getSchoolId() == null
+                        || cachedSchoolOpt.map(s -> !Boolean.TRUE.equals(s.getIsSetupCompleted())).orElse(true);
             }
 
             String teacherType = null;

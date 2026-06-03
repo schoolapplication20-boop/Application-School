@@ -121,14 +121,12 @@ export const AuthProvider = ({ children }) => {
       sessionStorage.setItem(SESSION_KEY, JSON.stringify({ token: authToken, user: finalUser }));
     } catch { /* storage full or blocked — continue without persistence */ }
 
-    // Hydrate school branding from login response (school field on the user DTO)
+    // Hydrate school branding from login response (school field on the user DTO).
+    // If the login response already includes school data, use it directly — no extra
+    // API call needed. Only fall back to a fetch when school data is absent.
     if (userData?.school && schoolSetterRef.current) {
       schoolSetterRef.current(userData.school);
-    }
-
-    // Always fetch fresh school data (catches missing logoUrl / branding changes).
-    // APPLICATION_OWNER has no school, so skip for that role.
-    if (userData?.role !== 'APPLICATION_OWNER' && schoolLoaderRef.current) {
+    } else if (userData?.role !== 'APPLICATION_OWNER' && schoolLoaderRef.current) {
       schoolLoaderRef.current();
     }
 

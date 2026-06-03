@@ -144,9 +144,10 @@ const Login = () => {
       retryCountRef.current = 0;
       login(loggedInUser, token);
 
-      if (loggedInUser.role === 'ADMIN') {
-        const hasPermsInResponse = loggedInUser.permissions != null;
-        if (!hasPermsInResponse) await refreshPermissions();
+      // Fire permissions refresh in background — do not block navigation.
+      // Permissions are already in the login response; this is only a fallback.
+      if (loggedInUser.role === 'ADMIN' && loggedInUser.permissions == null) {
+        refreshPermissions(); // intentionally not awaited
       }
 
       navigateByRole(loggedInUser);
