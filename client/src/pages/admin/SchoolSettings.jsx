@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useSchool } from '../../context/SchoolContext';
-import { schoolAPI, examTypeAPI, gradeScaleAPI, BASE_URL } from '../../services/api';
+import { schoolAPI, examTypeAPI, gradeScaleAPI, adminAPI, BASE_URL } from '../../services/api';
 import Layout from '../../components/Layout';
 
 const MAX_SIZE_MB = 5;
@@ -10,6 +10,39 @@ const ACCEPTED   = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 const SchoolSettings = () => {
   const { user }                         = useAuth();
   const { school, logoVersion, loadSchool } = useSchool();
+
+  // ── Year Rollover ────────────────────────────────────────────────────────────
+  const [showRollover,   setShowRollover]   = useState(false);
+  const [rolloverYear,   setRolloverYear]   = useState('');
+  const [copyFees,       setCopyFees]       = useState(true);
+  const [rollingOver,    setRollingOver]    = useState(false);
+  const [rolloverResult, setRolloverResult] = useState(null); // { previousYear, newYear, feeStructuresCopied }
+  const [rolloverError,  setRolloverError]  = useState('');
+
+  const suggestNextYear = () => {
+    const current = school?.academicYear || '';
+    // Supports both "2025-26" and "2025-2026" formats
+    const match = current.match(/(\d{4})/);
+    if (match) {
+      const start = parseInt(match[1]);
+      const nextStart = start + 1;
+      // Match the same format as current year
+      if (/\d{4}-\d{2}$/.test(current)) return `${nextStart}-${String(nextStart + 1).slice(-2)}`;
+      return `${nextStart}-${nextStart + 1}`;
+    }
+    return '';
+  };
+
+  const handleRollover = async () => {
+    if (!rolloverYear.trim()) { setRolloverError('Please enter the new academic year.'); return; }
+    setRollingOver(true); setRolloverError('');
+    try {
+      const res = await adminAPI.yearRollover({ newAcademicYear: rolloverYear.trim(), copyFeeStructures: copyFees });
+      setRolloverResult(res.data?.data);
+    } catch (err) {
+      setRolloverError(err.response?.data?.message || 'Rollover failed. Please try again.');
+    } finally { setRollingOver(false); }
+  };
 
   const [dragging,  setDragging]  = useState(false);
   const [preview,   setPreview]   = useState(null);   // local blob URL for preview
@@ -618,8 +651,156 @@ const SchoolSettings = () => {
           </div>
         )}
 
+        {/* ── New Academic Year card ── */}
+        {canEdit && (
+          <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #e2e8f0', boxShadow: '0 1px 6px rgba(0,0,0,0.06)', marginTop: 20 }}>
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+              <div>
+                <h2 style={{ fontSize: 16, fontWeight: 700, color: '#1e293b', margin: 0 }}>New Academic Year</h2>
+                <p style={{ fontSize: 13, color: '#64748b', margin: '4px 0 0' }}>
+                  Current year: <strong>{school?.academicYear || '—'}</strong> · Transition to a new academic year, carry over fee structures, then promote students class by class.
+                </p>
+              </div>
+              <button
+                onClick={() => { setShowRollover(true); setRolloverYear(suggestNextYear()); setRolloverResult(null); setRolloverError(''); }}
+                style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', background: 'linear-gradient(135deg,#4f46e5,#7c3aed)', border: 'none', borderRadius: 9, color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
+              >
+                <span className="material-icons" style={{ fontSize: 17 }}>calendar_today</span>
+                Start New Year
+              </button>
+            </div>
+
+            {/* Step guide */}
+            <div style={{ padding: '18px 24px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+                {[
+                  { step: '1', icon: 'calendar_today', color: '#4f46e5', title: 'Update Year', desc: 'Click "Start New Year" to change the school academic year and optionally copy fee structures.' },
+                  { step: '2', icon: 'school',         color: '#0369a1', title: 'Promote Students', desc: 'Go to Students → Promote Students to move each class to the next (Class 5 → 6, etc.).' },
+                  { step: '3', icon: 'payments',       color: '#16a34a', title: 'Assign New Fees', desc: 'Go to Fees & Payments → Class Fee Structures to review or adjust copied fee structures for the new year.' },
+                ].map(({ step, icon, color, title, desc }) => (
+                  <div key={step} style={{ background: '#f8faff', borderRadius: 10, padding: '14px 16px', border: '1px solid #e8eaf6' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <span className="material-icons" style={{ fontSize: 15, color }}>{icon}</span>
+                      </div>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: '#1e293b' }}>Step {step}: {title}</div>
+                    </div>
+                    <p style={{ margin: 0, fontSize: 12, color: '#64748b', lineHeight: 1.6 }}>{desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </Layout>
+
+    {/* ── Year Rollover Modal ─────────────────────────────────────────────────── */}
+    {showRollover && (
+      <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+           onClick={e => e.target === e.currentTarget && setShowRollover(false)}>
+        <div style={{ background: '#fff', borderRadius: 18, width: '100%', maxWidth: 460, boxShadow: '0 28px 72px rgba(0,0,0,0.2)', overflow: 'hidden' }}>
+
+          {/* Header */}
+          <div style={{ background: 'linear-gradient(135deg,#1e1b4b,#4f46e5)', padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ color: '#fff', fontWeight: 800, fontSize: 15 }}>Start New Academic Year</div>
+              <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12, marginTop: 2 }}>
+                Current: <strong style={{ color: 'rgba(255,255,255,0.9)' }}>{school?.academicYear || '—'}</strong>
+              </div>
+            </div>
+            <button onClick={() => setShowRollover(false)} style={{ background: 'rgba(255,255,255,0.12)', border: 'none', borderRadius: 8, width: 30, height: 30, color: '#fff', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+          </div>
+
+          <div style={{ padding: 24 }}>
+            {rolloverResult ? (
+              /* ── Success state ── */
+              <>
+                <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                  <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+                    <span className="material-icons" style={{ fontSize: 30, color: '#16a34a' }}>check_circle</span>
+                  </div>
+                  <h3 style={{ margin: '0 0 6px', fontWeight: 800, fontSize: 17, color: '#1e293b' }}>Year Updated!</h3>
+                  <p style={{ margin: 0, color: '#64748b', fontSize: 13 }}>
+                    Academic year changed from <strong>{rolloverResult.previousYear}</strong> to <strong>{rolloverResult.newYear}</strong>
+                  </p>
+                  {rolloverResult.feeStructuresCopied > 0 && (
+                    <p style={{ margin: '6px 0 0', color: '#16a34a', fontSize: 12, fontWeight: 600 }}>
+                      ✓ {rolloverResult.feeStructuresCopied} fee structure{rolloverResult.feeStructuresCopied !== 1 ? 's' : ''} copied to {rolloverResult.newYear}
+                    </p>
+                  )}
+                </div>
+
+                {/* Remaining steps checklist */}
+                <div style={{ background: '#f8faff', borderRadius: 10, padding: 16, marginBottom: 18 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '.05em' }}>Remaining tasks</div>
+                  {[
+                    'Go to Students → Promote Students to move each class to the next',
+                    'Review copied fee structures in Fees & Payments → Class Fee Structures',
+                    'Assign new fee amounts to students for the new year',
+                  ].map((task, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}>
+                      <span className="material-icons" style={{ fontSize: 15, color: '#4f46e5', flexShrink: 0, marginTop: 1 }}>radio_button_unchecked</span>
+                      <span style={{ fontSize: 12, color: '#374151', lineHeight: 1.5 }}>{task}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <button onClick={() => { setShowRollover(false); window.location.reload(); }}
+                  style={{ width: '100%', padding: '11px', background: 'linear-gradient(135deg,#4f46e5,#7c3aed)', border: 'none', borderRadius: 9, color: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
+                  Done — Reload Page
+                </button>
+              </>
+            ) : (
+              /* ── Form state ── */
+              <>
+                {rolloverError && (
+                  <div style={{ padding: '10px 14px', background: '#fff5f5', border: '1px solid #fecaca', borderRadius: 8, color: '#dc2626', fontSize: 13, marginBottom: 16 }}>{rolloverError}</div>
+                )}
+
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 6 }}>New Academic Year *</label>
+                  <input
+                    type="text" placeholder="e.g. 2026-27"
+                    value={rolloverYear} onChange={e => setRolloverYear(e.target.value)}
+                    style={{ width: '100%', padding: '10px 12px', fontSize: 14, fontWeight: 700, border: '2px solid #e2e8f0', borderRadius: 8, outline: 'none', boxSizing: 'border-box' }}
+                    onFocus={e => e.target.style.borderColor = '#4f46e5'}
+                    onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+                  />
+                  <p style={{ margin: '5px 0 0', fontSize: 11, color: '#94a3b8' }}>Use the same format as your current year (e.g. 2026-27 or 2026-2027)</p>
+                </div>
+
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', marginBottom: 20 }}>
+                  <input type="checkbox" checked={copyFees} onChange={e => setCopyFees(e.target.checked)}
+                    style={{ width: 16, height: 16, marginTop: 2, flexShrink: 0, accentColor: '#4f46e5' }} />
+                  <div>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: '#1e293b' }}>Copy fee structures to new year</span>
+                    <p style={{ margin: '2px 0 0', fontSize: 11, color: '#64748b', lineHeight: 1.5 }}>
+                      Duplicates each class's fee breakdown (tuition, transport, lab, etc.) for {rolloverYear || 'the new year'}. You can edit amounts afterwards in Fees &amp; Payments.
+                    </p>
+                  </div>
+                </label>
+
+                <div style={{ background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: '#92400e', marginBottom: 20, lineHeight: 1.6 }}>
+                  <span className="material-icons" style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 5 }}>info</span>
+                  This only updates the <strong>year label</strong> and optionally copies fee templates. Existing student data, marks, and fee records are <strong>not changed</strong>. You will promote students separately.
+                </div>
+
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                  <button onClick={() => setShowRollover(false)} style={{ padding: '9px 20px', border: '1.5px solid #e2e8f0', borderRadius: 8, background: '#fff', color: '#64748b', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+                  <button onClick={handleRollover} disabled={rollingOver || !rolloverYear.trim()} style={{ padding: '9px 22px', border: 'none', borderRadius: 8, background: (rollingOver || !rolloverYear.trim()) ? '#a5b4fc' : 'linear-gradient(135deg,#4f46e5,#7c3aed)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: (rollingOver || !rolloverYear.trim()) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 7 }}>
+                    {rollingOver
+                      ? <><span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} />Updating…</>
+                      : <><span className="material-icons" style={{ fontSize: 16 }}>calendar_today</span>Confirm Year Change</>}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
   );
 };
 

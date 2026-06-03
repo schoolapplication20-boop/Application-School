@@ -218,6 +218,9 @@ export const adminAPI = {
   // Student search for fee collection
   searchStudentsForFee: (q, className, section) => api.get('/api/admin/students/search', { params: { q: q || undefined, className: className || undefined, section: section || undefined } }),
 
+  // Academic Year Rollover
+  yearRollover: (data) => api.post('/api/admin/year-rollover', data),
+
   // Expenses
   getExpenses: (params) => api.get('/api/admin/expenses', { params }),
   getExpense: (id) => api.get(`/api/admin/expenses/${id}`),

@@ -2572,6 +2572,60 @@ public class AdminService {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * Year-end rollover:
+     *   1. Updates school.academicYear to newAcademicYear
+     *   2. Optionally copies class fee structures from the old year to the new year
+     */
+    @org.springframework.transaction.annotation.Transactional
+    public ApiResponse<Map<String, Object>> yearRollover(Long schoolId, String newAcademicYear, boolean copyFeeStructures) {
+        if (schoolId == null) return ApiResponse.error("School not found.");
+
+        com.schoolers.model.School school = schoolRepository.findById(schoolId).orElse(null);
+        if (school == null) school = schoolRepository.findBySchoolId(schoolId.intValue()).orElse(null);
+        if (school == null) return ApiResponse.error("School record not found.");
+
+        String oldYear = school.getAcademicYear();
+        school.setAcademicYear(newAcademicYear);
+        schoolRepository.save(school);
+
+        int feeStructuresCopied = 0;
+        if (copyFeeStructures && oldYear != null && !oldYear.isBlank()) {
+            List<com.schoolers.model.ClassFeeStructure> oldStructures =
+                    classFeeStructureRepository.findBySchoolId(school.getId());
+            oldStructures = oldStructures.stream()
+                    .filter(s -> oldYear.equals(s.getAcademicYear()))
+                    .collect(Collectors.toList());
+
+            for (com.schoolers.model.ClassFeeStructure old : oldStructures) {
+                // Skip if a structure for this class already exists in the new year
+                boolean exists = classFeeStructureRepository
+                        .findByClassNameAndAcademicYearAndSchoolId(old.getClassName(), newAcademicYear, school.getId())
+                        .isPresent();
+                if (exists) continue;
+                com.schoolers.model.ClassFeeStructure fresh = com.schoolers.model.ClassFeeStructure.builder()
+                        .className(old.getClassName())
+                        .academicYear(newAcademicYear)
+                        .schoolId(school.getId())
+                        .tuitionFee(old.getTuitionFee())
+                        .transportFee(old.getTransportFee())
+                        .labFee(old.getLabFee())
+                        .examFee(old.getExamFee())
+                        .sportsFee(old.getSportsFee())
+                        .otherFee(old.getOtherFee())
+                        .build();
+                classFeeStructureRepository.save(fresh);
+                feeStructuresCopied++;
+            }
+        }
+
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("previousYear",       oldYear);
+        result.put("newYear",            newAcademicYear);
+        result.put("feeStructuresCopied", feeStructuresCopied);
+        return ApiResponse.success("Academic year updated to " + newAcademicYear, result);
+    }
+
     public ApiResponse<Map<String, Object>> promoteStudents(
             Long schoolId, String fromClass, String fromSection, String toClass, String toSection) {
 

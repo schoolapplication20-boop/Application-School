@@ -152,6 +152,18 @@ public class AdminController {
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
+    @PostMapping("/year-rollover")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> yearRollover(
+            @RequestBody Map<String, Object> body, Authentication auth) {
+        String newYear       = body.get("newAcademicYear") != null ? body.get("newAcademicYear").toString().trim() : null;
+        boolean copyFees     = Boolean.TRUE.equals(body.get("copyFeeStructures"));
+        if (newYear == null || newYear.isBlank())
+            return ResponseEntity.badRequest().body(ApiResponse.error("newAcademicYear is required."));
+        ApiResponse<Map<String, Object>> response =
+                adminService.yearRollover(getCurrentSchoolId(auth), newYear, copyFees);
+        return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
+    }
+
     @PostMapping("/students/promote")
     public ResponseEntity<ApiResponse<Map<String, Object>>> promoteStudents(
             @RequestBody Map<String, Object> body, Authentication auth) {
