@@ -96,12 +96,16 @@ function OwnerDashboard() {
   };
 
   const savePaymentPlan = async (sa, plan) => {
+    const prevPlan = sa.paymentPlan; // save for rollback
+    setSuperAdmins(prev => prev.map(s => s.schoolDbId === sa.schoolDbId ? { ...s, paymentPlan: plan } : s));
     setPlanSaving(prev => ({ ...prev, [sa.schoolDbId]: true }));
     try {
       await ownerAPI.setPaymentPlan(sa.schoolActualId ?? sa.schoolDbId, plan);
-      setSuperAdmins(prev => prev.map(s => s.schoolDbId === sa.schoolDbId ? { ...s, paymentPlan: plan } : s));
-    } catch (e) { alert(e.response?.data?.message || 'Failed to save payment plan.'); }
-    finally { setPlanSaving(prev => ({ ...prev, [sa.schoolDbId]: false })); }
+    } catch (e) {
+      // Rollback optimistic update on failure
+      setSuperAdmins(prev => prev.map(s => s.schoolDbId === sa.schoolDbId ? { ...s, paymentPlan: prevPlan } : s));
+      alert(e.response?.data?.message || 'Failed to save payment plan.');
+    } finally { setPlanSaving(prev => ({ ...prev, [sa.schoolDbId]: false })); }
   };
 
   const openLimitEdit  = (sa) => setLimitEdit(prev => ({ ...prev, [sa.schoolDbId]: String(sa.userLimit ?? '') }));

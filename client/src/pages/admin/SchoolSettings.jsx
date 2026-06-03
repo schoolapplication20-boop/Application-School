@@ -790,7 +790,8 @@ const SchoolSettings = () => {
                 </div>
 
                 <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-                  <button onClick={() => setShowRollover(false)} style={{ padding: '9px 20px', border: '1.5px solid #e2e8f0', borderRadius: 8, background: '#fff', color: '#64748b', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+                  <button onClick={() => { setShowRollover(false); setRolloverYear(''); setRolloverError(''); setCopyFees(true); }}
+                    style={{ padding: '9px 20px', border: '1.5px solid #e2e8f0', borderRadius: 8, background: '#fff', color: '#64748b', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
                   <button onClick={handleRollover} disabled={rollingOver || !rolloverYear.trim()} style={{ padding: '9px 22px', border: 'none', borderRadius: 8, background: (rollingOver || !rolloverYear.trim()) ? '#a5b4fc' : 'linear-gradient(135deg,#4f46e5,#7c3aed)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: (rollingOver || !rolloverYear.trim()) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 7 }}>
                     {rollingOver
                       ? <><span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} />Updating…</>

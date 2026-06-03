@@ -221,8 +221,9 @@ export default function AttendanceReport() {
     try {
       // Build array of dates in range
       const dates = [];
-      let cursor = new Date(rangeFrom + 'T00:00:00');
-      const end  = new Date(rangeTo  + 'T00:00:00');
+      // Use UTC midnight to avoid DST-related day-skipping
+      let cursor = new Date(rangeFrom + 'T00:00:00Z');
+      const end  = new Date(rangeTo   + 'T00:00:00Z');
       while (cursor <= end && dates.length <= 60) { // max 60 days
         dates.push(cursor.toISOString().slice(0, 10));
         cursor.setDate(cursor.getDate() + 1);

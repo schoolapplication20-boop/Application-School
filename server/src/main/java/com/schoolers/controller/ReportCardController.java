@@ -174,9 +174,11 @@ public class ReportCardController {
 
             double marksVal, maxVal;
             try { marksVal = Double.parseDouble(marksS); maxVal = Double.parseDouble(maxS); }
-            catch (NumberFormatException e) { res.put("status", "error"); res.put("message", "Invalid marks/maxMarks"); results.add(res); continue; }
+            catch (NumberFormatException e) { res.put("status", "error"); res.put("message", "Invalid marks/maxMarks — must be numbers"); results.add(res); continue; }
+            if (marksVal < 0 || maxVal <= 0) { res.put("status", "error"); res.put("message", "maxMarks must be > 0 and marks must be ≥ 0"); results.add(res); continue; }
+            if (marksVal > maxVal) { res.put("status", "error"); res.put("message", "marks (" + marksVal + ") cannot exceed maxMarks (" + maxVal + ")"); results.add(res); continue; }
 
-            double pctVal = maxVal > 0 ? (marksVal / maxVal) * 100 : 0;
+            double pctVal = (marksVal / maxVal) * 100;
             String grade = pctVal >= 90 ? "O" : pctVal >= 80 ? "A+" : pctVal >= 70 ? "A" : pctVal >= 60 ? "B+" : pctVal >= 50 ? "B" : pctVal >= 40 ? "B-" : pctVal >= 33 ? "C" : "F";
 
             com.schoolers.model.Marks m = com.schoolers.model.Marks.builder()

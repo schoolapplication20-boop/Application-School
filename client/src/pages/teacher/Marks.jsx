@@ -179,8 +179,10 @@ ADM002,Mathematics,92,100`;
     setCsvImporting(true);
     try {
       const res = await reportCardAPI.bulkImportMarksCsv({ rows: csvRows, examType: csvExamType.trim(), examDate: csvDate || null });
-      setCsvResults(res.data?.data);
-      showToast(`${res.data?.data?.saved || 0} marks imported successfully`);
+      const importResult = res.data?.data;
+      setCsvResults(importResult);
+      setCsvRows([]); // clear parsed rows so re-import flow is clean
+      showToast(`${importResult?.saved || 0} of ${importResult?.total || 0} marks imported successfully`);
       loadAllData(classes); // refresh marks list
     } catch (err) {
       showToast(err.response?.data?.message || 'Import failed', 'error');

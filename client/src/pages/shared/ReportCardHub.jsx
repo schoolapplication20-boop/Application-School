@@ -159,15 +159,17 @@ export default function ReportCardHub() {
 
   useEffect(() => { loadClassStudents(); }, [loadClassStudents]);
 
-  // Load report card for selected student
+  // Load report card for selected student — cancelled flag prevents stale response overwriting
   useEffect(() => {
     if (!selectedStudent) { setCardData(null); return; }
+    let cancelled = false;
     setLoading(true);
     const params = filterExam ? { examType: filterExam } : {};
     reportCardAPI.getAnyStudentCard(selectedStudent.studentId, params)
-      .then(res => setCardData(res.data?.data))
-      .catch(() => setCardData(null))
-      .finally(() => setLoading(false));
+      .then(res => { if (!cancelled) setCardData(res.data?.data); })
+      .catch(() => { if (!cancelled) setCardData(null); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [selectedStudent, filterExam]);
 
   // Student name search
