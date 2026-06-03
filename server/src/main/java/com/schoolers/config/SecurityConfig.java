@@ -138,6 +138,9 @@ public class SecurityConfig {
                 // ── User profile ──────────────────────────────────────────────
                 .requestMatchers("/api/user/**").authenticated()
 
+                // ── Issue reporting — any authenticated user can submit; GET gated by @PreAuthorize ──
+                .requestMatchers("/api/issues/**").authenticated()
+
                 .anyRequest().authenticated()
             )
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '../../components/Layout';
-import { superAdminAPI, adminAPI, schoolAPI, marketingAPI, systemAPI, onboardingVerifyAPI } from '../../services/api';
+import { superAdminAPI, adminAPI, schoolAPI, marketingAPI, systemAPI, onboardingVerifyAPI, issueAPI } from '../../services/api';
 import { getLogs } from '../../services/activityLog';
 import { useAuth } from '../../context/AuthContext';
 import SEOMeta from '../../components/SEOMeta';
@@ -64,6 +64,14 @@ function OwnerDashboard() {
   const [editTarget,   setEditTarget]   = useState(null); // sa object being edited
   const [demoBookings, setDemoBookings] = useState([]);
   const [bookingsLoading, setBookingsLoading] = useState(true);
+
+  // ── Reported Issues ──────────────────────────────────────────────────────────
+  const [issues,         setIssues]         = useState([]);
+  const [issuesLoading,  setIssuesLoading]  = useState(true);
+  const [issueFilter,    setIssueFilter]    = useState('');      // '' = all statuses
+  const [expandedIssue,  setExpandedIssue]  = useState(null);   // issue id being viewed
+  const [issueNote,      setIssueNote]      = useState('');
+  const [savingIssue,    setSavingIssue]    = useState(false);
 
   // ── School users modal ───────────────────────────────────────────────────────
   const [usersModal,    setUsersModal]    = useState(null); // { school: sa, users: [] } | null
@@ -140,6 +148,43 @@ function OwnerDashboard() {
     finally  { setBookingsLoading(false); }
   }, []);
 
+  const loadIssues = useCallback(async () => {
+    setIssuesLoading(true);
+    try {
+      const res = await issueAPI.getAll();
+      setIssues(res.data?.data ?? []);
+    } catch { setIssues([]); }
+    finally { setIssuesLoading(false); }
+  }, []);
+
+  const handleIssueStatusChange = async (issue, newStatus) => {
+    setSavingIssue(true);
+    try {
+      const note = expandedIssue === issue.id ? issueNote : issue.ownerNote;
+      await issueAPI.updateIssue(issue.id, { status: newStatus, ownerNote: note || '' });
+      setIssues(prev => prev.map(i => i.id === issue.id ? { ...i, status: newStatus, ownerNote: note || '' } : i));
+    } catch { /* ignore */ }
+    finally { setSavingIssue(false); }
+  };
+
+  const handleIssueSaveNote = async (issue) => {
+    setSavingIssue(true);
+    try {
+      await issueAPI.updateIssue(issue.id, { ownerNote: issueNote });
+      setIssues(prev => prev.map(i => i.id === issue.id ? { ...i, ownerNote: issueNote } : i));
+    } catch { /* ignore */ }
+    finally { setSavingIssue(false); }
+  };
+
+  const handleIssueDelete = async (id) => {
+    if (!window.confirm('Delete this issue permanently?')) return;
+    try {
+      await issueAPI.deleteIssue(id);
+      setIssues(prev => prev.filter(i => i.id !== id));
+      if (expandedIssue === id) setExpandedIssue(null);
+    } catch { /* ignore */ }
+  };
+
   const markBookingContacted = async (id) => {
     await marketingAPI.updateBookingStatus(id, 'CONTACTED');
     setDemoBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'CONTACTED' } : b));
@@ -203,7 +248,7 @@ function OwnerDashboard() {
     }
   };
 
-  useEffect(() => { load(); loadBookings(); loadNotice(); }, [load, loadBookings, loadNotice]);
+  useEffect(() => { load(); loadBookings(); loadNotice(); loadIssues(); }, [load, loadBookings, loadNotice, loadIssues]);
 
   const totalSchools = superAdmins.length;
   const activeCount  = superAdmins.filter(sa => sa.isActive !== false).length;
@@ -656,6 +701,141 @@ function OwnerDashboard() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+      </div>
+
+      {/* ── Reported Issues ─────────────────────────────────────────────────── */}
+      <div style={{ marginTop: 32 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 4, height: 24, background: 'linear-gradient(180deg,#4f46e5,#7c3aed)', borderRadius: 2 }} />
+            <div>
+              <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#1a202c' }}>Reported Issues</h2>
+              <p style={{ margin: '2px 0 0', fontSize: 12, color: '#718096' }}>Bugs and feedback submitted by users across all roles</p>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {['', 'OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'].map(s => (
+              <button key={s} onClick={() => setIssueFilter(s)}
+                style={{
+                  padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: 'none',
+                  background: issueFilter === s ? '#4f46e5' : '#f1f5f9',
+                  color:      issueFilter === s ? '#fff'    : '#64748b',
+                }}
+              >{s || 'ALL'}</button>
+            ))}
+            <span style={{ background: '#eef2ff', color: '#4f46e5', borderRadius: 20, padding: '2px 12px', fontSize: 12, fontWeight: 700 }}>
+              {issues.filter(i => !issueFilter || i.status === issueFilter).length}
+            </span>
+          </div>
+        </div>
+
+        {issuesLoading ? (
+          <div style={{ textAlign: 'center', padding: 32, color: '#a0aec0' }}>Loading issues…</div>
+        ) : issues.filter(i => !issueFilter || i.status === issueFilter).length === 0 ? (
+          <div style={{ textAlign: 'center', padding: 40, background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', color: '#a0aec0' }}>
+            <span className="material-icons" style={{ fontSize: 40, display: 'block', marginBottom: 8 }}>bug_report</span>
+            No issues {issueFilter ? `with status "${issueFilter}"` : 'reported yet'}
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {issues.filter(i => !issueFilter || i.status === issueFilter).map(issue => {
+              const isExpanded = expandedIssue === issue.id;
+              const priColor = { CRITICAL: '#dc2626', HIGH: '#f97316', MEDIUM: '#f59e0b', LOW: '#22c55e' }[issue.priority] || '#94a3b8';
+              const stColor  = { OPEN: '#3b82f6', IN_PROGRESS: '#f59e0b', RESOLVED: '#22c55e', CLOSED: '#94a3b8' }[issue.status] || '#94a3b8';
+              return (
+                <div key={issue.id} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden' }}>
+                  {/* Row */}
+                  <div
+                    onClick={() => {
+                      setExpandedIssue(isExpanded ? null : issue.id);
+                      setIssueNote(issue.ownerNote || '');
+                    }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px',
+                      cursor: 'pointer', background: isExpanded ? '#f8faff' : '#fff',
+                      borderBottom: isExpanded ? '1px solid #e2e8f0' : 'none',
+                    }}
+                  >
+                    <span className="material-icons" style={{ fontSize: 20, color: priColor, flexShrink: 0 }}>bug_report</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: 14, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{issue.title}</div>
+                      <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
+                        {issue.reporterName || 'Unknown'} · {issue.reporterRole || '?'} · {issue.schoolName || 'No school'}
+                        {' · '}{issue.createdAt ? new Date(issue.createdAt).toLocaleDateString('en-IN') : ''}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                      <span style={{ padding: '2px 9px', borderRadius: 20, fontSize: 10, fontWeight: 700, background: priColor + '18', color: priColor }}>{issue.priority}</span>
+                      <span style={{ padding: '2px 9px', borderRadius: 20, fontSize: 10, fontWeight: 700, background: stColor + '18', color: stColor }}>{issue.status}</span>
+                      <span style={{ padding: '2px 9px', borderRadius: 20, fontSize: 10, fontWeight: 700, background: '#f1f5f9', color: '#64748b' }}>{(issue.category || '').replace('_', ' ')}</span>
+                      <span className="material-icons" style={{ fontSize: 16, color: '#94a3b8' }}>{isExpanded ? 'expand_less' : 'expand_more'}</span>
+                    </div>
+                  </div>
+
+                  {/* Expanded detail */}
+                  {isExpanded && (
+                    <div style={{ padding: '18px 20px' }}>
+                      <div style={{ background: '#f8faff', borderLeft: '3px solid #4f46e5', padding: '12px 16px', borderRadius: '0 8px 8px 0', marginBottom: 16 }}>
+                        <p style={{ margin: 0, fontSize: 13, color: '#1e293b', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{issue.description}</p>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, marginBottom: 16 }}>
+                        {[
+                          ['Reporter',  issue.reporterName || '—'],
+                          ['Email',     issue.reporterEmail || '—'],
+                          ['Role',      issue.reporterRole || '—'],
+                          ['School',    issue.schoolName || '—'],
+                          ['Category',  (issue.category || '').replace('_', ' ')],
+                          ['Submitted', issue.createdAt ? new Date(issue.createdAt).toLocaleString('en-IN') : '—'],
+                        ].map(([k, v]) => (
+                          <div key={k} style={{ background: '#f8faff', borderRadius: 8, padding: '8px 12px' }}>
+                            <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em' }}>{k}</div>
+                            <div style={{ fontSize: 12, color: '#1e293b', fontWeight: 600, marginTop: 2 }}>{v}</div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Status update */}
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+                        {['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'].map(s => (
+                          <button key={s} disabled={savingIssue || issue.status === s}
+                            onClick={() => handleIssueStatusChange(issue, s)}
+                            style={{
+                              padding: '5px 14px', borderRadius: 8, fontSize: 11, fontWeight: 700,
+                              border: 'none', cursor: issue.status === s ? 'default' : 'pointer',
+                              background: issue.status === s ? '#4f46e5' : '#f1f5f9',
+                              color: issue.status === s ? '#fff' : '#64748b',
+                              opacity: savingIssue ? 0.6 : 1,
+                            }}
+                          >{s.replace('_', ' ')}</button>
+                        ))}
+                        <button onClick={() => handleIssueDelete(issue.id)}
+                          style={{ marginLeft: 'auto', padding: '5px 14px', borderRadius: 8, fontSize: 11, fontWeight: 700, border: 'none', cursor: 'pointer', background: '#fff5f5', color: '#dc2626' }}>
+                          Delete
+                        </button>
+                      </div>
+
+                      {/* Owner note */}
+                      <div>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.05em' }}>Internal Note</label>
+                        <textarea
+                          value={issueNote}
+                          onChange={e => setIssueNote(e.target.value)}
+                          placeholder="Add a note for internal tracking..."
+                          rows={2}
+                          style={{ width: '100%', padding: '8px 12px', fontSize: 12, border: '1.5px solid #e2e8f0', borderRadius: 8, outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit' }}
+                        />
+                        <button onClick={() => handleIssueSaveNote(issue)} disabled={savingIssue}
+                          style={{ marginTop: 6, padding: '5px 14px', borderRadius: 7, fontSize: 11, fontWeight: 700, border: 'none', cursor: 'pointer', background: '#4f46e5', color: '#fff', opacity: savingIssue ? 0.6 : 1 }}>
+                          {savingIssue ? 'Saving…' : 'Save Note'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

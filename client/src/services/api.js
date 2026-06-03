@@ -660,4 +660,18 @@ export const appointmentAPI = {
 };
 
 // ============================================
+// ISSUE REPORT APIs
+// ============================================
+
+export const issueAPI = {
+  // Any authenticated user: submit an issue
+  report: (data) => api.post('/api/issues', data),
+
+  // APPLICATION_OWNER: manage issues
+  getAll:        (status) => api.get('/api/issues', { params: status ? { status } : {} }),
+  updateIssue:   (id, data) => api.patch(`/api/issues/${id}`, data),
+  deleteIssue:   (id) => api.delete(`/api/issues/${id}`),
+};
+
+// ============================================
 export default api;

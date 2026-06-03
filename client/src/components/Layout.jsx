@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
 import AiChat from './AiChat';
+import ReportIssueModal from './ReportIssueModal';
 import MaintenanceBanner from './MaintenanceBanner';
 import BgPicker, { loadSavedBg } from './BgPicker';
 import { useTheme } from '../context/ThemeContext';
@@ -30,6 +31,7 @@ const Layout = ({ children, pageTitle }) => {
   }, [isDark]);
 
   const showAi = !!user;
+  const [showIssueModal, setShowIssueModal] = useState(false);
 
   useEffect(() => {
     if (!user || user.role === 'APPLICATION_OWNER') return;
@@ -73,6 +75,32 @@ const Layout = ({ children, pageTitle }) => {
 
       {showAi && <AiChat />}
       <BgPicker value={appBg} onChange={setAppBg} />
+
+      {/* ── Report Issue FAB ─────────────────────────────────────────────────── */}
+      {user && (
+        <button
+          onClick={() => setShowIssueModal(true)}
+          title="Report an Issue"
+          style={{
+            position: 'fixed', bottom: 148, left: 24, zIndex: 999,
+            display: 'flex', alignItems: 'center', gap: 7,
+            padding: '0 16px', height: 42,
+            background: 'linear-gradient(135deg,#1e1b4b,#4c1d95)',
+            color: '#fff', border: 'none', borderRadius: 21,
+            fontSize: 12, fontWeight: 700, cursor: 'pointer',
+            boxShadow: '0 4px 16px rgba(76,29,149,0.35)',
+            transition: 'box-shadow 0.2s, transform 0.15s',
+            whiteSpace: 'nowrap',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(76,29,149,0.5)'; }}
+          onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 4px 16px rgba(76,29,149,0.35)'; }}
+        >
+          <span className="material-icons" style={{ fontSize: 16 }}>bug_report</span>
+          Report Issue
+        </button>
+      )}
+
+      {showIssueModal && <ReportIssueModal onClose={() => setShowIssueModal(false)} />}
 
       {/* ── Subscription Ended Overlay ──────────────────────────────────────── */}
       {schoolInactive && (

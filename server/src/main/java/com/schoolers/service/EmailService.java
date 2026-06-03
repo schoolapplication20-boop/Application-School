@@ -277,6 +277,57 @@ public class EmailService {
         }
     }
 
+    // ── Issue report notification (fire-and-forget) ──────────────────────────
+
+    public void sendIssueReportNotification(com.schoolers.model.IssueReport issue) {
+        final String ISSUES_EMAIL = "schoolapplication20@gmail.com";
+        try {
+            requireApiKey();
+            send(ISSUES_EMAIL,
+                "[My-Skoolz] New Issue Reported — " + issue.getCategory() + " [" + issue.getPriority() + "]",
+                buildIssueReportHtml(issue));
+            log.info("[EmailService] Issue report notification sent for issue #" + issue.getId());
+        } catch (Exception e) {
+            log.warning("[EmailService] Issue report email failed for issue #" + issue.getId() + ": " + e.getMessage());
+        }
+    }
+
+    private String buildIssueReportHtml(com.schoolers.model.IssueReport issue) {
+        String priorityColor = "HIGH".equals(issue.getPriority()) || "CRITICAL".equals(issue.getPriority()) ? "#dc2626" : "#d97706";
+        return "<!DOCTYPE html><html><body style='margin:0;padding:0;background:#f7fafc;font-family:Poppins,Arial,sans-serif;'>"
+            + "<div style='max-width:600px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);'>"
+            + "<div style='background:linear-gradient(135deg,#1e1b4b,#4c1d95);padding:28px 32px;'>"
+            + "<h2 style='margin:0;color:#fff;font-size:20px;'>🐛 New Issue Reported</h2>"
+            + "<p style='margin:6px 0 0;color:rgba(255,255,255,0.75);font-size:13px;'>My-Skoolz Platform — Issue Tracker</p>"
+            + "</div>"
+            + "<div style='padding:28px 32px;'>"
+            + "<table style='width:100%;border-collapse:collapse;'>"
+            + row("Issue #",       String.valueOf(issue.getId()))
+            + row("Title",         issue.getTitle())
+            + row("Category",      issue.getCategory().replace("_", " "))
+            + row("Priority",      "<span style='color:" + priorityColor + ";font-weight:700;'>" + issue.getPriority() + "</span>")
+            + row("Reporter",      nvl(issue.getReporterName()) + " (" + nvl(issue.getReporterEmail()) + ")")
+            + row("Role",          nvl(issue.getReporterRole()))
+            + row("School",        nvl(issue.getSchoolName()))
+            + row("Reported At",   issue.getCreatedAt() != null ? issue.getCreatedAt().toString().replace("T", " ").substring(0, 19) : "—")
+            + "</table>"
+            + "<div style='margin-top:20px;background:#f8faff;border-left:4px solid #4f46e5;padding:16px 20px;border-radius:0 8px 8px 0;'>"
+            + "<p style='margin:0 0 6px;font-size:12px;font-weight:700;color:#4f46e5;text-transform:uppercase;letter-spacing:.05em;'>Description</p>"
+            + "<p style='margin:0;font-size:14px;color:#1e293b;line-height:1.7;white-space:pre-wrap;'>" + escHtml(issue.getDescription()) + "</p>"
+            + "</div>"
+            + "</div>"
+            + "<div style='padding:16px 32px;background:#f8faff;border-top:1px solid #e2e8f0;text-align:center;'>"
+            + "<p style='margin:0;font-size:11px;color:#94a3b8;'>My-Skoolz Platform • Issue Tracker</p>"
+            + "</div></div></body></html>";
+    }
+
+    private String nvl(String s) { return s != null && !s.isBlank() ? s : "—"; }
+
+    private String escHtml(String s) {
+        if (s == null) return "";
+        return s.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;");
+    }
+
     // ── Private helpers ───────────────────────────────────────────────────────
 
     private void requireApiKey() {
