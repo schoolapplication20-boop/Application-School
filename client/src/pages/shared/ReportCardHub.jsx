@@ -126,7 +126,7 @@ export default function ReportCardHub() {
   const [filterSection,setFilterSection]= useState('');
   const [filterExam,   setFilterExam]   = useState('');
   const [studentSearch,setStudentSearch]= useState('');
-  const [classStudents,setClassStudents]= useState([]);  // [{studentId,name,rollNumber,...}]
+  const [classStudents,setClassStudents]= useState([]);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [cardData,   setCardData]   = useState(null);
   const [loading,    setLoading]    = useState(false);
@@ -134,16 +134,42 @@ export default function ReportCardHub() {
   const [searchResults,setSearchResults]= useState([]);
   const [searching,  setSearching]  = useState(false);
   const [printingAll,setPrintingAll] = useState(false);
+  const [isClassTeacher, setIsClassTeacher] = useState(null); // null = loading, true/false = resolved
 
   // Load class list and exam types on mount
   useEffect(() => {
-    adminAPI.getClasses()
-      .then(res => setClasses((res.data?.data ?? []).slice().sort(sortClasses)))
-      .catch(() => {});
+    if (isTeacher) {
+      // Teachers: only load their assigned class via teacher API
+      teacherAPI.getClassTeacherAssignment()
+        .then(res => {
+          const assignment = res.data?.data;
+          if (assignment?.isClassTeacher && assignment?.classId) {
+            setIsClassTeacher(true);
+            // Build a single-class list from the assignment
+            setClasses([{
+              id:      assignment.classId,
+              name:    assignment.className,
+              section: assignment.section,
+            }]);
+            // Auto-select so students load immediately
+            setFilterClass(String(assignment.classId));
+          } else {
+            setIsClassTeacher(false);
+            setClasses([]);
+          }
+        })
+        .catch(() => { setIsClassTeacher(false); setClasses([]); });
+    } else {
+      // Admin / Super Admin: load all classes
+      setIsClassTeacher(false);
+      adminAPI.getClasses()
+        .then(res => setClasses((res.data?.data ?? []).slice().sort(sortClasses)))
+        .catch(() => {});
+    }
     reportCardAPI.getSchoolFilters()
       .then(res => setExamTypes(res.data?.data?.examTypes ?? []))
       .catch(() => {});
-  }, []);
+  }, [isTeacher]);
 
   // Load students when class filter changes
   const loadClassStudents = useCallback(async () => {
@@ -174,8 +200,9 @@ export default function ReportCardHub() {
     return () => { cancelled = true; };
   }, [selectedStudent, filterExam]);
 
-  // Student name search
+  // Student name search — admin/super_admin only (teacher uses class list instead)
   useEffect(() => {
+    if (isTeacher) { setSearchResults([]); return; }
     if (!studentSearch || studentSearch.length < 2) { setSearchResults([]); return; }
     const t = setTimeout(async () => {
       setSearching(true);
@@ -186,7 +213,7 @@ export default function ReportCardHub() {
       finally { setSearching(false); }
     }, 300);
     return () => clearTimeout(t);
-  }, [studentSearch]);
+  }, [studentSearch, isTeacher]);
 
   const selectStudent = (s) => {
     setSelectedStudent({ studentId: s.id || s.studentId, name: s.name, rollNumber: s.rollNumber });
@@ -290,22 +317,50 @@ export default function ReportCardHub() {
     <Layout pageTitle="Report Cards">
       <div className="page-header">
         <h1>Report Cards</h1>
-        <p>View academic performance records by student or class</p>
+        <p>{isTeacher ? 'Academic performance records for your class' : 'View academic performance records by student or class'}</p>
       </div>
 
-      {/* Filters bar */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-        {/* Class selector */}
-        <div>
-          <label style={{ fontSize: 11, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 4 }}>Class</label>
-          <select value={filterClass} onChange={e => { setFilterClass(e.target.value); setSelectedStudent(null); setCardData(null); }}
-            style={{ padding: '8px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none', minWidth: 140 }}>
-            <option value="">— Select class —</option>
-            {visibleClasses.map(c => (
-              <option key={c.id} value={c.id}>{c.name}{c.section ? ` - ${c.section}` : ''}</option>
-            ))}
-          </select>
+      {/* Class teacher banner */}
+      {isTeacher && isClassTeacher === true && classes[0] && (
+        <div style={{ background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 10, padding: '10px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span className="material-icons" style={{ color: '#4f46e5', fontSize: 20 }}>class</span>
+          <div>
+            <span style={{ fontWeight: 700, color: '#3730a3', fontSize: 13 }}>Your class: {classes[0].name}{classes[0].section ? ` - ${classes[0].section}` : ''}</span>
+            <span style={{ fontSize: 12, color: '#6366f1', marginLeft: 8 }}>Showing report cards for your assigned students only</span>
+          </div>
         </div>
+      )}
+
+      {/* Not a class teacher */}
+      {isTeacher && isClassTeacher === false && (
+        <div style={{ textAlign: 'center', padding: '60px 20px', color: '#94a3b8' }}>
+          <span className="material-icons" style={{ fontSize: 56, display: 'block', marginBottom: 12, color: '#e2e8f0' }}>assignment_ind</span>
+          <p style={{ fontSize: 15, fontWeight: 600, color: '#475569' }}>Report cards are available to class teachers only</p>
+          <p style={{ fontSize: 13, marginTop: 6 }}>You are not assigned as a class teacher. Contact your admin to update your role.</p>
+        </div>
+      )}
+
+      {/* Loading teacher assignment */}
+      {isTeacher && isClassTeacher === null && (
+        <div style={{ textAlign: 'center', padding: 40, color: '#94a3b8' }}>Loading your class assignment…</div>
+      )}
+
+      {/* Filters bar — shown for admin/super_admin and class teachers */}
+      {(!isTeacher || isClassTeacher === true) && isClassTeacher !== null && (
+      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        {/* Class selector — only for admin/super_admin; teachers have their class auto-selected */}
+        {!isTeacher && (
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 4 }}>Class</label>
+            <select value={filterClass} onChange={e => { setFilterClass(e.target.value); setSelectedStudent(null); setCardData(null); }}
+              style={{ padding: '8px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none', minWidth: 140 }}>
+              <option value="">— Select class —</option>
+              {visibleClasses.map(c => (
+                <option key={c.id} value={c.id}>{c.name}{c.section ? ` - ${c.section}` : ''}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* Exam type */}
         <div>
@@ -317,34 +372,37 @@ export default function ReportCardHub() {
           </select>
         </div>
 
-        {/* OR search student */}
-        <div style={{ position: 'relative' }}>
-          <label style={{ fontSize: 11, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 4 }}>Or search student</label>
-          <input value={studentSearch} onChange={e => setStudentSearch(e.target.value)} placeholder="Name or admission no…"
-            style={{ padding: '8px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none', width: 200 }} />
-          {searching && <span style={{ position: 'absolute', right: 10, top: 32, fontSize: 11, color: '#94a3b8' }}>Searching…</span>}
-          {searchResults.length > 0 && (
-            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 100, maxHeight: 200, overflowY: 'auto' }}>
-              {searchResults.map(s => (
-                <div key={s.id} onMouseDown={() => selectStudent(s)}
-                  style={{ padding: '9px 14px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', fontSize: 13 }}
-                  onMouseEnter={e => e.currentTarget.style.background = '#f8faff'}
-                  onMouseLeave={e => e.currentTarget.style.background = '#fff'}>
-                  <div style={{ fontWeight: 700 }}>{s.name}</div>
-                  <div style={{ fontSize: 11, color: '#94a3b8' }}>{s.className}{s.section ? ` - ${s.section}` : ''} · Roll: {s.rollNumber}</div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        {/* OR search student — admin/super_admin only */}
+        {!isTeacher && (
+          <div style={{ position: 'relative' }}>
+            <label style={{ fontSize: 11, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 4 }}>Or search student</label>
+            <input value={studentSearch} onChange={e => setStudentSearch(e.target.value)} placeholder="Name or admission no…"
+              style={{ padding: '8px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none', width: 200 }} />
+            {searching && <span style={{ position: 'absolute', right: 10, top: 32, fontSize: 11, color: '#94a3b8' }}>Searching…</span>}
+            {searchResults.length > 0 && (
+              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 100, maxHeight: 200, overflowY: 'auto' }}>
+                {searchResults.map(s => (
+                  <div key={s.id} onMouseDown={() => selectStudent(s)}
+                    style={{ padding: '9px 14px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', fontSize: 13 }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#f8faff'}
+                    onMouseLeave={e => e.currentTarget.style.background = '#fff'}>
+                    <div style={{ fontWeight: 700 }}>{s.name}</div>
+                    <div style={{ fontSize: 11, color: '#94a3b8' }}>{s.className}{s.section ? ` - ${s.section}` : ''} · Roll: {s.rollNumber}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
-        {(selectedStudent || filterClass) && (
-          <button onClick={() => { setSelectedStudent(null); setFilterClass(''); setCardData(null); setClassStudents([]); setStudentSearch(''); }}
+        {(selectedStudent || (!isTeacher && filterClass)) && (
+          <button onClick={() => { setSelectedStudent(null); if (!isTeacher) setFilterClass(''); setCardData(null); setClassStudents([]); setStudentSearch(''); }}
             style={{ padding: '8px 14px', border: '1.5px solid #e2e8f0', borderRadius: 8, background: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', color: '#64748b', marginTop: 18 }}>
-            Clear
+            {isTeacher ? 'Back to class' : 'Clear'}
           </button>
         )}
       </div>
+      )}
 
       {/* Class student list */}
       {filterClass && !selectedStudent && (
@@ -410,8 +468,8 @@ export default function ReportCardHub() {
         </div>
       )}
 
-      {/* Empty state */}
-      {!filterClass && !selectedStudent && (
+      {/* Empty state — only for admin/super_admin (teachers auto-load their class) */}
+      {!isTeacher && !filterClass && !selectedStudent && (
         <div style={{ textAlign: 'center', padding: '60px 20px', color: '#94a3b8' }}>
           <span className="material-icons" style={{ fontSize: 56, display: 'block', marginBottom: 12, color: '#e2e8f0' }}>school</span>
           <p style={{ fontSize: 15, fontWeight: 600 }}>Select a class or search for a student to view report cards</p>
