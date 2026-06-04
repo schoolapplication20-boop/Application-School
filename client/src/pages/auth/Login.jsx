@@ -128,7 +128,6 @@ const Login = () => {
         return;
       }
 
-      setServerWaking(false);
       retryCountRef.current = 0;
       login(loggedInUser, token);
 
