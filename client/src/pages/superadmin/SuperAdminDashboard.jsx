@@ -52,9 +52,7 @@ function OwnerDashboard() {
   const [credentials,  setCredentials]  = useState(null);
   const [search,       setSearch]       = useState('');
   const [expandedRow,  setExpandedRow]  = useState(null); // schoolId of expanded row
-  const [deleteTarget,       setDeleteTarget]       = useState(null); // sa object — delete super admin
-  const [deleting,           setDeleting]           = useState(false);
-  const [schoolDeleteTarget,     setSchoolDeleteTarget]     = useState(null); // sa object — delete entire school
+  const [schoolDeleteTarget,     setSchoolDeleteTarget]     = useState(null); // sa object — delete entire school (unused, kept for safety)
   const [schoolDeleting,         setSchoolDeleting]         = useState(false);
   // OTP confirmation modal for destructive actions
   const [otpAction, setOtpAction] = useState(null); // { title, description, onConfirmed }
@@ -381,28 +379,6 @@ function OwnerDashboard() {
     load();
   };
 
-  // Open OTP modal for delete super admin — close confirmation modal first
-  const handleDeleteConfirm = () => {
-    if (!deleteTarget) return;
-    const target = deleteTarget;
-    setDeleteTarget(null); // close confirmation modal before opening OTP modal
-    setOtpAction({
-      title: 'Delete Super Admin',
-      description: (
-        <div>
-          <div style={{ fontSize: 13, color: '#2d3748', marginBottom: 6 }}>You are about to permanently delete the Super Admin account for:</div>
-          <div style={{ fontWeight: 700, fontSize: 15, color: '#dc2626' }}>{target.schoolName || '—'}</div>
-          <div style={{ fontSize: 12, color: '#718096', marginTop: 3 }}>{target.name} · {target.email}</div>
-          <div style={{ fontSize: 11, color: '#a0aec0', marginTop: 8 }}>The school record will be preserved. Only the login account will be removed.</div>
-        </div>
-      ),
-      onConfirmed: async () => {
-        await superAdminAPI.deleteSuperAdmin(target.id);
-        load();
-      },
-    });
-  };
-
   const handleSuspendConfirm = async () => {
     if (!schoolSuspendTarget) return;
     setSchoolSuspending(true);
@@ -662,10 +638,6 @@ function OwnerDashboard() {
                                 <span className="material-icons" style={{ fontSize: 15, color: '#15803d' }}>play_circle</span>
                               </button>
                             )}
-                            <button onClick={() => setDeleteTarget(sa)} title="Delete super admin"
-                              style={{ border: 'none', background: '#fff5f5', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <span className="material-icons" style={{ fontSize: 15, color: '#ef4444' }}>person_remove</span>
-                            </button>
                             <button
                               onClick={() => { setExpandedRow(isExpanded ? null : sa.schoolDbId); if (!isExpanded) loadFeeSummary(sa.schoolDbId, sa.schoolActualId ?? sa.schoolDbId); }}
                               title={isExpanded ? 'Collapse' : 'View details'}
@@ -1578,61 +1550,6 @@ function OwnerDashboard() {
         />
       )}
 
-      {/* ── Delete Confirmation Modal ───────────────────────────────────────── */}
-      {deleteTarget && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div className="modal-card" style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 420, width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', maxHeight: '90vh', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-              <div style={{ width: 44, height: 44, borderRadius: 12, background: '#fff5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <span className="material-icons" style={{ color: '#e53e3e', fontSize: 24 }}>delete_forever</span>
-              </div>
-              <div>
-                <div style={{ fontWeight: 800, fontSize: 16, color: '#1a202c' }}>Delete Super Admin</div>
-                <div style={{ fontSize: 12, color: '#718096', marginTop: 2 }}>This action cannot be undone</div>
-              </div>
-            </div>
-
-            <div style={{ background: '#fff5f5', borderRadius: 10, padding: '12px 14px', marginBottom: 20, border: '1.5px solid #fed7d7' }}>
-              <div style={{ fontSize: 13, color: '#2d3748', marginBottom: 4 }}>
-                You are about to delete the Super Admin account for:
-              </div>
-              <div style={{ fontWeight: 700, fontSize: 14, color: '#e53e3e' }}>{deleteTarget.schoolName || '—'}</div>
-              <div style={{ fontSize: 12, color: '#718096', marginTop: 2 }}>{deleteTarget.name} · {deleteTarget.email}</div>
-              <div style={{ fontSize: 11, color: '#a0aec0', marginTop: 8 }}>
-                The school record will be preserved. Only the Super Admin login account will be removed.
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => setDeleteTarget(null)}
-                disabled={deleting}
-                style={{ padding: '9px 20px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: '#fff', color: '#4a5568', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDeleteConfirm}
-                disabled={deleting}
-                style={{ padding: '9px 20px', borderRadius: 8, border: 'none', background: '#e53e3e', color: '#fff', fontWeight: 700, fontSize: 13, cursor: deleting ? 'not-allowed' : 'pointer', opacity: deleting ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 6 }}
-              >
-                {deleting ? (
-                  <>
-                    <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />
-                    Deleting…
-                  </>
-                ) : (
-                  <>
-                    <span className="material-icons" style={{ fontSize: 16 }}>delete</span>
-                    Delete
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* ── Suspend School Modal ─────────────────────────────────────────────── */}
       {schoolSuspendTarget && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1654,8 +1571,14 @@ function OwnerDashboard() {
               <div style={{ fontSize: 12, color: '#718096', marginTop: 1 }}>{schoolSuspendTarget.name} · {schoolSuspendTarget.email}</div>
             </div>
 
-            <div style={{ background: '#f0fff4', borderRadius: 8, padding: '10px 14px', marginBottom: 20, border: '1px solid #9ae6b4', fontSize: 12, color: '#276749', lineHeight: 1.6 }}>
-              <strong>No data will be deleted.</strong> The school's login will be blocked immediately. You can reactivate it at any time and set a new subscription expiry date.
+            <div style={{ background: '#fff7ed', borderRadius: 8, padding: '12px 14px', marginBottom: 20, border: '1px solid #fed7aa', fontSize: 12, color: '#9a3412', lineHeight: 1.7 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                <span className="material-icons" style={{ fontSize: 17, color: '#ea580c', marginTop: 1, flexShrink: 0 }}>warning</span>
+                <div>
+                  <strong>This will immediately stop the entire school.</strong><br />
+                  Every user — Super Admin, Admins, Teachers and Students — will be logged out and blocked from signing in. All data is preserved. You can reactivate the school at any time.
+                </div>
+              </div>
             </div>
 
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
