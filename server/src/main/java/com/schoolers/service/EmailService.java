@@ -44,8 +44,8 @@ public class EmailService {
 
     public void sendOwnerLoginOtp(String ownerEmail, String otp) {
         requireApiKey();
-        send(notifyEmail, "My-Skoolz — Owner Login OTP", buildOwnerLoginOtpHtml(ownerEmail, otp));
-        log.info("[EmailService] Owner login OTP sent to notify email for owner: " + ownerEmail);
+        send(ownerEmail, "My-Skoolz — Owner Login OTP", buildOwnerLoginOtpHtml(ownerEmail, otp));
+        log.info("[EmailService] Owner login OTP sent to owner: " + ownerEmail);
     }
 
     // ── Registration email verification (re-throws on failure) ──────────────
@@ -354,7 +354,8 @@ public class EmailService {
 
     private String escHtml(String s) {
         if (s == null) return "";
-        return s.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;");
+        return s.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;")
+                .replace("\"","&quot;").replace("'","&#39;");
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────

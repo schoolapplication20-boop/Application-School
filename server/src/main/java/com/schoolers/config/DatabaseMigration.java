@@ -470,6 +470,15 @@ public class DatabaseMigration implements CommandLineRunner {
         exec("ALTER TABLE users ALTER COLUMN reset_otp TYPE VARCHAR(64)");
         log.debug("users.reset_otp column widened to VARCHAR(64) for hashed storage.");
 
+        // ── users: invalidate legacy short-format OTPs ────────────────────────────
+        // Old code stored 6-digit raw OTPs or 16-char shortened hashes.
+        // New code stores full 64-char SHA-256 hashes or the sentinel "VERIFIED".
+        // Any stored value shorter than 64 chars that is NOT "VERIFIED" is an
+        // old-format token that can never match the new hash — null it out so
+        // affected users get a fresh OTP next time they click Forgot Password.
+        exec("UPDATE users SET reset_otp = NULL WHERE reset_otp IS NOT NULL AND reset_otp <> 'VERIFIED' AND LENGTH(reset_otp) < 64");
+        log.debug("Legacy short-format OTP tokens invalidated.");
+
         // ── users: unlock ALL currently-locked accounts (one-time recovery) ──────
         // Accounts accumulated stale failed_login_attempts across sessions and got
         // locked before the threshold was raised to 10.  Reset every locked account

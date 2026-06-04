@@ -291,9 +291,11 @@ export const AuthProvider = ({ children }) => {
   }, [user]);
 
   const dismissSessionExpired = useCallback(() => {
-    setSessionExpired(false);
-    window.location.href = '/login';
-  }, []);
+    // logout() clears user state + sets sessionExpired=false.
+    // ProtectedRoute then redirects to /login without a hard page reload,
+    // so any other open tabs or forms that weren't submitted are not wiped.
+    logout();
+  }, [logout]);
 
   const value = {
     user,

@@ -670,8 +670,8 @@ public class AdminService {
         transportStudentAssignmentRepository.deleteByStudentId(id);
         log.info("[deleteStudent] attendance, fees, transport records deleted");
 
-        // ── Step 3: Fee payments & fee assignments (with installments) ───────────
-        feePaymentRepository.deleteByStudentId(id);
+        // ── Step 3: Fee assignments (with installments) ───────────────────────────
+        // Note: feePaymentRepository.deleteByStudentId already called in Step 2 above.
         List<com.schoolers.model.StudentFeeAssignment> feeAssignments =
                 studentFeeAssignmentRepository.findByStudentId(id);
         for (com.schoolers.model.StudentFeeAssignment fa : feeAssignments) {
@@ -1098,7 +1098,7 @@ public class AdminService {
                     userRepository.save(user);
                     auditLogService.log(null, "SYSTEM", "ADMIN", schoolId, "PASSWORD_RESET", "Teacher", teacherId,
                             "Password reset for teacher id=" + teacherId, null);
-                    return ApiResponse.success("Password reset successfully", newPassword);
+                    return ApiResponse.success("Password reset successfully", "Password updated");
                 })
                 .orElse(ApiResponse.error("Teacher not found"));
     }
@@ -2324,7 +2324,7 @@ public class AdminService {
                     user.setTempPassword(null);
                     user.setFirstLogin(true);
                     userRepository.save(user);
-                    return ApiResponse.success("Password reset successfully", newPassword);
+                    return ApiResponse.success("Password reset successfully", "Password updated");
                 })
                 .orElse(ApiResponse.error("Parent not found"));
     }
