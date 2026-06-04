@@ -67,6 +67,7 @@ function OwnerDashboard() {
   const [editTarget,   setEditTarget]   = useState(null); // sa object being edited
   const [demoBookings, setDemoBookings] = useState([]);
   const [bookingsLoading, setBookingsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('schools');
 
   // ── User limit editing (per school) ─────────────────────────────────────────
   const [limitEdit,    setLimitEdit]    = useState({});  // { [schoolDbId]: string input value }
@@ -445,268 +446,271 @@ function OwnerDashboard() {
     <Layout pageTitle="Platform Dashboard">
       <SEOMeta title="Platform Dashboard" description="Application owner overview — manage all schools on the My-Skoolz platform." />
 
-      {/* ── Hero banner ────────────────────────────────────────────────────── */}
+      {/* ══ Modern Header ═══════════════════════════════════════════════════════ */}
       <div style={{
-        background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%)',
-        borderRadius: 16, padding: '24px 28px', marginBottom: 24, color: '#fff',
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 60%, #312e81 100%)',
+        borderRadius: 20, padding: '28px 32px', marginBottom: 28, color: '#fff',
+        boxShadow: '0 8px 32px rgba(15,23,42,0.3)',
       }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-              <span className="material-icons" style={{ fontSize: 28, color: '#a78bfa' }}>domain</span>
-              <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#fff' }}>Platform Overview</h1>
+        {/* Title row */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 28 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ width: 48, height: 48, borderRadius: 14, background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span className="material-icons" style={{ fontSize: 26, color: '#818cf8' }}>domain</span>
             </div>
-            <p style={{ margin: 0, color: '#a5b4fc', fontSize: 13 }}>Manage all schools and their Super Admins from one place</p>
+            <div>
+              <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.3px' }}>Platform Dashboard</h1>
+              <p style={{ margin: '3px 0 0', color: '#94a3b8', fontSize: 13 }}>My-Skoolz · Owner Control Center</p>
+            </div>
           </div>
           <button
             onClick={() => setShowWizard(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', background: 'linear-gradient(135deg,#dc2626,#991b1b)', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: 'pointer', boxShadow: '0 4px 12px rgba(220,38,38,0.4)', whiteSpace: 'nowrap', flexShrink: 0 }}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 22px', background: 'linear-gradient(135deg,#4f46e5,#7c3aed)', color: '#fff', border: 'none', borderRadius: 12, fontWeight: 700, fontSize: 13, cursor: 'pointer', boxShadow: '0 4px 14px rgba(79,70,229,0.45)', whiteSpace: 'nowrap', flexShrink: 0, letterSpacing: '0.2px' }}
           >
-            <span className="material-icons" style={{ fontSize: 17 }}>add_business</span>
+            <span className="material-icons" style={{ fontSize: 18 }}>add_business</span>
             Onboard School
           </button>
         </div>
 
-        {/* Stat tiles inside hero */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12 }}>
+        {/* Stat tiles */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
           {[
-            { label: 'Total Schools',      value: totalSchools, icon: 'domain',          color: '#f87171', bg: 'rgba(248,113,113,0.15)' },
-            { label: 'Setup Complete',     value: setupDone,    icon: 'task_alt',         color: '#4ade80', bg: 'rgba(74,222,128,0.15)' },
-            { label: 'Pending Setup',      value: pendingSetup, icon: 'pending_actions',  color: '#fbbf24', bg: 'rgba(251,191,36,0.15)' },
-            { label: 'Active Admins',      value: activeCount,  icon: 'manage_accounts',  color: '#a78bfa', bg: 'rgba(167,139,250,0.15)' },
+            { label: 'Total Schools',  value: totalSchools, icon: 'domain',         accent: '#60a5fa' },
+            { label: 'Setup Complete', value: setupDone,    icon: 'task_alt',        accent: '#4ade80' },
+            { label: 'Pending Setup',  value: pendingSetup, icon: 'pending_actions', accent: '#fbbf24' },
+            { label: 'Active Schools', value: activeCount,  icon: 'check_circle',    accent: '#a78bfa' },
           ].map(c => (
-            <div key={c.label} style={{ background: c.bg, borderRadius: 12, padding: '14px 16px', border: `1px solid ${c.color}30` }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <span className="material-icons" style={{ fontSize: 18, color: c.color }}>{c.icon}</span>
+            <div key={c.label} style={{ background: 'rgba(255,255,255,0.07)', backdropFilter: 'blur(8px)', borderRadius: 14, padding: '18px 20px', border: `1px solid rgba(255,255,255,0.1)`, cursor: 'default' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 9, background: c.accent + '22', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span className="material-icons" style={{ fontSize: 17, color: c.accent }}>{c.icon}</span>
+                </div>
               </div>
-              <div style={{ fontSize: 28, fontWeight: 800, color: c.color, lineHeight: 1 }}>{c.value}</div>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 4, fontWeight: 600 }}>{c.label}</div>
+              <div style={{ fontSize: 34, fontWeight: 800, color: '#fff', lineHeight: 1, marginBottom: 6 }}>{c.value}</div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{c.label}</div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* ── Schools / Super Admins Table ────────────────────────────────────── */}
-      <div className="data-table-card">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, gap: 12, flexWrap: 'wrap' }}>
-          <div style={{ fontWeight: 700, fontSize: 15, color: '#2d3748', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span className="material-icons" style={{ color: '#dc2626', fontSize: 20 }}>domain</span>
-            Schools &amp; Super Admins
-            <span style={{ background: '#dc262618', color: '#dc2626', padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>{totalSchools} school{totalSchools !== 1 ? 's' : ''}</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f8fafc', borderRadius: 8, padding: '6px 12px', border: '1.5px solid #e2e8f0' }}>
-            <span className="material-icons" style={{ fontSize: 16, color: '#a0aec0' }}>search</span>
-            <input
-              value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Search school, admin, email…"
-              style={{ border: 'none', outline: 'none', fontSize: 13, background: 'transparent', width: 200, color: '#2d3748' }}
-            />
-          </div>
-        </div>
-
-        {loading ? (
-          <div style={{ padding: 40, textAlign: 'center', color: '#a0aec0' }}>
-            <span className="material-icons" style={{ fontSize: 36, display: 'block', marginBottom: 8, animation: 'spin 1s linear infinite' }}>autorenew</span>
-            Loading…
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="empty-state" style={{ padding: 48, textAlign: 'center' }}>
-            <span className="material-icons" style={{ fontSize: 48, color: '#e2e8f0', display: 'block', marginBottom: 12 }}>domain_disabled</span>
-            <p style={{ color: '#a0aec0', marginBottom: 16 }}>
-              {search ? 'No matching schools found.' : 'No schools created yet.'}
-            </p>
-            {!search && (
-              <button onClick={() => setShowWizard(true)} style={{ padding: '10px 24px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, cursor: 'pointer' }}>
-                Create First School
-              </button>
+      {/* ══ Tab Navigation ═══════════════════════════════════════════════════════ */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 24, background: '#f1f5f9', borderRadius: 14, padding: 5, width: 'fit-content', boxShadow: '0 1px 3px rgba(0,0,0,0.06) inset' }}>
+        {[
+          { id: 'schools',  label: 'Schools',   icon: 'domain',       badge: totalSchools },
+          { id: 'issues',   label: 'Issues',    icon: 'bug_report',   badge: issues.filter(i => i.status === 'OPEN').length },
+          { id: 'bookings', label: 'Bookings',  icon: 'event_note',   badge: demoBookings.filter(b => b.status === 'NEW').length },
+          { id: 'system',   label: 'System',    icon: 'settings',     badge: activeNotice ? 1 : 0 },
+        ].map(tab => (
+          <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
+            display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', borderRadius: 10, border: 'none', cursor: 'pointer',
+            fontWeight: activeTab === tab.id ? 700 : 600, fontSize: 13, transition: 'all 0.15s',
+            background: activeTab === tab.id ? '#fff' : 'transparent',
+            color: activeTab === tab.id ? '#4f46e5' : '#64748b',
+            boxShadow: activeTab === tab.id ? '0 2px 8px rgba(79,70,229,0.12), 0 1px 3px rgba(0,0,0,0.08)' : 'none',
+          }}>
+            <span className="material-icons" style={{ fontSize: 17 }}>{tab.icon}</span>
+            {tab.label}
+            {tab.badge > 0 && (
+              <span style={{ background: activeTab === tab.id ? '#4f46e5' : '#e2e8f0', color: activeTab === tab.id ? '#fff' : '#64748b', borderRadius: 20, padding: '1px 8px', fontSize: 10, fontWeight: 800 }}>{tab.badge}</span>
             )}
+          </button>
+        ))}
+      </div>
+
+      {/* ══ Schools Tab ══════════════════════════════════════════════════════════ */}
+      {activeTab === 'schools' && (
+        <div>
+          {/* Search bar */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: 240, display: 'flex', alignItems: 'center', gap: 10, background: '#fff', borderRadius: 12, padding: '10px 16px', border: '1.5px solid #e2e8f0', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+              <span className="material-icons" style={{ fontSize: 18, color: '#94a3b8' }}>search</span>
+              <input
+                value={search} onChange={e => setSearch(e.target.value)}
+                placeholder="Search school, admin or email…"
+                style={{ border: 'none', outline: 'none', fontSize: 14, background: 'transparent', flex: 1, color: '#1e293b' }}
+              />
+              {search && <button onClick={() => setSearch('')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#94a3b8', lineHeight: 1, padding: 0 }}>✕</button>}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: '#eef2ff', borderRadius: 10, fontSize: 13, fontWeight: 700, color: '#4f46e5' }}>
+              <span className="material-icons" style={{ fontSize: 16 }}>domain</span>
+              {filtered.length} school{filtered.length !== 1 ? 's' : ''}
+            </div>
           </div>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>School</th>
-                  <th>Super Admin</th>
-                  <th>Joined</th>
-                  <th>Modules</th>
-                  <th>Setup</th>
-                  <th>Status</th>
-                  <th style={{ textAlign: 'center' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
+
+          {loading ? (
+            <div style={{ padding: 60, textAlign: 'center', color: '#94a3b8' }}>
+              <span className="material-icons" style={{ fontSize: 40, display: 'block', marginBottom: 12, animation: 'spin 1s linear infinite', color: '#c7d2fe' }}>autorenew</span>
+              <div style={{ fontSize: 14, fontWeight: 600 }}>Loading schools…</div>
+            </div>
+          ) : filtered.length === 0 ? (
+            <div style={{ padding: '64px 20px', textAlign: 'center', background: '#fff', borderRadius: 20, border: '2px dashed #e2e8f0' }}>
+              <span className="material-icons" style={{ fontSize: 56, display: 'block', marginBottom: 14, color: '#cbd5e1' }}>domain_disabled</span>
+              <div style={{ fontSize: 16, fontWeight: 700, color: '#475569', marginBottom: 8 }}>{search ? 'No matching schools' : 'No schools yet'}</div>
+              <p style={{ color: '#94a3b8', fontSize: 14, marginBottom: 20 }}>{search ? 'Try a different search term.' : 'Onboard your first school to get started.'}</p>
+              {!search && (
+                <button onClick={() => setShowWizard(true)} style={{ padding: '11px 24px', background: 'linear-gradient(135deg,#4f46e5,#7c3aed)', color: '#fff', border: 'none', borderRadius: 12, fontWeight: 700, cursor: 'pointer', fontSize: 14 }}>
+                  Onboard First School
+                </button>
+              )}
+            </div>
+          ) : (
+            <>
+              {/* ── School Cards Grid ── */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 16, marginBottom: expandedRow ? 20 : 0 }}>
                 {filtered.map(sa => {
                   const schoolFeatures = sa.schoolFeatures
                     ? (typeof sa.schoolFeatures === 'string' ? (() => { try { return JSON.parse(sa.schoolFeatures); } catch { return null; } })() : sa.schoolFeatures)
                     : null;
                   const enabledCount = schoolFeatures ? ALL_MODULES.filter(m => schoolFeatures[m.key] !== false).length : ALL_MODULES.length;
-                  const isExpanded   = expandedRow === sa.schoolDbId;
+                  const isExpanded = expandedRow === sa.schoolDbId;
+                  const isActive   = sa.schoolActive !== false;
 
                   return (
-                    <React.Fragment key={sa.id}>
-                      <tr style={{ background: isExpanded ? '#fafbff' : undefined }}>
-                        {/* School Number */}
-                        <td style={{ textAlign: 'center' }}>
-                          {sa.schoolId != null ? (
-                            <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg,#dc2626,#7c3aed)', color: '#fff', fontSize: 15, fontWeight: 800 }}>
-                              {sa.schoolId}
-                            </div>
-                          ) : (
-                            <span style={{ fontSize: 11, color: '#cbd5e0' }}>—</span>
-                          )}
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <div style={{ width: 38, height: 38, borderRadius: 10, background: 'linear-gradient(135deg,#7c3aed,#553c9a)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 13, fontWeight: 700, flexShrink: 0 }}>
-                              {initials(sa.schoolName || sa.name)}
-                            </div>
-                            <div>
-                              <div style={{ fontWeight: 700, fontSize: 13 }}>{sa.schoolName || '—'}</div>
-                              <span style={{ padding: '2px 6px', background: '#7c3aed18', color: '#7c3aed', borderRadius: 5, fontSize: 10, fontWeight: 700, fontFamily: 'monospace' }}>
-                                {sa.schoolCode || '—'}
+                    <div key={sa.id} style={{
+                      background: '#fff', borderRadius: 18, border: isExpanded ? '2px solid #4f46e5' : '1.5px solid #e2e8f0',
+                      boxShadow: isExpanded ? '0 8px 30px rgba(79,70,229,0.12)' : '0 2px 8px rgba(0,0,0,0.04)',
+                      transition: 'box-shadow 0.2s, border-color 0.2s', overflow: 'hidden',
+                    }}>
+                      {/* Card header strip */}
+                      <div style={{ height: 5, background: isActive ? 'linear-gradient(90deg,#4f46e5,#7c3aed)' : 'linear-gradient(90deg,#94a3b8,#cbd5e1)' }} />
+
+                      <div style={{ padding: '18px 20px' }}>
+                        {/* Top row: avatar + school name + status */}
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 16 }}>
+                          <div style={{ width: 48, height: 48, borderRadius: 13, background: 'linear-gradient(135deg,#4f46e5,#7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 16, fontWeight: 800, flexShrink: 0, boxShadow: '0 3px 10px rgba(79,70,229,0.3)' }}>
+                            {initials(sa.schoolName || sa.name)}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sa.schoolName || '—'}</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              {sa.schoolId != null && (
+                                <span style={{ padding: '2px 8px', background: '#eef2ff', color: '#4f46e5', borderRadius: 6, fontSize: 11, fontWeight: 700, fontFamily: 'monospace' }}>#{sa.schoolId}</span>
+                              )}
+                              {sa.schoolCode && (
+                                <span style={{ padding: '2px 7px', background: '#f1f5f9', color: '#64748b', borderRadius: 6, fontSize: 10, fontWeight: 700 }}>{sa.schoolCode}</span>
+                              )}
+                              <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700, background: isActive ? '#f0fdf4' : '#fff7ed', color: isActive ? '#15803d' : '#c2410c' }}>
+                                {isActive ? '● Active' : '○ Suspended'}
                               </span>
                             </div>
                           </div>
-                        </td>
-                        <td>
-                          <div style={{ fontWeight: 600, fontSize: 13 }}>{sa.name}</div>
-                          <div style={{ fontSize: 11, color: '#a0aec0' }}>{sa.email}</div>
-                          {sa.mobile && <div style={{ fontSize: 11, color: '#718096' }}>{sa.mobile}</div>}
-                        </td>
-                        <td style={{ fontSize: 12, color: '#718096' }}>
-                          {sa.onboardedAt
-                            ? <div>Onboarded {new Date(sa.onboardedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
-                            : sa.createdAt
-                            ? <div>Joined {new Date(sa.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
-                            : '—'}
-                          <div style={{ fontSize: 11, color: '#a0aec0' }}>ID #{sa.schoolDbId}</div>
-                        </td>
-                        <td>
-                          <span style={{ padding: '3px 10px', background: '#3182ce18', color: '#2c5282', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>
-                            {enabledCount} / {ALL_MODULES.length}
-                          </span>
-                          <div style={{ marginTop: 4, fontSize: 11, color: '#64748b', fontWeight: 600, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                            {[
-                              { icon: 'badge',  val: sa.adminCount   ?? 0, color: '#7c3aed' },
-                              { icon: 'school', val: sa.teacherCount ?? 0, color: '#0369a1' },
-                              { icon: 'person', val: sa.studentCount ?? 0, color: '#16a34a' },
-                            ].map(({ icon, val, color }) => (
-                              <span key={icon} style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <span className="material-icons" style={{ fontSize: 10, color }}>{icon}</span>
-                                <span style={{ color }}>{val.toLocaleString()}</span>
-                              </span>
-                            ))}
-                            {sa.userLimit && (
-                              <span style={{ color: '#94a3b8' }}>/ {sa.userLimit.toLocaleString()}</span>
-                            )}
-                          </div>
-                        </td>
-                        <td>
                           {sa.needsSchoolSetup ? (
-                            <span style={{ padding: '3px 10px', background: '#fffbeb', color: '#d97706', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>
-                              ⏳ Pending
-                            </span>
+                            <span style={{ padding: '3px 9px', background: '#fffbeb', color: '#d97706', borderRadius: 8, fontSize: 10, fontWeight: 700, flexShrink: 0 }}>⏳ Setup Pending</span>
                           ) : (
-                            <span style={{ padding: '3px 10px', background: '#f0fff4', color: '#276749', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>
-                              ✓ Complete
-                            </span>
+                            <span style={{ padding: '3px 9px', background: '#f0fdf4', color: '#15803d', borderRadius: 8, fontSize: 10, fontWeight: 700, flexShrink: 0 }}>✓ Ready</span>
                           )}
-                        </td>
-                        <td>
-                          <button
-                            onClick={() => toggleSchool(sa.schoolDbId, sa.schoolActive !== false)}
-                            disabled={!sa.schoolDbId}
-                            title={sa.schoolActive !== false ? 'Click to disable school' : 'Click to enable school'}
-                            style={{
-                              display: 'inline-flex', alignItems: 'center', gap: 5,
-                              padding: '4px 10px', borderRadius: 20, border: 'none', cursor: sa.schoolDbId ? 'pointer' : 'default',
-                              background: sa.schoolActive !== false ? '#f0fff4' : '#fff5f5',
-                              color:      sa.schoolActive !== false ? '#276749' : '#e53e3e',
-                              fontWeight: 700, fontSize: 11,
-                              transition: 'opacity 0.15s',
-                            }}
-                          >
-                            <span className="material-icons" style={{ fontSize: 13 }}>
-                              {sa.schoolActive !== false ? 'toggle_on' : 'toggle_off'}
-                            </span>
-                            {sa.schoolActive !== false ? 'Active' : 'Disabled'}
-                          </button>
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center' }}>
-                            <button
-                              onClick={() => sa.schoolDbId && openUsersModal(sa)}
-                              disabled={!sa.schoolDbId}
-                              title="View users"
-                              style={{ border: 'none', background: '#eff6ff', borderRadius: 7, width: 28, height: 28, cursor: sa.schoolDbId ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: sa.schoolDbId ? 1 : 0.4, flexShrink: 0 }}
-                            >
+                        </div>
+
+                        {/* Super Admin row */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#f8fafc', borderRadius: 10, marginBottom: 14 }}>
+                          <div style={{ width: 32, height: 32, borderRadius: 8, background: '#e0e7ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <span className="material-icons" style={{ fontSize: 16, color: '#4f46e5' }}>manage_accounts</span>
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 700, fontSize: 13, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sa.name}</div>
+                            <div style={{ fontSize: 11, color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sa.email}</div>
+                          </div>
+                          {sa.onboardedAt && (
+                            <div style={{ fontSize: 10, color: '#94a3b8', flexShrink: 0, textAlign: 'right' }}>
+                              {new Date(sa.onboardedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' })}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* User counts row */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 16 }}>
+                          {[
+                            { label: 'Admins',   count: sa.adminCount   ?? 0, color: '#7c3aed', bg: '#f5f3ff', icon: 'badge' },
+                            { label: 'Teachers', count: sa.teacherCount ?? 0, color: '#0369a1', bg: '#eff6ff', icon: 'school' },
+                            { label: 'Students', count: sa.studentCount ?? 0, color: '#15803d', bg: '#f0fdf4', icon: 'person' },
+                          ].map(({ label, count, color, bg, icon }) => (
+                            <div key={label} style={{ background: bg, borderRadius: 10, padding: '8px 10px', textAlign: 'center' }}>
+                              <span className="material-icons" style={{ fontSize: 14, color, display: 'block', marginBottom: 2 }}>{icon}</span>
+                              <div style={{ fontSize: 15, fontWeight: 800, color, lineHeight: 1 }}>{count.toLocaleString()}</div>
+                              <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2, fontWeight: 600 }}>{label}</div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Modules + action buttons */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                          <span style={{ padding: '4px 10px', background: '#eef2ff', color: '#4338ca', borderRadius: 8, fontSize: 11, fontWeight: 700 }}>
+                            <span className="material-icons" style={{ fontSize: 12, verticalAlign: 'middle', marginRight: 3 }}>apps</span>
+                            {enabledCount}/{ALL_MODULES.length} modules
+                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                            <button onClick={() => sa.schoolDbId && openUsersModal(sa)} disabled={!sa.schoolDbId} title="View users"
+                              style={{ border: 'none', background: '#eff6ff', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: sa.schoolDbId ? 1 : 0.4 }}>
                               <span className="material-icons" style={{ fontSize: 15, color: '#2563eb' }}>group</span>
                             </button>
-                            <button
-                              onClick={() => sa.schoolDbId && openModulesModal(sa)}
-                              disabled={!sa.schoolDbId}
-                              title="Manage modules"
-                              style={{ border: 'none', background: '#f0fdf4', borderRadius: 7, width: 28, height: 28, cursor: sa.schoolDbId ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: sa.schoolDbId ? 1 : 0.4, flexShrink: 0 }}
-                            >
+                            <button onClick={() => sa.schoolDbId && openModulesModal(sa)} disabled={!sa.schoolDbId} title="Manage modules"
+                              style={{ border: 'none', background: '#f0fdf4', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: sa.schoolDbId ? 1 : 0.4 }}>
                               <span className="material-icons" style={{ fontSize: 15, color: '#16a34a' }}>tune</span>
                             </button>
-                            <button
-                              onClick={() => {
-                                setExpandedRow(isExpanded ? null : sa.schoolDbId);
-                                if (!isExpanded) loadFeeSummary(sa.schoolDbId, sa.schoolActualId ?? sa.schoolDbId);
-                              }}
-                              title={isExpanded ? 'Collapse' : 'View details'}
-                              style={{ border: 'none', background: isExpanded ? '#ede9fe' : '#f8fafc', borderRadius: 7, width: 28, height: 28, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-                            >
-                              <span className="material-icons" style={{ fontSize: 15, color: isExpanded ? '#7c3aed' : '#a0aec0' }}>
-                                {isExpanded ? 'expand_less' : 'expand_more'}
-                              </span>
+                            <button onClick={() => setEditTarget(sa)} title="Edit school"
+                              style={{ border: 'none', background: '#f0fdf4', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <span className="material-icons" style={{ fontSize: 15, color: '#16a34a' }}>edit</span>
                             </button>
-                            <button
-                              onClick={() => setEditTarget(sa)}
-                              title="Edit school"
-                              style={{ border: 'none', background: '#f0fff4', borderRadius: 7, width: 28, height: 28, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-                            >
-                              <span className="material-icons" style={{ fontSize: 15, color: '#276749' }}>edit</span>
-                            </button>
-                            {sa.schoolActive !== false ? (
-                              <button
-                                onClick={() => sa.schoolDbId && setSchoolSuspendTarget(sa)}
-                                disabled={!sa.schoolDbId}
-                                title="Suspend school (block logins, preserve data)"
-                                style={{ border: 'none', background: '#fffbeb', borderRadius: 7, width: 28, height: 28, cursor: sa.schoolDbId ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: sa.schoolDbId ? 1 : 0.4 }}
-                              >
+                            {isActive ? (
+                              <button onClick={() => sa.schoolDbId && setSchoolSuspendTarget(sa)} disabled={!sa.schoolDbId} title="Suspend school"
+                                style={{ border: 'none', background: '#fffbeb', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: sa.schoolDbId ? 1 : 0.4 }}>
                                 <span className="material-icons" style={{ fontSize: 15, color: '#d97706' }}>pause_circle</span>
                               </button>
                             ) : (
-                              <button
-                                onClick={() => { sa.schoolDbId && setSchoolReactivateTarget(sa); setReactivateExpiry(''); }}
-                                disabled={!sa.schoolDbId}
-                                title="Reactivate school"
-                                style={{ border: 'none', background: '#f0fff4', borderRadius: 7, width: 28, height: 28, cursor: sa.schoolDbId ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: sa.schoolDbId ? 1 : 0.4 }}
-                              >
-                                <span className="material-icons" style={{ fontSize: 15, color: '#276749' }}>play_circle</span>
+                              <button onClick={() => { sa.schoolDbId && setSchoolReactivateTarget(sa); setReactivateExpiry(''); }} disabled={!sa.schoolDbId} title="Reactivate school"
+                                style={{ border: 'none', background: '#f0fff4', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: sa.schoolDbId ? 1 : 0.4 }}>
+                                <span className="material-icons" style={{ fontSize: 15, color: '#15803d' }}>play_circle</span>
                               </button>
                             )}
-                            <button
-                              onClick={() => setDeleteTarget(sa)}
-                              title="Delete super admin"
-                              style={{ border: 'none', background: '#fff5f5', borderRadius: 7, width: 28, height: 28, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-                            >
-                              <span className="material-icons" style={{ fontSize: 15, color: '#e53e3e' }}>person_remove</span>
+                            <button onClick={() => setDeleteTarget(sa)} title="Delete super admin"
+                              style={{ border: 'none', background: '#fff5f5', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <span className="material-icons" style={{ fontSize: 15, color: '#ef4444' }}>person_remove</span>
                             </button>
-                            {/* Delete school removed — use Suspend to deactivate */}
+                            <button
+                              onClick={() => { setExpandedRow(isExpanded ? null : sa.schoolDbId); if (!isExpanded) loadFeeSummary(sa.schoolDbId, sa.schoolActualId ?? sa.schoolDbId); }}
+                              title={isExpanded ? 'Collapse' : 'View details'}
+                              style={{ border: 'none', background: isExpanded ? '#eef2ff' : '#f8fafc', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <span className="material-icons" style={{ fontSize: 17, color: isExpanded ? '#4f46e5' : '#94a3b8' }}>
+                                {isExpanded ? 'expand_less' : 'expand_more'}
+                              </span>
+                            </button>
                           </div>
-                        </td>
-                      </tr>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
 
-                      {/* ── Expanded detail row ─────────────────────────────── */}
-                      {isExpanded && (
-                        <tr>
-                          <td colSpan={8} style={{ padding: 0, background: '#fafbff', borderTop: '1px dashed #e2e8f0' }}>
-                            <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, gridTemplateRows: 'auto auto' }}>
+              {/* ── Expanded Detail Panel (full-width, below cards) ── */}
+              {expandedRow && (() => {
+                const sa = filtered.find(s => s.schoolDbId === expandedRow);
+                if (!sa) return null;
+                const schoolFeatures = sa.schoolFeatures
+                  ? (typeof sa.schoolFeatures === 'string' ? (() => { try { return JSON.parse(sa.schoolFeatures); } catch { return null; } })() : sa.schoolFeatures)
+                  : null;
+                const enabledCount = schoolFeatures ? ALL_MODULES.filter(m => schoolFeatures[m.key] !== false).length : ALL_MODULES.length;
+                return (
+                  <div style={{ background: '#fff', borderRadius: 20, border: '2px solid #4f46e5', boxShadow: '0 8px 40px rgba(79,70,229,0.12)', marginBottom: 8, overflow: 'hidden' }}>
+                    {/* Panel header */}
+                    <div style={{ background: 'linear-gradient(135deg,#f0f4ff,#ede9fe)', padding: '16px 24px', borderBottom: '1px solid #e0e7ff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ width: 40, height: 40, borderRadius: 11, background: 'linear-gradient(135deg,#4f46e5,#7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 14, fontWeight: 800 }}>
+                          {initials(sa.schoolName || sa.name)}
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 800, fontSize: 15, color: '#1e293b' }}>{sa.schoolName}</div>
+                          <div style={{ fontSize: 12, color: '#64748b' }}>Detailed view · School #{sa.schoolId}</div>
+                        </div>
+                      </div>
+                      <button onClick={() => setExpandedRow(null)} style={{ border: 'none', background: 'rgba(255,255,255,0.7)', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span className="material-icons" style={{ fontSize: 18, color: '#64748b' }}>close</span>
+                      </button>
+                    </div>
+
+                    {/* Panel content */}
+                    <div style={{ padding: '20px 24px', display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, gridTemplateRows: 'auto auto' }}>
+
                               {/* School info + User Limit */}
                               <div style={{ background: '#fff', borderRadius: 10, padding: '12px 14px', border: '1.5px solid #e2e8f0' }}>
                                 <div style={{ fontSize: 11, fontWeight: 700, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>School Info</div>
@@ -1027,30 +1031,24 @@ function OwnerDashboard() {
                                   );
                                 })()}
                               </div>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </>
+          )}
+        </div>
+      )}
 
-      {/* ── Demo Booking Leads ──────────────────────────────────────────────── */}
-      <div style={{ marginTop: 32 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 4, height: 24, background: 'linear-gradient(180deg,#7c3aed,#a78bfa)', borderRadius: 2 }} />
-            <div>
-              <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#1a202c' }}>Demo Booking Leads</h2>
-              <p style={{ margin: '2px 0 0', fontSize: 12, color: '#718096' }}>Schools that submitted the "Book Free Demo" form on the website</p>
-            </div>
+      {/* ══ Bookings Tab ══════════════════════════════════════════════════════════ */}
+      {activeTab === 'bookings' && (
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#0f172a' }}>Demo Booking Leads</h2>
+            <p style={{ margin: '4px 0 0', fontSize: 13, color: '#64748b' }}>Schools that submitted the "Book Free Demo" form on the website</p>
           </div>
-          <span style={{ background: '#ede9fe', color: '#5b21b6', borderRadius: 20, padding: '2px 12px', fontSize: 12, fontWeight: 700 }}>
+          <span style={{ background: '#ede9fe', color: '#5b21b6', borderRadius: 20, padding: '4px 14px', fontSize: 12, fontWeight: 700 }}>
             {demoBookings.filter(b => b.status === 'NEW').length} new
           </span>
         </div>
@@ -1114,16 +1112,15 @@ function OwnerDashboard() {
           </div>
         )}
       </div>
+      )}
 
-      {/* ── Reported Issues ─────────────────────────────────────────────────── */}
-      <div style={{ marginTop: 32 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 4, height: 24, background: 'linear-gradient(180deg,#4f46e5,#7c3aed)', borderRadius: 2 }} />
-            <div>
-              <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#1a202c' }}>Reported Issues</h2>
-              <p style={{ margin: '2px 0 0', fontSize: 12, color: '#718096' }}>Bugs and feedback submitted by users across all roles</p>
-            </div>
+      {/* ══ Issues Tab ════════════════════════════════════════════════════════════ */}
+      {activeTab === 'issues' && (
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#0f172a' }}>Reported Issues</h2>
+            <p style={{ margin: '4px 0 0', fontSize: 13, color: '#64748b' }}>Bugs and feedback submitted by users across all roles</p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {['', 'OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'].map(s => (
@@ -1249,21 +1246,24 @@ function OwnerDashboard() {
           </div>
         )}
       </div>
+      )}
 
-      {/* ── System Maintenance Notice ──────────────────────────────────────── */}
-      <div className="data-table-card" style={{ marginTop: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-          <div style={{ width: 4, height: 20, background: 'linear-gradient(180deg,#d97706,#fbbf24)', borderRadius: 2, flexShrink: 0 }} />
-          <span className="material-icons" style={{ color: '#d97706', fontSize: 22 }}>announcement</span>
+      {/* ══ System Tab ════════════════════════════════════════════════════════════ */}
+      {activeTab === 'system' && (
+      <div className="data-table-card">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
+          <div style={{ width: 44, height: 44, borderRadius: 12, background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span className="material-icons" style={{ color: '#d97706', fontSize: 24 }}>announcement</span>
+          </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, fontSize: 15, color: '#2d3748' }}>System Maintenance Notice</div>
-            <div style={{ fontSize: 12, color: '#718096', marginTop: 2 }}>
+            <div style={{ fontWeight: 800, fontSize: 16, color: '#0f172a' }}>System Maintenance Notice</div>
+            <div style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>
               This message will appear as a banner on every user's dashboard
             </div>
           </div>
           {activeNotice && (
-            <span style={{ background: '#fef3c7', color: '#92400e', border: '1.5px solid #fcd34d', padding: '3px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>
-              ACTIVE
+            <span style={{ background: '#fef3c7', color: '#92400e', border: '1.5px solid #fcd34d', padding: '4px 14px', borderRadius: 10, fontSize: 12, fontWeight: 700 }}>
+              ● ACTIVE
             </span>
           )}
         </div>
@@ -1366,6 +1366,7 @@ function OwnerDashboard() {
           </div>
         </div>
       </div>
+      )}
 
       {/* ── School Users Modal ─────────────────────────────────────────────── */}
       {usersModal && (
