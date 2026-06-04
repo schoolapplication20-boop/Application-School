@@ -20,6 +20,9 @@ public interface FeePaymentRepository extends JpaRepository<FeePayment, Long> {
     /** School-scoped: all payments for one school, newest first */
     List<FeePayment> findBySchoolIdOrderByPaymentDateDescCreatedAtDesc(Long schoolId);
 
+    /** Dashboard: last 5 payments for a school — avoids full table scan */
+    List<FeePayment> findTop5BySchoolIdOrderByPaymentDateDescCreatedAtDesc(Long schoolId);
+
     /** Total amount collected for a specific school */
     @Query("SELECT COALESCE(SUM(fp.amountPaid), 0) FROM FeePayment fp WHERE fp.schoolId = :schoolId")
     BigDecimal sumAmountPaidBySchool(@Param("schoolId") Long schoolId);

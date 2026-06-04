@@ -59,15 +59,17 @@ export default function AdminDashboard() {
 
   const [chartPeriod, setChartPeriod] = useState('12M');
   const [toast, setToast] = useState(null);
-  const [applications,     setApplications]     = useState([]);
-  const [appsLoading,      setAppsLoading]      = useState(true);
-  const [recentFees,       setRecentFees]       = useState([]);
-  const [feesLoading,      setFeesLoading]      = useState(true);
-  const [dbStats,          setDbStats]          = useState(null);
-  const [statsLoading,     setStatsLoading]     = useState(true);
-  const [statsError,       setStatsError]       = useState(null);
-  const [lastRefresh,      setLastRefresh]      = useState(null);
-  const [refreshing,       setRefreshing]       = useState(false);
+  const [dbStats,      setDbStats]      = useState(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [statsError,   setStatsError]   = useState(null);
+  const [lastRefresh,  setLastRefresh]  = useState(null);
+  const [refreshing,   setRefreshing]   = useState(false);
+
+  // Derived from the single getDashboardStats call — no extra API round-trips
+  const applications = dbStats?.recentApplications ?? [];
+  const recentFees   = dbStats?.recentFeePayments  ?? [];
+  const appsLoading  = statsLoading;
+  const feesLoading  = statsLoading;
 
   const fetchDashboardStats = useCallback(async (silent = false) => {
     if (silent) setRefreshing(true); else setStatsLoading(true);
@@ -86,28 +88,6 @@ export default function AdminDashboard() {
     const t = setInterval(() => fetchDashboardStats(true), 60000);
     return () => clearInterval(t);
   }, [fetchDashboardStats]);
-
-  useEffect(() => {
-    setAppsLoading(true);
-    applicationAPI.getAll()
-      .then(res => {
-        const list = res.data?.data ?? res.data ?? [];
-        setApplications([...(Array.isArray(list) ? list : [])].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5));
-      })
-      .catch(() => setApplications([]))
-      .finally(() => setAppsLoading(false));
-  }, []);
-
-  useEffect(() => {
-    setFeesLoading(true);
-    adminAPI.getAllFeePayments()
-      .then(res => {
-        const list = res.data?.data ?? res.data ?? [];
-        setRecentFees([...(Array.isArray(list) ? list : [])].sort((a, b) => new Date(b.createdAt || b.paymentDate) - new Date(a.createdAt || a.paymentDate)).slice(0, 5));
-      })
-      .catch(() => setRecentFees([]))
-      .finally(() => setFeesLoading(false));
-  }, []);
 
   const [admins, setAdmins] = useState([]);
   const [logs,   setLogs]   = useState([]);
@@ -133,7 +113,11 @@ export default function AdminDashboard() {
   const handleApprove = async (id) => {
     try {
       await applicationAPI.updateStatus(id, { status: 'APPROVED' });
-      setApplications(prev => prev.map(a => a.id === id ? { ...a, status: 'APPROVED' } : a));
+      // Optimistic update in local dbStats while background refresh runs
+      setDbStats(prev => prev ? {
+        ...prev,
+        recentApplications: (prev.recentApplications ?? []).map(a => a.id === id ? { ...a, status: 'APPROVED' } : a),
+      } : prev);
       fetchDashboardStats(true);
       showToast('Application approved successfully');
     } catch { showToast('Failed to approve application', 'error'); }
@@ -142,7 +126,10 @@ export default function AdminDashboard() {
   const handleReject = async (id) => {
     try {
       await applicationAPI.updateStatus(id, { status: 'REJECTED' });
-      setApplications(prev => prev.map(a => a.id === id ? { ...a, status: 'REJECTED' } : a));
+      setDbStats(prev => prev ? {
+        ...prev,
+        recentApplications: (prev.recentApplications ?? []).map(a => a.id === id ? { ...a, status: 'REJECTED' } : a),
+      } : prev);
       fetchDashboardStats(true);
       showToast('Application rejected', 'warning');
     } catch { showToast('Failed to reject application', 'error'); }

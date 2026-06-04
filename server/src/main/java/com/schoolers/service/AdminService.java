@@ -56,6 +56,8 @@ public class AdminService {
     @Autowired private HallTicketRepository hallTicketRepository;
     @Autowired private CertificateRepository certificateRepository;
     @Autowired private TransportStudentAssignmentRepository transportStudentAssignmentRepository;
+    @Autowired private AdmissionApplicationRepository admissionApplicationRepository;
+    @Autowired private ExamScheduleRepository examScheduleRepository;
     @Autowired private TransportFeeRepository transportFeeRepository;
     @Autowired private ClassFeeStructureRepository classFeeStructureRepository;
     @Autowired private StudentFeeAssignmentRepository studentFeeAssignmentRepository;
@@ -213,16 +215,27 @@ public class AdminService {
         String[] monthNames = {"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"};
 
         if (schoolId != null) {
-            // Multi-tenant: scope all counts to the caller's school
             stats.put("totalStudents", studentRepository.countBySchoolId(schoolId));
             stats.put("totalTeachers", teacherRepository.countBySchoolId(schoolId));
             stats.put("totalClasses",  classRoomRepository.countBySchoolId(schoolId));
-            // Revenue: sum actual payments recorded (FeePayment table), not the legacy Fee table
+            stats.put("totalExams",    examScheduleRepository.countBySchoolId(schoolId));
             BigDecimal rev = feePaymentRepository.sumAmountPaidBySchool(schoolId);
             BigDecimal exp = expenseRepository.sumAllExpensesBySchool(schoolId);
             stats.put("totalRevenue",  rev != null ? rev : BigDecimal.ZERO);
             stats.put("totalExpenses", exp != null ? exp : BigDecimal.ZERO);
-            // Monthly chart data — 2 aggregated queries instead of 24 individual queries
+
+            // Pending applications count + last 5 (avoids separate full-list API call from frontend)
+            stats.put("pendingApplications",
+                admissionApplicationRepository.countByStatusAndSchoolId(
+                    com.schoolers.model.AdmissionApplication.Status.PENDING, schoolId));
+            stats.put("recentApplications",
+                admissionApplicationRepository.findTop5BySchoolIdOrderByCreatedAtDesc(schoolId));
+
+            // Last 5 fee payments (avoids frontend fetching entire history just to show 5 rows)
+            stats.put("recentFeePayments",
+                feePaymentRepository.findTop5BySchoolIdOrderByPaymentDateDescCreatedAtDesc(schoolId));
+
+            // Monthly chart data — 2 aggregated queries
             java.util.Map<Integer, BigDecimal> revByMonth = new java.util.HashMap<>();
             java.util.Map<Integer, BigDecimal> expByMonth = new java.util.HashMap<>();
             for (Object[] row : feePaymentRepository.sumMonthlyBySchoolAndYear(schoolId, currentYear)) {
@@ -247,6 +260,7 @@ public class AdminService {
             stats.put("totalStudents", studentRepository.count());
             stats.put("totalTeachers", teacherRepository.count());
             stats.put("totalClasses",  classRoomRepository.count());
+            stats.put("totalExams",    examScheduleRepository.count());
             BigDecimal rev = feePaymentRepository.sumAmountPaidAll();
             BigDecimal exp = expenseRepository.sumAllExpenses();
             stats.put("totalRevenue",  rev != null ? rev : BigDecimal.ZERO);

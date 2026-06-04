@@ -14,6 +14,8 @@ public interface AdmissionApplicationRepository extends JpaRepository<AdmissionA
     // School-scoped queries
     List<AdmissionApplication> findBySchoolIdOrderByCreatedAtDesc(Long schoolId);
     List<AdmissionApplication> findByStatusAndSchoolId(AdmissionApplication.Status status, Long schoolId);
+    long countByStatusAndSchoolId(AdmissionApplication.Status status, Long schoolId);
+    List<AdmissionApplication> findTop5BySchoolIdOrderByCreatedAtDesc(Long schoolId);
 
     @org.springframework.data.jpa.repository.Modifying
     @org.springframework.transaction.annotation.Transactional

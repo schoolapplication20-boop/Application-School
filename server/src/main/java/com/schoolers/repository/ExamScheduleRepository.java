@@ -16,6 +16,8 @@ public interface ExamScheduleRepository extends JpaRepository<ExamSchedule, Long
     List<ExamSchedule> findByStatusOrderByExamDateAsc(String status);
     List<ExamSchedule> findAllByOrderByExamDateAsc();
 
+    long countBySchoolId(Long schoolId);
+
     // School-scoped queries (strict match)
     List<ExamSchedule> findBySchoolIdOrderByExamDateAsc(Long schoolId);
     List<ExamSchedule> findByExamTypeAndSchoolIdOrderByExamDateAsc(String examType, Long schoolId);
