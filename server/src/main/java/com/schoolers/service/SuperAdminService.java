@@ -71,15 +71,28 @@ public class SuperAdminService {
     @Autowired private IdempotencyKeyRepository          idempotencyKeyRepository;
     @Autowired private JdbcTemplate                      jdbcTemplate;
 
-    private static final String CHARS = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#$!";
+    private static final String UPPER   = "ABCDEFGHJKMNPQRSTUVWXYZ";
+    private static final String LOWER   = "abcdefghjkmnpqrstuvwxyz";
+    private static final String DIGITS  = "23456789";
+    private static final String SPECIAL = "@#$!";
+    private static final String ALL     = UPPER + LOWER + DIGITS + SPECIAL;
     private static final SecureRandom RANDOM = new SecureRandom();
 
     public String generatePassword() {
-        StringBuilder sb = new StringBuilder(10);
-        for (int i = 0; i < 10; i++) {
-            sb.append(CHARS.charAt(RANDOM.nextInt(CHARS.length())));
+        // Guarantee at least one char from each required category,
+        // then fill remaining positions with random chars from the full set.
+        char[] pwd = new char[10];
+        pwd[0] = UPPER  .charAt(RANDOM.nextInt(UPPER.length()));
+        pwd[1] = LOWER  .charAt(RANDOM.nextInt(LOWER.length()));
+        pwd[2] = DIGITS .charAt(RANDOM.nextInt(DIGITS.length()));
+        pwd[3] = SPECIAL.charAt(RANDOM.nextInt(SPECIAL.length()));
+        for (int i = 4; i < 10; i++) pwd[i] = ALL.charAt(RANDOM.nextInt(ALL.length()));
+        // Shuffle so guaranteed chars are not always in fixed positions
+        for (int i = 9; i > 0; i--) {
+            int j = RANDOM.nextInt(i + 1);
+            char tmp = pwd[i]; pwd[i] = pwd[j]; pwd[j] = tmp;
         }
-        return sb.toString();
+        return new String(pwd);
     }
 
     @Transactional

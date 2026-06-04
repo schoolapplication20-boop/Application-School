@@ -342,6 +342,7 @@ ADM002,Mathematics,92,100`;
     if (!classList.length) return;
     setLoadingMarks(true);
     try {
+      // Load students per class (small number of classes, parallel is fine)
       const studentArrays = await Promise.all(
         classList.map(cls =>
           teacherAPI.getClassStudents(cls.id)
@@ -356,16 +357,21 @@ ADM002,Mathematics,92,100`;
       const allStudents = studentArrays.flat();
       setStudents(allStudents);
 
+      // One bulk request per class instead of one per student (eliminates N+1)
+      const studentMap = Object.fromEntries(allStudents.map(s => [s.id, s]));
       const marksArrays = await Promise.all(
-        allStudents.map(s =>
-          teacherAPI.getMarks(s.id)
-            .then(r => (r?.data?.data ?? r?.data ?? []).map(m => ({
-              ...m,
-              studentName: m.studentName || s.name,
-              rollNumber:  s.rollNumber || '',
-              classLabel:  s.classLabel,
-              classId:     s.classId,
-            })))
+        classList.map(cls =>
+          teacherAPI.getMarksByClass(cls.id)
+            .then(r => (r?.data?.data ?? r?.data ?? []).map(m => {
+              const s = studentMap[m.studentId] || {};
+              return {
+                ...m,
+                studentName: m.studentName || s.name || '',
+                rollNumber:  m.rollNumber  || s.rollNumber || '',
+                classLabel:  s.classLabel  || cls.section ? `${cls.name}-${cls.section}` : cls.name,
+                classId:     s.classId     || cls.id,
+              };
+            }))
             .catch(() => [])
         )
       );

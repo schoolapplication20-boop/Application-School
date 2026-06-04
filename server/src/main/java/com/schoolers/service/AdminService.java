@@ -68,6 +68,7 @@ public class AdminService {
     @Autowired private MessageRepository messageRepository;
     @Autowired private SalaryPaymentRepository salaryPaymentRepository;
     @Autowired private GradeScaleRepository gradeScaleRepository;
+    @Autowired private AuditLogService auditLogService;
     private static final String CHARS = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#$!";
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final java.util.regex.Pattern EMAIL_PATTERN =
@@ -720,6 +721,8 @@ public class AdminService {
         }
 
         log.info("[deleteStudent] COMPLETE — studentId=" + id + " name=" + studentName);
+        auditLogService.log(null, "SYSTEM", "ADMIN", schoolId, "DELETE", "Student", id,
+                "Deleted student: " + studentName, null);
         return ApiResponse.success("Student and login account deleted successfully", "Deleted");
     }
 
@@ -1069,10 +1072,20 @@ public class AdminService {
             userRepository.deleteById(linkedUserId);
         }
         log.info("[deleteTeacher] COMPLETE — teacherId=" + id);
+        auditLogService.log(null, "SYSTEM", "ADMIN", schoolId, "DELETE", "Teacher", id,
+                "Deleted teacher id=" + id, null);
         return ApiResponse.success("Teacher and all related records deleted", "Deleted");
     }
 
     public ApiResponse<String> resetTeacherPassword(Long teacherId, String newPassword, Long schoolId) {
+        if (newPassword == null || newPassword.length() < 8)
+            return ApiResponse.error("Password must be at least 8 characters.");
+        if (!newPassword.matches(".*[A-Z].*"))
+            return ApiResponse.error("Password must contain at least one uppercase letter.");
+        if (!newPassword.matches(".*[0-9].*"))
+            return ApiResponse.error("Password must contain at least one number.");
+        if (!newPassword.matches(".*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?].*"))
+            return ApiResponse.error("Password must contain at least one special character.");
         return teacherRepository.findById(teacherId)
                 .map(teacher -> {
                     if (schoolMismatch(schoolId, teacher.getSchoolId()))
@@ -1081,8 +1094,10 @@ public class AdminService {
                     if (user == null) return ApiResponse.<String>error("Teacher has no login account.");
                     user.setPassword(passwordEncoder.encode(newPassword));
                     user.setTempPassword(null);
-                    user.setFirstLogin(true);            // force password change on next login
+                    user.setFirstLogin(true);
                     userRepository.save(user);
+                    auditLogService.log(null, "SYSTEM", "ADMIN", schoolId, "PASSWORD_RESET", "Teacher", teacherId,
+                            "Password reset for teacher id=" + teacherId, null);
                     return ApiResponse.success("Password reset successfully", newPassword);
                 })
                 .orElse(ApiResponse.error("Teacher not found"));

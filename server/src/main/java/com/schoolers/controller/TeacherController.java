@@ -370,6 +370,19 @@ public class TeacherController {
         return ResponseEntity.ok(teacherService.getMarksByStudent(studentId, resolveTeacherSchoolId()));
     }
 
+    /** Returns all marks for every student in a class in one query — eliminates N+1 per-student calls. */
+    @GetMapping("/marks/by-class/{classId}")
+    public ResponseEntity<ApiResponse<List<Marks>>> getMarksByClass(@PathVariable Long classId) {
+        Long schoolId = resolveTeacherSchoolId();
+        ApiResponse<List<com.schoolers.model.Student>> studentsResp = teacherService.getClassStudents(classId);
+        List<com.schoolers.model.Student> students = studentsResp.getData() != null ? studentsResp.getData() : java.util.List.of();
+        if (students.isEmpty()) return ResponseEntity.ok(ApiResponse.success(java.util.List.of()));
+        List<Long> ids = students.stream().map(com.schoolers.model.Student::getId).collect(java.util.stream.Collectors.toList());
+        // Single query — fetches all marks for all students in one DB round-trip
+        List<Marks> marks = teacherService.getMarksByStudentIds(ids, schoolId);
+        return ResponseEntity.ok(ApiResponse.success(marks));
+    }
+
     @PostMapping("/marks")
     public ResponseEntity<ApiResponse<Marks>> addMarks(@RequestBody Marks marks) {
         return ResponseEntity.status(201).body(teacherService.addMarks(marks, resolveTeacherSchoolId()));

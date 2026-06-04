@@ -293,7 +293,8 @@ public class ReportCardController {
                 student.getId(), yearStart, today);
         long total   = attendance.size();
         long present = attendance.stream().filter(a ->
-                a.getStatus() == Attendance.Status.PRESENT || a.getStatus() == Attendance.Status.LATE).count();
+                a != null && a.getStatus() != null &&
+                (a.getStatus() == Attendance.Status.PRESENT || a.getStatus() == Attendance.Status.LATE)).count();
         double pct = total > 0 ? Math.round((present * 100.0 / total) * 10) / 10.0 : 0;
 
         // School info — student.schoolId stores the human-assigned display number (School.schoolId),

@@ -173,7 +173,9 @@ public class RateLimitingInterceptor implements HandlerInterceptor {
     private boolean isPrivate172(String ip) {
         // 172.16.0.0 – 172.31.255.255
         try {
-            int second = Integer.parseInt(ip.split("\\.")[1]);
+            String[] parts = ip.split("\\.");
+            if (parts.length < 2) return false;
+            int second = Integer.parseInt(parts[1]);
             return second >= 16 && second <= 31;
         } catch (Exception e) { return false; }
     }

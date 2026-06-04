@@ -70,8 +70,14 @@ public class AdminController {
             out[0] = ResponseEntity.ok(ApiResponse.success("Already processed", null));
             return true;
         }
-        idempotencyKeyRepository.save(IdempotencyKey.builder()
-                .key(key).schoolId(schoolId).endpoint(endpoint).build());
+        try {
+            idempotencyKeyRepository.save(IdempotencyKey.builder()
+                    .key(key).schoolId(schoolId).endpoint(endpoint).build());
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            // Concurrent request already saved this key — treat as duplicate
+            out[0] = ResponseEntity.ok(ApiResponse.success("Already processed", null));
+            return true;
+        }
         return false;
     }
 

@@ -3,10 +3,12 @@ import axios from 'axios';
 // Base URL for the Spring Boot backend
 export const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
-// Module-level auth token (no localStorage, no sessionStorage)
-let _authToken = null;
-export const setAuthToken   = (token) => { _authToken = token; };
-export const clearAuthToken = ()       => { _authToken = null; };
+// Auth token stored in sessionStorage so it survives page refresh
+// (cleared automatically when the browser tab is closed — safer than localStorage)
+const SESSION_KEY = 'ms_auth_token';
+let _authToken = sessionStorage.getItem(SESSION_KEY) || null;
+export const setAuthToken   = (token) => { _authToken = token; sessionStorage.setItem(SESSION_KEY, token); };
+export const clearAuthToken = ()       => { _authToken = null; sessionStorage.removeItem(SESSION_KEY); };
 
 // ── Server wake-up retry (Render free plan cold starts) ──────────────────────
 let _isServerSleeping = false;
@@ -34,11 +36,12 @@ const api = axios.create({
   timeout: 60000,
 });
 
-// Request Interceptor - attach JWT token
+// Request Interceptor - attach JWT token (module var, seeded from sessionStorage on load)
 api.interceptors.request.use(
   (config) => {
-    if (_authToken) {
-      config.headers.Authorization = `Bearer ${_authToken}`;
+    const token = _authToken || sessionStorage.getItem(SESSION_KEY);
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
@@ -273,6 +276,7 @@ export const teacherAPI = {
 
   // Marks
   getMarks: (studentId) => api.get(`/api/teacher/marks/${studentId}`),
+  getMarksByClass: (classId) => api.get(`/api/teacher/marks/by-class/${classId}`),
   addMarks: (data) => api.post('/api/teacher/marks', data),
   updateMarks: (id, data) => api.put(`/api/teacher/marks/${id}`, data),
   deleteMarks: (id) => api.delete(`/api/teacher/marks/${id}`),

@@ -713,7 +713,13 @@ const Classes = () => {
               </p>
               <div style={{ background: '#fff5f5', border: '1px solid #fed7d7', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#c53030' }}>
                 <span className="material-icons" style={{ fontSize: 15, verticalAlign: 'middle', marginRight: 6 }}>info</span>
-                This will permanently delete the class and <strong>all students enrolled in it</strong>. This action cannot be undone.
+                This will permanently delete the class and{' '}
+                <strong>
+                  {deleteClassTarget.enrolled > 0
+                    ? `all ${deleteClassTarget.enrolled} student${deleteClassTarget.enrolled !== 1 ? 's' : ''} enrolled in it`
+                    : 'all students enrolled in it'}
+                </strong>
+                , along with their marks, fees, attendance and transport records. This action cannot be undone.
               </div>
             </div>
             <div className="modal-footer">

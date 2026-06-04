@@ -661,6 +661,12 @@ public class TeacherService {
 
     // ── Marks ──────────────────────────────────────────────────────────────────
 
+    /** Single-query bulk fetch — replaces N per-student getMarksByStudent calls on the Marks page. */
+    public List<Marks> getMarksByStudentIds(List<Long> studentIds, Long schoolId) {
+        if (studentIds == null || studentIds.isEmpty()) return java.util.List.of();
+        return marksRepository.findByStudentIdsAndExamType(studentIds, null);
+    }
+
     public ApiResponse<List<Marks>> getMarksByStudent(Long studentId, Long authSchoolId) {
         Student student = studentRepository.findById(studentId).orElse(null);
         if (student == null) return ApiResponse.error("Student not found");
