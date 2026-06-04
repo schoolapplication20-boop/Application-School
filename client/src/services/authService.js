@@ -54,9 +54,6 @@ export const verifyOwnerOtp = async (email, otp) => {
   }
 };
 
-// Demo OTP shown in UI — backend must store this in reset_otp for demo/dev mode
-export const DEMO_OTP = '1234';
-
 /**
  * Send OTP to mobile.
  * Backend generates OTP, stores in users.reset_otp & users.otp_expiry, sends via SMS.

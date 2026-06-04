@@ -94,7 +94,8 @@ export default function Marks() {
   }, []);
 
   // ── Grade scale (school-defined or default) ───────────────────────────────────
-  const [gradeScale, setGradeScale] = useState(DEFAULT_SCALE);
+  const [gradeScale,        setGradeScale]        = useState(DEFAULT_SCALE);
+  const [gradeScaleWarning, setGradeScaleWarning] = useState(false);
 
   useEffect(() => {
     gradeScaleAPI.forTeacher()
@@ -103,9 +104,12 @@ export default function Marks() {
         if (data.length > 0) {
           setGradeScale(data);
           getGradeRef.current = buildGetGrade(data);
+          setGradeScaleWarning(false);
+        } else {
+          setGradeScaleWarning(true); // no custom scale — using default
         }
       })
-      .catch(() => {});
+      .catch(() => setGradeScaleWarning(true));
   }, []);
 
   // ── Bulk modal state ──────────────────────────────────────────────────────────
@@ -501,6 +505,14 @@ ADM002,Mathematics,92,100`;
   return (
     <Layout pageTitle="Marks">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
+      {gradeScaleWarning && (
+        <div style={{ background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 8, padding: '10px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#92400e' }}>
+          <span className="material-icons" style={{ fontSize: 18, color: '#d97706' }}>warning</span>
+          <span>Custom grade scale not found — using default grading scale. Ask your admin to configure a grade scale for accurate grades.</span>
+          <button onClick={() => setGradeScaleWarning(false)} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#92400e', fontSize: 16, lineHeight: 1 }}>✕</button>
+        </div>
+      )}
 
       <div className="page-header">
         <h1>Marks &amp; Grades</h1>

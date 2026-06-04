@@ -1430,7 +1430,9 @@ export default function Students() {
                   Student Added Successfully!
                 </h3>
                 <p style={{ margin: 0, fontSize: 13, color: '#718096' }}>
-                  Credentials have been generated for <strong>{newCredential.studentName}</strong>. Share them securely.
+                  {newCredential.studentPassword
+                    ? <>Credentials have been generated for <strong>{newCredential.studentName}</strong>. Share them securely.</>
+                    : <>Student record created for <strong>{newCredential.studentName}</strong>. No email provided — use the <strong>person_add</strong> icon to create a login account later.</>}
                 </p>
               </div>
 

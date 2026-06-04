@@ -468,7 +468,7 @@ public class AuthService {
         if (userRepository.existsByEmailIgnoreCase(normalizedEmail))
             return ApiResponse.error("This email is already registered. Use a different email or try Forgot Password.");
 
-        String otp = String.format("%06d", 100000 + new java.util.Random().nextInt(900000));
+        String otp = String.format("%06d", 100000 + new SecureRandom().nextInt(900000));
         LocalDateTime otpExpiry = LocalDateTime.now(ZoneOffset.UTC).plusDays(1);
 
         User studentUser = userRepository.save(User.builder()

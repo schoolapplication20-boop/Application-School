@@ -12,7 +12,7 @@ const todayStr = () => {
 };
 const escHtml = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');
 const fmt = (n) => Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const genReceipt = () => `RCP-${Date.now().toString().slice(-7)}-${Math.random().toString(36).slice(2,5).toUpperCase()}`;
+const genReceipt = () => `RCP-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2,6).toUpperCase()}`;
 const isOverdue = (dueDateStr) => dueDateStr && new Date(dueDateStr) < new Date(todayStr());
 
 const StatusBadge = ({ status }) => {
