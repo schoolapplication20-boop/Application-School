@@ -3063,9 +3063,41 @@ function SchoolDashboard() {
   return (
     <Layout pageTitle="Super Admin Dashboard">
       <SEOMeta title="Super Admin Dashboard" description="School-level super admin overview — manage admins, students, teachers and settings." />
-      <div className="page-header">
-        <h1>Super Admin Dashboard</h1>
-        <p>Overview of your school management platform</p>
+
+      {/* ── Welcome Banner ── */}
+      <div style={{
+        background: 'linear-gradient(135deg, #1e0b3f 0%, #4c1d96 55%, #7c3aed 100%)',
+        borderRadius: 20, padding: '28px 32px', marginBottom: 28,
+        color: '#fff', position: 'relative', overflow: 'hidden',
+        boxShadow: '0 8px 32px rgba(109,40,217,0.35)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
+      }}>
+        <div style={{ position: 'absolute', top: -40, right: -40, width: 200, height: 200, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', bottom: -50, right: 80, width: 140, height: 140, borderRadius: '50%', background: 'rgba(255,255,255,0.03)', pointerEvents: 'none' }} />
+        <div>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+            Super Admin
+          </div>
+          <div style={{ fontSize: 26, fontWeight: 800, lineHeight: 1.2, marginBottom: 6 }}>
+            School Management
+          </div>
+          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>
+            Manage admins, teachers, students and school settings from one place.
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          {[
+            { label: 'Admins',   val: admins.length,   icon: 'manage_accounts' },
+            { label: 'Teachers', val: teachers.length, icon: 'school' },
+            { label: 'Students', val: students.length, icon: 'person' },
+          ].map(b => (
+            <div key={b.label} style={{ textAlign: 'center', background: 'rgba(255,255,255,0.1)', borderRadius: 14, padding: '14px 20px', backdropFilter: 'blur(4px)' }}>
+              <span className="material-icons" style={{ fontSize: 20, color: 'rgba(255,255,255,0.7)', display: 'block', marginBottom: 4 }}>{b.icon}</span>
+              <div style={{ fontSize: 22, fontWeight: 800, lineHeight: 1 }}>{b.val}</div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 3 }}>{b.label}</div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* ── Platform Billing Card ────────────────────────────────────────────── */}
@@ -3177,10 +3209,10 @@ function SchoolDashboard() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '16px', marginBottom: '24px' }}>
         {[
-          { label: 'Total Admins',    value: admins.length,    sub: `${activeAdmins} active`,   icon: 'manage_accounts', color: '#76C442' },
-          { label: 'Total Teachers',  value: teachers.length,  sub: 'registered teachers',      icon: 'school',          color: '#3182ce' },
-          { label: 'Total Students',  value: students.length,  sub: `${activeStudents} active`, icon: 'person',          color: '#805ad5' },
-          { label: 'Active Students', value: activeStudents,   sub: 'currently active',         icon: 'how_to_reg',      color: '#ed8936' },
+          { label: 'Total Admins',    value: admins.length,    sub: `${activeAdmins} active`,   icon: 'manage_accounts', color: '#7c3aed' },
+          { label: 'Total Teachers',  value: teachers.length,  sub: 'registered teachers',      icon: 'school',          color: '#0e7490' },
+          { label: 'Total Students',  value: students.length,  sub: `${activeStudents} active`, icon: 'person',          color: '#b45309' },
+          { label: 'Active Students', value: activeStudents,   sub: 'currently active',         icon: 'how_to_reg',      color: '#16a34a' },
         ].map(c => (
           <div key={c.label} className="stat-card">
             <div className="stat-icon" style={{ backgroundColor: c.color + '18' }}>
@@ -3214,7 +3246,7 @@ function SchoolDashboard() {
                     <tr key={a.id}>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#76C442,#5fa832)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '12px', fontWeight: 700, flexShrink: 0 }}>
+                          <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#4c1d96)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '12px', fontWeight: 700, flexShrink: 0 }}>
                             {initials(a.name)}
                           </div>
                           <div>

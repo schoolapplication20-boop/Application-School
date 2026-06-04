@@ -123,9 +123,9 @@ export default function StudentDashboard() {
 
       {/* Welcome Banner */}
       <div style={{
-        background: 'linear-gradient(135deg, #0c1445 0%, #1e3a8a 50%, #1d4ed8 100%)',
+        background: 'linear-gradient(135deg, #1c0a00 0%, #92400e 55%, #b45309 100%)',
         borderRadius: 18, padding: '28px 32px', marginBottom: 24, color: '#fff',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.18)', position: 'relative', overflow: 'hidden',
+        boxShadow: '0 8px 32px rgba(146,64,14,0.35)', position: 'relative', overflow: 'hidden',
       }}>
         <div style={{ position: 'absolute', top: -40, right: -40, width: 200, height: 200, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', bottom: -60, right: 120, width: 140, height: 140, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }} />
@@ -163,7 +163,7 @@ export default function StudentDashboard() {
         {/* Banner stats row */}
         <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.15)', display: 'flex', gap: 16, flexWrap: 'wrap' }}>
           {[
-            { label: 'Attendance', value: `${attendancePct}%`, icon: 'fact_check', color: '#67e8f9' },
+            { label: 'Attendance', value: `${attendancePct}%`, icon: 'fact_check', color: '#fcd34d' },
             { label: 'Days Present', value: presentDays, icon: 'check_circle', color: '#86efac' },
             { label: 'Fee Due', value: `₹${pendingFee.toLocaleString()}`, icon: 'payments', color: '#fca5a5' },
           ].map(b => (

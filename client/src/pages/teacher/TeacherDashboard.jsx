@@ -261,11 +261,11 @@ export default function TeacherDashboard() {
     ? 'linear-gradient(135deg, #134e4a 0%, #0f766e 50%, #0d9488 100%)'
     : isSubjectTeacherOnly
       ? 'linear-gradient(135deg, #2e1065 0%, #4c1d95 50%, #5b21b6 100%)'
-      : 'linear-gradient(135deg, #0c1445 0%, #1e3a8a 50%, #1d4ed8 100%)';
+      : 'linear-gradient(135deg, #0c2d3e 0%, #155e75 50%, #0e7490 100%)';
 
   const bannerAccent = isClassTeacher && primaryClassLabel ? '#5eead4'
     : isSubjectTeacherOnly ? '#c4b5fd'
-    : '#93c5fd';
+    : '#67e8f9';
 
   return (
     <Layout pageTitle="Teacher Dashboard">
