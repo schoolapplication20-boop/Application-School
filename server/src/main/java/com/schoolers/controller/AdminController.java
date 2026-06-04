@@ -95,12 +95,14 @@ public class AdminController {
     @GetMapping("/students")
     public ResponseEntity<ApiResponse<Page<Student>>> getStudents(
             @RequestParam(defaultValue = "") String search,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "") String className,
+            @RequestParam(defaultValue = "") String status,
+            @RequestParam(defaultValue = "0")  int page,
+            @RequestParam(defaultValue = "20") int size,
             Authentication auth) {
         int safePage = Math.max(0, page);
-        int safeSize = Math.min(Math.max(1, size), 200); // cap at 200 per page
-        return ResponseEntity.ok(adminService.getStudents(getCurrentSchoolId(auth), search, safePage, safeSize));
+        int safeSize = Math.min(Math.max(1, size), 200);
+        return ResponseEntity.ok(adminService.getStudents(getCurrentSchoolId(auth), search, className, status, safePage, safeSize));
     }
 
     @GetMapping("/students/{id}")

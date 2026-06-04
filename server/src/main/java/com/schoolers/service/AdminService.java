@@ -292,14 +292,14 @@ public class AdminService {
 
     // ── Students ───────────────────────────────────────────────────────────
 
-    public ApiResponse<Page<Student>> getStudents(Long schoolId, String search, int page, int size) {
+    public ApiResponse<Page<Student>> getStudents(Long schoolId, String search, String className, String status, int page, int size) {
         if (schoolId == null) return ApiResponse.success(Page.empty());
-        size = Math.min(size, 2000); // raised from 100 — schools can have 500+ students
+        size = Math.min(size, 200);
         Pageable pageable = PageRequest.of(page, size, Sort.by("name").ascending());
-        if (search != null && !search.isEmpty()) {
-            return ApiResponse.success(studentRepository.searchStudentsBySchool(schoolId, search, pageable));
-        }
-        return ApiResponse.success(studentRepository.findBySchoolId(schoolId, pageable));
+        String s  = search    != null ? search.trim()    : "";
+        String cn = className != null ? className.trim() : "";
+        String st = status    != null ? status.trim()    : "";
+        return ApiResponse.success(studentRepository.findByFilters(schoolId, s, cn, st, pageable));
     }
 
     public ApiResponse<Student> getStudentById(Long id, Long schoolId) {

@@ -35,7 +35,6 @@ const formatDOB = (dob) => {
 
 const phoneOnly = (v) => v.replace(/\D/g, '').slice(0, 10);
 
-const ITEMS_PER_PAGE = 6;
 
 // ─── Section divider ──────────────────────────────────────────────────────────
 function SectionLabel({ icon, text }) {
@@ -112,13 +111,17 @@ function CredentialCard({ label, value, mono }) {
   );
 }
 
+const PAGE_SIZE = 20; // students per page — server-side
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function Students() {
   const [students, setStudents]         = useState([]);
+  const [totalElements, setTotalElements] = useState(0);
+  const [totalPages, setTotalPages]     = useState(0);
   const [searchTerm, setSearchTerm]     = useState('');
   const [filterClass, setFilterClass]   = useState('');
   const [filterStatus, setFilterStatus] = useState('');
-  const [currentPage, setCurrentPage]   = useState(1);
+  const [currentPage, setCurrentPage]   = useState(0); // 0-based (matches Spring Page)
   const [showModal, setShowModal]       = useState(false);
   const [showExportModal, setShowExportModal]   = useState(false);
   const [showBulkImport, setShowBulkImport]     = useState(false);
@@ -189,16 +192,21 @@ export default function Students() {
 
   const exitSelectionMode = () => { setSelectionMode(false); setSelectedIds(new Set()); };
 
-  // Load from API — called on mount and after every mutation
-  const loadStudents = () => {
+  // Load the current page from the server — passes all active filters.
+  // Called on mount, on filter/search change (page resets to 0), and after mutations.
+  const loadStudents = useCallback((overridePage) => {
+    const pg = overridePage !== undefined ? overridePage : currentPage;
     setLoadingStudents(true);
-    apiFetchStudents().then(data => {
-      setStudents(Array.isArray(data) ? data : []);
-      setApiStatus('live');
-    }).catch(() => {
-      setApiStatus('offline');
-    }).finally(() => setLoadingStudents(false));
-  };
+    apiFetchStudents({ page: pg, size: PAGE_SIZE, search: searchTerm, className: filterClass, status: filterStatus })
+      .then(({ content, totalElements: te, totalPages: tp }) => {
+        setStudents(content);
+        setTotalElements(te);
+        setTotalPages(tp);
+        setApiStatus('live');
+      })
+      .catch(() => setApiStatus('offline'))
+      .finally(() => setLoadingStudents(false));
+  }, [currentPage, searchTerm, filterClass, filterStatus]);
 
   // Load classes defined by admin in the Classes module
   useEffect(() => {
@@ -226,7 +234,8 @@ export default function Students() {
     [availableClasses, formData.class]
   );
 
-  useEffect(() => { loadStudents(); }, []);
+  // Reload whenever page, search, or filters change
+  useEffect(() => { loadStudents(); }, [loadStudents]);
 
   // Capacity check — fires whenever class or section changes while form is open
   useEffect(() => {
@@ -257,24 +266,9 @@ export default function Students() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const persist = (updated) => { setStudents(updated); };
-
-  // ── Search / filter ──────────────────────────────────────────────────────────
-  const filtered = students.filter(s => {
-    const q = searchTerm.toLowerCase();
-    const matchSearch = !q ||
-      s.name.toLowerCase().includes(q) ||
-      s.rollNo.toLowerCase().includes(q) ||
-      (s.fatherName || s.parent || '').toLowerCase().includes(q) ||
-      (s.motherName || '').toLowerCase().includes(q);
-    const normalise = (v) => String(v || '').replace(/^Class\s+/i, '').trim();
-    const matchClass = !filterClass || normalise(s.class) === normalise(filterClass);
-    const matchStatus = !filterStatus || s.status === filterStatus;
-    return matchSearch && matchClass && matchStatus;
-  });
-
-  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
-  const paginated  = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  // Server now handles filtering — `students` is already the current page of results
+  const filtered = students;   // alias kept so downstream JSX references still work
+  const paginated = students;  // same — server returns exactly PAGE_SIZE rows
 
   const getInitials = (name) => (name || 'U').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
@@ -516,8 +510,8 @@ export default function Students() {
     setBulkDeleteConfirm(false);
     exitSelectionMode();
     showToast(`${ok} student${ok !== 1 ? 's' : ''} deleted`, ok > 0 ? 'warning' : 'error');
-    setCurrentPage(1);
-    loadStudents();
+    setCurrentPage(0);
+    loadStudents(0);
   };
 
   const handlePromote = async () => {
@@ -592,13 +586,13 @@ export default function Students() {
 
       <div className="page-header">
         <h1>Student Management</h1>
-        <p>Manage and view all enrolled students ({students.length} total)</p>
+        <p>Manage and view all enrolled students ({totalElements} total)</p>
       </div>
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '16px', marginBottom: '24px' }}>
         {[
-          { label: 'Total Students', value: students.length,                                    icon: 'school',       color: '#0de1e8' },
+          { label: 'Total Students', value: totalElements,                                        icon: 'school',       color: '#0de1e8' },
           { label: 'Active',         value: students.filter(s => s.status === 'Active').length,  icon: 'check_circle', color: '#3182ce' },
           { label: 'Inactive',       value: students.filter(s => s.status === 'Inactive').length,icon: 'cancel',       color: '#e53e3e' },
           { label: 'Classes',        value: new Set(students.map(s => s.class)).size,            icon: 'class',        color: '#805ad5' },
@@ -619,9 +613,9 @@ export default function Students() {
           <div className="search-input-wrapper">
             <span className="material-icons">search</span>
             <input type="text" className="search-input" placeholder="Search by name, roll no, father/mother…"
-              value={searchTerm} onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }} />
+              value={searchTerm} onChange={e => { setSearchTerm(e.target.value); setCurrentPage(0); }} />
           </div>
-          <select className="filter-select" value={filterClass} onChange={e => { setFilterClass(e.target.value); setCurrentPage(1); }}>
+          <select className="filter-select" value={filterClass} onChange={e => { setFilterClass(e.target.value); setCurrentPage(0); }}>
             <option value="">All Classes</option>
             {filterClassOptions.length === 0
               ? <option disabled>No classes added yet</option>
@@ -630,7 +624,7 @@ export default function Students() {
                 ))
             }
           </select>
-          <select className="filter-select" value={filterStatus} onChange={e => { setFilterStatus(e.target.value); setCurrentPage(1); }}>
+          <select className="filter-select" value={filterStatus} onChange={e => { setFilterStatus(e.target.value); setCurrentPage(0); }}>
             <option value="">All Status</option>
             <option>Active</option>
             <option>Inactive</option>
@@ -847,16 +841,21 @@ export default function Students() {
         {totalPages > 1 && (
           <div className="pagination-bar">
             <div className="pagination-info">
-              Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, filtered.length)} of {filtered.length}
+              Showing {currentPage * PAGE_SIZE + 1}–{Math.min((currentPage + 1) * PAGE_SIZE, totalElements)} of {totalElements}
             </div>
             <div className="pagination-controls">
-              <button className="page-btn" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1}>
+              <button className="page-btn" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 0}>
                 <span className="material-icons" style={{ fontSize: '16px' }}>chevron_left</span>
               </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                <button key={p} className={`page-btn ${currentPage === p ? 'active' : ''}`} onClick={() => setCurrentPage(p)}>{p}</button>
-              ))}
-              <button className="page-btn" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages}>
+              {Array.from({ length: Math.min(totalPages, 10) }, (_, i) => {
+                // Show pages around currentPage when there are many pages
+                const start = Math.max(0, Math.min(currentPage - 4, totalPages - 10));
+                const p = start + i;
+                return (
+                  <button key={p} className={`page-btn ${currentPage === p ? 'active' : ''}`} onClick={() => setCurrentPage(p)}>{p + 1}</button>
+                );
+              })}
+              <button className="page-btn" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage >= totalPages - 1}>
                 <span className="material-icons" style={{ fontSize: '16px' }}>chevron_right</span>
               </button>
             </div>

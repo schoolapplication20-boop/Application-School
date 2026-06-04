@@ -52,6 +52,19 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     @Query("SELECT s FROM Student s WHERE s.schoolId = :schoolId AND s.isActive = true AND (LOWER(s.name) LIKE LOWER(CONCAT('%',:search,'%')) OR LOWER(s.rollNumber) LIKE LOWER(CONCAT('%',:search,'%')))")
     Page<Student> searchStudentsBySchool(@Param("schoolId") Long schoolId, @Param("search") String search, Pageable pageable);
 
+    /** Single query that handles search + className + status filters together.
+     *  Pass empty string to skip a filter (avoids multiple query methods). */
+    @Query("SELECT s FROM Student s WHERE s.schoolId = :schoolId " +
+           "AND (:search = '' OR LOWER(s.name) LIKE LOWER(CONCAT('%',:search,'%')) OR LOWER(s.rollNumber) LIKE LOWER(CONCAT('%',:search,'%')) OR s.parentMobile LIKE CONCAT('%',:search,'%')) " +
+           "AND (:className = '' OR LOWER(s.className) = LOWER(:className)) " +
+           "AND (:status = '' OR (:status = 'Active' AND s.isActive = true) OR (:status = 'Inactive' AND (s.isActive = false OR s.isActive IS NULL)))")
+    Page<Student> findByFilters(
+        @Param("schoolId") Long schoolId,
+        @Param("search") String search,
+        @Param("className") String className,
+        @Param("status") String status,
+        Pageable pageable);
+
     @Query("SELECT s FROM Student s WHERE s.schoolId = :schoolId AND (LOWER(s.name) LIKE LOWER(CONCAT('%',:s,'%')) OR LOWER(s.rollNumber) LIKE LOWER(CONCAT('%',:s,'%')) OR s.parentMobile LIKE CONCAT('%',:s,'%') OR s.motherMobile LIKE CONCAT('%',:s,'%') OR s.guardianMobile LIKE CONCAT('%',:s,'%'))")
     List<Student> searchBySchoolAndNameRollOrPhone(@Param("schoolId") Long schoolId, @Param("s") String search);
 

@@ -36,15 +36,24 @@ const normalizeStudent = (s) => ({
   address: s.address ?? s.permanentAddress ?? '',
 });
 
-/** Fetch all students — returns empty array if API unavailable */
-export const fetchStudents = async () => {
+/**
+ * Fetch a single page of students with optional server-side filters.
+ * Returns { content, totalElements, totalPages, currentPage }.
+ * Replaces the old "load everything" approach — only the visible page is fetched.
+ */
+export const fetchStudents = async ({ page = 0, size = 20, search = '', className = '', status = '' } = {}) => {
   try {
-    const res = await adminAPI.getStudents({ page: 0, size: 1000 });
-    const page = res.data?.data;
-    const data = page?.content ?? (Array.isArray(page) ? page : []);
-    return Array.isArray(data) ? data.map(normalizeStudent) : [];
+    const res = await adminAPI.getStudents({ page, size, search, className, status });
+    const pageData = res.data?.data;
+    const content = (pageData?.content ?? (Array.isArray(pageData) ? pageData : [])).map(normalizeStudent);
+    return {
+      content,
+      totalElements: pageData?.totalElements ?? content.length,
+      totalPages:    pageData?.totalPages    ?? 1,
+      currentPage:   pageData?.number        ?? page,
+    };
   } catch {
-    return [];
+    return { content: [], totalElements: 0, totalPages: 0, currentPage: 0 };
   }
 };
 
