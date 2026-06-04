@@ -58,6 +58,7 @@ public class AdminService {
     @Autowired private TransportStudentAssignmentRepository transportStudentAssignmentRepository;
     @Autowired private AdmissionApplicationRepository admissionApplicationRepository;
     @Autowired private ExamScheduleRepository examScheduleRepository;
+    @Autowired private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
     @Autowired private TransportFeeRepository transportFeeRepository;
     @Autowired private ClassFeeStructureRepository classFeeStructureRepository;
     @Autowired private StudentFeeAssignmentRepository studentFeeAssignmentRepository;
@@ -215,37 +216,56 @@ public class AdminService {
         String[] monthNames = {"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"};
 
         if (schoolId != null) {
-            stats.put("totalStudents", studentRepository.countBySchoolId(schoolId));
-            stats.put("totalTeachers", teacherRepository.countBySchoolId(schoolId));
-            stats.put("totalClasses",  classRoomRepository.countBySchoolId(schoolId));
-            stats.put("totalExams",    examScheduleRepository.countBySchoolId(schoolId));
-            BigDecimal rev = feePaymentRepository.sumAmountPaidBySchool(schoolId);
-            BigDecimal exp = expenseRepository.sumAllExpensesBySchool(schoolId);
-            stats.put("totalRevenue",  rev != null ? rev : BigDecimal.ZERO);
-            stats.put("totalExpenses", exp != null ? exp : BigDecimal.ZERO);
+            // Single round-trip to the DB for all counts and aggregates.
+            // Previously 11 sequential queries × ~40 ms Supabase latency = ~440 ms minimum.
+            // Now: 1 query, all subqueries run in parallel inside PostgreSQL.
+            String countSql =
+                "SELECT " +
+                "  (SELECT COUNT(*) FROM students       WHERE school_id = ?) AS total_students," +
+                "  (SELECT COUNT(*) FROM teachers       WHERE school_id = ?) AS total_teachers," +
+                "  (SELECT COUNT(*) FROM classrooms     WHERE school_id = ?) AS total_classes," +
+                "  (SELECT COUNT(*) FROM exam_schedules WHERE school_id = ?) AS total_exams," +
+                "  COALESCE((SELECT SUM(amount_paid) FROM fee_payments WHERE school_id = ?), 0) AS total_revenue," +
+                "  COALESCE((SELECT SUM(amount)      FROM expenses     WHERE school_id = ?), 0) AS total_expenses," +
+                "  (SELECT COUNT(*) FROM admission_applications WHERE school_id = ? AND status = 'PENDING') AS pending_apps";
 
-            // Pending applications count + last 5 (avoids separate full-list API call from frontend)
-            stats.put("pendingApplications",
-                admissionApplicationRepository.countByStatusAndSchoolId(
-                    com.schoolers.model.AdmissionApplication.Status.PENDING, schoolId));
+            java.util.Map<String, Object> row = jdbcTemplate.queryForMap(countSql,
+                schoolId, schoolId, schoolId, schoolId, schoolId, schoolId, schoolId);
+
+            stats.put("totalStudents",        row.get("total_students"));
+            stats.put("totalTeachers",        row.get("total_teachers"));
+            stats.put("totalClasses",         row.get("total_classes"));
+            stats.put("totalExams",           row.get("total_exams"));
+            stats.put("totalRevenue",         row.get("total_revenue"));
+            stats.put("totalExpenses",        row.get("total_expenses"));
+            stats.put("pendingApplications",  row.get("pending_apps"));
+
+            // Last 5 records — two small queries (LIMIT 5 each, index-backed)
             stats.put("recentApplications",
                 admissionApplicationRepository.findTop5BySchoolIdOrderByCreatedAtDesc(schoolId));
-
-            // Last 5 fee payments (avoids frontend fetching entire history just to show 5 rows)
             stats.put("recentFeePayments",
                 feePaymentRepository.findTop5BySchoolIdOrderByPaymentDateDescCreatedAtDesc(schoolId));
 
-            // Monthly chart data — 2 aggregated queries
+            // Monthly chart — 2 GROUP BY aggregates (combined into one query)
+            String monthlySql =
+                "SELECT 'rev' AS kind, EXTRACT(MONTH FROM payment_date) AS m, COALESCE(SUM(amount_paid),0) AS total " +
+                "  FROM fee_payments WHERE school_id = ? AND EXTRACT(YEAR FROM payment_date) = ? GROUP BY m " +
+                "UNION ALL " +
+                "SELECT 'exp' AS kind, EXTRACT(MONTH FROM date) AS m, COALESCE(SUM(amount),0) AS total " +
+                "  FROM expenses WHERE school_id = ? AND EXTRACT(YEAR FROM date) = ? GROUP BY m";
+
             java.util.Map<Integer, BigDecimal> revByMonth = new java.util.HashMap<>();
             java.util.Map<Integer, BigDecimal> expByMonth = new java.util.HashMap<>();
-            for (Object[] row : feePaymentRepository.sumMonthlyBySchoolAndYear(schoolId, currentYear)) {
-                int m = ((Number) row[0]).intValue();
-                revByMonth.put(m, row[1] != null ? new BigDecimal(row[1].toString()) : BigDecimal.ZERO);
-            }
-            for (Object[] row : expenseRepository.sumMonthlyBySchoolAndYear(schoolId, currentYear)) {
-                int m = ((Number) row[0]).intValue();
-                expByMonth.put(m, row[1] != null ? new BigDecimal(row[1].toString()) : BigDecimal.ZERO);
-            }
+            jdbcTemplate.query(monthlySql,
+                rs -> {
+                    String kind = rs.getString("kind");
+                    int m = rs.getInt("m");
+                    BigDecimal total = rs.getBigDecimal("total");
+                    if ("rev".equals(kind)) revByMonth.put(m, total != null ? total : BigDecimal.ZERO);
+                    else                    expByMonth.put(m, total != null ? total : BigDecimal.ZERO);
+                },
+                schoolId, currentYear, schoolId, currentYear);
+
             java.util.List<java.util.Map<String, Object>> monthly = new java.util.ArrayList<>();
             for (int m = 1; m <= 12; m++) {
                 java.util.Map<String, Object> mo = new java.util.LinkedHashMap<>();
@@ -256,7 +276,7 @@ public class AdminService {
             }
             stats.put("monthlyData", monthly);
         } else {
-            // Platform-level SUPER_ADMIN: aggregate across all schools
+            // Platform-level: simple counts across all schools
             stats.put("totalStudents", studentRepository.count());
             stats.put("totalTeachers", teacherRepository.count());
             stats.put("totalClasses",  classRoomRepository.count());
@@ -274,8 +294,8 @@ public class AdminService {
 
     public ApiResponse<Page<Student>> getStudents(Long schoolId, String search, int page, int size) {
         if (schoolId == null) return ApiResponse.success(Page.empty());
-        size = Math.min(size, 100);
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        size = Math.min(size, 2000); // raised from 100 — schools can have 500+ students
+        Pageable pageable = PageRequest.of(page, size, Sort.by("name").ascending());
         if (search != null && !search.isEmpty()) {
             return ApiResponse.success(studentRepository.searchStudentsBySchool(schoolId, search, pageable));
         }
