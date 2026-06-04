@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
 import AiChat from './AiChat';
@@ -7,8 +7,89 @@ import BgPicker, { loadSavedBg } from './BgPicker';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { schoolAPI } from '../services/api';
+import Logo from './Logo';
 import '../styles/sidebar.css';
 import '../styles/dashboard.css';
+
+// ── Clean top-bar layout for APPLICATION_OWNER (no sidebar) ──────────────────
+function OwnerLayout({ children }) {
+  const { user, logout } = useAuth();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handler = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const initials = (name = '') => name.split(' ').filter(Boolean).map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'OW';
+
+  return (
+    <div style={{ minHeight: '100vh', background: '#f1f5f9', display: 'flex', flexDirection: 'column' }}>
+      {/* ── Top bar ── */}
+      <header style={{
+        position: 'sticky', top: 0, zIndex: 100,
+        background: '#0f172a',
+        borderBottom: '1px solid rgba(255,255,255,0.07)',
+        boxShadow: '0 2px 12px rgba(0,0,0,0.25)',
+      }}>
+        <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0 28px', height: 62, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+          {/* Left: Logo + brand */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Logo size={32} />
+            <span style={{ fontSize: 17, fontWeight: 800, color: '#fff', letterSpacing: '-0.3px' }}>My-Skoolz</span>
+            <span style={{ padding: '2px 9px', background: 'rgba(99,102,241,0.25)', color: '#a5b4fc', borderRadius: 6, fontSize: 10, fontWeight: 700, letterSpacing: '0.5px', marginLeft: 4 }}>OWNER</span>
+          </div>
+
+          {/* Right: user chip + logout */}
+          <div ref={menuRef} style={{ position: 'relative' }}>
+            <button
+              onClick={() => setMenuOpen(o => !o)}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, padding: '7px 14px 7px 8px', cursor: 'pointer', transition: 'background 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.12)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.07)'}
+            >
+              <div style={{ width: 32, height: 32, borderRadius: 9, background: 'linear-gradient(135deg,#4f46e5,#7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 12, fontWeight: 800, flexShrink: 0 }}>
+                {initials(user?.name || 'Owner')}
+              </div>
+              <div style={{ textAlign: 'left' }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>{user?.name || 'Application Owner'}</div>
+                <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600 }}>Application Owner</div>
+              </div>
+              <span className="material-icons" style={{ fontSize: 18, color: '#64748b', marginLeft: 2, transition: 'transform 0.15s', transform: menuOpen ? 'rotate(180deg)' : 'none' }}>expand_more</span>
+            </button>
+
+            {menuOpen && (
+              <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 8px)', background: '#fff', borderRadius: 12, boxShadow: '0 8px 30px rgba(0,0,0,0.15)', border: '1px solid #e2e8f0', minWidth: 200, overflow: 'hidden', zIndex: 200 }}>
+                <div style={{ padding: '12px 16px', borderBottom: '1px solid #f1f5f9' }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#0f172a' }}>{user?.name || 'Application Owner'}</div>
+                  <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{user?.email || ''}</div>
+                </div>
+                <button
+                  onClick={() => { setMenuOpen(false); logout(); }}
+                  style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '11px 16px', background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: 13, fontWeight: 600, textAlign: 'left', transition: 'background 0.1s' }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#fff5f5'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                >
+                  <span className="material-icons" style={{ fontSize: 17 }}>logout</span>
+                  Sign out
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* ── Page content ── */}
+      <main style={{ flex: 1, maxWidth: 1400, width: '100%', margin: '0 auto', padding: '32px 28px' }}>
+        <MaintenanceBanner />
+        {children}
+      </main>
+    </div>
+  );
+}
 
 const Layout = ({ children, pageTitle }) => {
   const [sidebarCollapsed, setSidebarCollapsed]   = useState(false);
@@ -43,6 +124,11 @@ const Layout = ({ children, pageTitle }) => {
       })
       .catch(() => {});
   }, [user]);
+
+  // APPLICATION_OWNER gets a clean full-width layout with no sidebar
+  if (user?.role === 'APPLICATION_OWNER') {
+    return <OwnerLayout>{children}</OwnerLayout>;
+  }
 
   return (
     <div className="app-layout" style={{ background: appBg }}>
