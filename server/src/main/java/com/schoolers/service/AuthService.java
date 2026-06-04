@@ -435,6 +435,68 @@ public class AuthService {
         return ApiResponse.success("Email verified successfully! You can now login.", "verified");
     }
 
+    // ── Student self-signup ───────────────────────────────────────────────────
+
+    /**
+     * Lets a student create their own account using their admission number.
+     * The admin must have already imported the student record (with or without email).
+     * On success the account is inactive until the student verifies their email.
+     */
+    @org.springframework.transaction.annotation.Transactional
+    public ApiResponse<Map<String, Object>> studentSignup(
+            Integer schoolCode, String admissionNumber, String email, String password) {
+
+        if (schoolCode == null) return ApiResponse.error("School ID is required");
+        if (admissionNumber == null || admissionNumber.isBlank()) return ApiResponse.error("Admission number is required");
+        if (email == null || email.isBlank()) return ApiResponse.error("Email is required");
+        if (password == null || password.length() < 6) return ApiResponse.error("Password must be at least 6 characters");
+
+        School school = schoolRepository.findBySchoolId(schoolCode).orElse(null);
+        if (school == null) return ApiResponse.error("School not found. Please check your School ID.");
+
+        Student student = studentRepository
+                .findBySchoolIdAndAdmissionNumberIgnoreCase(school.getId(), admissionNumber.trim())
+                .orElse(null);
+        if (student == null) return ApiResponse.error("No student found with this admission number in that school.");
+
+        if (student.getStudentUserId() != null)
+            return ApiResponse.error("An account already exists for this admission number. Please login or use Forgot Password.");
+
+        String normalizedEmail = email.trim().toLowerCase();
+        if (!normalizedEmail.matches("^[\\w.+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,}$"))
+            return ApiResponse.error("Please enter a valid email address.");
+        if (userRepository.existsByEmailIgnoreCase(normalizedEmail))
+            return ApiResponse.error("This email is already registered. Use a different email or try Forgot Password.");
+
+        String otp = String.format("%06d", 100000 + new java.util.Random().nextInt(900000));
+        LocalDateTime otpExpiry = LocalDateTime.now(ZoneOffset.UTC).plusDays(1);
+
+        User studentUser = userRepository.save(User.builder()
+                .name(student.getName())
+                .email(normalizedEmail)
+                .username(normalizedEmail)
+                .studentId(student.getId())
+                .password(passwordEncoder.encode(password))
+                .role(User.Role.STUDENT)
+                .isActive(false)
+                .firstLogin(true)
+                .schoolId(school.getId())
+                .resetOtp(otp)
+                .otpExpiry(otpExpiry)
+                .build());
+
+        student.setStudentUserId(studentUser.getId());
+        studentRepository.save(student);
+
+        try { emailService.sendRegistrationOtp(normalizedEmail, student.getName(), otp); }
+        catch (Exception e) { log.warn("[studentSignup] Could not send OTP to {}: {}", normalizedEmail, e.getMessage()); }
+
+        log.info("[studentSignup] Student {} signed up, pending email verification", normalizedEmail);
+        return ApiResponse.success(
+                "Account created! Please check your email for a 6-digit verification code.",
+                Map.of("email", normalizedEmail));
+    }
+
     /** Generates a short unique code from the school name (e.g. "Springfield High" → "SPRHI"). */
     private String generateSchoolCode(String name) {
         String[] words = name.split("\\s+");

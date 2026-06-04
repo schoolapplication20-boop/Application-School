@@ -2,6 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '../../components/Layout';
 import { teacherAPI } from '../../services/api';
 import { sortClasses } from '../../utils/classOrder';
+import axios from 'axios';
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 
 const DEFAULT_PW = (rollNumber) => `${rollNumber}@123`;
 
@@ -14,10 +17,16 @@ export default function MyStudents() {
   const [search,        setSearch]        = useState('');
 
   // Reset password modal state
-  const [resetTarget,   setResetTarget]   = useState(null); // student object
+  const [resetTarget,   setResetTarget]   = useState(null);
   const [newPassword,   setNewPassword]   = useState('');
   const [resetting,     setResetting]     = useState(false);
   const [resetSuccess,  setResetSuccess]  = useState(false);
+
+  // Onboard student modal state
+  const [onboardTarget, setOnboardTarget] = useState(null);
+  const [onboardEmail,  setOnboardEmail]  = useState('');
+  const [onboarding,    setOnboarding]    = useState(false);
+  const [onboardResult, setOnboardResult] = useState(null);
 
   const loadClasses = useCallback(async () => {
     setLoadingClass(true);
@@ -64,6 +73,26 @@ export default function MyStudents() {
     } catch (err) {
       alert(err.response?.data?.message || err.response?.data?.error || 'Failed to reset password.');
     } finally { setResetting(false); }
+  };
+
+  const handleOnboard = async () => {
+    if (!onboardEmail.trim() || !onboardTarget) return;
+    setOnboarding(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.post(
+        `${API_BASE}/teacher/students/${onboardTarget.id}/onboard`,
+        { email: onboardEmail.trim() },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setOnboardResult(res.data?.data || { studentTempPassword: '(check email)' });
+      // Refresh list so the "Onboard" button changes to "Reset Password"
+      const cls = selectedClass;
+      setStudents([]);
+      teacherAPI.getClassStudents(cls.id).then(r => setStudents(r.data?.data ?? []));
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to create account.');
+    } finally { setOnboarding(false); }
   };
 
   const filtered = students.filter(s => {
@@ -146,7 +175,7 @@ export default function MyStudents() {
                   <th>Student Name</th>
                   <th>Class</th>
                   <th>Parent Mobile</th>
-                  <th>Password Reset</th>
+                  <th>Account</th>
                 </tr>
               </thead>
               <tbody>
@@ -166,21 +195,35 @@ export default function MyStudents() {
                       {s.parentMobile || s.motherMobile || '—'}
                     </td>
                     <td>
-                      <button
-                        onClick={() => openReset(s)}
-                        disabled={!s.studentUserId}
-                        title={s.studentUserId ? 'Reset login password' : 'Student has no login account'}
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 5,
-                          padding: '5px 12px', border: 'none', borderRadius: 8,
-                          background: s.studentUserId ? '#eff6ff' : '#f7fafc',
-                          color: s.studentUserId ? '#2563eb' : '#cbd5e0',
-                          fontSize: 12, fontWeight: 600, cursor: s.studentUserId ? 'pointer' : 'not-allowed',
-                        }}
-                      >
-                        <span className="material-icons" style={{ fontSize: 14 }}>lock_reset</span>
-                        Reset Password
-                      </button>
+                      {s.studentUserId ? (
+                        <button
+                          onClick={() => openReset(s)}
+                          title="Reset login password"
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 5,
+                            padding: '5px 12px', border: 'none', borderRadius: 8,
+                            background: '#eff6ff', color: '#2563eb',
+                            fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                          }}
+                        >
+                          <span className="material-icons" style={{ fontSize: 14 }}>lock_reset</span>
+                          Reset Password
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => { setOnboardTarget(s); setOnboardEmail(''); setOnboardResult(null); }}
+                          title="Create login account for this student"
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 5,
+                            padding: '5px 12px', border: 'none', borderRadius: 8,
+                            background: '#f0fff4', color: '#276749',
+                            fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                          }}
+                        >
+                          <span className="material-icons" style={{ fontSize: 14 }}>person_add</span>
+                          Onboard
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -265,6 +308,61 @@ export default function MyStudents() {
                     ) : (
                       <><span className="material-icons" style={{ fontSize: 16 }}>lock_reset</span> Reset Password</>
                     )}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Onboard Student Modal ────────────────────────────────────────── */}
+      {onboardTarget && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 420, width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+            {onboardResult ? (
+              <div style={{ textAlign: 'center' }}>
+                <span className="material-icons" style={{ fontSize: 50, color: '#38a169' }}>how_to_reg</span>
+                <h3 style={{ marginTop: 12 }}>Account Created!</h3>
+                <p style={{ color: '#718096', fontSize: 13 }}>
+                  Login credentials for <strong>{onboardTarget.name}</strong>:
+                </p>
+                <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 8, padding: 12, textAlign: 'left', marginBottom: 16 }}>
+                  <div style={{ fontSize: 12, color: '#718096' }}>Email: <strong>{onboardEmail}</strong></div>
+                  <div style={{ fontSize: 12, color: '#718096', marginTop: 4 }}>Temp Password: <strong style={{ fontFamily: 'monospace' }}>{onboardResult.studentTempPassword}</strong></div>
+                </div>
+                <p style={{ fontSize: 11, color: '#a0aec0', marginBottom: 20 }}>Student will change this password on first login. A welcome email has been sent.</p>
+                <button onClick={() => setOnboardTarget(null)} style={{ padding: '10px 28px', borderRadius: 8, border: 'none', background: '#276749', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
+                  Done
+                </button>
+              </div>
+            ) : (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+                  <div style={{ width: 44, height: 44, borderRadius: 12, background: '#f0fff4', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <span className="material-icons" style={{ color: '#276749', fontSize: 22 }}>person_add</span>
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: 15 }}>Create Account</div>
+                    <div style={{ fontSize: 12, color: '#718096' }}>{onboardTarget.name} · Roll {onboardTarget.rollNumber}</div>
+                  </div>
+                </div>
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: '#718096', display: 'block', marginBottom: 6 }}>Student Email Address</label>
+                  <input
+                    type="email"
+                    value={onboardEmail}
+                    onChange={e => setOnboardEmail(e.target.value)}
+                    placeholder="student@email.com"
+                    style={{ width: '100%', border: '1.5px solid #e2e8f0', borderRadius: 8, padding: '10px 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+                    autoFocus
+                  />
+                  <p style={{ fontSize: 11, color: '#a0aec0', marginTop: 6 }}>A welcome email with login credentials will be sent to this address.</p>
+                </div>
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                  <button onClick={() => setOnboardTarget(null)} disabled={onboarding} style={{ padding: '9px 20px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: '#fff', color: '#4a5568', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+                  <button onClick={handleOnboard} disabled={onboarding || !onboardEmail.trim()} style={{ padding: '9px 20px', borderRadius: 8, border: 'none', background: '#276749', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: onboarding ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {onboarding ? 'Creating…' : <><span className="material-icons" style={{ fontSize: 16 }}>person_add</span> Create Account</>}
                   </button>
                 </div>
               </>

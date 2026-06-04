@@ -19,8 +19,9 @@ const COL_MAP = {
   'student email': 'studentEmail', 'email': 'studentEmail', 'student email id': 'studentEmail',
 };
 
-const REQUIRED = ['fullName', 'rollNumber', 'className', 'studentEmail'];
+const REQUIRED = ['fullName', 'rollNumber', 'className'];
 const PHONE_RE  = /^\d{10}$/;
+const EMAIL_RE  = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const STEPS = ['Upload', 'Preview', 'Results'];
 
@@ -30,10 +31,14 @@ function validateRow(row, idx, seenAdmNos, seenRollKeys) {
 
   REQUIRED.forEach(f => {
     if (!row[f] || String(row[f]).trim() === '') {
-      const label = f === 'fullName' ? 'Full Name' : f === 'rollNumber' ? 'Roll Number' : f === 'studentEmail' ? 'Student Email' : 'Class';
+      const label = f === 'fullName' ? 'Full Name' : f === 'rollNumber' ? 'Roll Number' : 'Class';
       errors.push(`${label} is required`);
     }
   });
+
+  // Email is optional but must be valid if provided
+  if (row.studentEmail && !EMAIL_RE.test(String(row.studentEmail).trim()))
+    errors.push('Student email format is invalid');
 
   if (row.fatherPhone && !PHONE_RE.test(String(row.fatherPhone).replace(/\s/g, '')))
     errors.push("Father's phone must be 10 digits");
@@ -330,15 +335,15 @@ export default function BulkImportModal({ onClose, onImportDone }) {
 
               {/* Columns info */}
               <div className="bim-cols-box">
-                <p className="bim-cols-title">Required columns in your file:</p>
+                <p className="bim-cols-title">Columns in your file:</p>
                 <div className="bim-cols-grid">
                   {['Full Name ✱', 'Roll Number ✱', 'Class ✱', 'Admission Number',
-                    'Section', "Father's Name", "Father's Phone", "Mother's Name",
-                    "Mother's Phone", 'Permanent Address', 'ID Proof File Name'].map(c => (
+                    'Student Email', 'Section', "Father's Name", "Father's Phone",
+                    "Mother's Name", "Mother's Phone", 'Permanent Address', 'ID Proof File Name'].map(c => (
                     <span key={c} className={`bim-col-tag ${c.includes('✱') ? 'required' : ''}`}>{c}</span>
                   ))}
                 </div>
-                <p className="bim-cols-note">✱ Required fields</p>
+                <p className="bim-cols-note">✱ Required &nbsp;|&nbsp; Student Email is optional — if provided, student gets a welcome email with login credentials. Without email, student can sign up later using their admission number.</p>
               </div>
             </div>
           )}

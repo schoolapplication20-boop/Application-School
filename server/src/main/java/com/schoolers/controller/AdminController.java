@@ -140,6 +140,17 @@ public class AdminController {
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
     }
 
+    /** Creates a login account for a student that was imported without an email. */
+    @PostMapping("/students/{id}/onboard")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> onboardStudent(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body,
+            Authentication auth) {
+        String email = body.get("email");
+        ApiResponse<Map<String, Object>> res = adminService.onboardStudentAccount(id, email, getCurrentSchoolId(auth));
+        return res.isSuccess() ? ResponseEntity.ok(res) : ResponseEntity.badRequest().body(res);
+    }
+
     // ── Grade Scales ──────────────────────────────────────────────────────────
     @GetMapping("/grade-scales")
     public ResponseEntity<ApiResponse<List<com.schoolers.model.GradeScale>>> getGradeScales(Authentication auth) {

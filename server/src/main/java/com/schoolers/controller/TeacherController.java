@@ -5,11 +5,14 @@ import com.schoolers.model.*;
 import com.schoolers.repository.AssignmentRepository;
 import com.schoolers.repository.AssignmentSubmissionRepository;
 import com.schoolers.repository.ClassRoomRepository;
+import com.schoolers.repository.StudentRepository;
 import com.schoolers.repository.UserRepository;
 import com.schoolers.repository.TeacherRepository;
 import com.schoolers.model.AssignmentSubmission;
 import com.schoolers.service.AdminService;
+import com.schoolers.service.EmailService;
 import com.schoolers.service.TeacherService;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -49,6 +52,15 @@ public class TeacherController {
 
     @Autowired
     private AssignmentSubmissionRepository submissionRepository;
+
+    @Autowired
+    private StudentRepository studentRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private EmailService emailService;
 
     // ── Helper: resolve teacher id from auth ──────────────────────────────────
 
@@ -196,6 +208,40 @@ public class TeacherController {
         Long teacherId = resolveTeacherId(null);
         ApiResponse<String> response = teacherService.resetStudentPassword(teacherId, studentId, newPassword);
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
+    }
+
+    /** Creates a login account for a student in the teacher's class that doesn't have one yet. */
+    @PostMapping("/students/{studentId}/onboard")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> onboardStudent(
+            @PathVariable Long studentId,
+            @RequestBody Map<String, String> body) {
+        Long teacherId = resolveTeacherId(null);
+        if (teacherId == null)
+            return ResponseEntity.badRequest().body(ApiResponse.error("Teacher not found"));
+
+        // Verify student belongs to teacher's class
+        Teacher teacher = teacherRepository.findById(teacherId).orElse(null);
+        if (teacher == null)
+            return ResponseEntity.badRequest().body(ApiResponse.error("Teacher not found"));
+
+        Student student = studentRepository.findById(studentId).orElse(null);
+        if (student == null)
+            return ResponseEntity.badRequest().body(ApiResponse.error("Student not found"));
+        if (teacher.getSchoolId() != null && !teacher.getSchoolId().equals(student.getSchoolId()))
+            return ResponseEntity.badRequest().body(ApiResponse.error("Student does not belong to your school"));
+
+        ApiResponse<java.util.List<com.schoolers.model.ClassRoom>> classesResp = teacherService.getTeacherClasses(teacherId);
+        boolean inClass = classesResp.isSuccess() && classesResp.getData().stream()
+                .anyMatch(cls -> cls.getName() != null
+                        && cls.getName().equalsIgnoreCase(student.getClassName())
+                        && (cls.getSection() == null || cls.getSection().isBlank()
+                            || cls.getSection().equalsIgnoreCase(student.getSection())));
+        if (!inClass)
+            return ResponseEntity.badRequest().body(ApiResponse.error("This student is not in any of your assigned classes"));
+
+        String email = body.get("email");
+        ApiResponse<Map<String, Object>> res = adminService.onboardStudentAccount(studentId, email, teacher.getSchoolId());
+        return res.isSuccess() ? ResponseEntity.ok(res) : ResponseEntity.badRequest().body(res);
     }
 
     @DeleteMapping("/class/{classId}/students/{studentId}")

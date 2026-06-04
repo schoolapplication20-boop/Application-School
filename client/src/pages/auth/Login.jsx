@@ -513,8 +513,11 @@ const Login = () => {
                     <span className="material-icons">{showPassword ? 'visibility_off' : 'visibility'}</span>
                   </button>
                 </div>
-                <div style={{ textAlign: 'right', marginTop: '6px' }}>
-                  <Link to="/forgot-password" className="forgot-password-link" style={{ float: 'none' }}>Forgot Password?</Link>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', flexWrap: 'wrap', gap: 4 }}>
+                  {selectedRole === 'STUDENT' && (
+                    <Link to="/student-signup" className="forgot-password-link" style={{ float: 'none' }}>New student? Sign up</Link>
+                  )}
+                  <Link to="/forgot-password" className="forgot-password-link" style={{ float: 'none', marginLeft: 'auto' }}>Forgot Password?</Link>
                 </div>
               </div>
 

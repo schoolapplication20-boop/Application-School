@@ -152,6 +152,12 @@ export default function Students() {
   const [studentOtp, setStudentOtp] = useState({ sent: false, verified: false, sending: false, verifying: false, value: '', error: '' });
   const resetStudentOtp = () => setStudentOtp({ sent: false, verified: false, sending: false, verifying: false, value: '', error: '' });
 
+  // Onboard (create account for students imported without email)
+  const [onboardTarget, setOnboardTarget] = useState(null);
+  const [onboardEmail, setOnboardEmail]   = useState('');
+  const [onboarding, setOnboarding]       = useState(false);
+  const [onboardResult, setOnboardResult] = useState(null);
+
   const handleStudentSendOtp = async () => {
     const email = formData.studentEmail?.trim();
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -295,10 +301,9 @@ export default function Students() {
     if (formData.guardianPhone && !/^\d{10}$/.test(formData.guardianPhone)) e.guardianPhone = 'Must be exactly 10 digits';
     if (!formData.permanentAddress.trim()) e.permanentAddress = 'Permanent address is required';
     if (!formData.idProofName)            e.idProof     = 'ID proof document is required';
-    if (!editStudent) {
-      if (!formData.studentEmail?.trim())
-        e.studentEmail = 'Student email is required';
-      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.studentEmail.trim()))
+    if (!editStudent && formData.studentEmail?.trim()) {
+      // Email is optional — only validate format and OTP if provided
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.studentEmail.trim()))
         e.studentEmail = 'Enter a valid email address';
       else if (!studentOtp.verified)
         e.studentEmail = 'Please verify the email with OTP before saving';
@@ -534,6 +539,18 @@ export default function Students() {
     } finally {
       setPromoting(false);
     }
+  };
+
+  const handleOnboard = async () => {
+    if (!onboardEmail.trim() || !onboardTarget) return;
+    setOnboarding(true);
+    try {
+      const res = await adminAPI.onboardStudent(onboardTarget.id, onboardEmail.trim());
+      setOnboardResult(res.data?.data || {});
+      loadStudents();
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to create account.', 'error');
+    } finally { setOnboarding(false); }
   };
 
   const handleViewCredentials = async (student) => {
@@ -803,11 +820,19 @@ export default function Students() {
                       <button className="action-btn action-btn-edit" onClick={() => openEditModal(s)} title="Edit">
                         <span className="material-icons">edit</span>
                       </button>
-                      <button className="action-btn" title="View Login Credentials"
-                        onClick={() => handleViewCredentials(s)}
-                        style={{ color: '#6d28d9', background: '#f5f3ff', border: '1px solid #ddd6fe' }}>
-                        <span className="material-icons" style={{ fontSize: 16 }}>key</span>
-                      </button>
+                      {s.studentUserId ? (
+                        <button className="action-btn" title="View Login Credentials"
+                          onClick={() => handleViewCredentials(s)}
+                          style={{ color: '#6d28d9', background: '#f5f3ff', border: '1px solid #ddd6fe' }}>
+                          <span className="material-icons" style={{ fontSize: 16 }}>key</span>
+                        </button>
+                      ) : (
+                        <button className="action-btn" title="Create login account"
+                          onClick={() => { setOnboardTarget(s); setOnboardEmail(''); setOnboardResult(null); }}
+                          style={{ color: '#276749', background: '#f0fff4', border: '1px solid #c6f6d5' }}>
+                          <span className="material-icons" style={{ fontSize: 16 }}>person_add</span>
+                        </button>
+                      )}
                       <button className="action-btn action-btn-delete" onClick={() => setDeleteTarget(s)} title="Delete">
                         <span className="material-icons">delete</span>
                       </button>
@@ -980,10 +1005,10 @@ export default function Students() {
                         <option>Inactive</option>
                       </select>
                     </div>
-                    {/* Student email — required, OTP-verified */}
+                    {/* Student email — optional; if provided must be OTP-verified */}
                     <div className="col-12">
                       <label className="form-label fw-medium small">
-                        Student Email <span style={{ color: '#e53e3e' }}>*</span>
+                        Student Email <span style={{ color: '#718096', fontWeight: 400 }}>(optional)</span>
                       </label>
                       {editStudent ? (
                         <input type="email"
@@ -1623,6 +1648,51 @@ export default function Students() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+      {/* ── Onboard Student Modal ──────────────────────────────────────── */}
+      {onboardTarget && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 420, width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+            {onboardResult ? (
+              <div style={{ textAlign: 'center' }}>
+                <span className="material-icons" style={{ fontSize: 50, color: '#38a169' }}>how_to_reg</span>
+                <h3 style={{ marginTop: 12 }}>Account Created!</h3>
+                <p style={{ color: '#718096', fontSize: 13 }}>Login credentials for <strong>{onboardTarget.name}</strong>:</p>
+                <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 8, padding: 12, textAlign: 'left', marginBottom: 16 }}>
+                  <div style={{ fontSize: 12, color: '#718096' }}>Email: <strong>{onboardEmail}</strong></div>
+                  <div style={{ fontSize: 12, color: '#718096', marginTop: 4 }}>Temp Password: <strong style={{ fontFamily: 'monospace' }}>{onboardResult.studentTempPassword}</strong></div>
+                </div>
+                <p style={{ fontSize: 11, color: '#a0aec0', marginBottom: 20 }}>Student will change this password on first login. A welcome email has been sent.</p>
+                <button onClick={() => setOnboardTarget(null)} style={{ padding: '10px 28px', borderRadius: 8, border: 'none', background: '#276749', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>Done</button>
+              </div>
+            ) : (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+                  <div style={{ width: 44, height: 44, borderRadius: 12, background: '#f0fff4', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <span className="material-icons" style={{ color: '#276749', fontSize: 22 }}>person_add</span>
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: 15 }}>Create Account</div>
+                    <div style={{ fontSize: 12, color: '#718096' }}>{onboardTarget.name}</div>
+                  </div>
+                </div>
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: '#718096', display: 'block', marginBottom: 6 }}>Student Email Address</label>
+                  <input type="email" value={onboardEmail} onChange={e => setOnboardEmail(e.target.value)}
+                    placeholder="student@email.com" autoFocus
+                    style={{ width: '100%', border: '1.5px solid #e2e8f0', borderRadius: 8, padding: '10px 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
+                  <p style={{ fontSize: 11, color: '#a0aec0', marginTop: 6 }}>A welcome email with login credentials will be sent.</p>
+                </div>
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                  <button onClick={() => setOnboardTarget(null)} disabled={onboarding} style={{ padding: '9px 20px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: '#fff', color: '#4a5568', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+                  <button onClick={handleOnboard} disabled={onboarding || !onboardEmail.trim()} style={{ padding: '9px 20px', borderRadius: 8, border: 'none', background: '#276749', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: onboarding ? 0.7 : 1 }}>
+                    {onboarding ? 'Creating…' : 'Create Account'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

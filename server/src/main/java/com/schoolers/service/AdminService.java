@@ -287,17 +287,16 @@ public class AdminService {
         String name = str(body, "name", null);
         if (name == null || name.isBlank()) return ApiResponse.<Map<String, Object>>error("Student name is required");
 
-        boolean isBulkImport = Boolean.TRUE.equals(body.get("bulkImport"));
+        // Email is optional — if provided, a user account is created; if absent, the student
+        // record is saved without an account (student can self-signup later via admission number).
         String studentEmailRaw = str(body, "studentEmail", null);
-        if (studentEmailRaw == null || studentEmailRaw.isBlank())
-            return ApiResponse.<Map<String, Object>>error("Student email is required");
-        if (!EMAIL_PATTERN.matcher(studentEmailRaw.trim().toLowerCase()).matches())
-            return ApiResponse.<Map<String, Object>>error("A valid student email address is required");
-        if (userRepository.existsByEmailIgnoreCase(studentEmailRaw.trim()))
-            return ApiResponse.<Map<String, Object>>error("Email '" + studentEmailRaw.trim().toLowerCase() + "' is already registered. Use a different email.");
-        // For bulk import: OTP verification is bypassed — account is created with isActive=false
-        // and activation OTP is sent by BulkImportService after this call returns.
-        // For individual creation via UI: OTP is verified by AdminController before calling here.
+        boolean hasEmail = studentEmailRaw != null && !studentEmailRaw.isBlank();
+        if (hasEmail) {
+            if (!EMAIL_PATTERN.matcher(studentEmailRaw.trim().toLowerCase()).matches())
+                return ApiResponse.<Map<String, Object>>error("A valid student email address is required");
+            if (userRepository.existsByEmailIgnoreCase(studentEmailRaw.trim()))
+                return ApiResponse.<Map<String, Object>>error("Email '" + studentEmailRaw.trim().toLowerCase() + "' is already registered. Use a different email.");
+        }
 
         String parentMobileRaw = str(body, "parentMobile", str(body, "fatherPhone", str(body, "mobile", null)));
         if (parentMobileRaw == null || parentMobileRaw.isBlank())
@@ -380,10 +379,13 @@ public class AdminService {
             Student saved = studentRepository.save(student);
             ensureClassExists(saved.getClassName(), saved.getSection(), schoolId);
 
-            // Step 3: Create the student User account (pass schoolId for multi-tenant isolation)
+            // Step 3: Create user account only when an email was provided.
+            // Without an email the student record is saved first; the student can
+            // self-signup later (via /auth/student-signup) or an admin can onboard them.
             String studentEmail = str(body, "studentEmail", null);
-            StudentUserResult studentUserResult = createStudentUser(
-                    name, saved.getAdmissionNumber(), rollNumber, saved.getId(), studentEmail, schoolId);
+            StudentUserResult studentUserResult = hasEmail
+                    ? createStudentUser(name, saved.getAdmissionNumber(), rollNumber, saved.getId(), studentEmail, schoolId)
+                    : null;
 
             // Step 4: Back-patch the student row with the user ID
             if (studentUserResult != null) {
@@ -392,18 +394,17 @@ public class AdminService {
             }
 
             log.info("[createStudent] Saved student id=" + saved.getId() + " roll=" + rollNumber
-                    + (saved.getStudentUserId() != null ? " studentUserId=" + saved.getStudentUserId() : "")
+                    + (saved.getStudentUserId() != null ? " studentUserId=" + saved.getStudentUserId() : " (no account yet)")
                     + (saved.getParentId() != null ? " parentId=" + saved.getParentId() : ""));
 
             Map<String, Object> responseData = new LinkedHashMap<>();
             responseData.put("student", saved);
 
-            // Student credentials
+            // Student credentials (only when account was created)
             if (studentUserResult != null) {
                 responseData.put("studentEmail", studentUserResult.loginEmail());
                 responseData.put("studentUsername", studentUserResult.user().getUsername());
                 responseData.put("studentTempPassword", studentUserResult.rawPassword());
-                // Send welcome email with temporary password (fire-and-forget)
                 emailService.sendWelcomeEmail(studentUserResult.loginEmail(), name.trim(), "STUDENT", studentUserResult.rawPassword());
             }
 
@@ -438,6 +439,36 @@ public class AdminService {
             log.error("[createStudent] Unexpected error: " + msg);
             return ApiResponse.<Map<String, Object>>error("Failed to save student: " + msg);
         }
+    }
+
+    /** Creates a user account for a student record that was imported without an email. */
+    @Transactional
+    public ApiResponse<Map<String, Object>> onboardStudentAccount(Long studentId, String email, Long callerSchoolId) {
+        Student student = studentRepository.findById(studentId).orElse(null);
+        if (student == null) return ApiResponse.error("Student not found");
+        if (callerSchoolId != null && !callerSchoolId.equals(student.getSchoolId()))
+            return ApiResponse.error("Student not found");
+        if (student.getStudentUserId() != null)
+            return ApiResponse.error("Student already has an account");
+        if (email == null || email.isBlank())
+            return ApiResponse.error("Email is required");
+        if (!EMAIL_PATTERN.matcher(email.trim().toLowerCase()).matches())
+            return ApiResponse.error("A valid email address is required");
+        if (userRepository.existsByEmailIgnoreCase(email.trim()))
+            return ApiResponse.error("Email '" + email.trim().toLowerCase() + "' is already registered");
+
+        StudentUserResult result = createStudentUser(
+                student.getName(), student.getAdmissionNumber(),
+                student.getRollNumber(), student.getId(), email.trim(), student.getSchoolId());
+        student.setStudentUserId(result.user().getId());
+        studentRepository.save(student);
+
+        emailService.sendWelcomeEmail(result.loginEmail(), student.getName(), "STUDENT", result.rawPassword());
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("studentEmail", result.loginEmail());
+        data.put("studentTempPassword", result.rawPassword());
+        return ApiResponse.success("Account created. Welcome email sent.", data);
     }
 
     @Transactional

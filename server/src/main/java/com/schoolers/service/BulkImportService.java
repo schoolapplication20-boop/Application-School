@@ -21,8 +21,6 @@ public class BulkImportService {
     @Autowired private AdminService              adminService;
     @Autowired private ImportLogRepository       importLogRepo;
     @Autowired private StudentRepository         studentRepo;
-    @Autowired private com.schoolers.repository.UserRepository userRepository;
-    @Autowired private EmailService              emailService;
     @Autowired private ObjectMapper              objectMapper;
 
     public BulkImportResult importStudents(BulkImportRequest request,
@@ -67,20 +65,8 @@ public class BulkImportService {
                 continue;
             }
 
-            // Validate email is present for bulk import (mandatory)
-            String emailRaw = row.getStudentEmail() != null ? row.getStudentEmail().trim() : null;
-            if (emailRaw == null || emailRaw.isBlank()) {
-                failed.add(new FailedRowDto(row.getRowNumber(), row.getFullName(),
-                    row.getAdmissionNumber(), row.getRollNumber(), row.getClassName(),
-                    "Student email is required for bulk import"));
-                if (!skipInvalid) break;
-                continue;
-            }
-
             try {
                 Map<String, Object> body = buildStudentMap(row, schoolId);
-                // Pass a flag so createStudent skips OTP check (admin is vouching)
-                body.put("bulkImport", true);
                 ApiResponse<Map<String, Object>> result = adminService.createStudent(body);
 
                 if (result.isSuccess()) {
@@ -90,17 +76,8 @@ public class BulkImportService {
                         existingAdmNos.add(admNo);
                     }
 
-                    // After import: set account as inactive + send activation OTP
-                    com.schoolers.model.User studentUser = userRepository.findByEmailIgnoreCase(emailRaw.toLowerCase()).orElse(null);
-                    if (studentUser != null) {
-                        String otp = String.format("%06d", 100000 + new java.util.Random().nextInt(900000));
-                        studentUser.setIsActive(false);
-                        studentUser.setResetOtp(otp); // plain OTP for verifyRegistrationEmail
-                        studentUser.setOtpExpiry(java.time.LocalDateTime.now().plusDays(7)); // 7-day window
-                        userRepository.save(studentUser);
-                        try { emailService.sendRegistrationOtp(emailRaw.toLowerCase(), row.getFullName(), otp); }
-                        catch (Exception ignored) { /* non-critical */ }
-                    }
+                    // If email provided: account was auto-created with temp password; send welcome email.
+                    // If no email: student record saved without account; student self-signs up via admission number.
                 } else {
                     failed.add(new FailedRowDto(row.getRowNumber(), row.getFullName(),
                         row.getAdmissionNumber(), row.getRollNumber(), row.getClassName(),

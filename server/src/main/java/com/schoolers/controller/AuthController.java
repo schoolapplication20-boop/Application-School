@@ -173,6 +173,18 @@ public class AuthController {
             : ResponseEntity.status(400).body(response);
     }
 
+    /** Student self-signup using admission number + school ID. */
+    @PostMapping("/student-signup")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> studentSignup(@RequestBody Map<String, Object> body) {
+        Integer schoolCode = body.get("schoolId") != null
+                ? Integer.parseInt(body.get("schoolId").toString()) : null;
+        String admNo    = body.get("admissionNumber") != null ? body.get("admissionNumber").toString() : null;
+        String email    = body.get("email") != null ? body.get("email").toString() : null;
+        String password = body.get("password") != null ? body.get("password").toString() : null;
+        ApiResponse<Map<String, Object>> res = authService.studentSignup(schoolCode, admNo, email, password);
+        return res.isSuccess() ? ResponseEntity.ok(res) : ResponseEntity.status(400).body(res);
+    }
+
     // ── Onboarding email OTP — send ───────────────────────────────────────────
     // Public: no auth required. Sends a 6-digit OTP to verify an email address
     // before an account is created for that email.
