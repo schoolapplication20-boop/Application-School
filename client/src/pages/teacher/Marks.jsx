@@ -205,61 +205,100 @@ ADM002,Mathematics,92,100`;
   const parseCsvFile = (file) => {
     const reader = new FileReader();
     reader.onload = (e) => {
-      const lines = e.target.result.split('\n').map(l => l.trim()).filter(Boolean);
-      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-      const rows = [];
-      const errors = [];
+      try {
+        let content = e.target.result;
+        // Strip UTF-8 BOM (added by Excel when saving as CSV — causes admIdx to be -1)
+        if (content.charCodeAt(0) === 0xFEFF) content = content.slice(1);
 
-      // Detect format: wide (has maxmarks column + subject columns) vs narrow (has 'subject' column)
-      const hasSubjectCol = headers.includes('subject');
-      const maxMarksIdx   = headers.findIndex(h => h === 'maxmarks' || h === 'max_marks' || h === 'max marks');
-      const admIdx        = headers.findIndex(h => h === 'admissionnumber' || h === 'admission_number' || h === 'admno');
-      const nameIdx       = headers.findIndex(h => h === 'studentname' || h === 'name' || h === 'student name');
-
-      // Wide format: columns after MaxMarks are subject names
-      const subjectHeaders = !hasSubjectCol && maxMarksIdx >= 0
-        ? headers.slice(maxMarksIdx + 1)
-        : [];
-
-      for (let i = 1; i < lines.length; i++) {
-        const vals = lines[i].split(',').map(v => v.trim());
-
-        if (subjectHeaders.length > 0) {
-          // ── Wide format: one row → multiple marks records ─────────────────
-          const admNum  = admIdx >= 0 ? vals[admIdx] : '';
-          const maxStr  = maxMarksIdx >= 0 ? vals[maxMarksIdx] : '100';
-          if (!admNum) { errors.push(`Row ${i + 1}: missing admission number`); continue; }
-
-          subjectHeaders.forEach((sub, si) => {
-            const marksStr = vals[maxMarksIdx + 1 + si] || '';
-            if (!marksStr) return; // skip empty subject columns
-            rows.push({
-              admissionNumber: admNum,
-              subject:         sub.charAt(0).toUpperCase() + sub.slice(1), // capitalise
-              marks:           marksStr,
-              maxMarks:        maxStr || '100',
-            });
-          });
-        } else {
-          // ── Narrow format: one row = one marks record ──────────────────────
-          if (vals.length < 4) { errors.push(`Row ${i + 1}: insufficient columns`); continue; }
-          const row = {};
-          headers.forEach((h, idx) => { row[h] = vals[idx] || ''; });
-          const r = {
-            admissionNumber: row['admissionnumber'] || row['admission_number'] || row['admno'] || '',
-            subject:         row['subject'] || '',
-            marks:           row['marks'] || '',
-            maxMarks:        row['maxmarks'] || row['max_marks'] || row['max marks'] || '100',
-          };
-          if (!r.admissionNumber) { errors.push(`Row ${i + 1}: missing admission number`); continue; }
-          if (!r.subject)         { errors.push(`Row ${i + 1}: missing subject`); continue; }
-          if (!r.marks)           { errors.push(`Row ${i + 1}: missing marks`); continue; }
-          rows.push(r);
+        const lines = content.split('\n').map(l => l.trim()).filter(Boolean);
+        if (lines.length < 2) {
+          setCsvErrors(['CSV file is empty or has no data rows.']);
+          setCsvRows([]); setCsvResults(null); return;
         }
+
+        // Strip BOM from individual header chars as fallback, then lowercase
+        const headers = lines[0].split(',').map(h => h.trim().replace(/^﻿/, '').toLowerCase());
+        const rows = [];
+        const errors = [];
+
+        // Detect format: wide (has maxmarks column + subject columns) vs narrow (has 'subject' column)
+        const hasSubjectCol = headers.includes('subject');
+        const maxMarksIdx   = headers.findIndex(h => h === 'maxmarks' || h === 'max_marks' || h === 'max marks');
+        const admIdx        = headers.findIndex(h => h === 'admissionnumber' || h === 'admission_number' || h === 'admno');
+
+        if (admIdx === -1) {
+          setCsvErrors([`Column "AdmissionNumber" not found. Headers detected: ${headers.join(', ')}`]);
+          setCsvRows([]); setCsvResults(null); return;
+        }
+        if (!hasSubjectCol && maxMarksIdx === -1) {
+          setCsvErrors([`Column "MaxMarks" not found. Headers detected: ${headers.join(', ')}`]);
+          setCsvRows([]); setCsvResults(null); return;
+        }
+
+        // Wide format: columns after MaxMarks are subject names
+        const subjectHeaders = !hasSubjectCol && maxMarksIdx >= 0
+          ? headers.slice(maxMarksIdx + 1).filter(Boolean)
+          : [];
+
+        if (!hasSubjectCol && subjectHeaders.length === 0) {
+          setCsvErrors(['No subject columns found after MaxMarks column.']);
+          setCsvRows([]); setCsvResults(null); return;
+        }
+
+        for (let i = 1; i < lines.length; i++) {
+          const vals = lines[i].split(',').map(v => v.trim());
+
+          if (subjectHeaders.length > 0) {
+            // ── Wide format: one row → multiple marks records ─────────────────
+            const admNum = admIdx >= 0 ? vals[admIdx] : '';
+            const maxStr = maxMarksIdx >= 0 ? vals[maxMarksIdx] : '100';
+            if (!admNum) { errors.push(`Row ${i + 1}: missing admission number`); continue; }
+
+            let rowHadMarks = false;
+            subjectHeaders.forEach((sub, si) => {
+              const marksStr = vals[maxMarksIdx + 1 + si] || '';
+              if (!marksStr) return; // skip empty subject columns
+              rowHadMarks = true;
+              rows.push({
+                admissionNumber: admNum,
+                subject:         sub.charAt(0).toUpperCase() + sub.slice(1),
+                marks:           marksStr,
+                maxMarks:        maxStr || '100',
+              });
+            });
+            if (!rowHadMarks) errors.push(`Row ${i + 1}: no marks entered for any subject`);
+          } else {
+            // ── Narrow format: one row = one marks record ──────────────────────
+            if (vals.length < 4) { errors.push(`Row ${i + 1}: insufficient columns`); continue; }
+            const row = {};
+            headers.forEach((h, idx) => { row[h] = vals[idx] || ''; });
+            const r = {
+              admissionNumber: row['admissionnumber'] || row['admission_number'] || row['admno'] || '',
+              subject:         row['subject'] || '',
+              marks:           row['marks'] || '',
+              maxMarks:        row['maxmarks'] || row['max_marks'] || row['max marks'] || '100',
+            };
+            if (!r.admissionNumber) { errors.push(`Row ${i + 1}: missing admission number`); continue; }
+            if (!r.subject)         { errors.push(`Row ${i + 1}: missing subject`); continue; }
+            if (!r.marks)           { errors.push(`Row ${i + 1}: missing marks`); continue; }
+            rows.push(r);
+          }
+        }
+
+        if (rows.length === 0 && errors.length === 0)
+          errors.push('No valid rows found in CSV. Please check the format and try again.');
+
+        setCsvRows(rows);
+        setCsvErrors(errors);
+        setCsvResults(null);
+      } catch (err) {
+        setCsvErrors([`Failed to parse CSV: ${err.message || 'Unknown error'}`]);
+        setCsvRows([]); setCsvResults(null);
       }
-      setCsvRows(rows);
-      setCsvErrors(errors);
-      setCsvResults(null);
+    };
+    reader.onerror = () => {
+      setCsvErrors(['Failed to read the file. Please try again.']);
+      setCsvRows([]); setCsvResults(null);
     };
     reader.readAsText(file);
   };
@@ -272,9 +311,15 @@ ADM002,Mathematics,92,100`;
       const res = await reportCardAPI.bulkImportMarksCsv({ rows: csvRows, examType: csvExamType.trim(), examDate: csvDate || null });
       const importResult = res.data?.data;
       setCsvResults(importResult);
-      setCsvRows([]); // clear parsed rows so re-import flow is clean
-      showToast(`${importResult?.saved || 0} of ${importResult?.total || 0} marks imported successfully`);
-      loadAllData(classes); // refresh marks list
+      setCsvRows([]);
+      const saved = importResult?.saved || 0;
+      showToast(`${saved} of ${importResult?.total || 0} marks imported successfully`);
+      if (saved > 0) {
+        // Set filters so imported marks are immediately visible in the table
+        setFilterExam(csvExamType.trim());
+        if (myClassAssignment?.classId) setFilterClassId(String(myClassAssignment.classId));
+        await loadAllData(classes);
+      }
     } catch (err) {
       showToast(err.response?.data?.message || 'Import failed', 'error');
     } finally { setCsvImporting(false); }
