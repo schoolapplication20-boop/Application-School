@@ -2,9 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '../../components/Layout';
 import { teacherAPI } from '../../services/api';
 import { sortClasses } from '../../utils/classOrder';
-import axios from 'axios';
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 
 const DEFAULT_PW = (rollNumber) => `${rollNumber}@123`;
 
@@ -77,19 +74,18 @@ export default function MyStudents() {
 
   const handleOnboard = async () => {
     if (!onboardEmail.trim() || !onboardTarget) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(onboardEmail.trim())) {
+      alert('Please enter a valid email address.');
+      return;
+    }
     setOnboarding(true);
     try {
-      const token = localStorage.getItem('token');
-      const res = await axios.post(
-        `${API_BASE}/teacher/students/${onboardTarget.id}/onboard`,
-        { email: onboardEmail.trim() },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setOnboardResult(res.data?.data || { studentTempPassword: '(check email)' });
-      // Refresh list so the "Onboard" button changes to "Reset Password"
-      const cls = selectedClass;
-      setStudents([]);
-      teacherAPI.getClassStudents(cls.id).then(r => setStudents(r.data?.data ?? []));
+      const res = await teacherAPI.onboardStudent(onboardTarget.id, onboardEmail.trim());
+      setOnboardResult(res.data?.data || { studentTempPassword: '(sent via email)' });
+      // Refresh list so button switches from Onboard → Reset Password
+      if (selectedClass) {
+        teacherAPI.getClassStudents(selectedClass.id).then(r => setStudents(r.data?.data ?? []));
+      }
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to create account.');
     } finally { setOnboarding(false); }

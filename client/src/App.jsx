@@ -26,6 +26,7 @@ import EnterOTP from './pages/auth/EnterOTP';
 import SetNewPassword from './pages/auth/SetNewPassword';
 import ResetPassword from './pages/auth/ResetPassword';
 import StudentSignup from './pages/auth/StudentSignup';
+import VerifyEmail from './pages/auth/VerifyEmail';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -162,6 +163,7 @@ function App() {
             <Route path="/register" element={<Navigate to="/login" replace />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/student-signup" element={<StudentSignup />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/verify-identity" element={<VerifyIdentity />} />
             <Route path="/enter-otp" element={<EnterOTP />} />
             <Route path="/set-new-password" element={<SetNewPassword />} />
