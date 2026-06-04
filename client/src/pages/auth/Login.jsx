@@ -40,13 +40,10 @@ const Login = () => {
   const [selectedRole, setSelectedRole] = useState(initialRole);
   const [emailForm, setEmailForm]       = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading]       = useState(false);
-  const [error, setError]               = useState('');
+  const [isLoading, setIsLoading]         = useState(false);
+  const [error, setError]                 = useState('');
   const [accountLocked, setAccountLocked] = useState(false);
-  const [serverWaking, setServerWaking] = useState(false);
-  const [retryIn, setRetryIn]           = useState(0);
   const retryCountRef  = useRef(0);
-  const retryTimerRef  = useRef(null);
   const attemptLoginFn = useRef(null);
 
   // Owner 2FA OTP step
@@ -64,22 +61,13 @@ const Login = () => {
     if (isAuthenticated) navigate(getDashboardPath(), { replace: true });
   }, [isAuthenticated, navigate, getDashboardPath]);
 
-  useEffect(() => {
-    return () => { if (retryTimerRef.current) clearInterval(retryTimerRef.current); };
-  }, []);
-
   // Reset form when role changes
   const handleRoleSelect = (roleKey) => {
-    // Clear any in-flight retry timer
-    if (retryTimerRef.current) { clearInterval(retryTimerRef.current); retryTimerRef.current = null; }
     retryCountRef.current = 0;
     setSelectedRole(roleKey);
     setEmailForm({ email: '', password: '' });
     setError('');
     setAccountLocked(false);
-    setServerWaking(false);
-    setRetryIn(0);
-    // Clear owner OTP state so a stale OTP screen can't persist across role changes
     setOwnerOtpStep(false);
     setOwnerEmail('');
     setOwnerOtp('');
@@ -126,7 +114,7 @@ const Login = () => {
       if (result.otpRequired) {
         setOwnerEmail(result.email);
         setOwnerOtpStep(true);
-        setServerWaking(false);
+
         retryCountRef.current = 0;
         return;
       }
@@ -134,7 +122,7 @@ const Login = () => {
       const { user: loggedInUser, token } = result;
 
       if (loggedInUser.role !== selectedRole) {
-        setServerWaking(false);
+
         retryCountRef.current = 0;
         setError('Access denied. You do not have permission for the selected role.');
         return;
@@ -152,29 +140,21 @@ const Login = () => {
 
       navigateByRole(loggedInUser);
     } catch (err) {
-      if (err.isColdStart && retryCountRef.current < 4) {
+      // On transient network errors (502/503/504), silently retry once after 2 s.
+      // These are brief during Railway deployments — no countdown UI needed.
+      if (err.isColdStart && retryCountRef.current < 1) {
         retryCountRef.current++;
-        setServerWaking(true);
-        let count = 12;
-        setRetryIn(count);
-        retryTimerRef.current = setInterval(() => {
-          count--;
-          setRetryIn(count);
-          if (count === 0) {
-            clearInterval(retryTimerRef.current);
-            attemptLoginFn.current?.();
-          }
-        }, 1000);
-      } else {
-        setServerWaking(false);
-        retryCountRef.current = 0;
-        const msg = err.isColdStart
-          ? 'Server took too long to respond. Please wait a moment and try again.'
-          : (err.message || 'Login failed. Please try again.');
-        const isLocked = msg.toLowerCase().includes('account locked') || msg.toLowerCase().includes('has been locked');
-        setAccountLocked(isLocked);
-        setError(msg);
+        setIsLoading(true);
+        setTimeout(() => attemptLoginFn.current?.(), 2000);
+        return;
       }
+      retryCountRef.current = 0;
+      const msg = err.isColdStart
+        ? 'Server is temporarily unavailable. Please try again in a moment.'
+        : (err.message || 'Login failed. Please try again.');
+      const isLocked = msg.toLowerCase().includes('account locked') || msg.toLowerCase().includes('has been locked');
+      setAccountLocked(isLocked);
+      setError(msg);
     } finally {
       setIsLoading(false);
     }
@@ -207,12 +187,7 @@ const Login = () => {
     }
     if (!emailForm.password) { setError('Please enter your password.'); return; }
 
-    if (retryTimerRef.current) {
-      clearInterval(retryTimerRef.current);
-      retryTimerRef.current = null;
-    }
     retryCountRef.current = 0;
-    setServerWaking(false);
     await attemptLogin();
   };
 
@@ -376,33 +351,7 @@ const Login = () => {
             </div>
           </div>}
 
-          {serverWaking && (
-            <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '10px', padding: '12px 14px', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#c2410c', fontWeight: 600, fontSize: '13px', marginBottom: '6px' }}>
-                <span className="material-icons" style={{ fontSize: '18px', animation: 'spin 2s linear infinite' }}>hourglass_empty</span>
-                Server is waking up... retrying in {retryIn}s
-              </div>
-              <p style={{ margin: '0 0 8px', fontSize: '12px', color: '#92400e', lineHeight: 1.5 }}>
-                The server was sleeping due to inactivity (Render free plan). Your credentials are fine — please wait.
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  clearInterval(retryTimerRef.current);
-                  retryTimerRef.current = null;
-                  retryCountRef.current = 0;
-                  setServerWaking(false);
-                  setRetryIn(0);
-                  setIsLoading(false);
-                }}
-                style={{ background: 'none', border: '1px solid #c2410c', color: '#c2410c', borderRadius: '6px', padding: '3px 10px', fontSize: '12px', cursor: 'pointer' }}
-              >
-                Cancel
-              </button>
-            </div>
-          )}
-
-          {error && !serverWaking && (
+          {error && (
             accountLocked ? (
               <div style={{ background: '#fff7ed', border: '1.5px solid #fed7aa', borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
@@ -521,14 +470,9 @@ const Login = () => {
                 </div>
               </div>
 
-              <button type="submit" className="btn-auth-submit" disabled={isLoading || serverWaking || accountLocked}
+              <button type="submit" className="btn-auth-submit" disabled={isLoading || accountLocked}
                 style={{ background: `linear-gradient(135deg, ${primary}, ${secondary})` }}>
-                {serverWaking ? (
-                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                    <span style={{ width: '16px', height: '16px', border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />
-                    Retrying in {retryIn}s...
-                  </span>
-                ) : isLoading ? (
+                {isLoading ? (
                   <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                     <span style={{ width: '16px', height: '16px', border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />
                     Signing In...
