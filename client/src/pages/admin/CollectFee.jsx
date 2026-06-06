@@ -165,15 +165,23 @@ export default function CollectFee() {
     } catch { setAssignment(null); } finally { setLoadingFee(false); }
   }, [reloadFeeData]);
 
+  /* ── effective due for an installment (base + carry-over − already paid) ── */
+  const effectiveDue = (inst) => {
+    const base  = Number(inst.amount    || 0);
+    const carry = Number(inst.carryOver || 0);
+    const paid  = Number(inst.paidAmount || 0);
+    return Math.max(0, base + carry - paid);
+  };
+
   /* ── select an installment for payment ── */
   const pickInstallment = (inst) => {
     setSelectedInstallment(inst);
-    setAmount(String(inst.amount));
+    setAmount(String(effectiveDue(inst)));   // pre-fill with full effective due
     setPaymentMode('Cash');
     setReceiptNo(genReceipt());
     setRemarks('');
     setPayDate(todayStr());
-    setReceiptData(null); // clear previous receipt so old one doesn't persist alongside new
+    setReceiptData(null);
   };
 
   const clearInstallmentSelection = () => {
@@ -191,8 +199,9 @@ export default function CollectFee() {
 
     const amt = Number(amount);
     if (!amt || amt <= 0) { showToast('Enter a valid amount', 'error'); return; }
-    if (Math.round(amt * 100) > Math.round(Number(selectedInstallment.amount) * 100)) {
-      showToast(`Amount exceeds installment amount ₹${fmt(selectedInstallment.amount)}`, 'error'); return;
+    const maxDue = effectiveDue(selectedInstallment);
+    if (Math.round(amt * 100) > Math.round(maxDue * 100)) {
+      showToast(`Amount ₹${fmt(amt)} exceeds the due amount ₹${fmt(maxDue)} for this term`, 'error'); return;
     }
 
     setPaying(true);
@@ -325,7 +334,10 @@ export default function CollectFee() {
     ? Math.min(100, (Number(assignment.paidAmount || 0) / Number(assignment.totalFee)) * 100)
     : 0;
 
-  const pendingInstallments = installments.filter(i => String(i.status || '').toUpperCase() !== 'PAID');
+  const pendingInstallments = installments.filter(i => {
+    const s = String(i.status || '').toUpperCase();
+    return s === 'PENDING' || s === 'PARTIAL';
+  });
   const hasInstallments     = installments.length > 0;
 
   return (
@@ -577,18 +589,23 @@ export default function CollectFee() {
                   </div>
                   <div style={{ padding: '8px 0' }}>
                     {installments.map(inst => {
-                      const isPaid    = String(inst.status || '').toUpperCase() === 'PAID';
+                      const status    = String(inst.status || '').toUpperCase();
+                      const isPaid    = status === 'PAID';
+                      const isPartial = status === 'PARTIAL';
                       const overdue   = !isPaid && isOverdue(inst.dueDate);
                       const selected  = selectedInstallment?.id === inst.id;
+                      const carry     = Number(inst.carryOver || 0);
+                      const instPaid  = Number(inst.paidAmount || 0);
+                      const effDue    = effectiveDue(inst);
                       return (
                         <div key={inst.id}
                           onClick={() => !isPaid && pickInstallment(inst)}
                           style={{
                             padding: '10px 16px',
-                            borderLeft: selected ? '3px solid #0de1e8' : '3px solid transparent',
+                            borderLeft: selected ? '3px solid #0de1e8' : isPartial ? '3px solid #f6ad55' : carry > 0 ? '3px solid #e53e3e' : '3px solid transparent',
                             background: selected ? '#f0fff4' : isPaid ? '#fafafa' : '#fff',
                             cursor: isPaid ? 'default' : 'pointer',
-                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
                             borderBottom: '1px solid #f7f7f7',
                             opacity: isPaid ? 0.7 : 1,
                             transition: 'background 0.15s',
@@ -596,17 +613,38 @@ export default function CollectFee() {
                           onMouseEnter={e => { if (!isPaid) e.currentTarget.style.background = selected ? '#f0fff4' : '#f7fdf2'; }}
                           onMouseLeave={e => { e.currentTarget.style.background = selected ? '#f0fff4' : isPaid ? '#fafafa' : '#fff'; }}
                         >
-                          <div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontWeight: 700, fontSize: 13, color: '#2d3748' }}>{inst.termName}</div>
                             <div style={{ fontSize: 11, color: overdue ? '#e53e3e' : '#a0aec0' }}>
-                              Due: {inst.dueDate}
+                              Due: {inst.dueDate || '—'}
                               {overdue && <span style={{ marginLeft: 4, fontWeight: 700 }}>· OVERDUE</span>}
                             </div>
+                            {/* Carry-over badge */}
+                            {carry > 0 && (
+                              <div style={{ marginTop: 4, display: 'inline-flex', alignItems: 'center', gap: 4, background: '#fff5f5', border: '1px solid #fed7d7', borderRadius: 6, padding: '2px 7px' }}>
+                                <span className="material-icons" style={{ fontSize: 11, color: '#e53e3e' }}>arrow_forward</span>
+                                <span style={{ fontSize: 10, color: '#e53e3e', fontWeight: 700 }}>₹{fmt(carry)} carried from previous term</span>
+                              </div>
+                            )}
+                            {/* Partial payment progress */}
+                            {isPartial && instPaid > 0 && (
+                              <div style={{ marginTop: 4, fontSize: 10, color: '#b45309', fontWeight: 600 }}>
+                                ₹{fmt(instPaid)} paid · ₹{fmt(effDue)} still due
+                              </div>
+                            )}
                           </div>
-                          <div style={{ textAlign: 'right' }}>
-                            <div style={{ fontWeight: 800, fontSize: 13, color: isPaid ? '#276749' : '#2d3748' }}>₹{fmt(inst.amount)}</div>
+                          <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 12 }}>
+                            {/* Show effective due when carry exists, base amount below */}
+                            <div style={{ fontWeight: 800, fontSize: 13, color: isPaid ? '#276749' : carry > 0 ? '#e53e3e' : '#2d3748' }}>
+                              ₹{fmt(isPaid ? inst.amount : effDue > 0 ? effDue : inst.amount)}
+                            </div>
+                            {carry > 0 && !isPaid && (
+                              <div style={{ fontSize: 10, color: '#a0aec0', textDecoration: 'line-through' }}>₹{fmt(inst.amount)}</div>
+                            )}
                             {isPaid
                               ? <span style={{ fontSize: 10, color: '#276749', fontWeight: 700 }}>✓ PAID</span>
+                              : isPartial
+                              ? <span style={{ fontSize: 10, color: '#b45309', fontWeight: 700 }}>◑ PARTIAL</span>
                               : <span style={{ fontSize: 10, color: selected ? '#276749' : '#f6ad55', fontWeight: 700 }}>
                                   {selected ? '▶ Selected' : 'Tap to pay'}
                                 </span>
@@ -622,7 +660,7 @@ export default function CollectFee() {
               {/* Payment form */}
               {assignment && selectedInstallment && (
                 <div style={{ background: '#fff', border: '2px solid #0de1e8', borderRadius: 12, padding: 20 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                     <h4 style={{ margin: 0, fontSize: 14, fontWeight: 800, color: '#276749' }}>
                       Collect: {selectedInstallment.termName}
                     </h4>
@@ -632,12 +670,47 @@ export default function CollectFee() {
                     </button>
                   </div>
 
+                  {/* Effective due breakdown */}
+                  {(() => {
+                    const carry   = Number(selectedInstallment.carryOver  || 0);
+                    const base    = Number(selectedInstallment.amount      || 0);
+                    const alrPaid = Number(selectedInstallment.paidAmount  || 0);
+                    const effDue  = effectiveDue(selectedInstallment);
+                    return (
+                      <div style={{ background: '#f8fafc', borderRadius: 8, padding: '10px 12px', marginBottom: 14, fontSize: 12 }}>
+                        {carry > 0 && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#718096', marginBottom: 3 }}>
+                            <span>Base amount</span><span>₹{fmt(base)}</span>
+                          </div>
+                        )}
+                        {carry > 0 && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#e53e3e', marginBottom: 3, fontWeight: 600 }}>
+                            <span>↪ Carried from previous term</span><span>+ ₹{fmt(carry)}</span>
+                          </div>
+                        )}
+                        {alrPaid > 0 && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#276749', marginBottom: 3 }}>
+                            <span>Already paid</span><span>− ₹{fmt(alrPaid)}</span>
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, color: '#1a202c', borderTop: carry > 0 || alrPaid > 0 ? '1px solid #e2e8f0' : 'none', paddingTop: carry > 0 || alrPaid > 0 ? 6 : 0, marginTop: carry > 0 || alrPaid > 0 ? 4 : 0 }}>
+                          <span>Due this term</span><span style={{ color: '#e53e3e' }}>₹{fmt(effDue)}</span>
+                        </div>
+                        <div style={{ marginTop: 6, fontSize: 11, color: '#718096' }}>
+                          You can pay less than the due amount — the shortfall will be carried to the next term.
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   <div style={{ marginBottom: 12 }}>
-                    <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Amount (₹) *</label>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>
+                      Amount Received (₹) *
+                    </label>
                     <input
-                      type="number" min="1" max={selectedInstallment.amount} value={amount}
+                      type="number" min="1" max={effectiveDue(selectedInstallment)} value={amount}
                       onChange={e => setAmount(e.target.value)}
-                      placeholder={`Max ₹${fmt(selectedInstallment.amount)}`}
+                      placeholder={`Max ₹${fmt(effectiveDue(selectedInstallment))}`}
                       style={{ width: '100%', padding: '9px 12px', border: '2px solid #0de1e8', borderRadius: 8, fontSize: 15, fontWeight: 700, outline: 'none', boxSizing: 'border-box' }}
                     />
                   </div>

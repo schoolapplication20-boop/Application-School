@@ -1996,14 +1996,51 @@ public class AdminService {
             try { paymentDate = LocalDate.parse(paidDateStr); } catch (Exception ignored) {}
         }
 
-        // Mark installment paid
-        installment.setStatus(FeeInstallment.Status.PAID);
+        // Determine actual amount paid (frontend sends amountPaid; fall back to full amount)
+        BigDecimal amountPaid;
+        try {
+            amountPaid = new BigDecimal(body.get("amountPaid").toString());
+        } catch (Exception e) {
+            return ApiResponse.error("Invalid amount");
+        }
+        if (amountPaid.compareTo(BigDecimal.ZERO) <= 0) return ApiResponse.error("Amount must be greater than zero");
+
+        // Effective amount due = base installment amount + any carry-over from previous term
+        BigDecimal base      = installment.getAmount()   != null ? installment.getAmount()   : BigDecimal.ZERO;
+        BigDecimal carryOver = installment.getCarryOver() != null ? installment.getCarryOver() : BigDecimal.ZERO;
+        BigDecimal prevPaid  = installment.getPaidAmount() != null ? installment.getPaidAmount() : BigDecimal.ZERO;
+        BigDecimal effectiveDue = base.add(carryOver).subtract(prevPaid);
+
+        if (amountPaid.compareTo(effectiveDue) > 0)
+            return ApiResponse.error("Amount ₹" + amountPaid + " exceeds due amount ₹" + effectiveDue);
+
+        // Update installment with actual paid amount
+        BigDecimal totalPaidForTerm = prevPaid.add(amountPaid);
+        installment.setPaidAmount(totalPaidForTerm);
         installment.setPaidDate(paymentDate);
+
+        BigDecimal shortage = base.add(carryOver).subtract(totalPaidForTerm);
+        boolean fullyCovered = shortage.compareTo(BigDecimal.ZERO) <= 0;
+
+        if (fullyCovered) {
+            installment.setStatus(FeeInstallment.Status.PAID);
+        } else {
+            // Partial payment — roll the shortage to the next pending term
+            installment.setStatus(FeeInstallment.Status.PARTIAL);
+            feeInstallmentRepository.findNextPending(installment.getAssignmentId(), installment.getId())
+                .ifPresent(next -> {
+                    BigDecimal existingCarry = next.getCarryOver() != null ? next.getCarryOver() : BigDecimal.ZERO;
+                    next.setCarryOver(existingCarry.add(shortage));
+                    feeInstallmentRepository.save(next);
+                    log.info("[collectInstallmentFee] ₹{} shortage from '{}' rolled over to '{}'",
+                        shortage, installment.getTermName(), next.getTermName());
+                });
+        }
         FeeInstallment savedInst = feeInstallmentRepository.save(installment);
 
-        // Update assignment totals
+        // Update assignment totals with actual amount paid
         BigDecimal currentPaid = assignment.getPaidAmount() != null ? assignment.getPaidAmount() : BigDecimal.ZERO;
-        BigDecimal newPaid = currentPaid.add(installment.getAmount());
+        BigDecimal newPaid = currentPaid.add(amountPaid);
         assignment.setPaidAmount(newPaid);
         if (newPaid.compareTo(assignment.getTotalFee()) >= 0) assignment.setStatus(StudentFeeAssignment.Status.PAID);
         else assignment.setStatus(StudentFeeAssignment.Status.PARTIAL);
@@ -2020,7 +2057,7 @@ public class AdminService {
                 .className(assignment.getClassName())
                 .feeType("Fee Payment")
                 .term(installment.getTermName())
-                .amountPaid(installment.getAmount())
+                .amountPaid(amountPaid)
                 .paymentDate(paymentDate)
                 .paymentMode(str(body, "paymentMode", "CASH"))
                 .receiptNumber(receiptNumber)
@@ -2028,7 +2065,11 @@ public class AdminService {
                 .remarks(str(body, "remarks", null))
                 .build());
 
-        return ApiResponse.success("Payment recorded for " + installment.getTermName(), savedInst);
+        String msg = fullyCovered
+            ? "Payment recorded for " + installment.getTermName()
+            : "Partial payment recorded. ₹" + shortage.setScale(0, java.math.RoundingMode.HALF_UP)
+              + " carried over to the next term.";
+        return ApiResponse.success(msg, savedInst);
     }
 
     /**

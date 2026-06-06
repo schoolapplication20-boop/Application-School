@@ -138,9 +138,12 @@ public class DatabaseMigration implements CommandLineRunner {
         log.debug("class_fee_structure unique constraint patched.");
 
         // ── fee_installments: ensure table exists with required columns ─────────
-        // Hibernate ddl-auto=update will create the table, but we add the index
-        // manually in case the table was created before the @Index annotation existed.
         exec("CREATE INDEX IF NOT EXISTS idx_fee_installments_assignment_id ON fee_installments(assignment_id)");
+        // Rollover feature columns (added for partial payment carry-over support)
+        exec("ALTER TABLE fee_installments ADD COLUMN IF NOT EXISTS paid_amount  DECIMAL(10,2) DEFAULT 0");
+        exec("ALTER TABLE fee_installments ADD COLUMN IF NOT EXISTS carry_over   DECIMAL(10,2) DEFAULT 0");
+        // PARTIAL is a new status value — Postgres enums need ALTER TYPE; if stored as VARCHAR it's automatic
+        // (status column is VARCHAR via @Enumerated(STRING) so no DDL change needed for PARTIAL)
         log.debug("fee_installments index ensured.");
 
         // 1. Drop NOT NULL from legacy columns so INSERT works without them

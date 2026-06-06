@@ -19,6 +19,13 @@ public interface FeeInstallmentRepository extends JpaRepository<FeeInstallment, 
 
     long countByAssignmentId(Long assignmentId);
 
+    /** First PENDING or PARTIAL installment after the given one, ordered by due date then creation. */
+    @Query("SELECT fi FROM FeeInstallment fi WHERE fi.assignmentId = :assignmentId " +
+           "AND fi.id <> :excludeId " +
+           "AND fi.status IN (com.schoolers.model.FeeInstallment.Status.PENDING, com.schoolers.model.FeeInstallment.Status.PARTIAL) " +
+           "ORDER BY fi.dueDate ASC NULLS LAST, fi.createdAt ASC")
+    java.util.Optional<FeeInstallment> findNextPending(@Param("assignmentId") Long assignmentId, @Param("excludeId") Long excludeId);
+
     @Transactional
     void deleteByAssignmentId(Long assignmentId);
 
