@@ -131,7 +131,7 @@ public class ReportCardController {
         if (student == null) return ResponseEntity.status(404).body(ApiResponse.error("Student not found"));
         if (schoolId != null && !schoolId.equals(student.getSchoolId()))
             return ResponseEntity.status(403).body(ApiResponse.error("Unauthorized"));
-        return ResponseEntity.ok(buildReportCard(student, examType));
+        return ResponseEntity.ok(ApiResponse.success(buildReportCard(student, examType)));
     }
 
     // ── Bulk CSV import of marks (teacher) ─────────────────────────────────────
