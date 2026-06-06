@@ -140,6 +140,8 @@ export default function Students() {
   const [photoPreview, setPhotoPreview] = useState(null);
   const [apiStatus, setApiStatus]       = useState(null); // 'live' | 'offline'
   const [loadingStudents, setLoadingStudents] = useState(true);
+  const [totalActive, setTotalActive]     = useState(0);
+  const [totalInactive, setTotalInactive] = useState(0);
   const [availableClasses, setAvailableClasses] = useState([]); // [{name, section}] from DB
   const [capacityInfo, setCapacityInfo] = useState(null);   // { capacity, enrolled, available, isFull }
   const [capacityChecking, setCapacityChecking] = useState(false);
@@ -197,11 +199,18 @@ export default function Students() {
   const loadStudents = useCallback((overridePage) => {
     const pg = overridePage !== undefined ? overridePage : currentPage;
     setLoadingStudents(true);
-    apiFetchStudents({ page: pg, size: PAGE_SIZE, search: searchTerm, className: filterClass, status: filterStatus })
-      .then(({ content, totalElements: te, totalPages: tp }) => {
-        setStudents(content);
-        setTotalElements(te);
-        setTotalPages(tp);
+    const base = { search: searchTerm, className: filterClass };
+    Promise.all([
+      apiFetchStudents({ page: pg, size: PAGE_SIZE, ...base, status: filterStatus }),
+      apiFetchStudents({ page: 0, size: 1, ...base, status: 'Active' }),
+      apiFetchStudents({ page: 0, size: 1, ...base, status: 'Inactive' }),
+    ])
+      .then(([main, active, inactive]) => {
+        setStudents(main.content);
+        setTotalElements(main.totalElements);
+        setTotalPages(main.totalPages);
+        setTotalActive(active.totalElements);
+        setTotalInactive(inactive.totalElements);
         setApiStatus('live');
       })
       .catch(() => setApiStatus('offline'))
@@ -593,8 +602,8 @@ export default function Students() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '16px', marginBottom: '24px' }}>
         {[
           { label: 'Total Students', value: totalElements,                                        icon: 'school',       color: '#0de1e8' },
-          { label: 'Active',         value: students.filter(s => s.status === 'Active').length,  icon: 'check_circle', color: '#3182ce' },
-          { label: 'Inactive',       value: students.filter(s => s.status === 'Inactive').length,icon: 'cancel',       color: '#e53e3e' },
+          { label: 'Active',         value: totalActive,   icon: 'check_circle', color: '#22c55e' },
+          { label: 'Inactive',       value: totalInactive, icon: 'cancel',       color: '#e53e3e' },
           { label: 'Classes',        value: new Set(students.map(s => s.class)).size,            icon: 'class',        color: '#805ad5' },
         ].map(c => (
           <div key={c.label} className="stat-card">
@@ -718,6 +727,80 @@ export default function Students() {
                 Cancel
               </button>
             </>
+          )}
+        </div>
+
+        {/* ── Account Status Toggles ─────────────────────────────────── */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+          padding: '10px 20px', borderBottom: '1px solid #f0f4f8', background: '#fafbfc',
+        }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: '#718096', whiteSpace: 'nowrap' }}>
+            Account Status:
+          </span>
+          <div style={{ display: 'flex', gap: 4, background: '#f1f5f9', borderRadius: 12, padding: 4 }}>
+            {/* All */}
+            <button
+              onClick={() => { setFilterStatus(''); setCurrentPage(0); }}
+              style={{
+                padding: '6px 14px', borderRadius: 9, border: 'none', cursor: 'pointer',
+                background: filterStatus === '' ? '#fff' : 'transparent',
+                color: filterStatus === '' ? '#1e293b' : '#94a3b8',
+                fontWeight: 700, fontSize: 12,
+                boxShadow: filterStatus === '' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                transition: 'all 0.15s',
+              }}
+            >
+              All
+            </button>
+            {/* Active */}
+            <button
+              onClick={() => { setFilterStatus(filterStatus === 'Active' ? '' : 'Active'); setCurrentPage(0); }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 5,
+                padding: '6px 14px', borderRadius: 9, border: 'none', cursor: 'pointer',
+                background: filterStatus === 'Active' ? '#22c55e' : 'transparent',
+                color: filterStatus === 'Active' ? '#fff' : '#64748b',
+                fontWeight: 700, fontSize: 12,
+                boxShadow: filterStatus === 'Active' ? '0 2px 8px rgba(34,197,94,0.35)' : 'none',
+                transition: 'all 0.15s',
+              }}
+            >
+              <span className="material-icons" style={{ fontSize: 14 }}>check_circle</span>
+              Active
+              <span style={{
+                background: filterStatus === 'Active' ? 'rgba(255,255,255,0.28)' : '#e2e8f0',
+                color: filterStatus === 'Active' ? '#fff' : '#64748b',
+                borderRadius: 20, padding: '1px 7px', fontSize: 11, fontWeight: 800,
+              }}>{totalActive}</span>
+            </button>
+            {/* Inactive */}
+            <button
+              onClick={() => { setFilterStatus(filterStatus === 'Inactive' ? '' : 'Inactive'); setCurrentPage(0); }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 5,
+                padding: '6px 14px', borderRadius: 9, border: 'none', cursor: 'pointer',
+                background: filterStatus === 'Inactive' ? '#ef4444' : 'transparent',
+                color: filterStatus === 'Inactive' ? '#fff' : '#64748b',
+                fontWeight: 700, fontSize: 12,
+                boxShadow: filterStatus === 'Inactive' ? '0 2px 8px rgba(239,68,68,0.35)' : 'none',
+                transition: 'all 0.15s',
+              }}
+            >
+              <span className="material-icons" style={{ fontSize: 14 }}>cancel</span>
+              Inactive
+              <span style={{
+                background: filterStatus === 'Inactive' ? 'rgba(255,255,255,0.28)' : '#e2e8f0',
+                color: filterStatus === 'Inactive' ? '#fff' : '#64748b',
+                borderRadius: 20, padding: '1px 7px', fontSize: 11, fontWeight: 800,
+              }}>{totalInactive}</span>
+            </button>
+          </div>
+          {filterStatus && (
+            <span style={{ fontSize: 12, color: '#94a3b8' }}>
+              Showing <strong style={{ color: '#1e293b' }}>{totalElements}</strong>{' '}
+              {filterStatus.toLowerCase()} student{totalElements !== 1 ? 's' : ''}
+            </span>
           )}
         </div>
 
