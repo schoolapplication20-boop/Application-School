@@ -1168,6 +1168,13 @@ public class AdminService {
 
         if (name.isBlank()) return ApiResponse.error("Class name is required");
 
+        // Validate that the assigned teacher is eligible to be a class teacher
+        if (classRoom.getTeacherId() != null) {
+            Teacher t = teacherRepository.findById(classRoom.getTeacherId()).orElse(null);
+            if (t == null || !isClassTeacherRole(t.getTeacherType()))
+                return ApiResponse.error("Only Class Teachers or Class+Subject Teachers can be assigned as class teacher");
+        }
+
         // School-scoped duplicate check
         boolean exists = (schoolId != null)
                 ? classRoomRepository.existsBySchoolIdAndNameIgnoreCaseAndSectionIgnoreCase(schoolId, name, section)
@@ -1194,6 +1201,10 @@ public class AdminService {
                     if (updated.getName() != null)        c.setName(resolveClassName(updated.getName()));
                     if (updated.getSection() != null)     c.setSection(normalizeSection(updated.getSection()));
                     if (updated.getTeacherId() != null && !updated.getTeacherId().equals(c.getTeacherId())) {
+                        // Validate new teacher is eligible for class teacher role
+                        Teacher candidateTeacher = teacherRepository.findById(updated.getTeacherId()).orElse(null);
+                        if (candidateTeacher == null || !isClassTeacherRole(candidateTeacher.getTeacherType()))
+                            return ApiResponse.<ClassRoom>error("Only Class Teachers or Class+Subject Teachers can be assigned as class teacher");
                         // Remove class from previous teacher's classes text field
                         if (c.getTeacherId() != null) {
                             teacherRepository.findById(c.getTeacherId()).ifPresent(prev ->

@@ -541,11 +541,13 @@ const Classes = () => {
                     }}
                   >
                     <option value="">— No teacher assigned —</option>
-                    {teacherList.map(t => (
-                      <option key={t.id} value={t.id}>
-                        {t.name}{t.employeeId ? ` (${t.employeeId})` : ''}
-                      </option>
-                    ))}
+                    {teacherList
+                      .filter(t => t.teacherType === 'CLASS_TEACHER' || t.teacherType === 'BOTH')
+                      .map(t => (
+                        <option key={t.id} value={t.id}>
+                          {t.name}{t.employeeId ? ` (${t.employeeId})` : ''}
+                        </option>
+                      ))}
                   </select>
                 </div>
                 <div>
