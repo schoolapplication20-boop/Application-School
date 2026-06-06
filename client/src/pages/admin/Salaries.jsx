@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import Layout from '../../components/Layout';
 import Toast from '../../components/Toast';
 import { salaryAPI } from '../../services/api';
@@ -45,10 +45,14 @@ export default function Salaries() {
   const [holidayForm, setHolidayForm] = useState({ name: '', date: '', recurring: false });
   const [payHistory,  setPayHistory]  = useState([]);
   const [saving, setSaving] = useState(false);
+  const toastTimerRef = useRef(null);
+
+  useEffect(() => () => clearTimeout(toastTimerRef.current), []);
 
   const showToast = useCallback((message, type = 'success') => {
+    clearTimeout(toastTimerRef.current);
     setToast({ message, type });
-    setTimeout(() => setToast(null), 3500);
+    toastTimerRef.current = setTimeout(() => setToast(null), 3500);
   }, []);
 
   const loadRecords = useCallback(async () => {

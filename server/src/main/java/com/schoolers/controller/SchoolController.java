@@ -92,6 +92,7 @@ public class SchoolController {
     // ── GET /api/schools/{id} ─────────────────────────────────────────────────
     // {id} = human-assigned display number (1, 2, 3…) — NOT the DB auto-generated PK.
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPLICATION_OWNER','ADMIN')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getSchoolById(@PathVariable Integer id) {
         return ResponseEntity.ok(schoolService.getSchoolById(id));
     }
@@ -239,11 +240,25 @@ public class SchoolController {
     // ── PATCH /api/schools/{id}/logo ──────────────────────────────────────────
     // {id} = human-assigned display number (1, 2, 3…) — NOT the DB auto-generated PK.
     @PatchMapping(value = "/{id}/logo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPLICATION_OWNER','ADMIN')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> updateLogo(
             @PathVariable Integer id,
-            @RequestPart("logo") MultipartFile logo) {
+            @RequestPart("logo") MultipartFile logo,
+            Authentication auth) {
         try {
+            // ADMIN must only update their own school's logo
+            if (auth != null) {
+                User caller = userRepository.findByEmailIgnoreCase(auth.getName()).orElse(null);
+                if (caller != null) {
+                    String role = caller.getRole() != null ? caller.getRole().name() : "";
+                    if (!"SUPER_ADMIN".equals(role) && !"APPLICATION_OWNER".equals(role)) {
+                        Long callerSchoolId = caller.getSchoolId();
+                        if (callerSchoolId == null || !callerSchoolId.equals(id.longValue())) {
+                            return ResponseEntity.status(403).body(ApiResponse.error("Access denied"));
+                        }
+                    }
+                }
+            }
             String oldLogoUrl = schoolService.getSchoolById(id).getData() != null
                     ? (String) schoolService.getSchoolById(id).getData().get("logoUrl")
                     : null;

@@ -298,6 +298,9 @@ public class TeacherService {
                     if (!belongsToClass(student, classRoom)) {
                         return ApiResponse.<String>error("Student does not belong to this class");
                     }
+                    // Cascade-delete related records before removing the student
+                    marksRepository.deleteByStudentId(student.getId());
+                    attendanceRepository.deleteByStudentId(student.getId());
                     studentRepository.deleteById(student.getId());
                     return ApiResponse.success("Student deleted", "Deleted");
                 })

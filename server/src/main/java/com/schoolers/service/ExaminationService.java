@@ -12,6 +12,7 @@ import com.schoolers.repository.StudentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -90,8 +91,11 @@ public class ExaminationService {
         return ApiResponse.success("Exam schedule updated", examScheduleRepository.save(s));
     }
 
-    public ApiResponse<Void> deleteSchedule(Long id) {
-        if (!examScheduleRepository.existsById(id)) return ApiResponse.error("Schedule not found");
+    public ApiResponse<Void> deleteSchedule(Long id, Long schoolId) {
+        ExamSchedule schedule = examScheduleRepository.findById(id).orElse(null);
+        if (schedule == null) return ApiResponse.error("Schedule not found");
+        if (schoolId != null && !schoolId.equals(schedule.getSchoolId()))
+            return ApiResponse.error("Schedule not found");
         examScheduleRepository.deleteById(id);
         return ApiResponse.success("Exam schedule deleted", null);
     }
@@ -265,10 +269,12 @@ public class ExaminationService {
         return ApiResponse.success("Certificate generated", certificateRepository.save(cert));
     }
 
-    public ApiResponse<Certificate> verifyCertificate(Long id, String verifiedBy) {
+    public ApiResponse<Certificate> verifyCertificate(Long id, String verifiedBy, Long schoolId) {
         Optional<Certificate> opt = certificateRepository.findById(id);
         if (opt.isEmpty()) return ApiResponse.error("Certificate not found");
         Certificate cert = opt.get();
+        if (schoolId != null && cert.getSchoolId() != null && !schoolId.equals(cert.getSchoolId()))
+            return ApiResponse.error("Certificate not found");
         cert.setVerifiedBy(verifiedBy);
         cert.setVerifiedAt(java.time.LocalDateTime.now());
         return ApiResponse.success("Certificate verified", certificateRepository.save(cert));
@@ -296,7 +302,7 @@ public class ExaminationService {
     private String generateTicketNumber() {
         String prefix = "HT";
         String timestamp = String.valueOf(System.currentTimeMillis()).substring(5);
-        String random = String.format("%04d", new Random().nextInt(9999));
+        String random = String.format("%04d", new SecureRandom().nextInt(9999));
         return prefix + timestamp + random;
     }
 
@@ -309,7 +315,7 @@ public class ExaminationService {
             default -> "CERT";
         };
         String year = String.valueOf(LocalDate.now().getYear()).substring(2);
-        String random = String.format("%06d", new Random().nextInt(999999));
+        String random = String.format("%06d", new SecureRandom().nextInt(999999));
         return prefix + year + random;
     }
 

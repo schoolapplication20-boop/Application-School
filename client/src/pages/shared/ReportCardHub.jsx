@@ -204,15 +204,17 @@ export default function ReportCardHub() {
   useEffect(() => {
     if (isTeacher) { setSearchResults([]); return; }
     if (!studentSearch || studentSearch.length < 2) { setSearchResults([]); return; }
+    let alive = true;
     const t = setTimeout(async () => {
+      if (!alive) return;
       setSearching(true);
       try {
         const res = await adminAPI.searchStudentsForFee(studentSearch, '', '');
-        setSearchResults(res.data?.data ?? []);
-      } catch { setSearchResults([]); }
-      finally { setSearching(false); }
+        if (alive) setSearchResults(res.data?.data ?? []);
+      } catch { if (alive) setSearchResults([]); }
+      finally { if (alive) setSearching(false); }
     }, 300);
-    return () => clearTimeout(t);
+    return () => { clearTimeout(t); alive = false; };
   }, [studentSearch, isTeacher]);
 
   const selectStudent = (s) => {

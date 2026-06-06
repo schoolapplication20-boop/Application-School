@@ -292,7 +292,8 @@ export const studentAPI = {
   // Convenience: fetch the full academic year (Jan 1 → today) in one call
   getMyFullAttendance: () => {
     const today = new Date().toISOString().split('T')[0];
-    const startDate = `${new Date().getFullYear()}-01-01`;
+    const year = new Date().getMonth() >= 3 ? new Date().getFullYear() : new Date().getFullYear() - 1;
+    const startDate = `${year}-04-01`;
     return api.get('/api/student/attendance', { params: { startDate, endDate: today } });
   },
   getMyMarks:          ()         => api.get('/api/student/marks'),

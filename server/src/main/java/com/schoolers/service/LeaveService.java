@@ -309,7 +309,6 @@ public class LeaveService {
     public ApiResponse<LeaveRequest> createLeave(Map<String, Object> body, Authentication auth) {
         String fromDateStr      = str(body, "fromDate", null);
         String toDateStr        = str(body, "toDate",   null);
-        String requesterTypeStr = str(body, "requesterType", "TEACHER");
 
         if (fromDateStr == null || toDateStr == null)
             return ApiResponse.error("From date and To date are required");
@@ -322,20 +321,33 @@ public class LeaveService {
             return ApiResponse.error("Invalid date format. Use YYYY-MM-DD");
         }
 
-        // Resolve schoolId from JWT so the record is always school-scoped
+        // Derive requesterType from the caller's role — never trust the body value for TEACHER/STUDENT
+        String requesterTypeStr;
         Long schoolId = null;
         Long resolvedRequesterId = longVal(body, "requesterId", null);
         if (auth != null) {
             var userOpt = userRepository.findByEmailIgnoreCase(auth.getName());
             if (userOpt.isPresent()) {
-                schoolId = userOpt.get().getSchoolId();
-                // For teacher leaves, override requesterId with the teacher's own id
-                if ("TEACHER".equalsIgnoreCase(requesterTypeStr)) {
-                    teacherRepository.findByUserId(userOpt.get().getId())
+                User caller = userOpt.get();
+                schoolId = caller.getSchoolId();
+                String roleName = caller.getRole().name();
+                if ("TEACHER".equals(roleName)) {
+                    requesterTypeStr = "TEACHER";
+                    // Override requesterId with the teacher's own entity id
+                    teacherRepository.findByUserId(caller.getId())
                             .ifPresent(t -> body.put("requesterId", t.getId()));
                     resolvedRequesterId = longVal(body, "requesterId", resolvedRequesterId);
+                } else if ("STUDENT".equals(roleName)) {
+                    requesterTypeStr = "STUDENT";
+                } else {
+                    // ADMIN / SUPER_ADMIN — allow body value as-is
+                    requesterTypeStr = str(body, "requesterType", "TEACHER");
                 }
+            } else {
+                requesterTypeStr = str(body, "requesterType", "TEACHER");
             }
+        } else {
+            requesterTypeStr = str(body, "requesterType", "TEACHER");
         }
 
         String requesterName = str(body, "requesterName", "Unknown");

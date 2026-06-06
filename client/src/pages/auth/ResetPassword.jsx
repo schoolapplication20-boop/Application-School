@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { authAPI } from '../../services/api';
@@ -19,6 +19,9 @@ const ResetPassword = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const navTimerRef = useRef(null);
+
+  useEffect(() => () => clearTimeout(navTimerRef.current), []);
 
   const validatePassword = (pw) => {
     const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
@@ -57,7 +60,7 @@ const ResetPassword = () => {
       });
       updateUser({ firstLogin: false });
       setSuccess('Password changed successfully! Redirecting...');
-      setTimeout(() => navigate(getDashboardPath()), 1800);
+      navTimerRef.current = setTimeout(() => navigate(getDashboardPath()), 1800);
     } catch (err) {
       const msg = err.response?.data?.message || 'Failed to change password. Please try again.';
       setError(msg);

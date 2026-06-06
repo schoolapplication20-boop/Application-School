@@ -16,6 +16,9 @@ export default function VerifyEmail() {
   const [error,    setError]    = useState('');
   const [success,  setSuccess]  = useState(false);
   const inputRefs = useRef([]);
+  const navTimerRef = useRef(null);
+
+  useEffect(() => () => clearTimeout(navTimerRef.current), []);
 
   useEffect(() => { inputRefs.current[0]?.focus(); }, []);
 
@@ -53,7 +56,7 @@ export default function VerifyEmail() {
       const res = await authAPI.verifyEmail({ email: email.trim().toLowerCase(), otp: code });
       if (res.data?.success) {
         setSuccess(true);
-        setTimeout(() => navigate('/login?role=STUDENT', { replace: true }), 2000);
+        navTimerRef.current = setTimeout(() => navigate('/login?role=STUDENT', { replace: true }), 2000);
       } else {
         setError(res.data?.message || 'Verification failed. Please try again.');
       }

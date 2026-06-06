@@ -12,6 +12,9 @@ const ForgotPassword = () => {
   const [error, setError] = useState('');
 
   const OTP_EXPIRY_SECONDS = 300;
+  const navTimerRef = useRef(null);
+
+  useEffect(() => () => clearTimeout(navTimerRef.current), []);
 
   // OTP popup state
   const [showOtpPopup, setShowOtpPopup] = useState(false);
@@ -146,7 +149,7 @@ const ForgotPassword = () => {
     try {
       await authAPI.verifyOTP({ identifier, otp: otpString });
       setOtpVerified(true);
-      setTimeout(() => {
+      navTimerRef.current = setTimeout(() => {
         setShowOtpPopup(false);
         navigate('/set-new-password', { state: { identifier } });
       }, 1000);

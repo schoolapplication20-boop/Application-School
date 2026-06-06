@@ -35,6 +35,8 @@ public interface TeacherRepository extends JpaRepository<Teacher, Long> {
 
     Optional<Teacher> findByPrimaryClassId(Long primaryClassId);
 
+    List<Teacher> findAllByPrimaryClassId(Long primaryClassId);
+
     List<Teacher> findBySubject(String subject);
     long countByIsActive(Boolean isActive);
 

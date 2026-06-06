@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Layout from '../../components/Layout';
 import Toast from '../../components/Toast';
 import { useAuth } from '../../context/AuthContext';
@@ -283,6 +283,8 @@ export default function Teachers() {
   const [errors,    setErrors]    = useState({});
   const [toast,     setToast]     = useState(null);
   const [classList, setClassList] = useState([]);
+  const [saving,    setSaving]    = useState(false);
+  const toastTimerRef = useRef(null);
 
   // email OTP verification
   const [teacherOtp, setTeacherOtp] = useState({ sent: false, verified: false, sending: false, verifying: false, value: '', error: '' });
@@ -318,9 +320,12 @@ export default function Teachers() {
   };
 
   const showToast = useCallback((message, type = 'success') => {
+    clearTimeout(toastTimerRef.current);
     setToast({ message, type });
-    setTimeout(() => setToast(null), 4000);
+    toastTimerRef.current = setTimeout(() => setToast(null), 4000);
   }, []);
+
+  useEffect(() => () => clearTimeout(toastTimerRef.current), []);
 
   // ── Load teachers and classes on mount ────────────────────────────────────
   useEffect(() => {
@@ -387,8 +392,11 @@ export default function Teachers() {
   // ── Add / Edit ─────────────────────────────────────────────────────────────
   const handleSave = async (e) => {
     e.preventDefault();
+    if (saving) return;
     if (!validate()) return;
 
+    setSaving(true);
+    try {
     if (editTeacher) {
       // ── Edit ──────────────────────────────────────────────────────────────
       const result = await apiUpdateTeacher(editTeacher.id, {
@@ -462,6 +470,9 @@ export default function Teachers() {
     setForm(EMPTY_FORM);
     setErrors({});
     setEditTeacher(null);
+    } finally {
+      setSaving(false);
+    }
   };
 
   // ── Delete ─────────────────────────────────────────────────────────────────
@@ -1055,10 +1066,10 @@ export default function Teachers() {
                   style={{ padding: '10px 20px', border: '1.5px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: 'pointer', fontWeight: 600, fontFamily: 'Poppins, sans-serif' }}>
                   Cancel
                 </button>
-                <button type="submit"
-                  style={{ padding: '10px 24px', background: '#0de1e8', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, cursor: 'pointer', fontFamily: 'Poppins, sans-serif', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <button type="submit" disabled={saving}
+                  style={{ padding: '10px 24px', background: '#0de1e8', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'Poppins, sans-serif', display: 'flex', alignItems: 'center', gap: 6, opacity: saving ? 0.7 : 1 }}>
                   <span className="material-icons" style={{ fontSize: 16 }}>{editTeacher ? 'save' : 'person_add'}</span>
-                  {editTeacher ? 'Update Teacher' : 'Add Teacher & Generate Credentials'}
+                  {saving ? 'Saving…' : (editTeacher ? 'Update Teacher' : 'Add Teacher & Generate Credentials')}
                 </button>
               </div>
             </form>

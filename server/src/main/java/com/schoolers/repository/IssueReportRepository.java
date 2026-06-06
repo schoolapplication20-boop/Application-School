@@ -11,5 +11,5 @@ public interface IssueReportRepository extends JpaRepository<IssueReport, Long> 
 
     List<IssueReport> findAllByOrderByCreatedAtDesc();
 
-    List<IssueReport> findByStatusOrderByCreatedAtDesc(String status);
+    List<IssueReport> findByStatusOrderByCreatedAtDesc(IssueReport.Status status);
 }

@@ -10,6 +10,8 @@ import java.util.Optional;
 @Repository
 public interface TransportBusRepository extends JpaRepository<TransportBus, Long> {
     Optional<TransportBus> findByBusNo(String busNo);
+    /** @deprecated Use {@link #existsByBusNoAndSchoolId(String, Long)} for school-scoped uniqueness checks. */
+    @Deprecated
     boolean existsByBusNo(String busNo);
 
     // School-scoped queries

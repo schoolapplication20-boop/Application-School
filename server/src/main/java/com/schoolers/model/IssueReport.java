@@ -32,13 +32,15 @@ public class IssueReport {
     @Builder.Default
     private String category = "BUG"; // BUG | UI_ISSUE | FEATURE_REQUEST | PERFORMANCE | OTHER
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default
-    private String priority = "MEDIUM"; // LOW | MEDIUM | HIGH | CRITICAL
+    private Priority priority = Priority.MEDIUM;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default
-    private String status = "OPEN"; // OPEN | IN_PROGRESS | RESOLVED | CLOSED
+    private Status status = Status.OPEN;
 
     @Column(length = 100)
     private String reporterName;
@@ -65,4 +67,7 @@ public class IssueReport {
     @UpdateTimestamp
     @Column
     private LocalDateTime updatedAt;
+
+    public enum Priority { LOW, MEDIUM, HIGH, CRITICAL }
+    public enum Status { OPEN, IN_PROGRESS, RESOLVED, CLOSED }
 }

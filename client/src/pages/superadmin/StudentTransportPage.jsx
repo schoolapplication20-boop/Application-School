@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Layout from '../../components/Layout';
 import Toast from '../../components/Toast';
 import { transportAPI } from '../../services/api';
@@ -110,6 +110,7 @@ export default function StudentTransportPage() {
   const [stops, setStops] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
+  const toastTimerRef = useRef(null);
 
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -129,9 +130,12 @@ export default function StudentTransportPage() {
   const [filterStatus, setFilterStatus] = useState('All');
   const [page, setPage] = useState(1);
 
+  useEffect(() => () => clearTimeout(toastTimerRef.current), []);
+
   const showToast = useCallback((message, type = 'success') => {
+    clearTimeout(toastTimerRef.current);
     setToast({ message, type });
-    setTimeout(() => setToast(null), 3500);
+    toastTimerRef.current = setTimeout(() => setToast(null), 3500);
   }, []);
 
   // ── Data loading ─────────────────────────────────────────────────────────────

@@ -260,6 +260,9 @@ public class AuthController {
     @PostMapping("/set-first-password")
     public ResponseEntity<ApiResponse<String>> setFirstPassword(@RequestBody Map<String, String> body) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            return ResponseEntity.status(401).body(ApiResponse.error("Unauthorized"));
+        }
         String email = auth.getName();
         String currentPassword = body.get("currentPassword");
         String newPassword = body.get("newPassword");

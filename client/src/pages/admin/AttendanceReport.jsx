@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   AreaChart, Area,
@@ -80,8 +80,15 @@ export default function AttendanceReport() {
   const [detailClass, setDetailClass]   = useState(null);
   const [detailRecords, setDetailRecords] = useState([]);
   const [detailLoading, setDetailLoading] = useState(false);
+  const toastTimerRef = useRef(null);
 
-  const showToast = (msg, type = 'success') => { setToast({ message: msg, type }); setTimeout(() => setToast(null), 3500); };
+  useEffect(() => () => clearTimeout(toastTimerRef.current), []);
+
+  const showToast = (msg, type = 'success') => {
+    clearTimeout(toastTimerRef.current);
+    setToast({ message: msg, type });
+    toastTimerRef.current = setTimeout(() => setToast(null), 3500);
+  };
 
   // ── Load all classes once ─────────────────────────────────────────────────
   useEffect(() => {

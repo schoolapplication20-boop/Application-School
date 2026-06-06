@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Layout from '../../components/Layout';
 import Toast from '../../components/Toast';
 import { teacherAPI } from '../../services/api';
@@ -41,9 +41,14 @@ export default function Attendance() {
   const [expandedDate, setExpandedDate]     = useState(null);
   const [expandedStudents, setExpandedStudents] = useState([]);
 
+  const toastTimerRef = useRef(null);
+
+  useEffect(() => () => clearTimeout(toastTimerRef.current), []);
+
   const showToast = (msg, type = 'success') => {
+    clearTimeout(toastTimerRef.current);
     setToast({ message: msg, type });
-    setTimeout(() => setToast(null), 3500);
+    toastTimerRef.current = setTimeout(() => setToast(null), 3500);
   };
 
   // ── Load teacher profile + assigned classes on mount ──────────────────────
@@ -492,9 +497,11 @@ function HistoryRow({ date, classId, expanded, expandedStudents, onToggle, clsLa
 
   useEffect(() => {
     if (!classId) return;
+    let alive = true;
     teacherAPI.getAttendanceSummary(classId, date)
-      .then(res => setSummary(res.data?.data ?? null))
+      .then(res => { if (alive) setSummary(res.data?.data ?? null); })
       .catch(() => {});
+    return () => { alive = false; };
   }, [classId, date]);
 
   const pct = summary && summary.total > 0

@@ -269,10 +269,14 @@ export default function Students() {
   const idProofRef  = useRef(null);
   const tcRef       = useRef(null);
   const bonafideRef = useRef(null);
+  const toastTimerRef = useRef(null);
+
+  useEffect(() => () => clearTimeout(toastTimerRef.current), []);
 
   const showToast = (message, type = 'success') => {
+    clearTimeout(toastTimerRef.current);
     setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
+    toastTimerRef.current = setTimeout(() => setToast(null), 3000);
   };
 
   // Server now handles filtering — `students` is already the current page of results

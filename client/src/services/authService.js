@@ -94,8 +94,9 @@ export const changePassword = async (payload) => {
   try {
     await authAPI.changePassword(payload);
     return { success: true };
-  } catch {
-    return { success: false };
+  } catch (err) {
+    const msg = err.response?.data?.message || err.message || 'Password change failed';
+    return { success: false, message: msg };
   }
 };
 

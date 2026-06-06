@@ -18,9 +18,14 @@ export default function Homework() {
 
   const [activeTab, setActiveTab] = useState('new');
   const [toast, setToast]       = useState(null);
+  const toastTimerRef = useRef(null);
+
+  useEffect(() => () => clearTimeout(toastTimerRef.current), []);
+
   const showToast = (message, type = 'success') => {
+    clearTimeout(toastTimerRef.current);
     setToast({ message, type });
-    setTimeout(() => setToast(null), 3500);
+    toastTimerRef.current = setTimeout(() => setToast(null), 3500);
   };
 
   const [myClasses, setMyClasses]       = useState([]);

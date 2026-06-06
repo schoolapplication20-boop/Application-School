@@ -11,7 +11,10 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "transport_buses")
+@Table(
+    name = "transport_buses",
+    uniqueConstraints = @UniqueConstraint(name = "uq_bus_no_school", columnNames = {"bus_no", "school_id"})
+)
 @Data
 @Builder
 @NoArgsConstructor
@@ -22,7 +25,7 @@ public class TransportBus {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "bus_no", nullable = false, unique = true, length = 20)
+    @Column(name = "bus_no", nullable = false, length = 20)
     private String busNo;
 
     @Column(length = 100)

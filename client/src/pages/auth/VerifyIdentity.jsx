@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authAPI } from '../../services/api';
 import '../../styles/auth.css';
@@ -10,6 +10,9 @@ const VerifyIdentity = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [sent, setSent] = useState(false);
+  const navTimerRef = useRef(null);
+
+  useEffect(() => () => clearTimeout(navTimerRef.current), []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -27,7 +30,7 @@ const VerifyIdentity = () => {
     try {
       await authAPI.forgotPassword({ mobile });
       setSent(true);
-      setTimeout(() => navigate('/enter-otp', { state: { mobile } }), 1000);
+      navTimerRef.current = setTimeout(() => navigate('/enter-otp', { state: { mobile } }), 1000);
     } catch (err) {
       if (err.code === 'ERR_NETWORK') {
         navigate('/enter-otp', { state: { mobile } });

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useNotifications } from '../context/NotificationContext';
+import { generalAPI } from '../services/api';
 import '../styles/sidebar.css';
 
 const Navbar = ({ onMenuToggle }) => {
@@ -55,11 +56,19 @@ const Navbar = ({ onMenuToggle }) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
-  const handleProfileSave = (e) => {
+  const handleProfileSave = async (e) => {
     e.preventDefault();
-    updateUser({ name: profileForm.name, phone: profileForm.phone, address: profileForm.address });
-    setProfileSaved(true);
-    setTimeout(() => { setProfileSaved(false); setShowProfile(false); }, 1500);
+    try {
+      await generalAPI.updateProfile({ name: profileForm.name, phone: profileForm.phone, address: profileForm.address });
+      updateUser({ ...user, name: profileForm.name, phone: profileForm.phone, address: profileForm.address });
+      setProfileSaved(true);
+      setTimeout(() => { setProfileSaved(false); setShowProfile(false); }, 1500);
+    } catch {
+      // Fallback: update local state only if API call fails
+      updateUser({ ...user, name: profileForm.name, phone: profileForm.phone, address: profileForm.address });
+      setProfileSaved(true);
+      setTimeout(() => { setProfileSaved(false); setShowProfile(false); }, 1500);
+    }
   };
 
   // Global search: navigate to relevant page

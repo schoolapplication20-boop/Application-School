@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Layout from '../../components/Layout';
 import { leaveAPI, teacherAPI } from '../../services/api';
 
@@ -31,9 +31,14 @@ export default function LeaveApproval() {
       .catch(() => setTeacherType('SUBJECT_TEACHER'));
   }, []);
 
+  const toastTimerRef = useRef(null);
+
+  useEffect(() => () => clearTimeout(toastTimerRef.current), []);
+
   const showToast = (msg, type = 'success') => {
+    clearTimeout(toastTimerRef.current);
     setToast({ msg, type });
-    setTimeout(() => setToast(null), 3500);
+    toastTimerRef.current = setTimeout(() => setToast(null), 3500);
   };
 
   const load = useCallback(async () => {

@@ -142,4 +142,18 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     @org.springframework.data.jpa.repository.Modifying
     @org.springframework.transaction.annotation.Transactional
     void deleteBySchoolId(Long schoolId);
+
+    /**
+     * Bulk rename: updates className and section for all students in a given class/section/school.
+     * Used by updateClass to avoid a per-student save loop (N+1 writes).
+     */
+    @Modifying
+    @Transactional
+    @Query("UPDATE Student s SET s.className = :newName, s.section = :newSection " +
+           "WHERE s.className = :oldName AND s.section = :oldSection AND s.schoolId = :schoolId")
+    int bulkUpdateClassName(@Param("oldName") String oldName,
+                            @Param("oldSection") String oldSection,
+                            @Param("newName") String newName,
+                            @Param("newSection") String newSection,
+                            @Param("schoolId") Long schoolId);
 }

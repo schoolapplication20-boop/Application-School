@@ -96,7 +96,8 @@ public class ParentController {
     }
 
     @PostMapping("/fees/pay")
-    public ResponseEntity<ApiResponse<Fee>> payFee(@RequestBody Map<String, Object> body) {
+    public ResponseEntity<ApiResponse<Fee>> payFee(@RequestBody Map<String, Object> body,
+            org.springframework.security.core.Authentication auth) {
         Object feeIdObj = body.get("feeId");
         if (feeIdObj == null) {
             return ResponseEntity.badRequest().body(ApiResponse.error("feeId is required."));
@@ -109,8 +110,9 @@ public class ParentController {
         }
         String paymentMethod = (String) body.get("paymentMethod");
         String transactionId = (String) body.getOrDefault("transactionId", "");
-        ApiResponse<Fee> response = parentService.payFee(feeId, paymentMethod, transactionId);
-        return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
+        Long parentUserId = resolveCallerParentId(auth);
+        ApiResponse<Fee> response = parentService.payFee(feeId, paymentMethod, transactionId, parentUserId);
+        return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
     // Marks

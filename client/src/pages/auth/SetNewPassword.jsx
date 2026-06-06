@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { authAPI } from '../../services/api';
 import Logo from '../../components/Logo';
@@ -22,6 +22,9 @@ const SetNewPassword = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const navTimerRef = useRef(null);
+
+  useEffect(() => () => clearTimeout(navTimerRef.current), []);
 
   const validatePassword = (pw) => {
     const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
@@ -72,7 +75,7 @@ const SetNewPassword = () => {
       await authAPI.resetPassword({ identifier, newPassword: formData.newPassword });
       setSuccess('Password changed successfully! Redirecting to login...');
       sessionStorage.removeItem('reset_identifier');
-      setTimeout(() => navigate('/login'), 2000);
+      navTimerRef.current = setTimeout(() => navigate('/login'), 2000);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to reset password. Please try again.');
     } finally {

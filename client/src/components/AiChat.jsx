@@ -153,6 +153,7 @@ const AiChat = () => {
   const bottomRef  = useRef(null);
   const inputRef   = useRef(null);
   const sessTabRef = useRef(null);
+  const animIntervalRef = useRef(null);
 
   const t = I18N[lang];
 
@@ -199,6 +200,9 @@ const AiChat = () => {
     const el = sessTabRef.current?.querySelector('.ai-sess-tab--active');
     el?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
   }, [activeId]);
+
+  /* cleanup typing animation interval on unmount */
+  useEffect(() => () => clearInterval(animIntervalRef.current), []);
 
   const loadSessions = async () => {
     try {
@@ -281,7 +285,7 @@ const AiChat = () => {
       const words = fullText.split(' ');
       let idx = 0;
       setMessages(prev => [...prev, { role: 'bot', text: '', animating: true }]);
-      const tick = setInterval(() => {
+      const tick = () => {
         idx += 3;
         const partial = words.slice(0, idx).join(' ');
         setMessages(prev => {
@@ -290,7 +294,7 @@ const AiChat = () => {
           return copy;
         });
         if (idx >= words.length) {
-          clearInterval(tick);
+          clearInterval(animIntervalRef.current);
           setMessages(prev => {
             const copy = [...prev];
             copy[copy.length - 1] = { role: 'bot', text: fullText };
@@ -298,7 +302,8 @@ const AiChat = () => {
           });
           resolve();
         }
-      }, 40);
+      };
+      animIntervalRef.current = setInterval(tick, 40);
     });
   }, []);
 

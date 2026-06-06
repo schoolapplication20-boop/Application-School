@@ -2,6 +2,7 @@ package com.schoolers.controller;
 
 import com.schoolers.dto.ApiResponse;
 import com.schoolers.model.AppNotification;
+import com.schoolers.repository.AppNotificationRepository;
 import com.schoolers.service.AppNotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +20,9 @@ public class AppNotificationController {
 
     @Autowired
     private AppNotificationService notificationService;
+
+    @Autowired
+    private AppNotificationRepository notificationRepository;
 
     @Autowired
     private com.schoolers.repository.UserRepository userRepository;
@@ -45,14 +49,22 @@ public class AppNotificationController {
     /** Unread count badge. */
     @GetMapping("/unread-count")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER')")
-    public ResponseEntity<Map<String, Long>> getUnreadCount(@RequestParam Long userId) {
+    public ResponseEntity<?> getUnreadCount(@RequestParam Long userId, Authentication auth) {
+        if (!isOwnerOrAdmin(userId, auth)) {
+            return ResponseEntity.status(403).body(ApiResponse.error("Access denied."));
+        }
         return ResponseEntity.ok(Map.of("count", notificationService.getUnreadCount(userId)));
     }
 
     /** Mark a single notification as read. */
     @PatchMapping("/{id}/read")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER')")
-    public ResponseEntity<?> markRead(@PathVariable Long id) {
+    public ResponseEntity<?> markRead(@PathVariable Long id, Authentication auth) {
+        AppNotification notification = notificationRepository.findById(id).orElse(null);
+        if (notification == null) return ResponseEntity.notFound().build();
+        if (!isOwnerOrAdmin(notification.getUserId(), auth)) {
+            return ResponseEntity.status(403).body(ApiResponse.error("Access denied."));
+        }
         var result = notificationService.markRead(id);
         return result.isSuccess() ? ResponseEntity.ok(result) : ResponseEntity.badRequest().body(result);
     }
@@ -71,7 +83,12 @@ public class AppNotificationController {
     /** Delete a single notification. */
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER')")
-    public ResponseEntity<?> delete(@PathVariable Long id) {
+    public ResponseEntity<?> delete(@PathVariable Long id, Authentication auth) {
+        AppNotification notification = notificationRepository.findById(id).orElse(null);
+        if (notification == null) return ResponseEntity.notFound().build();
+        if (!isOwnerOrAdmin(notification.getUserId(), auth)) {
+            return ResponseEntity.status(403).body(ApiResponse.error("Access denied."));
+        }
         var result = notificationService.delete(id);
         return result.isSuccess() ? ResponseEntity.ok(result) : ResponseEntity.notFound().build();
     }

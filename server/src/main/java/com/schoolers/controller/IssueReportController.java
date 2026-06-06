@@ -64,11 +64,15 @@ public class IssueReportController {
             }
         }
 
+        IssueReport.Priority priorityEnum;
+        try { priorityEnum = IssueReport.Priority.valueOf(priority.toUpperCase()); }
+        catch (IllegalArgumentException e) { priorityEnum = IssueReport.Priority.MEDIUM; }
+
         IssueReport issue = IssueReport.builder()
                 .title(title.trim())
                 .description(description.trim())
                 .category(category.toUpperCase())
-                .priority(priority.toUpperCase())
+                .priority(priorityEnum)
                 .reporterName(reporterName)
                 .reporterEmail(reporterEmail)
                 .reporterRole(reporterRole)
@@ -94,9 +98,17 @@ public class IssueReportController {
     @PreAuthorize("hasRole('APPLICATION_OWNER')")
     public ResponseEntity<ApiResponse<List<IssueReport>>> getAllIssues(
             @RequestParam(required = false) String status) {
-        List<IssueReport> issues = status != null && !status.isBlank()
-                ? issueReportRepository.findByStatusOrderByCreatedAtDesc(status.toUpperCase())
-                : issueReportRepository.findAllByOrderByCreatedAtDesc();
+        List<IssueReport> issues;
+        if (status != null && !status.isBlank()) {
+            try {
+                IssueReport.Status statusEnum = IssueReport.Status.valueOf(status.toUpperCase());
+                issues = issueReportRepository.findByStatusOrderByCreatedAtDesc(statusEnum);
+            } catch (IllegalArgumentException e) {
+                issues = issueReportRepository.findAllByOrderByCreatedAtDesc();
+            }
+        } else {
+            issues = issueReportRepository.findAllByOrderByCreatedAtDesc();
+        }
         return ResponseEntity.ok(ApiResponse.success(issues));
     }
 
@@ -115,8 +127,11 @@ public class IssueReportController {
         String status    = getString(body, "status");
         String ownerNote = getString(body, "ownerNote");
 
-        if (status    != null && !status.isBlank())    issue.setStatus(status.toUpperCase());
-        if (ownerNote != null)                         issue.setOwnerNote(ownerNote);
+        if (status != null && !status.isBlank()) {
+            try { issue.setStatus(IssueReport.Status.valueOf(status.toUpperCase())); }
+            catch (IllegalArgumentException ignored) { }
+        }
+        if (ownerNote != null) issue.setOwnerNote(ownerNote);
 
         return ResponseEntity.ok(ApiResponse.success(issueReportRepository.save(issue)));
     }

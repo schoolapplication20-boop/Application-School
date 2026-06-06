@@ -1,5 +1,7 @@
 package com.schoolers.controller;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -12,6 +14,8 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/health")
 public class HealthController {
+
+    private static final Logger log = LoggerFactory.getLogger(HealthController.class);
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -34,10 +38,11 @@ public class HealthController {
                 "ms",     System.currentTimeMillis() - start
             ));
         } catch (Exception e) {
+            log.error("[Health] DB check failed: {}", e.getMessage());
             return ResponseEntity.status(503).body(Map.of(
                 "status", "DOWN",
                 "db",     "UNREACHABLE",
-                "error",  e.getMessage() != null ? e.getMessage() : "unknown"
+                "error",  "DB unavailable"
             ));
         }
     }

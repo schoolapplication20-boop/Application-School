@@ -12,7 +12,10 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "attendance",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"student_id", "class_id", "date", "school_id"}))
+        uniqueConstraints = @UniqueConstraint(columnNames = {"student_id", "class_id", "date", "school_id"}),
+        indexes = {
+            @Index(name = "idx_att_school_class_date", columnList = "school_id, class_id, date")
+        })
 @Data
 @Builder
 @NoArgsConstructor

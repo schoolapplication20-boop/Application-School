@@ -67,8 +67,8 @@ public class ExaminationController {
 
     @DeleteMapping("/schedules/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
-    public ResponseEntity<ApiResponse<Void>> deleteSchedule(@PathVariable Long id) {
-        return ResponseEntity.ok(examinationService.deleteSchedule(id));
+    public ResponseEntity<ApiResponse<Void>> deleteSchedule(@PathVariable Long id, Authentication auth) {
+        return ResponseEntity.ok(examinationService.deleteSchedule(id, getCurrentSchoolId(auth)));
     }
 
     // ============================================================
@@ -144,8 +144,8 @@ public class ExaminationController {
 
     @PatchMapping("/certificates/{id}/verify")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER')")
-    public ResponseEntity<ApiResponse<Certificate>> verifyCertificate(@PathVariable Long id) {
-        return ResponseEntity.ok(examinationService.verifyCertificate(id, currentUser()));
+    public ResponseEntity<ApiResponse<Certificate>> verifyCertificate(@PathVariable Long id, Authentication auth) {
+        return ResponseEntity.ok(examinationService.verifyCertificate(id, currentUser(), getCurrentSchoolId(auth)));
     }
 
     @DeleteMapping("/certificates/{id}")

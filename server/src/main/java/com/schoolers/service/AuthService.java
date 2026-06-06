@@ -388,7 +388,7 @@ public class AuthService {
                 .schoolId(school.getId())
                 .isActive(false)
                 .firstLogin(false)
-                .resetOtp(verifyOtp)
+                .resetOtp(hashOtp(verifyOtp, normalizedEmail))
                 .otpExpiry(otpExpiry)
                 .build();
         userRepository.save(superAdmin);
@@ -418,8 +418,9 @@ public class AuthService {
             return ApiResponse.success("Email already verified. Please login.", "already_verified");
         }
 
+        String normalizedEmail2 = email.trim().toLowerCase();
         String dbOtp = user.getResetOtp();
-        if (dbOtp == null || !constantTimeEquals(dbOtp.trim(), otp.trim()))
+        if (dbOtp == null || !constantTimeEquals(dbOtp.trim(), hashOtp(otp.trim(), normalizedEmail2)))
             return ApiResponse.error("Invalid verification code.");
 
         LocalDateTime expiry = user.getOtpExpiry();
@@ -449,7 +450,8 @@ public class AuthService {
         if (schoolCode == null) return ApiResponse.error("School ID is required");
         if (admissionNumber == null || admissionNumber.isBlank()) return ApiResponse.error("Admission number is required");
         if (email == null || email.isBlank()) return ApiResponse.error("Email is required");
-        if (password == null || password.length() < 6) return ApiResponse.error("Password must be at least 6 characters");
+        String studentPwdError = validatePasswordComplexity(password);
+        if (studentPwdError != null) return ApiResponse.error(studentPwdError);
 
         School school = schoolRepository.findBySchoolId(schoolCode).orElse(null);
         if (school == null) return ApiResponse.error("School not found. Please check your School ID.");
@@ -481,7 +483,7 @@ public class AuthService {
                 .isActive(false)
                 .firstLogin(true)
                 .schoolId(school.getId())
-                .resetOtp(otp)
+                .resetOtp(hashOtp(otp, normalizedEmail))
                 .otpExpiry(otpExpiry)
                 .build());
 

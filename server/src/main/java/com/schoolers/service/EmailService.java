@@ -322,7 +322,8 @@ public class EmailService {
     }
 
     private String buildIssueReportHtml(com.schoolers.model.IssueReport issue) {
-        String priorityColor = "HIGH".equals(issue.getPriority()) || "CRITICAL".equals(issue.getPriority()) ? "#dc2626" : "#d97706";
+        String priorityColor = (issue.getPriority() == com.schoolers.model.IssueReport.Priority.HIGH
+                || issue.getPriority() == com.schoolers.model.IssueReport.Priority.CRITICAL) ? "#dc2626" : "#d97706";
         return "<!DOCTYPE html><html><body style='margin:0;padding:0;background:#f7fafc;font-family:Poppins,Arial,sans-serif;'>"
             + "<div style='max-width:600px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);'>"
             + "<div style='background:linear-gradient(135deg,#1e1b4b,#4c1d95);padding:28px 32px;'>"

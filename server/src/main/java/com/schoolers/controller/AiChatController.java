@@ -9,6 +9,7 @@ import com.schoolers.repository.UserRepository;
 import com.schoolers.service.AiChatService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,6 +17,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/ai/sessions")
+@PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','APPLICATION_OWNER')")
 public class AiChatController {
 
     @Autowired private AiChatService aiChatService;

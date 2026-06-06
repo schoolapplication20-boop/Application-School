@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import StatCard from '../../components/StatCard';
@@ -19,14 +19,6 @@ const EMPTY_REVENUE_DATA = [
   { name: 'Nov', revenue: 0, expenses: 0 }, { name: 'Dec', revenue: 0, expenses: 0 },
 ];
 
-const attendanceData = [
-  { name: 'Jan', attendance: 88 }, { name: 'Feb', attendance: 85 },
-  { name: 'Mar', attendance: 90 }, { name: 'Apr', attendance: 87 },
-  { name: 'May', attendance: 92 }, { name: 'Jun', attendance: 89 },
-  { name: 'Jul', attendance: 86 }, { name: 'Aug', attendance: 91 },
-  { name: 'Sep', attendance: 94 }, { name: 'Oct', attendance: 93 },
-  { name: 'Nov', attendance: 90 }, { name: 'Dec', attendance: 88 },
-];
 
 const fmtDate = (d) => {
   if (!d) return '—';
@@ -59,6 +51,8 @@ export default function AdminDashboard() {
 
   const [chartPeriod, setChartPeriod] = useState('12M');
   const [toast, setToast] = useState(null);
+  const [attendanceChartData, setAttendanceChartData] = useState(null);
+  const toastTimerRef = useRef(null);
   const [dbStats,      setDbStats]      = useState(null);
   const [statsLoading, setStatsLoading] = useState(true);
   const [statsError,   setStatsError]   = useState(null);
@@ -106,9 +100,12 @@ export default function AdminDashboard() {
   }, [isSuperAdmin]);
 
   const showToast = (message, type = 'success') => {
+    clearTimeout(toastTimerRef.current);
     setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
+    toastTimerRef.current = setTimeout(() => setToast(null), 3000);
   };
+
+  useEffect(() => () => clearTimeout(toastTimerRef.current), []);
 
   const handleApprove = async (id) => {
     try {
@@ -385,7 +382,13 @@ export default function AdminDashboard() {
           </div>
         </div>
         <div style={{ padding: '16px 8px 8px' }}>
-          <LineChartComponent data={attendanceData} lines={[{ key: 'attendance', name: 'Attendance %', color: '#0de1e8' }]} height={220} />
+          {attendanceChartData ? (
+            <LineChartComponent data={attendanceChartData} lines={[{ key: 'attendance', name: 'Attendance %', color: '#0de1e8' }]} height={220} />
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 200, color: '#a0aec0', fontSize: 13 }}>
+              Attendance trend coming soon
+            </div>
+          )}
         </div>
       </div>
 

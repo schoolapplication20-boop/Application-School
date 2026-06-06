@@ -4,6 +4,7 @@ import com.schoolers.dto.ApiResponse;
 import com.schoolers.model.ClassDiary;
 import com.schoolers.model.ClassRoom;
 import com.schoolers.model.Teacher;
+import com.schoolers.repository.ClassDiaryRepository;
 import com.schoolers.repository.TeacherRepository;
 import com.schoolers.repository.UserRepository;
 import com.schoolers.service.ClassDiaryService;
@@ -30,6 +31,9 @@ public class ClassDiaryController {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private ClassDiaryRepository diaryRepository;
 
     @Autowired
     private TeacherRepository teacherRepository;
@@ -133,6 +137,20 @@ public class ClassDiaryController {
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<?> update(@PathVariable Long id, @RequestBody Map<String, Object> body, Authentication auth) {
+        // ADMIN and SUPER_ADMIN can update any diary entry without needing a teacher profile
+        if (auth != null) {
+            var userOpt = userRepository.findByEmailIgnoreCase(auth.getName());
+            if (userOpt.isPresent()) {
+                String role = userOpt.get().getRole() != null ? userOpt.get().getRole().name() : "";
+                if ("ADMIN".equals(role) || "SUPER_ADMIN".equals(role)) {
+                    // Fetch the entry's own teacherId so the service ownership check passes
+                    ClassDiary diary = diaryRepository.findById(id).orElse(null);
+                    if (diary == null) return ResponseEntity.notFound().build();
+                    var response = diaryService.update(id, body, diary.getTeacherId());
+                    return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
+                }
+            }
+        }
         Optional<Teacher> teacherOpt = resolveTeacher(auth);
         if (teacherOpt.isEmpty()) return ResponseEntity.status(403).body(ApiResponse.error("Teacher profile not found"));
         var response = diaryService.update(id, body, teacherOpt.get().getId());

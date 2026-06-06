@@ -72,16 +72,23 @@ public class ParentService {
         return ApiResponse.success(feeRepository.findByStudentId(studentId));
     }
 
-    public ApiResponse<Fee> payFee(Long feeId, String paymentMethod, String transactionId) {
-        return feeRepository.findById(feeId)
-                .map(fee -> {
-                    fee.setStatus(Fee.Status.PAID);
-                    fee.setPaidDate(LocalDate.now());
-                    fee.setPaymentMethod(paymentMethod);
-                    fee.setTransactionId(transactionId);
-                    return ApiResponse.success("Fee paid successfully", feeRepository.save(fee));
-                })
-                .orElse(ApiResponse.error("Fee record not found"));
+    public ApiResponse<Fee> payFee(Long feeId, String paymentMethod, String transactionId, Long parentUserId) {
+        Fee fee = feeRepository.findById(feeId).orElse(null);
+        if (fee == null) return ApiResponse.error("Fee record not found");
+
+        // Ownership check: verify the fee's student belongs to this parent
+        if (parentUserId != null) {
+            Student feeStudent = studentRepository.findById(fee.getStudentId()).orElse(null);
+            if (feeStudent == null || !parentUserId.equals(feeStudent.getParentId())) {
+                return ApiResponse.error("Access denied: fee does not belong to your child");
+            }
+        }
+
+        fee.setStatus(Fee.Status.PAID);
+        fee.setPaidDate(LocalDate.now());
+        fee.setPaymentMethod(paymentMethod);
+        fee.setTransactionId(transactionId);
+        return ApiResponse.success("Fee paid successfully", feeRepository.save(fee));
     }
 
     // Marks / Performance

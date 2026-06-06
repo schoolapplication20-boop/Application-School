@@ -2,7 +2,8 @@ const MAX_LOGS = 50;
 
 // Keyed by schoolId (string) so each school only sees its own activity.
 // schoolId null/undefined is treated as the platform-level (APPLICATION_OWNER) bucket.
-const _logsBySchool = {};
+// Persisted to sessionStorage so logs survive soft navigation (page refresh within the tab).
+let _logsBySchool = (() => { try { return JSON.parse(sessionStorage.getItem('activityLog') || '{}'); } catch { return {}; } })();
 
 const bucketKey = (schoolId) => (schoolId != null ? String(schoolId) : '__platform__');
 
@@ -24,4 +25,5 @@ export const addLog = (adminName, action, module, schoolId) => {
     }),
   };
   _logsBySchool[key] = [newLog, ...(_logsBySchool[key] ?? [])].slice(0, MAX_LOGS);
+  try { sessionStorage.setItem('activityLog', JSON.stringify(_logsBySchool)); } catch {}
 };

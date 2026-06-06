@@ -12,7 +12,13 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "marks")
+@Table(
+    name = "marks",
+    indexes = {
+        @Index(name = "idx_marks_student_school", columnList = "student_id, school_id"),
+        @Index(name = "idx_marks_school_examtype", columnList = "school_id, exam_type")
+    }
+)
 @Data
 @Builder
 @NoArgsConstructor

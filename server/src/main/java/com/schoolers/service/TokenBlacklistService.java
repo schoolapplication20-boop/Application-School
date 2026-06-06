@@ -6,7 +6,9 @@ import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -41,11 +43,16 @@ public class TokenBlacklistService {
     }
 
     /** Revoke a token — adds to DB and in-memory cache immediately. */
+    @Transactional
     public void revoke(String token, LocalDateTime expiresAt) {
         String hash = sha256(token);
-        if (!revokedTokenRepository.existsByTokenHash(hash)) {
-            revokedTokenRepository.save(RevokedToken.builder()
-                    .tokenHash(hash).expiresAt(expiresAt).build());
+        try {
+            if (!revokedTokenRepository.existsByTokenHash(hash)) {
+                revokedTokenRepository.save(RevokedToken.builder()
+                        .tokenHash(hash).expiresAt(expiresAt).build());
+            }
+        } catch (DataIntegrityViolationException e) {
+            // concurrent revoke — already saved, safe to ignore
         }
         revokedHashes.add(hash);
     }

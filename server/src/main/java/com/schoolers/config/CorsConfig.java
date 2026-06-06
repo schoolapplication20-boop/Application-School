@@ -51,7 +51,7 @@ public class CorsConfig {
         }
 
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(origins);
+        config.setAllowedOrigins(origins);
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(Arrays.asList(
                 "Authorization", "Content-Type", "Accept", "Origin",

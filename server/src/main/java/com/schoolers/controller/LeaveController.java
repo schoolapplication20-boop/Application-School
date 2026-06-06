@@ -90,6 +90,17 @@ public class LeaveController {
             @RequestParam(defaultValue = "STUDENT") String type,
             Authentication auth) {
         Long schoolId = getCurrentSchoolId(auth);
+        var callerOpt = userRepository.findByEmailIgnoreCase(auth.getName());
+        if (callerOpt.isPresent()) {
+            var caller = callerOpt.get();
+            String role = caller.getRole() != null ? caller.getRole().name() : "";
+            if ("TEACHER".equals(role)) {
+                Long callerId = caller.getId();
+                if (!requesterId.equals(callerId)) {
+                    return ResponseEntity.status(403).body(ApiResponse.error("Access denied"));
+                }
+            }
+        }
         return ResponseEntity.ok(leaveService.getLeavesByRequester(requesterId, type, schoolId));
     }
 

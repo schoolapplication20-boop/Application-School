@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Layout from '../../components/Layout';
 import Toast from '../../components/Toast';
 import { adminAPI } from '../../services/api';
@@ -55,10 +55,14 @@ const Classes = () => {
   // Confirmation dialogs
   const [deleteClassTarget,   setDeleteClassTarget]   = useState(null); // class row to delete
   const [deleteStudentTarget, setDeleteStudentTarget] = useState(null); // student to delete from view modal
+  const toastTimerRef = useRef(null);
+
+  useEffect(() => () => clearTimeout(toastTimerRef.current), []);
 
   const showToast = (message, type = 'success') => {
+    clearTimeout(toastTimerRef.current);
     setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
+    toastTimerRef.current = setTimeout(() => setToast(null), 3000);
   };
 
   // ── Map backend ClassRoom to frontend shape ───────────────────────────────

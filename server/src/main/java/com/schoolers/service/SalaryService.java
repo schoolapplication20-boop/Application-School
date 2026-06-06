@@ -141,12 +141,19 @@ public class SalaryService {
 
                 String receiptNo = str(body, "receiptNumber", "RCP-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
 
+                // Use paidDate from request body if provided, otherwise default to today
+                LocalDate paidDate = LocalDate.now();
+                String paidDateStr = str(body, "paidDate", null);
+                if (paidDateStr != null && !paidDateStr.isBlank()) {
+                    try { paidDate = LocalDate.parse(paidDateStr); } catch (Exception ignored) { }
+                }
+
                 SalaryPayment payment = SalaryPayment.builder()
                     .salaryId(id)
                     .staffId(s.getStaffId())
                     .staffName(s.getStaffName())
                     .amountPaid(amount)
-                    .paidDate(LocalDate.now())
+                    .paidDate(paidDate)
                     .paymentMode(str(body, "paymentMode", "Cash"))
                     .receiptNumber(receiptNo)
                     .remarks(str(body, "remarks", null))
@@ -161,7 +168,7 @@ public class SalaryService {
                 BigDecimal newPaid = (s.getPaidAmount() != null ? s.getPaidAmount() : BigDecimal.ZERO).add(amount);
                 s.setPaidAmount(newPaid);
                 s.setPaymentMethod(str(body, "paymentMode", "Cash"));
-                s.setPaidDate(LocalDate.now());
+                s.setPaidDate(paidDate);
 
                 BigDecimal calc = s.getCalculatedSalary() != null ? s.getCalculatedSalary() : BigDecimal.ZERO;
                 if (newPaid.compareTo(calc) >= 0) s.setStatus(Salary.Status.PAID);

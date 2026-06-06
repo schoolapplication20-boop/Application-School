@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Layout from '../../components/Layout';
 import { studentAPI } from '../../services/api';
 
@@ -19,6 +19,9 @@ export default function StudentAssignments() {
   const [submitting,   setSubmitting]   = useState(false);
   const [error,        setError]        = useState('');
   const [success,      setSuccess]      = useState('');
+  const successTimerRef = useRef(null);
+
+  useEffect(() => () => clearTimeout(successTimerRef.current), []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -48,7 +51,7 @@ export default function StudentAssignments() {
       setSubmitFor(null);
       setNotes('');
       await load();
-      setTimeout(() => setSuccess(''), 3500);
+      successTimerRef.current = setTimeout(() => setSuccess(''), 3500);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to submit assignment');
     } finally {

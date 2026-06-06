@@ -561,9 +561,12 @@ public class AdminService {
                         student.setParentName(str(body, "parentName", str(body, "fatherName", student.getParentName())));
                     if (body.containsKey("parentMobile") || body.containsKey("fatherPhone")) {
                         String newMobile = str(body, "parentMobile", str(body, "fatherPhone", student.getParentMobile()));
+                        String existingMobile = student.getParentMobile();
                         student.setParentMobile(newMobile);
-                        if (newMobile != null && !newMobile.isBlank()) {
-                            student.setParentId(null); // Parent role removed
+                        // Only clear parentId when the mobile number actually changes
+                        if (newMobile != null && !newMobile.isBlank()
+                                && !newMobile.equals(existingMobile)) {
+                            student.setParentId(null); // Parent link invalidated by mobile change
                         }
                     }
                     if (body.containsKey("motherName"))
@@ -736,7 +739,7 @@ public class AdminService {
             // Auto-create credentials if the student has no linked user account
             if (student.getStudentUserId() == null) {
                 StudentUserResult result = createStudentUser(
-                        student.getName(), student.getAdmissionNumber(), student.getRollNumber(), student.getId(), null);
+                        student.getName(), student.getAdmissionNumber(), student.getRollNumber(), student.getId(), null, student.getSchoolId());
                 if (result == null)
                     return ApiResponse.<Map<String, Object>>error("Could not create login account for this student.");
                 student.setStudentUserId(result.user().getId());
@@ -766,6 +769,16 @@ public class AdminService {
         if (schoolId == null) return ApiResponse.success(java.util.List.of());
         List<Teacher> teachers = teacherRepository.findBySchoolId(schoolId);
 
+        // Batch-load all referenced classrooms in one query to avoid N+1
+        java.util.Set<Long> primaryClassIds = teachers.stream()
+                .map(Teacher::getPrimaryClassId)
+                .filter(id -> id != null)
+                .collect(java.util.stream.Collectors.toSet());
+        Map<Long, com.schoolers.model.ClassRoom> classRoomMap = classRoomRepository.findAllById(primaryClassIds)
+                .stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        com.schoolers.model.ClassRoom::getId, cr -> cr));
+
         List<Map<String, Object>> result = teachers.stream().map(t -> {
             Map<String, Object> map = new LinkedHashMap<>();
             map.put("id",             t.getId());
@@ -786,13 +799,14 @@ public class AdminService {
                 map.put("email",  t.getUser().getEmail());
                 map.put("mobile", t.getUser().getMobile());
             }
-            // Resolve primary class name so the frontend doesn't need a separate lookup
+            // Resolve primary class name from the pre-loaded map (no extra DB call)
             if (t.getPrimaryClassId() != null) {
-                classRoomRepository.findById(t.getPrimaryClassId()).ifPresent(cr -> {
+                com.schoolers.model.ClassRoom cr = classRoomMap.get(t.getPrimaryClassId());
+                if (cr != null) {
                     map.put("primaryClassName",
                             cr.getName() + (cr.getSection() != null && !cr.getSection().isBlank()
                                     ? " - " + cr.getSection() : ""));
-                });
+                }
             }
             return map;
         }).toList();
@@ -800,6 +814,7 @@ public class AdminService {
         return ApiResponse.success(result);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public ApiResponse<Map<String, Object>> createTeacher(CreateTeacherRequest req) {
 
         // ── Input validation (fast-fail before touching the DB) ────────────────
@@ -1256,16 +1271,18 @@ public class AdminService {
                     }
 
                     if (!oldName.equalsIgnoreCase(newName) || !oldSection.equalsIgnoreCase(newSection)) {
-                        // Only cascade rename to students in the same school
-                        List<?> studentsToRename = (roomSchoolId != null)
-                                ? studentRepository.findBySchoolIdAndClassNameIgnoreCaseAndSectionIgnoreCase(roomSchoolId, oldName, oldSection)
-                                : studentRepository.findByClassNameIgnoreCaseAndSectionIgnoreCase(oldName, oldSection);
-                        studentsToRename.forEach(s -> {
-                            Student student = (Student) s;
-                            student.setClassName(newName);
-                            student.setSection(newSection);
-                            studentRepository.save(student);
-                        });
+                        if (roomSchoolId != null) {
+                            // Bulk update: single JPQL UPDATE instead of per-student save
+                            studentRepository.bulkUpdateClassName(oldName, oldSection, newName, newSection, roomSchoolId);
+                        } else {
+                            // Fallback for legacy null-schoolId records (no bulk method without schoolId scope)
+                            studentRepository.findByClassNameIgnoreCaseAndSectionIgnoreCase(oldName, oldSection)
+                                    .forEach(s -> {
+                                        s.setClassName(newName);
+                                        s.setSection(newSection);
+                                        studentRepository.save(s);
+                                    });
+                        }
                     }
 
                     return ApiResponse.success("Class updated", classRoomRepository.save(c));
@@ -1334,12 +1351,10 @@ public class AdminService {
         log.info("[deleteClass] class-level records deleted for " + classSection);
 
         // ── Step 3: Reset teacher's primaryClassId if pointing to this class ──
-        teacherRepository.findAll().stream()
-                .filter(t -> id.equals(t.getPrimaryClassId()))
-                .forEach(t -> {
-                    t.setPrimaryClassId(null);
-                    teacherRepository.save(t);
-                });
+        teacherRepository.findAllByPrimaryClassId(id).forEach(t -> {
+            t.setPrimaryClassId(null);
+            teacherRepository.save(t);
+        });
 
         // ── Step 4: Delete the classroom row ──────────────────────────────────
         classRoomRepository.deleteById(id);
@@ -1470,7 +1485,7 @@ public class AdminService {
         return ApiResponse.success("Fee record created", feeRepository.save(fee));
     }
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public ApiResponse<Fee> collectCashFee(Long feeId, Map<String, Object> body, Long schoolId) {
         return feeRepository.findById(feeId)
                 .map(fee -> {
@@ -1652,6 +1667,7 @@ public class AdminService {
         int updatedCount = 0;
         if (schoolId != null && totalFee.compareTo(BigDecimal.ZERO) > 0) {
             List<Student> students = studentRepository.findBySchoolIdAndClassName(schoolId, className);
+            List<StudentFeeAssignment> toSave = new java.util.ArrayList<>();
             for (Student student : students) {
                 StudentFeeAssignment assignment = studentFeeAssignmentRepository
                         .findByStudentIdAndAcademicYearAndSchoolId(student.getId(), academicYear, schoolId)
@@ -1669,13 +1685,14 @@ public class AdminService {
                 assignment.setTotalFee(totalFee);
 
                 BigDecimal paid = assignment.getPaidAmount() != null ? assignment.getPaidAmount() : BigDecimal.ZERO;
-                if (paid.compareTo(totalFee) >= 0)        assignment.setStatus(StudentFeeAssignment.Status.PAID);
-                else if (paid.compareTo(BigDecimal.ZERO) > 0) assignment.setStatus(StudentFeeAssignment.Status.PARTIAL);
-                else                                       assignment.setStatus(StudentFeeAssignment.Status.PENDING);
+                if (paid.compareTo(totalFee) >= 0)             assignment.setStatus(StudentFeeAssignment.Status.PAID);
+                else if (paid.compareTo(BigDecimal.ZERO) > 0)  assignment.setStatus(StudentFeeAssignment.Status.PARTIAL);
+                else                                            assignment.setStatus(StudentFeeAssignment.Status.PENDING);
 
-                studentFeeAssignmentRepository.save(assignment);
-                updatedCount++;
+                toSave.add(assignment);
             }
+            studentFeeAssignmentRepository.saveAll(toSave);
+            updatedCount = toSave.size();
         }
 
         String msg = updatedCount > 0
@@ -1773,8 +1790,8 @@ public class AdminService {
                 } catch (Exception ignored) {}
             }
 
-            String academicYear = str(body, "academicYear", "2024-25");
-            if (academicYear == null || academicYear.isBlank()) academicYear = "2024-25";
+            String academicYear = str(body, "academicYear", currentAcademicYear());
+            if (academicYear == null || academicYear.isBlank()) academicYear = currentAcademicYear();
 
             StudentFeeAssignment assignment = studentFeeAssignmentRepository
                     .findByStudentIdAndAcademicYear(studentId, academicYear)
@@ -2228,8 +2245,7 @@ public class AdminService {
         BigDecimal total, paid, unpaid;
         if (schoolId != null) {
             total  = expenseRepository.sumBySchoolAndMonth(schoolId, month, year);
-            // School-scoped paid/unpaid: fall back to in-memory filter from findFilteredBySchool
-            paid   = expenseRepository.sumBySchoolAndMonth(schoolId, month, year); // reuse total; separate breakdowns below
+            // School-scoped paid/unpaid: computed via in-memory filter from findFilteredBySchool
             List<Expense> schoolExpenses = expenseRepository.findFilteredBySchool(
                     schoolId, null, now.withDayOfMonth(1).toString(), now.toString(), null);
             paid   = schoolExpenses.stream()
@@ -2755,6 +2771,21 @@ public class AdminService {
 
         if (batch.isEmpty()) {
             return ApiResponse.error("No students found in " + src + (srcSec.isBlank() ? "" : "-" + srcSec));
+        }
+
+        // Capacity check: ensure the target class can absorb the incoming batch
+        if (schoolId != null) {
+            com.schoolers.model.ClassRoom targetRoom = classRoomRepository
+                    .findBySchoolIdAndNameIgnoreCaseAndSectionIgnoreCase(schoolId, dst, dstSec)
+                    .orElse(null);
+            if (targetRoom != null && targetRoom.getCapacity() != null) {
+                long alreadyInTarget = studentRepository.countEnrolledForCapacity(schoolId, dst, dstSec);
+                long available = targetRoom.getCapacity() - alreadyInTarget;
+                if (batch.size() > available) {
+                    return ApiResponse.error("Target class is full — cannot promote " + batch.size()
+                            + " students, only " + Math.max(0, available) + " spots remaining");
+                }
+            }
         }
 
         batch.forEach(s -> {

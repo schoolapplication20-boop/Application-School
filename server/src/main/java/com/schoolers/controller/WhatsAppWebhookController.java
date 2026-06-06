@@ -52,11 +52,14 @@ public class WhatsAppWebhookController {
         String sigHeader = request.getHeader("X-Hub-Signature-256");
         String appSecret = whatsAppCloudService.getAppSecret();
 
-        if (appSecret != null && !appSecret.isBlank()) {
-            if (sigHeader == null || !verifySignature(payload, sigHeader, appSecret)) {
-                log.warn("[WhatsApp Webhook] Rejected — invalid X-Hub-Signature-256");
-                return ResponseEntity.status(403).body("Forbidden");
-            }
+        if (appSecret == null || appSecret.isBlank()) {
+            log.warn("[WhatsApp Webhook] Rejected — appSecret not configured");
+            return ResponseEntity.status(403).body("Webhook not configured");
+        }
+
+        if (sigHeader == null || !verifySignature(payload, sigHeader, appSecret)) {
+            log.warn("[WhatsApp Webhook] Rejected — invalid X-Hub-Signature-256");
+            return ResponseEntity.status(403).body("Forbidden");
         }
 
         whatsAppCloudService.processIncoming(payload);

@@ -39,6 +39,7 @@ const TABS = [
 export default function Transport() {
   const [activeTab, setActiveTab] = useState('routes');
   const [toast, setToast] = useState(null);
+  const toastTimerRef = useRef(null);
 
   // Data stores
   const [buses,    setBuses]    = useState([]);
@@ -58,9 +59,12 @@ export default function Transport() {
     fetchTransportFees().then(data => setFees(data));
   }, []);
 
+  useEffect(() => () => clearTimeout(toastTimerRef.current), []);
+
   const showToast = (message, type = 'success') => {
+    clearTimeout(toastTimerRef.current);
     setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
+    toastTimerRef.current = setTimeout(() => setToast(null), 3000);
   };
 
   // Summary stats

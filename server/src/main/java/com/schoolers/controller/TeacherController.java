@@ -316,7 +316,18 @@ public class TeacherController {
     }
 
     @PostMapping("/assignments")
-    public ResponseEntity<ApiResponse<Assignment>> createAssignment(@RequestBody Assignment assignment) {
+    public ResponseEntity<ApiResponse<Assignment>> createAssignment(
+            @RequestBody Assignment assignment, Authentication auth) {
+        if (auth != null) {
+            var userOpt = userRepository.findByEmailIgnoreCase(auth.getName());
+            if (userOpt.isPresent()) {
+                assignment.setSchoolId(userOpt.get().getSchoolId());
+            }
+        }
+        Long teacherId = resolveTeacherId(null);
+        if (teacherId != null) {
+            assignment.setTeacherId(teacherId);
+        }
         return ResponseEntity.status(201).body(teacherService.createAssignment(assignment));
     }
 
