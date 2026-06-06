@@ -111,6 +111,17 @@ const Classes = () => {
   // Enrolled count comes directly from the backend getClasses() response.
   const withEnrolled = useMemo(() => classes, [classes]);
 
+  // Teacher IDs already assigned as Class Teacher to a class other than the one being edited.
+  // Used to exclude them from the Class Teacher dropdown so one teacher can only hold one class.
+  const assignedTeacherIds = useMemo(() => {
+    const editId = editClass?.id;
+    return new Set(
+      classes
+        .filter(c => c.teacherId && c.id !== editId)
+        .map(c => String(c.teacherId))
+    );
+  }, [classes, editClass]);
+
   // ── Derived filter options from classes list ──────────────────────────────
   const classOptions   = useMemo(() => [...new Set(withEnrolled.map(c => c.name))].sort((a, b) => {
     const na = parseInt(a.replace(/\D/g, '')) || 0;
@@ -542,7 +553,10 @@ const Classes = () => {
                   >
                     <option value="">— No teacher assigned —</option>
                     {teacherList
-                      .filter(t => t.teacherType === 'CLASS_TEACHER' || t.teacherType === 'BOTH')
+                      .filter(t =>
+                        (t.teacherType === 'CLASS_TEACHER' || t.teacherType === 'BOTH') &&
+                        !assignedTeacherIds.has(String(t.id))
+                      )
                       .map(t => (
                         <option key={t.id} value={t.id}>
                           {t.name}{t.employeeId ? ` (${t.employeeId})` : ''}

@@ -1173,6 +1173,12 @@ public class AdminService {
             Teacher t = teacherRepository.findById(classRoom.getTeacherId()).orElse(null);
             if (t == null || !isClassTeacherRole(t.getTeacherType()))
                 return ApiResponse.error("Only Class Teachers or Class+Subject Teachers can be assigned as class teacher");
+            // Prevent duplicate: one teacher can be class teacher for only one class
+            List<ClassRoom> alreadyAssigned = (schoolId != null)
+                    ? classRoomRepository.findBySchoolIdAndTeacherId(schoolId, classRoom.getTeacherId())
+                    : classRoomRepository.findByTeacherId(classRoom.getTeacherId());
+            if (!alreadyAssigned.isEmpty())
+                return ApiResponse.error("This teacher is already assigned as Class Teacher for another class");
         }
 
         // School-scoped duplicate check
@@ -1205,6 +1211,12 @@ public class AdminService {
                         Teacher candidateTeacher = teacherRepository.findById(updated.getTeacherId()).orElse(null);
                         if (candidateTeacher == null || !isClassTeacherRole(candidateTeacher.getTeacherType()))
                             return ApiResponse.<ClassRoom>error("Only Class Teachers or Class+Subject Teachers can be assigned as class teacher");
+                        // Prevent duplicate: reject if teacher is already class teacher for a different class
+                        List<ClassRoom> alreadyAssigned = (c.getSchoolId() != null)
+                                ? classRoomRepository.findBySchoolIdAndTeacherId(c.getSchoolId(), updated.getTeacherId())
+                                : classRoomRepository.findByTeacherId(updated.getTeacherId());
+                        if (alreadyAssigned.stream().anyMatch(room -> !room.getId().equals(id)))
+                            return ApiResponse.<ClassRoom>error("This teacher is already assigned as Class Teacher for another class");
                         // Remove class from previous teacher's classes text field
                         if (c.getTeacherId() != null) {
                             teacherRepository.findById(c.getTeacherId()).ifPresent(prev ->
