@@ -297,7 +297,8 @@ public class AdminService {
         if (schoolId == null) return ApiResponse.success(Page.empty());
         size = Math.min(size, 200);
         Pageable pageable = PageRequest.of(page, size, Sort.by("name").ascending());
-        String s  = search    != null ? search.trim()    : "";
+        // Escape LIKE wildcards so a search for "50%" doesn't match every row
+        String s  = search    != null ? search.trim().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") : "";
         String cn = className != null ? className.trim() : "";
         String st = status    != null ? status.trim()    : "";
         return ApiResponse.success(studentRepository.findByFilters(schoolId, s, cn, st, pageable));
@@ -1912,7 +1913,11 @@ public class AdminService {
         String paidDateStr = str(body, "paidDate", null);
         LocalDate paymentDate = LocalDate.now();
         if (paidDateStr != null) {
-            try { paymentDate = LocalDate.parse(paidDateStr); } catch (Exception ignored) {}
+            try {
+                paymentDate = LocalDate.parse(paidDateStr);
+                if (paymentDate.isAfter(LocalDate.now()))
+                    return ApiResponse.error("Payment date cannot be in the future");
+            } catch (Exception ignored) {}
         }
 
         BigDecimal newPaid = currentPaid.add(amountPaid);
@@ -1979,21 +1984,22 @@ public class AdminService {
                 .findById(installment.getAssignmentId()).orElse(null);
         if (assignment == null) return ApiResponse.error("Fee assignment not found");
 
-        // Server-side sequential receipt: RCP-{schoolId}-{YYYY}-{6-digit-seq}
-        int receiptYear = java.time.LocalDate.now().getYear();
-        Long schoolIdForReceipt = assignment.getSchoolId() != null ? assignment.getSchoolId() : 0L;
-        long seqBase = feePaymentRepository.countBySchoolIdAndPaymentYear(schoolIdForReceipt, receiptYear);
-        String receiptNumber = String.format("RCP-%d-%d-%06d", schoolIdForReceipt, receiptYear, seqBase + 1);
-        int retries = 0;
-        while (feePaymentRepository.existsByReceiptNumber(receiptNumber) && retries++ < 10) {
-            receiptNumber = String.format("RCP-%d-%d-%06d-%03d", schoolIdForReceipt, receiptYear, seqBase + 1,
-                    new java.security.SecureRandom().nextInt(999));
-        }
+        // Use the receipt number sent by the frontend (same as collectAssignmentFee).
+        // The frontend generates a timestamped receipt; we validate uniqueness here.
+        String receiptNumber = str(body, "receiptNumber", null);
+        if (receiptNumber == null || receiptNumber.isBlank()) return ApiResponse.error("Receipt number is required");
+        receiptNumber = receiptNumber.trim();
+        if (feePaymentRepository.existsByReceiptNumber(receiptNumber))
+            return ApiResponse.error("Duplicate receipt number: " + receiptNumber + ". Please try again.");
 
         String paidDateStr = str(body, "paidDate", null);
         LocalDate paymentDate = LocalDate.now();
         if (paidDateStr != null && !paidDateStr.isBlank()) {
-            try { paymentDate = LocalDate.parse(paidDateStr); } catch (Exception ignored) {}
+            try {
+                paymentDate = LocalDate.parse(paidDateStr);
+                if (paymentDate.isAfter(LocalDate.now()))
+                    return ApiResponse.error("Payment date cannot be in the future");
+            } catch (Exception ignored) {}
         }
 
         // Determine actual amount paid (frontend sends amountPaid; fall back to full amount)

@@ -53,9 +53,10 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     Page<Student> searchStudentsBySchool(@Param("schoolId") Long schoolId, @Param("search") String search, Pageable pageable);
 
     /** Single query that handles search + className + status filters together.
-     *  Pass empty string to skip a filter (avoids multiple query methods). */
+     *  Pass empty string to skip a filter (avoids multiple query methods).
+     *  Caller must escape LIKE special chars (% and _) before binding :search. */
     @Query("SELECT s FROM Student s WHERE s.schoolId = :schoolId " +
-           "AND (:search = '' OR LOWER(s.name) LIKE LOWER(CONCAT('%',:search,'%')) OR LOWER(s.rollNumber) LIKE LOWER(CONCAT('%',:search,'%')) OR s.parentMobile LIKE CONCAT('%',:search,'%')) " +
+           "AND (:search = '' OR LOWER(s.name) LIKE LOWER(CONCAT('%',:search,'%')) ESCAPE '\\' OR LOWER(s.rollNumber) LIKE LOWER(CONCAT('%',:search,'%')) ESCAPE '\\' OR s.parentMobile LIKE CONCAT('%',:search,'%') ESCAPE '\\') " +
            "AND (:className = '' OR LOWER(s.className) = LOWER(:className)) " +
            "AND (:status = '' OR (:status = 'Active' AND s.isActive = true) OR (:status = 'Inactive' AND (s.isActive = false OR s.isActive IS NULL)))")
     Page<Student> findByFilters(

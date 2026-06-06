@@ -227,7 +227,10 @@ public class TeacherController {
         Student student = studentRepository.findById(studentId).orElse(null);
         if (student == null)
             return ResponseEntity.badRequest().body(ApiResponse.error("Student not found"));
-        if (teacher.getSchoolId() != null && !teacher.getSchoolId().equals(student.getSchoolId()))
+        // Require non-null schoolId — prevents bypassing school isolation for platform-level accounts
+        if (teacher.getSchoolId() == null)
+            return ResponseEntity.badRequest().body(ApiResponse.error("Teacher school not configured"));
+        if (!teacher.getSchoolId().equals(student.getSchoolId()))
             return ResponseEntity.badRequest().body(ApiResponse.error("Student does not belong to your school"));
 
         ApiResponse<java.util.List<com.schoolers.model.ClassRoom>> classesResp = teacherService.getTeacherClasses(teacherId);
