@@ -54,6 +54,8 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
 
     // ── School-scoped queries (multi-tenant) ──────────────────────────────────
 
+    List<Attendance> findBySchoolIdAndDateBetween(Long schoolId, LocalDate start, LocalDate end);
+
     List<Attendance> findBySchoolIdAndClassIdAndDate(Long schoolId, Long classId, LocalDate date);
 
     List<Attendance> findBySchoolIdAndClassIdAndDateBetween(Long schoolId, Long classId, LocalDate start, LocalDate end);
