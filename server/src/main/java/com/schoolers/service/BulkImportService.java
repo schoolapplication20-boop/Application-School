@@ -156,8 +156,12 @@ public class BulkImportService {
         map.put("motherMobile",   row.getMotherPhone());
         map.put("address",        row.getAddress());
         map.put("idProofName",    row.getIdProofFileName());
-        if (row.getStudentEmail() != null && !row.getStudentEmail().isBlank())
+        if (row.getStudentEmail() != null && !row.getStudentEmail().isBlank()) {
             map.put("studentEmail", row.getStudentEmail().trim());
+        } else {
+            // No email → no account created → student starts Inactive
+            map.put("status", "Inactive");
+        }
         return map;
     }
 

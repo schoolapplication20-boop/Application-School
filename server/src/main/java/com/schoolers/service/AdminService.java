@@ -497,6 +497,7 @@ public class AdminService {
                 student.getName(), student.getAdmissionNumber(),
                 student.getRollNumber(), student.getId(), email.trim(), student.getSchoolId());
         student.setStudentUserId(result.user().getId());
+        student.setIsActive(true);
         studentRepository.save(student);
 
         emailService.sendWelcomeEmail(result.loginEmail(), student.getName(), "STUDENT", result.rawPassword());
@@ -744,6 +745,7 @@ public class AdminService {
                 if (result == null)
                     return ApiResponse.<Map<String, Object>>error("Could not create login account for this student.");
                 student.setStudentUserId(result.user().getId());
+                student.setIsActive(true);
                 studentRepository.save(student);
                 Map<String, Object> creds = new LinkedHashMap<>();
                 creds.put("email", result.loginEmail());

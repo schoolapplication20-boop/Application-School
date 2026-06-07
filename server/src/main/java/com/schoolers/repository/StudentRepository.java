@@ -58,7 +58,7 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     @Query("SELECT s FROM Student s WHERE s.schoolId = :schoolId " +
            "AND (:search = '' OR LOWER(s.name) LIKE LOWER(CONCAT('%',:search,'%')) ESCAPE '\\' OR LOWER(s.rollNumber) LIKE LOWER(CONCAT('%',:search,'%')) ESCAPE '\\' OR s.parentMobile LIKE CONCAT('%',:search,'%') ESCAPE '\\') " +
            "AND (:className = '' OR LOWER(s.className) = LOWER(:className)) " +
-           "AND (:status = '' OR (:status = 'Active' AND s.isActive = true) OR (:status = 'Inactive' AND (s.isActive = false OR s.isActive IS NULL)))")
+           "AND (:status = '' OR (:status = 'Active' AND s.isActive = true AND s.studentUserId IS NOT NULL) OR (:status = 'Inactive' AND (s.isActive = false OR s.isActive IS NULL OR s.studentUserId IS NULL)))")
     Page<Student> findByFilters(
         @Param("schoolId") Long schoolId,
         @Param("search") String search,
