@@ -176,8 +176,14 @@ public class AuthController {
     /** Student self-signup using admission number + school ID. */
     @PostMapping("/student-signup")
     public ResponseEntity<ApiResponse<Map<String, Object>>> studentSignup(@RequestBody Map<String, Object> body) {
-        Integer schoolCode = body.get("schoolId") != null
-                ? Integer.parseInt(body.get("schoolId").toString()) : null;
+        Integer schoolCode = null;
+        if (body.get("schoolId") != null) {
+            try {
+                schoolCode = Integer.parseInt(body.get("schoolId").toString());
+            } catch (NumberFormatException e) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("Invalid schoolId"));
+            }
+        }
         String admNo    = body.get("admissionNumber") != null ? body.get("admissionNumber").toString() : null;
         String email    = body.get("email") != null ? body.get("email").toString() : null;
         String password = body.get("password") != null ? body.get("password").toString() : null;

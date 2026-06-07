@@ -1,5 +1,7 @@
 package com.schoolers.config;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,6 +16,8 @@ import java.util.List;
 
 @Configuration
 public class CorsConfig {
+
+    private static final Logger log = LoggerFactory.getLogger(CorsConfig.class);
 
     /**
      * Production origins come from the CORS_ALLOWED_ORIGINS env var (comma-separated).
@@ -48,6 +52,14 @@ public class CorsConfig {
             origins.add("http://localhost:5173");
             origins.add("http://127.0.0.1:3000");
             origins.add("http://127.0.0.1:5173");
+        }
+
+        // Guard: allowCredentials=true is incompatible with wildcard origin '*'.
+        // Fail fast if a misconfigured env var introduces a wildcard.
+        if (origins.contains("*")) {
+            throw new IllegalStateException(
+                "CORS misconfiguration: allowCredentials=true cannot be combined with wildcard origin '*'. " +
+                "Remove '*' from CORS_ALLOWED_ORIGINS and specify explicit origins instead.");
         }
 
         CorsConfiguration config = new CorsConfiguration();
