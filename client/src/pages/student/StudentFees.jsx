@@ -84,9 +84,11 @@ export default function StudentFees() {
   };
   const sc = statusConfig[overallStatus] || statusConfig.PENDING;
 
-  /* fee type rows with amounts from class structure */
-  const feeTypeRows = cfs
-    ? FEE_TYPES.filter(ft => Number(cfs[ft.key] || 0) > 0)
+  /* Use student's assigned breakup if stored; fall back to class fee structure */
+  const assignmentHasBreakup = assignment && FEE_TYPES.some(ft => Number(assignment[ft.key] || 0) > 0);
+  const breakupSource = assignmentHasBreakup ? assignment : cfs;
+  const feeTypeRows = breakupSource
+    ? FEE_TYPES.filter(ft => Number(breakupSource[ft.key] || 0) > 0)
     : [];
 
   /* ── sub-components ── */
@@ -243,10 +245,15 @@ export default function StudentFees() {
           </div>
         </div>
 
-        {/* ── Fee Type Breakdown (from class structure) ── */}
+        {/* ── Fee Breakdown (student assigned or class structure fallback) ── */}
         {feeTypeRows.length > 0 && (
           <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, padding: '16px 20px', marginBottom: 20 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#2d3748', marginBottom: 14 }}>Fee Breakdown</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#2d3748' }}>Fee Breakdown</div>
+              {!assignmentHasBreakup && (
+                <span style={{ fontSize: 11, color: '#a0aec0', fontStyle: 'italic' }}>Based on class fee structure</span>
+              )}
+            </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
               {feeTypeRows.map(ft => (
                 <div key={ft.key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: ft.color + '0d', border: `1px solid ${ft.color}25`, borderRadius: 10 }}>
@@ -255,14 +262,16 @@ export default function StudentFees() {
                   </div>
                   <div>
                     <div style={{ fontSize: 12, color: '#718096', fontWeight: 600 }}>{ft.label}</div>
-                    <div style={{ fontSize: 14, fontWeight: 800, color: '#2d3748' }}>₹{fmt(cfs[ft.key])}</div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: '#2d3748' }}>₹{fmt(breakupSource[ft.key])}</div>
                   </div>
                 </div>
               ))}
             </div>
             <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px dashed #e2e8f0', display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-              <span style={{ color: '#718096', fontWeight: 600 }}>Class Total Annual Fee</span>
-              <span style={{ fontWeight: 800, color: '#1a202c' }}>₹{fmt(feeTypeRows.reduce((s, ft) => s + Number(cfs[ft.key] || 0), 0))}</span>
+              <span style={{ color: '#718096', fontWeight: 600 }}>
+                {assignmentHasBreakup ? 'Total Assigned Fee' : 'Class Total Annual Fee'}
+              </span>
+              <span style={{ fontWeight: 800, color: '#1a202c' }}>₹{fmt(feeTypeRows.reduce((s, ft) => s + Number(breakupSource[ft.key] || 0), 0))}</span>
             </div>
             {assignment.remarks && (
               <div style={{ marginTop: 8, fontSize: 12, color: '#718096', fontStyle: 'italic' }}>
