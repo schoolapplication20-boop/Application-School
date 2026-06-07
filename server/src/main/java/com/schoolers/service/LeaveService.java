@@ -6,7 +6,6 @@ import com.schoolers.repository.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,11 +29,6 @@ public class LeaveService {
     @Autowired private StudentRepository         studentRepository;
     @Autowired private TeacherRepository         teacherRepository;
     @Autowired private ClassRoomRepository       classRoomRepository;
-    @Autowired private EmailService              emailService;
-
-    @Value("${app.frontend.url:https://my-skoolz.com}")
-    private String appBaseUrl;
-
     // ── Admin helpers ───────────────────────────────────────────────────────
 
     public ApiResponse<List<LeaveRequest>> getStudentLeaves(Long schoolId) {
@@ -142,19 +136,6 @@ public class LeaveService {
 
         // 6. Notify the class teacher (if assigned)
         notifyClassTeacher(student, saved);
-
-        // 7. Email parent if parentEmail is set
-        if (student.getParentEmail() != null && !student.getParentEmail().isBlank()) {
-            emailService.sendParentLeaveAcknowledgement(
-                student.getParentEmail(),
-                student.getName(),
-                fromDate.toString(),
-                toDate.toString(),
-                parentToken,
-                "",  // school name fetched in email service; pass empty for now — school name not needed for token link
-                appBaseUrl
-            );
-        }
 
         return ApiResponse.success("Leave request submitted", saved);
     }

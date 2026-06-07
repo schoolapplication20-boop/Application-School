@@ -66,7 +66,6 @@ public class SuperAdminService {
     @Autowired private TransportStudentAssignmentRepository transportStudentAssignmentRepository;
     @Autowired private TransportFeeRepository            transportFeeRepository;
     @Autowired private StudentTransportRepository        studentTransportRepository;
-    @Autowired private ParentProfileRepository           parentProfileRepository;
     @Autowired private AuditLogRepository                auditLogRepository;
     @Autowired private IdempotencyKeyRepository          idempotencyKeyRepository;
     @Autowired private JdbcTemplate                      jdbcTemplate;
@@ -609,12 +608,7 @@ public class SuperAdminService {
         teacherUserIds.forEach(userRepository::deleteById);
         log.info("[deleteSchool] students and teachers deleted");
 
-        // ── 16. Parent profiles: FK parent_profiles.user_id → users.id must be removed
-        //        BEFORE we delete any remaining user rows.
-        parentProfileRepository.deleteBySchoolId(sid);
-        log.info("[deleteSchool] parent profiles deleted");
-
-        // ── 17. Remaining users (ADMIN, SUPER_ADMIN, any orphaned accounts) ───
+        // ── 16. Remaining users (ADMIN, SUPER_ADMIN, any orphaned accounts) ───
         userRepository.deleteBySchoolId(sid);
 
         // ── 18. Audit logs and idempotency keys ──────────────────────────────

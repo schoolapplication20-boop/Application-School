@@ -6,9 +6,10 @@ import com.schoolers.repository.AssignmentRepository;
 import com.schoolers.repository.AssignmentSubmissionRepository;
 import com.schoolers.repository.StudentRepository;
 import com.schoolers.repository.UserRepository;
+import com.schoolers.repository.AttendanceRepository;
+import com.schoolers.repository.MarksRepository;
 import com.schoolers.service.AdminService;
 import com.schoolers.service.ClassDiaryService;
-import com.schoolers.service.ParentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -28,7 +29,10 @@ import java.util.Optional;
 public class StudentController {
 
     @Autowired
-    private ParentService parentService;
+    private AttendanceRepository attendanceRepository;
+
+    @Autowired
+    private MarksRepository marksRepository;
 
     @Autowired
     private AdminService adminService;
@@ -77,7 +81,10 @@ public class StudentController {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         Long studentId = resolveStudentId(auth);
         if (studentId == null) return ResponseEntity.status(403).body(ApiResponse.error("Student profile not found."));
-        return ResponseEntity.ok(parentService.getChildAttendance(null, studentId, startDate, endDate));
+        List<Attendance> records = (startDate != null && endDate != null)
+            ? attendanceRepository.findByStudentIdAndDateBetween(studentId, startDate, endDate)
+            : attendanceRepository.findByStudentIdOrderByDateDesc(studentId);
+        return ResponseEntity.ok(ApiResponse.success(records));
     }
 
     @GetMapping("/marks")
@@ -85,7 +92,7 @@ public class StudentController {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         Long studentId = resolveStudentId(auth);
         if (studentId == null) return ResponseEntity.status(403).body(ApiResponse.error("Student profile not found."));
-        return ResponseEntity.ok(parentService.getChildMarks(null, studentId));
+        return ResponseEntity.ok(ApiResponse.success(marksRepository.findByStudentId(studentId)));
     }
 
     /**

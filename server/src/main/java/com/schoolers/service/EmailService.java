@@ -155,22 +155,6 @@ public class EmailService {
         }
     }
 
-    // ── Parent leave acknowledgement (fire-and-forget) ───────────────────────
-
-    public void sendParentLeaveAcknowledgement(String parentEmail, String studentName,
-            String fromDate, String toDate, String token, String schoolName, String appBaseUrl) {
-        try {
-            requireApiKey();
-            String ackLink = appBaseUrl + "/leave/parent-ack?token=" + token;
-            send(parentEmail,
-                studentName + "'s Leave Request — " + schoolName,
-                buildParentLeaveAckHtml(studentName, fromDate, toDate, ackLink, schoolName));
-            log.info("[EmailService] Parent leave ack email sent for student: " + studentName);
-        } catch (Exception e) {
-            log.warning("[EmailService] Parent leave ack email failed: " + e.getMessage());
-        }
-    }
-
     // ── Low attendance alert (fire-and-forget) ────────────────────────────────
 
     public void sendAttendanceAlert(String parentEmail, String studentName,
@@ -524,22 +508,6 @@ public class EmailService {
         return "<tr><td style='padding:8px;border:1px solid #e2e8f0;font-weight:bold;width:35%'>" +
             label + "</td><td style='padding:8px;border:1px solid #e2e8f0'>" +
             (value != null ? value : "") + "</td></tr>";
-    }
-
-    private String buildParentLeaveAckHtml(String studentName, String fromDate, String toDate, String ackLink, String schoolName) {
-        return "<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px'>" +
-            "<h2 style='color:#2563EB'>" + schoolName + " — Leave Request</h2>" +
-            "<p>Dear Parent/Guardian,</p>" +
-            "<p>Your ward <strong>" + studentName + "</strong> has submitted a leave request:</p>" +
-            "<table style='width:100%;border-collapse:collapse;margin:16px 0'>" +
-            row("From Date", fromDate) + row("To Date", toDate) +
-            "</table>" +
-            "<p>Please click the button below to acknowledge this request:</p>" +
-            "<div style='text-align:center;margin:28px 0'>" +
-            "<a href='" + ackLink + "' style='background:#2563EB;color:#fff;padding:14px 32px;" +
-            "border-radius:8px;text-decoration:none;font-weight:bold;font-size:16px'>Acknowledge Leave</a></div>" +
-            "<p style='color:#64748b;font-size:13px'>If you did not expect this email, please contact the school directly.</p>" +
-            "<p>Regards,<br><strong>" + schoolName + "</strong></p></div>";
     }
 
     private String buildAttendanceAlertHtml(String studentName, String className, double pct, String schoolName) {
