@@ -69,7 +69,7 @@ export default function Fees() {
   const [assignStudentSearch, setAssignStudentSearch]   = useState('');
   const [assignStudentResults, setAssignStudentResults] = useState([]);
   const [assignStudent, setAssignStudent]     = useState(null);
-  const [assignForm, setAssignForm]           = useState({ totalFee: '', dueDate: '', remarks: '', academicYear: CURRENT_YEAR });
+  const [assignForm, setAssignForm]           = useState({ tuitionFee: '', transportFee: '', labFee: '', examFee: '', sportsFee: '', otherFee: '', dueDate: '', remarks: '', academicYear: CURRENT_YEAR });
   const [assignSearching, setAssignSearching] = useState(false);
 
   // Installment schedule state
@@ -150,6 +150,12 @@ export default function Fees() {
     return { totalBilled, totalPaid, totalDue, paid, total: assignments.length };
   }, [assignments]);
 
+  /* ── auto-calculated total for assign modal ── */
+  const assignTotal = useMemo(() =>
+    ['tuitionFee','transportFee','labFee','examFee','sportsFee','otherFee']
+      .reduce((sum, k) => sum + Number(assignForm[k] || 0), 0),
+  [assignForm]);
+
   /* ── open fee structure modal ── */
   const openFeeModal = (className) => {
     const existing = structureMap[className];
@@ -183,8 +189,38 @@ export default function Fees() {
   const openAssignModal = async (assignment = null) => {
     setAssignTarget(assignment);
     setAssignStudent(assignment ? { id: assignment.studentId, name: assignment.studentName, rollNumber: assignment.rollNumber, className: assignment.className } : null);
+
+    let breakup = { tuitionFee: '', transportFee: '', labFee: '', examFee: '', sportsFee: '', otherFee: '' };
+    if (assignment) {
+      const hasBreakup = ['tuitionFee','transportFee','labFee','examFee','sportsFee','otherFee']
+        .some(k => Number(assignment[k] || 0) > 0);
+      if (hasBreakup) {
+        breakup = {
+          tuitionFee:   assignment.tuitionFee   ?? '',
+          transportFee: assignment.transportFee ?? '',
+          labFee:       assignment.labFee       ?? '',
+          examFee:      assignment.examFee      ?? '',
+          sportsFee:    assignment.sportsFee    ?? '',
+          otherFee:     assignment.otherFee     ?? '',
+        };
+      } else {
+        // Old assignment with only totalFee — prefill breakup from class fee structure
+        const cfs = structureMap[assignment.className];
+        if (cfs) {
+          breakup = {
+            tuitionFee:   cfs.tuitionFee   ?? '',
+            transportFee: cfs.transportFee ?? '',
+            labFee:       cfs.labFee       ?? '',
+            examFee:      cfs.examFee      ?? '',
+            sportsFee:    cfs.sportsFee    ?? '',
+            otherFee:     cfs.otherFee     ?? '',
+          };
+        }
+      }
+    }
+
     setAssignForm({
-      totalFee:     assignment?.totalFee    ?? '',
+      ...breakup,
       dueDate:      assignment?.dueDate     ?? '',
       remarks:      assignment?.remarks     ?? '',
       academicYear: assignment?.academicYear ?? CURRENT_YEAR,
@@ -228,10 +264,20 @@ export default function Fees() {
     setAssignStudentSearch(s.name);
     setAssignStudentResults([]);
     const cfs = structureMap[s.className];
-    if (cfs && !assignForm.totalFee) {
-      const total = ['tuitionFee','transportFee','labFee','examFee','sportsFee','otherFee']
-        .reduce((sum, k) => sum + Number(cfs[k] || 0), 0);
-      setAssignForm(f => ({ ...f, totalFee: total }));
+    if (cfs) {
+      const hasAny = ['tuitionFee','transportFee','labFee','examFee','sportsFee','otherFee']
+        .some(k => Number(assignForm[k] || 0) > 0);
+      if (!hasAny) {
+        setAssignForm(f => ({
+          ...f,
+          tuitionFee:   cfs.tuitionFee   ?? '',
+          transportFee: cfs.transportFee ?? '',
+          labFee:       cfs.labFee       ?? '',
+          examFee:      cfs.examFee      ?? '',
+          sportsFee:    cfs.sportsFee    ?? '',
+          otherFee:     cfs.otherFee     ?? '',
+        }));
+      }
     }
   };
 
@@ -246,19 +292,18 @@ export default function Fees() {
 
   const saveAssignment = async () => {
     if (!assignStudent) { showToast('Select a student', 'error'); return; }
-    if (!assignForm.totalFee) { showToast('Enter total fee', 'error'); return; }
+    if (!assignTotal) { showToast('Enter fee amounts', 'error'); return; }
 
-    // Validate installments: if any are filled, their total must match totalFee
+    // Validate installments: if any are filled, their total must match assignTotal
     const filledInstallments = installments
       .filter(i => i.termName?.trim() && i.amount && Number(i.amount) > 0)
       .map(i => ({ termName: i.termName.trim(), amount: i.amount, dueDate: i.dueDate || null }));
 
     if (filledInstallments.length > 0) {
       const instTotal = filledInstallments.reduce((s, i) => s + Number(i.amount || 0), 0);
-      const feeTotal  = Number(assignForm.totalFee);
-      if (Math.abs(instTotal - feeTotal) > 0.01) {
+      if (Math.abs(instTotal - assignTotal) > 0.01) {
         showToast(
-          `Installment total ₹${fmt(instTotal)} does not match total fee ₹${fmt(feeTotal)}. Please correct before saving.`,
+          `Installment total ₹${fmt(instTotal)} does not match total fee ₹${fmt(assignTotal)}. Please correct before saving.`,
           'error'
         );
         return;
@@ -267,10 +312,10 @@ export default function Fees() {
 
     setSaving(true);
     try {
-
       await adminAPI.assignStudentFee({
         studentId: assignStudent.id,
         ...assignForm,
+        totalFee: assignTotal,
         installments: filledInstallments.length > 0 ? filledInstallments : undefined,
       });
       showToast(assignTarget ? 'Fee updated' : 'Fee assigned');
@@ -278,7 +323,7 @@ export default function Fees() {
       // Reset form so next open starts clean
       setAssignTarget(null);
       setAssignStudent(null);
-      setAssignForm({ totalFee: '', dueDate: '', remarks: '', academicYear: CURRENT_YEAR });
+      setAssignForm({ tuitionFee: '', transportFee: '', labFee: '', examFee: '', sportsFee: '', otherFee: '', dueDate: '', remarks: '', academicYear: CURRENT_YEAR });
       setAssignStudentSearch('');
       setAssignStudentResults([]);
       setInstallments([{ termName: 'Term 1', amount: '', dueDate: '' }, { termName: 'Term 2', amount: '', dueDate: '' }, { termName: 'Term 3', amount: '', dueDate: '' }]);
@@ -653,16 +698,15 @@ export default function Fees() {
             )}
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 16 }}>
-              <div style={{ gridColumn: '1/-1' }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Assigned Total Fee (₹) *</label>
-                <input
-                  type="number" min="0"
-                  value={assignForm.totalFee}
-                  onChange={e => setAssignForm(f => ({ ...f, totalFee: e.target.value }))}
-                  placeholder="Enter negotiated/final fee"
-                  style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 14, fontWeight: 700, outline: 'none', boxSizing: 'border-box' }}
-                />
-                <p style={{ fontSize: 11, color: '#a0aec0', margin: '4px 0 0' }}>You can override the class fee with a negotiated amount.</p>
+              <FeeInput label="Tuition Fee (₹)" value={assignForm.tuitionFee} onChange={v => setAssignForm(f => ({ ...f, tuitionFee: v }))} />
+              <FeeInput label="Transport Fee (₹)" value={assignForm.transportFee} onChange={v => setAssignForm(f => ({ ...f, transportFee: v }))} />
+              <FeeInput label="Lab Fee (₹)" value={assignForm.labFee} onChange={v => setAssignForm(f => ({ ...f, labFee: v }))} />
+              <FeeInput label="Exam Fee (₹)" value={assignForm.examFee} onChange={v => setAssignForm(f => ({ ...f, examFee: v }))} />
+              <FeeInput label="Sports Fee (₹)" value={assignForm.sportsFee} onChange={v => setAssignForm(f => ({ ...f, sportsFee: v }))} />
+              <FeeInput label="Other Fee (₹)" value={assignForm.otherFee} onChange={v => setAssignForm(f => ({ ...f, otherFee: v }))} />
+              <div style={{ gridColumn: '1/-1', background: '#f0fff4', borderRadius: 8, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#276749' }}>Total Assigned Fee *</span>
+                <span style={{ fontSize: 17, fontWeight: 800, color: '#276749' }}>₹{fmt(assignTotal)}</span>
               </div>
               <div>
                 <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Due Date</label>
@@ -742,9 +786,9 @@ export default function Fees() {
                 {installments.some(i => i.amount && Number(i.amount) > 0) && (
                   <div style={{ fontSize: 12, color: '#718096', marginTop: 6, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                     <span>Installment total: ₹{fmt(installments.reduce((s, i) => s + Number(i.amount || 0), 0))}</span>
-                    {Number(assignForm.totalFee) > 0 &&
-                     Math.abs(installments.reduce((s, i) => s + Number(i.amount || 0), 0) - Number(assignForm.totalFee)) > 0.01 && (
-                      <span style={{ color: '#e53e3e' }}>⚠ Does not match total fee (₹{fmt(assignForm.totalFee)})</span>
+                    {assignTotal > 0 &&
+                     Math.abs(installments.reduce((s, i) => s + Number(i.amount || 0), 0) - assignTotal) > 0.01 && (
+                      <span style={{ color: '#e53e3e' }}>⚠ Does not match total fee (₹{fmt(assignTotal)})</span>
                     )}
                   </div>
                 )}
