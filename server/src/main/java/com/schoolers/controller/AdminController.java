@@ -45,7 +45,14 @@ public class AdminController {
         if (auth == null) return null;
         if (auth.getDetails() instanceof java.util.Map) {
             Object v = ((java.util.Map<?, ?>) auth.getDetails()).get("schoolId");
-            if (v != null) return v instanceof Long ? (Long) v : Long.parseLong(v.toString());
+            if (v != null) {
+                if (v instanceof Long) return (Long) v;
+                try {
+                    return Long.parseLong(v.toString());
+                } catch (NumberFormatException e) {
+                    return null;
+                }
+            }
         }
         return userRepository.findByEmailIgnoreCase(auth.getName())
                 .map(com.schoolers.model.User::getSchoolId)

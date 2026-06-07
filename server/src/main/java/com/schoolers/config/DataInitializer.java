@@ -22,8 +22,8 @@ public class DataInitializer {
     @Value("${app.owner.email:superadmin@schoolers.com}")
     private String ownerEmail;
 
-    @Value("${app.owner.password:SuperAdmin@123}")
-    private String ownerPassword;
+    @Value("${app.owner.password:}")
+    private String ownerPasswordProp;
 
     @Value("${app.owner.mobile:9000000000}")
     private String ownerMobile;
@@ -39,6 +39,17 @@ public class DataInitializer {
             PasswordEncoder passwordEncoder
     ) {
         return args -> {
+
+            // Resolve owner password: prefer APP_OWNER_PASSWORD env var, then Spring property,
+            // then fall back to the insecure default — warn loudly when using the default.
+            String ownerPassword = System.getenv("APP_OWNER_PASSWORD");
+            if (ownerPassword == null || ownerPassword.isBlank()) {
+                ownerPassword = ownerPasswordProp;
+            }
+            if (ownerPassword == null || ownerPassword.isBlank()) {
+                ownerPassword = "SuperAdmin@123"; // fallback for local dev only
+                log.warn("[DataInitializer] APP_OWNER_PASSWORD env var not set — using insecure default. Set this in production!");
+            }
 
             // ── Role Hierarchy ─────────────────────────────────────────────────────
             // APPLICATION_OWNER : platform-level account, schoolId = NULL.

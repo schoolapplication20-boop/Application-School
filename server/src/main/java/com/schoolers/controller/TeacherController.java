@@ -206,6 +206,15 @@ public class TeacherController {
         if (newPassword == null || newPassword.isBlank())
             return ResponseEntity.badRequest().body(ApiResponse.error("New password is required"));
         Long teacherId = resolveTeacherId(null);
+        // Cross-school guard: ensure the target student belongs to the teacher's school
+        Long teacherSchoolId = resolveTeacherSchoolId();
+        if (teacherSchoolId != null) {
+            Student targetStudent = studentRepository.findById(studentId).orElse(null);
+            if (targetStudent == null)
+                return ResponseEntity.status(404).body(ApiResponse.error("Student not found"));
+            if (!teacherSchoolId.equals(targetStudent.getSchoolId()))
+                return ResponseEntity.status(403).body(ApiResponse.error("Access denied: student does not belong to your school"));
+        }
         ApiResponse<String> response = teacherService.resetStudentPassword(teacherId, studentId, newPassword);
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
