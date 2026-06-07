@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -36,6 +37,7 @@ public class User {
     @Column(nullable = false, length = 100)
     private String name;
 
+    @NotNull
     @Email
     @Column(nullable = false, length = 150)
     private String email;
@@ -68,6 +70,7 @@ public class User {
     @Column(name = "temp_password", length = 30)
     private String tempPassword;
 
+    @NotNull
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private Role role;

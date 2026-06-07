@@ -1,6 +1,7 @@
 package com.schoolers.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -31,15 +32,18 @@ public class Student {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotNull
     @Column(nullable = false, length = 100)
     private String name;
 
+    @NotNull
     @Column(name = "roll_number", nullable = false, length = 20)
     private String rollNumber;
 
     @Column(name = "admission_number", length = 30)
     private String admissionNumber;
 
+    @NotNull
     @Column(name = "class_name", nullable = false, length = 50)
     private String className;
 

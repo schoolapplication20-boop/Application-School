@@ -1,6 +1,7 @@
 package com.schoolers.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -25,12 +26,15 @@ public class Expense {
     private Long id;
 
     /** Free-text title — user types anything e.g. "Salaries March 2026" */
+    @NotNull
     @Column(nullable = false, length = 255)
     private String title;
 
-    @Column(nullable = false, precision = 12, scale = 2)
+    @NotNull
+    @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal amount;
 
+    @NotNull
     @Column(nullable = false)
     private LocalDate date;
 
@@ -38,6 +42,7 @@ public class Expense {
     @Column(name = "payment_mode", length = 30)
     private String paymentMode;
 
+    @NotNull
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)
     @Builder.Default

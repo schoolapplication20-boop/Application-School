@@ -1,6 +1,7 @@
 package com.schoolers.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -22,9 +23,11 @@ public class Announcement {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotNull
     @Column(nullable = false, length = 200)
     private String title;
 
+    @NotNull
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
@@ -43,6 +46,7 @@ public class Announcement {
     private Boolean isActive = true;
 
     /** Multi-tenancy: which school this announcement belongs to. */
+    @NotNull
     @Column(name = "school_id")
     private Long schoolId;
 

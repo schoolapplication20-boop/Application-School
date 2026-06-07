@@ -1,6 +1,7 @@
 package com.schoolers.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -26,18 +27,22 @@ public class Attendance {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotNull
     @Column(name = "student_id", nullable = false)
     private Long studentId;
 
+    @NotNull
     @Column(name = "class_id", nullable = false)
     private Long classId;
 
     @Column(name = "class_name", length = 20)
     private String className;
 
+    @NotNull
     @Column(nullable = false)
     private LocalDate date;
 
+    @NotNull
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)
     private Status status;

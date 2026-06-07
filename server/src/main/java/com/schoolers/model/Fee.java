@@ -1,6 +1,7 @@
 package com.schoolers.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -24,6 +25,7 @@ public class Fee {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotNull
     @Column(name = "student_id", nullable = false)
     private Long studentId;
 
@@ -36,12 +38,14 @@ public class Fee {
     @Column(name = "class_name", length = 20)
     private String className;
 
+    @NotNull
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal amount;
 
     @Column(name = "fee_type", length = 50)
     private String feeType;
 
+    @NotNull
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)
     @Builder.Default

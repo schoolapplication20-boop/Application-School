@@ -1,6 +1,7 @@
 package com.schoolers.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import java.time.LocalDateTime;
 
@@ -14,12 +15,15 @@ public class EmailVerification {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotNull
     @Column(nullable = false, length = 254)
     private String email;
 
+    @NotNull
     @Column(nullable = false, length = 6)
     private String otp;
 
+    @NotNull
     @Column(nullable = false)
     private LocalDateTime expiry;
 

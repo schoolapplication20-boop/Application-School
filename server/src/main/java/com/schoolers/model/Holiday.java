@@ -1,6 +1,7 @@
 package com.schoolers.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -22,9 +23,11 @@ public class Holiday {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotNull
     @Column(nullable = false, length = 100)
     private String name;
 
+    @NotNull
     @Column(nullable = false)
     private LocalDate date;
 
@@ -32,6 +35,7 @@ public class Holiday {
     @Builder.Default
     private boolean recurring = false;
 
+    @NotNull
     @Column(name = "school_id")
     private Long schoolId;
 

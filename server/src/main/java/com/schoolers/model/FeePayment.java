@@ -1,6 +1,7 @@
 package com.schoolers.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -30,6 +31,7 @@ public class FeePayment {
     @Column(name = "assignment_id")
     private Long assignmentId;
 
+    @NotNull
     @Column(name = "student_id", nullable = false)
     private Long studentId;
 
@@ -45,15 +47,19 @@ public class FeePayment {
     @Column(name = "fee_type", length = 50)
     private String feeType;
 
+    @NotNull
     @Column(name = "amount_paid", nullable = false, precision = 10, scale = 2)
     private BigDecimal amountPaid;
 
+    @NotNull
     @Column(name = "payment_date", nullable = false)
     private LocalDate paymentDate;
 
+    @NotNull
     @Column(name = "payment_mode", nullable = false, length = 20)
     private String paymentMode;
 
+    @NotNull
     @Column(name = "receipt_number", nullable = false, length = 50, unique = true)
     private String receiptNumber;
 

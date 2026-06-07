@@ -1,6 +1,7 @@
 package com.schoolers.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -23,10 +24,12 @@ public class LeaveRequest {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotNull
     @Enumerated(EnumType.STRING)
     @Column(name = "requester_type", nullable = false, length = 10)
     private RequesterType requesterType;
 
+    @NotNull
     @Column(name = "requester_id", nullable = false)
     private Long requesterId;
 
@@ -39,15 +42,18 @@ public class LeaveRequest {
     @Column(name = "leave_type", length = 30)
     private String leaveType;
 
+    @NotNull
     @Column(name = "from_date", nullable = false)
     private LocalDate fromDate;
 
+    @NotNull
     @Column(name = "to_date", nullable = false)
     private LocalDate toDate;
 
     @Column(columnDefinition = "TEXT")
     private String reason;
 
+    @NotNull
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 15)
     @Builder.Default

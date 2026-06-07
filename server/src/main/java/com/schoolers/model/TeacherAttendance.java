@@ -1,6 +1,7 @@
 package com.schoolers.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -20,6 +21,7 @@ public class TeacherAttendance {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotNull
     @Column(name = "teacher_id", nullable = false)
     private Long teacherId;
 
@@ -29,9 +31,11 @@ public class TeacherAttendance {
     @Column(name = "school_id")
     private Long schoolId;
 
+    @NotNull
     @Column(nullable = false)
     private LocalDate date;
 
+    @NotNull
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)
     private Status status;

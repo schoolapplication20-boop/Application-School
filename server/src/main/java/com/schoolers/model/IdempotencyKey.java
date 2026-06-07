@@ -1,6 +1,7 @@
 package com.schoolers.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -27,9 +28,11 @@ public class IdempotencyKey {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotNull
     @Column(name = "idem_key", nullable = false, length = 64)
     private String key;
 
+    @NotNull
     @Column(name = "school_id", nullable = false)
     private Long schoolId;
 

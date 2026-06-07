@@ -1,6 +1,7 @@
 package com.schoolers.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -27,6 +28,7 @@ public class Message {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotNull
     @Column(name = "sender_id", nullable = false)
     private Long senderId;
 
@@ -36,6 +38,7 @@ public class Message {
     @Column(name = "sender_role", length = 20)
     private String senderRole;
 
+    @NotNull
     @Column(name = "receiver_id", nullable = false)
     private Long receiverId;
 
@@ -45,6 +48,7 @@ public class Message {
     @Column(name = "receiver_role", length = 20)
     private String receiverRole;
 
+    @NotNull
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
