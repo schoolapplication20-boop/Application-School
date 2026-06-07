@@ -15,7 +15,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.stream.Stream;
 
 @Service
@@ -114,9 +113,6 @@ public class LeaveService {
             classSection += "-" + student.getSection();
         }
 
-        // 4. Generate parent acknowledgement token
-        String parentToken = UUID.randomUUID().toString().replace("-", "");
-
         // 5. Persist
         LeaveRequest leave = LeaveRequest.builder()
                 .requesterType(LeaveRequest.RequesterType.STUDENT)
@@ -128,7 +124,6 @@ public class LeaveService {
                 .toDate(toDate)
                 .reason(reason.trim())
                 .status(LeaveRequest.Status.PENDING)
-                .parentToken(parentToken)
                 .schoolId(student.getSchoolId())
                 .build();
 

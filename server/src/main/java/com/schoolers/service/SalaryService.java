@@ -255,7 +255,25 @@ public class SalaryService {
         int totalDays    = ym.lengthOfMonth();
         int weekends     = countWeekends(ym);
         int extraHolidays = countExtraHolidays(ym, month, year);
-        int workingDays  = Math.max(totalDays - weekends - extraHolidays, 1);
+        int rawWorkingDays = totalDays - weekends - extraHolidays;
+        // Fix: guard against division by zero — if all days are weekends/holidays, pay the full net salary
+        if (rawWorkingDays <= 0) {
+            BigDecimal gross0 = s.getGross();
+            BigDecimal pfAmt0 = s.getPf()  != null ? s.getPf()  : BigDecimal.ZERO;
+            BigDecimal tax0   = s.getTax() != null ? s.getTax() : BigDecimal.ZERO;
+            BigDecimal net0   = gross0.subtract(pfAmt0).subtract(tax0);
+            s.setTotalDaysInMonth(totalDays);
+            s.setTotalWorkingDays(0);
+            s.setWorkedDays(0);
+            s.setPerDaySalary(BigDecimal.ZERO);
+            s.setCalculatedSalary(net0.setScale(2, RoundingMode.HALF_UP));
+            BigDecimal paid0 = s.getPaidAmount() != null ? s.getPaidAmount() : BigDecimal.ZERO;
+            if (paid0.compareTo(BigDecimal.ZERO) == 0)   s.setStatus(Salary.Status.PENDING);
+            else if (paid0.compareTo(net0) >= 0)          s.setStatus(Salary.Status.PAID);
+            else                                           s.setStatus(Salary.Status.PROCESSING);
+            return;
+        }
+        int workingDays  = rawWorkingDays;
         int leaves       = s.getLeavesTaken() != null ? s.getLeavesTaken() : 0;
         int workedDays   = Math.max(workingDays - leaves, 0);
 

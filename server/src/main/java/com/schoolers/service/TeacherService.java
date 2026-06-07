@@ -539,11 +539,15 @@ public class TeacherService {
         }
 
         if (requireClassTeacher) {
+            // Fix: SUBJECT_TEACHER must never perform class-wide operations (e.g. marking attendance)
+            // regardless of how they are assigned to the class.
+            if ("SUBJECT_TEACHER".equalsIgnoreCase(teacher.getTeacherType())) {
+                return ApiResponse.error("Only class teachers can mark class attendance.");
+            }
             boolean isClassTeacherType = "CLASS_TEACHER".equalsIgnoreCase(teacher.getTeacherType())
                     || "BOTH".equalsIgnoreCase(teacher.getTeacherType());
-            // Allow any teacher who has a legitimate class assignment (all three paths above)
-            if (!isClassTeacherType && !isAssignedViaClass && !isAssignedViaText) {
-                return ApiResponse.error("You are not assigned to this class");
+            if (!isClassTeacherType) {
+                return ApiResponse.error("Only class teachers can mark class attendance.");
             }
         }
 

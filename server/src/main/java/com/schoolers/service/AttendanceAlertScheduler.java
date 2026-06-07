@@ -10,7 +10,9 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 @Service
 public class AttendanceAlertScheduler {
@@ -31,37 +33,50 @@ public class AttendanceAlertScheduler {
         LocalDate monthStart = LocalDate.now().withDayOfMonth(1);
         LocalDate today      = LocalDate.now();
 
-        List<Student> students = studentRepository.findAll();
+        // Process per school to avoid loading all students globally (N+1 fix)
+        List<com.schoolers.model.School> schools = schoolRepository.findAll();
         int alertsSent = 0;
 
-        for (Student student : students) {
-            if (!Boolean.TRUE.equals(student.getIsActive())) continue;
-            if (student.getParentEmail() == null || student.getParentEmail().isBlank()) continue;
+        for (com.schoolers.model.School school : schools) {
+            Long schoolId = school.getId();
 
-            List<Attendance> records = attendanceRepository
-                    .findByStudentIdAndDateBetween(student.getId(), monthStart, today);
+            // Load all students for this school
+            List<Student> students = studentRepository.findBySchoolId(schoolId);
 
-            if (records.isEmpty()) continue;
+            // Bulk-load all attendance records for this school in one query
+            List<Attendance> allRecords = attendanceRepository
+                    .findBySchoolIdAndDateBetween(schoolId, monthStart, today);
 
-            long present = records.stream().filter(a ->
-                    a.getStatus() == Attendance.Status.PRESENT ||
-                    a.getStatus() == Attendance.Status.LATE).count();
-            double pct = (present * 100.0) / records.size();
+            // Group attendance by studentId in memory — avoids per-student DB queries
+            Map<Long, List<Attendance>> byStudent = allRecords.stream()
+                    .collect(Collectors.groupingBy(Attendance::getStudentId));
 
-            if (pct < THRESHOLD) {
-                String schoolName = schoolRepository.findById(student.getSchoolId())
-                        .map(s -> s.getName()).orElse("School");
-                String className = student.getClassName()
-                        + (student.getSection() != null ? "-" + student.getSection() : "");
+            for (Student student : students) {
+                if (!Boolean.TRUE.equals(student.getIsActive())) continue;
+                if (student.getParentEmail() == null || student.getParentEmail().isBlank()) continue;
 
-                emailService.sendAttendanceAlert(
-                    student.getParentEmail(),
-                    student.getName(),
-                    className,
-                    pct,
-                    schoolName
-                );
-                alertsSent++;
+                List<Attendance> records = byStudent.getOrDefault(student.getId(), List.of());
+                if (records.isEmpty()) continue;
+
+                long present = records.stream().filter(a ->
+                        a.getStatus() == Attendance.Status.PRESENT ||
+                        a.getStatus() == Attendance.Status.LATE).count();
+                double pct = (present * 100.0) / records.size();
+
+                if (pct < THRESHOLD) {
+                    String schoolName = school.getName() != null ? school.getName() : "School";
+                    String className = student.getClassName()
+                            + (student.getSection() != null ? "-" + student.getSection() : "");
+
+                    emailService.sendAttendanceAlert(
+                        student.getParentEmail(),
+                        student.getName(),
+                        className,
+                        pct,
+                        schoolName
+                    );
+                    alertsSent++;
+                }
             }
         }
         log.info("[AttendanceAlert] Completed. Alerts sent: " + alertsSent);

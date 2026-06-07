@@ -66,7 +66,9 @@ public class AppointmentService {
         Student student = studentRepository.findById(studentId).orElse(null);
         if (student == null) return ApiResponse.error("Student not found.");
 
-        // Multi-tenant guard
+        // Multi-tenant guard: block when school IDs differ, or when one is set and the other is not
+        if (teacher.getSchoolId() == null && student.getSchoolId() != null)
+            return ApiResponse.error("Teacher has no school assigned; cannot create cross-school appointment.");
         if (teacher.getSchoolId() != null && !teacher.getSchoolId().equals(student.getSchoolId()))
             return ApiResponse.error("Student does not belong to your school.");
 
