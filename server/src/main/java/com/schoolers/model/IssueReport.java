@@ -1,6 +1,7 @@
 package com.schoolers.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -22,21 +23,26 @@ public class IssueReport {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotNull
     @Column(nullable = false, length = 200)
     private String title;
 
+    @NotNull
     @Column(nullable = false, columnDefinition = "TEXT")
     private String description;
 
+    @NotNull
     @Column(nullable = false, length = 50)
     @Builder.Default
     private String category = "BUG"; // BUG | UI_ISSUE | FEATURE_REQUEST | PERFORMANCE | OTHER
 
+    @NotNull
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default
     private Priority priority = Priority.MEDIUM;
 
+    @NotNull
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default
@@ -51,6 +57,7 @@ public class IssueReport {
     @Column(length = 30)
     private String reporterRole;
 
+    @NotNull
     @Column
     private Long schoolId;
 
@@ -61,6 +68,7 @@ public class IssueReport {
     private String ownerNote; // Owner's internal note/response
 
     @CreationTimestamp
+    @NotNull
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

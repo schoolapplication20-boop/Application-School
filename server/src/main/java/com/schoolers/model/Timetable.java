@@ -1,6 +1,7 @@
 package com.schoolers.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -28,18 +29,23 @@ public class Timetable {
     @Column(name = "teacher_name", length = 100)
     private String teacherName;
 
+    @NotNull
     @Column(name = "class_section", nullable = false, length = 20)
     private String classSection;
 
+    @NotNull
     @Column(nullable = false, length = 50)
     private String subject;
 
+    @NotNull
     @Column(nullable = false, length = 15)
     private String day;
 
+    @NotNull
     @Column(name = "start_time", nullable = false, length = 10)
     private String startTime;
 
+    @NotNull
     @Column(name = "end_time", nullable = false, length = 10)
     private String endTime;
 

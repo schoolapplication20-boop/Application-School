@@ -1,6 +1,7 @@
 package com.schoolers.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -23,27 +24,34 @@ public class Certificate {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotNull
     @Column(name = "certificate_id", nullable = false, unique = true, length = 30)
     private String certificateId;
 
+    @NotNull
     @Column(name = "certificate_type", nullable = false, length = 30)
     private String certificateType; // BONAFIDE, TRANSFER, COURSE_COMPLETION, MARKS_MEMO
 
+    @NotNull
     @Column(name = "student_id", nullable = false)
     private Long studentId;
 
+    @NotNull
     @Column(name = "student_name", nullable = false, length = 100)
     private String studentName;
 
+    @NotNull
     @Column(name = "roll_number", nullable = false, length = 20)
     private String rollNumber;
 
+    @NotNull
     @Column(name = "class_name", nullable = false, length = 10)
     private String className;
 
     @Column(length = 5)
     private String section;
 
+    @NotNull
     @Column(name = "issue_date", nullable = false)
     private LocalDate issueDate;
 

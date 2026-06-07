@@ -1,6 +1,7 @@
 package com.schoolers.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -29,21 +30,25 @@ public class Marks {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotNull
     @Column(name = "student_id", nullable = false)
     private Long studentId;
 
     @Column(name = "student_name", length = 100)
     private String studentName;
 
+    @NotNull
     @Column(nullable = false, length = 50)
     private String subject;
 
     @Column(name = "exam_type", length = 50)
     private String examType;
 
+    @NotNull
     @Column(nullable = false)
     private Integer marks;
 
+    @NotNull
     @Column(name = "max_marks", nullable = false)
     private Integer maxMarks;
 

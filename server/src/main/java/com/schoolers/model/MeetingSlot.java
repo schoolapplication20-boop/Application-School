@@ -1,6 +1,7 @@
 package com.schoolers.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -31,12 +32,15 @@ public class MeetingSlot {
     @Column(name = "school_id")
     private Long schoolId;
 
+    @NotNull
     @Column(name = "meeting_date", nullable = false)
     private LocalDate meetingDate;
 
+    @NotNull
     @Column(name = "start_time", nullable = false, length = 10)
     private String startTime;
 
+    @NotNull
     @Column(name = "end_time", nullable = false, length = 10)
     private String endTime;
 

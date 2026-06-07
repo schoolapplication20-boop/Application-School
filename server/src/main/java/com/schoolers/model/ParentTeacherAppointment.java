@@ -1,6 +1,7 @@
 package com.schoolers.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -20,12 +21,14 @@ public class ParentTeacherAppointment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotNull
     @Column(name = "teacher_id", nullable = false)
     private Long teacherId;
 
     @Column(name = "teacher_name", length = 100)
     private String teacherName;
 
+    @NotNull
     @Column(name = "student_id", nullable = false)
     private Long studentId;
 
@@ -39,6 +42,7 @@ public class ParentTeacherAppointment {
     private Long schoolId;
 
     /** Who initiated — "STUDENT" (on behalf of parent) or "TEACHER". */
+    @NotNull
     @Column(name = "requested_by", nullable = false, length = 10)
     private String requestedBy;
 
@@ -51,6 +55,7 @@ public class ParentTeacherAppointment {
     @Column(name = "proposed_time", length = 10)
     private String proposedTime;
 
+    @NotNull
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default
