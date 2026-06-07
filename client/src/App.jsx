@@ -42,8 +42,6 @@ import LeaveManagement from './pages/admin/LeaveManagement';
 import Transport from './pages/admin/Transport';
 import AttendanceReport from './pages/admin/AttendanceReport';
 import TeacherAttendanceView from './pages/admin/TeacherAttendanceView';
-import Parents from './pages/admin/Parents';
-
 // Teacher Pages
 import TeacherDashboard from './pages/teacher/TeacherDashboard';
 import MyStudents from './pages/teacher/MyStudents';
@@ -91,9 +89,6 @@ import MeetingBookings       from './pages/student/MeetingBookings';
 // Shared pages
 import SchoolCalendar        from './pages/shared/SchoolCalendar';
 import ReportCardHub         from './pages/shared/ReportCardHub';
-
-// Public pages
-import ParentAcknowledge     from './pages/auth/ParentAcknowledge';
 
 // Admin Messages
 import AdminMessages         from './pages/admin/AdminMessages';
@@ -187,7 +182,6 @@ function App() {
             <Route path="/admin/transport"         element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} permKey="transport"><Transport /></ProtectedRoute>} />
             <Route path="/admin/attendance-report"    element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} permKey="attendance"><AttendanceReport /></ProtectedRoute>} />
             <Route path="/admin/teacher-attendance"   element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']}><TeacherAttendanceView /></ProtectedRoute>} />
-            <Route path="/admin/parents"           element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} permKey="parents"><Parents /></ProtectedRoute>} />
             <Route path="/admin/timetable"         element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} permKey="timetable"><Timetable /></ProtectedRoute>} />
             <Route path="/admin/examination"       element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} permKey="examination"><Examination /></ProtectedRoute>} />
 
@@ -250,8 +244,6 @@ function App() {
             {/* Shared routes (all authenticated roles) */}
             <Route path="/school/calendar"          element={<ProtectedRoute allowedRoles={['ADMIN','SUPER_ADMIN','TEACHER','STUDENT']}><SchoolCalendar /></ProtectedRoute>} />
 
-            {/* Public routes */}
-            <Route path="/leave/parent-ack"         element={<ParentAcknowledge />} />
 
             {/* Admin Messages */}
             <Route path="/admin/messages"     element={<ProtectedRoute allowedRoles={['ADMIN','SUPER_ADMIN']} permKey="messages"><AdminMessages /></ProtectedRoute>} />

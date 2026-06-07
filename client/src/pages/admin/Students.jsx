@@ -470,11 +470,6 @@ export default function Students() {
           studentEmail:    d.studentEmail || null,
           studentPassword: d.studentTempPassword || null,
           // parent (only if newly created)
-          newParentCreated: !!d.newParentCreated,
-          parentName:      formData.fatherName || formData.name + "'s Parent",
-          parentEmail:     d.parentEmail || null,
-          parentMobile:    d.parentMobile || null,
-          parentPassword:  d.parentTempPassword || null,
         });
         setShowCred(true);
         showToast('Student added successfully. Login credentials generated.');
@@ -1489,7 +1484,7 @@ export default function Students() {
         </div>
       )}
 
-      {/* ── Student + Parent Credentials Modal ──────────────────────────── */}
+      {/* ── Student Credentials Modal ──────────────────────────── */}
       {showCred && newCredential && (
         <div className="modal-overlay">
           <div className="modal-container" style={{ maxWidth: 480 }}>

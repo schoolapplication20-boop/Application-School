@@ -73,10 +73,6 @@ export const createStudent = async (studentData) => {
         studentEmail:       backendData.studentEmail       ?? null,
         studentUsername:    backendData.studentUsername    ?? null,
         studentTempPassword: backendData.studentTempPassword ?? null,
-        newParentCreated:   backendData.newParentCreated   ?? false,
-        parentEmail:        backendData.parentEmail        ?? null,
-        parentMobile:       backendData.parentMobile       ?? null,
-        parentTempPassword: backendData.parentTempPassword ?? null,
       },
       message: res.data?.message,
     };

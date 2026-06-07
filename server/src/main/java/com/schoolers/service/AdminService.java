@@ -44,7 +44,6 @@ public class AdminService {
     @Autowired private ExpenseRepository expenseRepository;
     @Autowired private UserRepository  userRepository;
     @Autowired private SchoolRepository schoolRepository;
-    @Autowired private ParentProfileRepository parentProfileRepository;
     @Autowired private AttendanceRepository attendanceRepository;
     @Autowired private PasswordEncoder passwordEncoder;
     @Autowired private EmailService emailService;
@@ -430,8 +429,7 @@ public class AdminService {
             }
 
             log.info("[createStudent] Saved student id=" + saved.getId() + " roll=" + rollNumber
-                    + (saved.getStudentUserId() != null ? " studentUserId=" + saved.getStudentUserId() : " (no account yet)")
-                    + (saved.getParentId() != null ? " parentId=" + saved.getParentId() : ""));
+                    + (saved.getStudentUserId() != null ? " studentUserId=" + saved.getStudentUserId() : " (no account yet)"));
 
             Map<String, Object> responseData = new LinkedHashMap<>();
             responseData.put("student", saved);
@@ -444,7 +442,6 @@ public class AdminService {
                 emailService.sendWelcomeEmail(studentUserResult.loginEmail(), name.trim(), "STUDENT", studentUserResult.rawPassword());
             }
 
-            responseData.put("newParentCreated", false);
             return ApiResponse.success("Student created successfully", responseData);
         } catch (DataIntegrityViolationException e) {
             TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
@@ -2321,101 +2318,6 @@ public class AdminService {
         return ApiResponse.success(summary);
     }
 
-    // ── Parents ────────────────────────────────────────────────────────────
-
-    private Map<String, Object> parentToMap(User user, ParentProfile profile) {
-        Map<String, Object> m = new HashMap<>();
-        m.put("id", user.getId());
-        m.put("name", user.getName());
-        m.put("email", user.getEmail());
-        m.put("mobile", user.getMobile());
-        m.put("isActive", user.getIsActive());
-        m.put("firstLogin", user.getFirstLogin());
-        // tempPassword intentionally omitted — plain-text password must not appear in list/update responses.
-        // createParent() explicitly adds "generatedPassword" only in the creation response.
-        m.put("createdAt", user.getCreatedAt());
-        if (profile != null) {
-            m.put("profileId", profile.getId());
-            m.put("relation", profile.getRelation());
-            m.put("occupation", profile.getOccupation());
-            m.put("address", profile.getAddress());
-            m.put("alternateMobile", profile.getAlternateMobile());
-        }
-        return m;
-    }
-
-    public ApiResponse<List<Map<String, Object>>> getParents(Long schoolId) {
-        return ApiResponse.success(java.util.Collections.emptyList());
-    }
-
-    @Transactional
-    public ApiResponse<Map<String, Object>> createParent(Map<String, Object> body) {
-        return ApiResponse.error("Parent role has been removed from this application.");
-    }
-
-    public ApiResponse<Map<String, Object>> updateParent(Long id, Map<String, Object> body) {
-        Long schoolId = body.get("schoolId") instanceof Number n ? n.longValue() : null;
-        return userRepository.findById(id)
-                .filter(u -> schoolId == null || schoolId.equals(u.getSchoolId()))
-                .map(user -> {
-                    String name   = str(body, "name",   null);
-                    String mobile = str(body, "mobile", null);
-                    Object active = body.get("isActive");
-                    if (name != null && !name.isBlank()) user.setName(name.trim());
-                    if (mobile != null && !mobile.isBlank()) {
-                        String newMobile = mobile.trim();
-                        if (userRepository.existsByMobileAndIdNot(newMobile, user.getId()))
-                            return ApiResponse.<Map<String,Object>>error("Mobile number '" + newMobile + "' is already registered to another user.");
-                        user.setMobile(newMobile);
-                    }
-                    if (active instanceof Boolean) user.setIsActive((Boolean) active);
-                    userRepository.save(user);
-
-                    ParentProfile profile = parentProfileRepository.findByUser(user)
-                            .orElse(ParentProfile.builder().user(user).build());
-                    if (name != null && !name.isBlank()) profile.setName(name.trim());
-                    if (body.containsKey("relation"))       profile.setRelation(str(body, "relation", null));
-                    if (body.containsKey("occupation"))     profile.setOccupation(str(body, "occupation", null));
-                    if (body.containsKey("address"))        profile.setAddress(str(body, "address", null));
-                    if (body.containsKey("alternateMobile")) profile.setAlternateMobile(str(body, "alternateMobile", null));
-                    if (active instanceof Boolean)          profile.setIsActive((Boolean) active);
-                    parentProfileRepository.save(profile);
-
-                    return ApiResponse.success("Parent updated", parentToMap(user, profile));
-                })
-                .orElse(ApiResponse.error("Parent not found"));
-    }
-
-    @Transactional
-    public ApiResponse<String> deleteParent(Long id, Long schoolId) {
-        return userRepository.findById(id)
-                .filter(u -> schoolId == null || schoolId.equals(u.getSchoolId()))
-                .map(user -> {
-                    // Unlink any students who reference this parent
-                    studentRepository.findByParentId(id).forEach(s -> {
-                        s.setParentId(null);
-                        studentRepository.save(s);
-                    });
-                    parentProfileRepository.findByUser(user)
-                            .ifPresent(p -> parentProfileRepository.deleteById(p.getId()));
-                    userRepository.deleteById(id);
-                    return ApiResponse.success("Parent deleted", "Deleted");
-                })
-                .orElse(ApiResponse.error("Parent not found"));
-    }
-
-    public ApiResponse<String> resetParentPassword(Long id, String newPassword, Long schoolId) {
-        return userRepository.findById(id)
-                .filter(u -> schoolId == null || schoolId.equals(u.getSchoolId()))
-                .map(user -> {
-                    user.setPassword(passwordEncoder.encode(newPassword));
-                    user.setTempPassword(null);
-                    user.setFirstLogin(true);
-                    userRepository.save(user);
-                    return ApiResponse.success("Password reset successfully", "Password updated");
-                })
-                .orElse(ApiResponse.error("Parent not found"));
-    }
 
     // ── Auto-create class when student is added/updated ────────────────────
     //

@@ -236,12 +236,6 @@ export const adminAPI = {
   updateExpense: (id, data) => api.put(`/api/admin/expenses/${id}`, data),
   deleteExpense: (id) => api.delete(`/api/admin/expenses/${id}`),
 
-  // Parents
-  getParents: () => api.get('/api/admin/parents'),
-  createParent: (data) => api.post('/api/admin/parents', data),
-  updateParent: (id, data) => api.put(`/api/admin/parents/${id}`, data),
-  resetParentPassword: (id, password) => api.put(`/api/admin/parents/${id}/reset-password`, { password }),
-  deleteParent: (id) => api.delete(`/api/admin/parents/${id}`),
 };
 
 // ============================================

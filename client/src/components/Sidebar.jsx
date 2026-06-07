@@ -11,7 +11,6 @@ const adminNavItems = [
   { path: '/admin/students',           icon: 'school',                  label: 'Students',           permKey: 'students' },
   { path: '/admin/teachers',           icon: 'person',                  label: 'Teachers',           permKey: 'teachers' },
   { path: '/admin/applications',       icon: 'assignment_ind',          label: 'Applications',       permKey: 'applications' },
-  { path: '/admin/parents',            icon: 'family_restroom',         label: 'Parents',            permKey: 'parents' },
   { path: '/admin/classes',            icon: 'class',                   label: 'Classes',            permKey: 'classes' },
   { path: '/admin/collect-fee',        icon: 'point_of_sale',           label: 'Collect Fee',        permKey: 'collectFee' },
   { path: '/admin/fees',               icon: 'payments',                label: 'Fees & Payments',    permKey: 'fees' },
@@ -151,7 +150,6 @@ const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
         }
 
         const visibleAdminItems = adminNavItems
-          .filter(item => item.path !== '/admin/parents')
           .filter(item => item.permKey === null || !perms || perms[item.permKey] === true)
           .filter(item => item.permKey === null || hasFeature(item.permKey));
 
