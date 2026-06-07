@@ -27,9 +27,11 @@ public interface FeePaymentRepository extends JpaRepository<FeePayment, Long> {
     @Query("SELECT COALESCE(SUM(fp.amountPaid), 0) FROM FeePayment fp WHERE fp.schoolId = :schoolId")
     BigDecimal sumAmountPaidBySchool(@Param("schoolId") Long schoolId);
 
-    /** Platform-wide total amount collected (all schools) */
-    @Query("SELECT COALESCE(SUM(fp.amountPaid), 0) FROM FeePayment fp")
-    BigDecimal sumAmountPaidAll();
+    /** School-scoped total amount collected; replaces the former unscoped sumAmountPaidAll().
+     *  Callers (e.g. AdminService) must pass schoolId — the old no-arg version leaked
+     *  cross-tenant data. */
+    @Query("SELECT COALESCE(SUM(fp.amountPaid), 0) FROM FeePayment fp WHERE fp.schoolId = :schoolId")
+    BigDecimal sumAmountPaidBySchoolId(@Param("schoolId") Long schoolId);
 
     /** Monthly revenue for a school in a given month/year */
     @Query(value = "SELECT COALESCE(SUM(amount_paid), 0) FROM fee_payments WHERE school_id = :schoolId AND EXTRACT(MONTH FROM payment_date) = :month AND EXTRACT(YEAR FROM payment_date) = :year", nativeQuery = true)

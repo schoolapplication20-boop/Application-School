@@ -132,6 +132,11 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     @Query("SELECT s FROM Student s WHERE LOWER(s.name) LIKE LOWER(CONCAT('%',:s,'%')) OR LOWER(s.rollNumber) LIKE LOWER(CONCAT('%',:s,'%')) OR s.parentMobile LIKE CONCAT('%',:s,'%') OR s.motherMobile LIKE CONCAT('%',:s,'%') OR s.guardianMobile LIKE CONCAT('%',:s,'%')")
     List<Student> searchByNameRollOrPhone(@Param("s") String search);
 
+    /** Pageable overload of searchByNameRollOrPhone — use this for user-facing searches
+     *  to avoid loading the entire student table. Caller must escape '%' and '_' in :s with '\'. */
+    @Query("SELECT s FROM Student s WHERE LOWER(s.name) LIKE LOWER(CONCAT('%',:s,'%')) OR LOWER(s.rollNumber) LIKE LOWER(CONCAT('%',:s,'%')) OR s.parentMobile LIKE CONCAT('%',:s,'%') OR s.motherMobile LIKE CONCAT('%',:s,'%') OR s.guardianMobile LIKE CONCAT('%',:s,'%')")
+    Page<Student> searchByNameRollOrPhonePageable(@Param("s") String search, Pageable pageable);
+
     @Query("SELECT s FROM Student s WHERE LOWER(s.rollNumber) = LOWER(:roll) AND LOWER(s.className) = LOWER(:cls) AND LOWER(COALESCE(s.section,'')) = LOWER(COALESCE(:sec,''))")
     Optional<Student> findDuplicateInClass(@Param("roll") String rollNumber, @Param("cls") String className, @Param("sec") String section);
 

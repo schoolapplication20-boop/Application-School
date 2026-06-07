@@ -15,12 +15,15 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
     // ── Filtered list ─────────────────────────────────────────────────────────
     // Uses CAST(status AS text) instead of status::text because Spring Data JPA's
     // named-parameter parser treats '::' as a second ':' parameter prefix.
+    // Caller must escape '%' and '_' in :search with '\' before calling
+    //   e.g.  search = search.replace("\\","\\\\").replace("%","\\%").replace("_","\\_");
+    // Note: AdminService.java also needs this escaping added at the call site.
     @Query(value =
         "SELECT * FROM expenses e WHERE " +
         "  (:status   IS NULL OR UPPER(CAST(e.status AS text)) = UPPER(:status))  AND " +
         "  (:dateFrom IS NULL OR e.date >= CAST(:dateFrom AS date))                AND " +
         "  (:dateTo   IS NULL OR e.date <= CAST(:dateTo   AS date))                AND " +
-        "  (:search   IS NULL OR LOWER(COALESCE(e.title,'')) LIKE LOWER(CONCAT('%',:search,'%'))) " +
+        "  (:search   IS NULL OR LOWER(COALESCE(e.title,'')) LIKE LOWER(CONCAT('%',:search,'%')) ESCAPE '\\') " +
         "ORDER BY e.date DESC, e.created_at DESC",
         nativeQuery = true)
     List<Expense> findFiltered(
@@ -55,12 +58,14 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
 
     // ── School-scoped queries (multi-tenant) ──────────────────────────────────
 
+    // Caller must escape '%' and '_' in :search with '\' before calling
+    //   e.g.  search = search.replace("\\","\\\\").replace("%","\\%").replace("_","\\_");
     @Query(value =
         "SELECT * FROM expenses e WHERE e.school_id = :schoolId AND " +
         "  (:status   IS NULL OR UPPER(CAST(e.status AS text)) = UPPER(:status))  AND " +
         "  (:dateFrom IS NULL OR e.date >= CAST(:dateFrom AS date))                AND " +
         "  (:dateTo   IS NULL OR e.date <= CAST(:dateTo   AS date))                AND " +
-        "  (:search   IS NULL OR LOWER(COALESCE(e.title,'')) LIKE LOWER(CONCAT('%',:search,'%'))) " +
+        "  (:search   IS NULL OR LOWER(COALESCE(e.title,'')) LIKE LOWER(CONCAT('%',:search,'%')) ESCAPE '\\') " +
         "ORDER BY e.date DESC, e.created_at DESC",
         nativeQuery = true)
     List<Expense> findFilteredBySchool(

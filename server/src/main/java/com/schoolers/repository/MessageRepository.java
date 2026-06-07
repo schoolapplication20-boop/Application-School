@@ -42,7 +42,7 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     void deleteBySenderId(Long senderId);
 
     @Modifying @Transactional
-    void deleteByClassSection(String classSection);
+    void deleteByClassSectionAndSchoolId(String classSection, Long schoolId);
 
     @Modifying @Transactional
     void deleteByTargetStudentId(Long targetStudentId);
