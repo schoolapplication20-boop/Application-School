@@ -2,14 +2,11 @@ import React, { createContext, useContext, useState, useCallback, useRef, useEff
 import { setAuthToken, clearAuthToken } from '../services/api';
 import api from '../services/api';
 
-/** Decode the exp claim from a JWT (no signature verification — frontend only) */
-const getTokenExpiry = (token) => {
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    return payload.exp ? payload.exp * 1000 : null; // convert to ms
-  } catch { return null; }
-};
-
+// NOTE: Client-side JWT exp parsing via atob() was removed — it is unreliable
+// (base64url padding issues, tampered payloads) and unnecessary.
+// Session expiry is handled by:
+//   1. The 401 response interceptor in api.js, which fires auth:session-expired.
+//   2. The SessionTimeoutWarning component, which tracks last activity time.
 const SESSION_KEY = 'schoolers_session';
 
 const AuthContext = createContext(null);
@@ -38,29 +35,12 @@ export const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading]           = useState(true); // true during session restore
   const [sessionExpired, setSessionExpired] = useState(false); // show session-expired modal
 
-  const expiryTimerRef = useRef(null);
-
   // schoolRef allows SchoolContext to register itself so AuthContext can
   // push school data on login without creating a circular dependency.
   const schoolSetterRef    = useRef(null);
   const schoolLoaderRef    = useRef(null);
   const registerSchoolSetter = useCallback((fn) => { schoolSetterRef.current = fn; }, []);
   const registerSchoolLoader = useCallback((fn) => { schoolLoaderRef.current = fn; }, []);
-
-  // ── Proactive token expiry: schedule auto-logout 60s before JWT expires ─
-  useEffect(() => {
-    if (expiryTimerRef.current) clearTimeout(expiryTimerRef.current);
-    if (!token) return;
-    const expMs = getTokenExpiry(token);
-    if (!expMs) return;
-    const msUntilExpiry = expMs - Date.now() - 60_000; // 60s early warning
-    if (msUntilExpiry <= 0) {
-      setSessionExpired(true);
-      return;
-    }
-    expiryTimerRef.current = setTimeout(() => setSessionExpired(true), msUntilExpiry);
-    return () => clearTimeout(expiryTimerRef.current);
-  }, [token]);
 
   // ── Listen for 401 fired by api.js interceptor ──────────────────────────
   useEffect(() => {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Layout from '../../components/Layout';
 import Toast from '../../components/Toast';
 import { adminAPI } from '../../services/api';
@@ -87,6 +87,7 @@ export default function Fees() {
 
   const [saving, setSaving]   = useState(false);
   const [toast, setToast]     = useState(null);
+  const debounceRef           = useRef(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null); // { id, studentName }
   const [deleting, setDeleting] = useState(false);
 
@@ -301,7 +302,7 @@ export default function Fees() {
 
     if (filledInstallments.length > 0) {
       const instTotal = filledInstallments.reduce((s, i) => s + Number(i.amount || 0), 0);
-      if (Math.abs(instTotal - assignTotal) > 0.01) {
+      if (Math.abs(Math.round(instTotal * 100) - Math.round(assignTotal * 100)) > 0) {
         showToast(
           `Installment total ₹${fmt(instTotal)} does not match total fee ₹${fmt(assignTotal)}. Please correct before saving.`,
           'error'
@@ -653,7 +654,12 @@ export default function Fees() {
                 <input
                   placeholder="Search by name, roll no, or phone..."
                   value={assignStudentSearch}
-                  onChange={e => { setAssignStudentSearch(e.target.value); searchAssignStudents(e.target.value); }}
+                  onChange={e => {
+                    const q = e.target.value;
+                    setAssignStudentSearch(q);
+                    clearTimeout(debounceRef.current);
+                    debounceRef.current = setTimeout(() => searchAssignStudents(q), 300);
+                  }}
                   style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
                 />
                 {assignSearching && <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-25%)', color: '#a0aec0', fontSize: 12 }}>Searching...</div>}
@@ -787,7 +793,7 @@ export default function Fees() {
                   <div style={{ fontSize: 12, color: '#718096', marginTop: 6, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                     <span>Installment total: ₹{fmt(installments.reduce((s, i) => s + Number(i.amount || 0), 0))}</span>
                     {assignTotal > 0 &&
-                     Math.abs(installments.reduce((s, i) => s + Number(i.amount || 0), 0) - assignTotal) > 0.01 && (
+                     Math.abs(Math.round(installments.reduce((s, i) => s + Number(i.amount || 0), 0) * 100) - Math.round(assignTotal * 100)) > 0 && (
                       <span style={{ color: '#e53e3e' }}>⚠ Does not match total fee (₹{fmt(assignTotal)})</span>
                     )}
                   </div>

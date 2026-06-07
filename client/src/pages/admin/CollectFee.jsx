@@ -92,12 +92,12 @@ export default function CollectFee() {
   /* ── load ALL students when class filter changes ── */
   useEffect(() => {
     if (!filterClass) { setClassStudents([]); return; }
-    let cancelled = false;
+    const controller = new AbortController();
     setLoadingClass(true);
     setClassStudents([]);
     adminAPI.searchStudentsForFee('', filterClassName, filterSection)
       .then(res => {
-        if (cancelled) return;
+        if (controller.signal.aborted) return;
         let data = res.data?.data ?? [];
         // Safety guard: exact-match filter in case backend returns broader results
         const clsLc = filterClassName.toLowerCase();
@@ -113,9 +113,9 @@ export default function CollectFee() {
         parsed.sort((a, b) => a._roll !== b._roll ? a._roll - b._roll : (a.name || '').localeCompare(b.name || ''));
         setClassStudents(parsed.map(({ _roll, ...s }) => s));
       })
-      .catch(() => { if (!cancelled) setClassStudents([]); })
-      .finally(() => { if (!cancelled) setLoadingClass(false); });
-    return () => { cancelled = true; };
+      .catch(() => { if (!controller.signal.aborted) setClassStudents([]); })
+      .finally(() => { if (!controller.signal.aborted) setLoadingClass(false); });
+    return () => { controller.abort(); };
   }, [filterClass, filterClassName, filterSection]);
 
   /* ── name-search dropdown (only when NO class filter is active) ── */
