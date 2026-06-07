@@ -32,7 +32,8 @@ export const fetchTeachers = async () => {
       return data.map(normalizeTeacher);
     }
     return [];
-  } catch {
+  } catch (err) {
+    console.error('[teacherService] fetchTeachers failed:', err?.response?.status, err?.message);
     return [];
   }
 };

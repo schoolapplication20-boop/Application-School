@@ -102,7 +102,6 @@ import NotFound              from './pages/NotFound';
 
 function App() {
   return (
-    <ErrorBoundary>
     <ThemeProvider>
     <AuthProvider>
       <SchoolProvider>
@@ -110,6 +109,7 @@ function App() {
         <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <InstallPrompt />
           <SessionTimeoutWarning />
+          <ErrorBoundary>
           <Routes>
             {/* Marketing Routes - Public */}
             <Route path="/marketing/home" element={
@@ -254,12 +254,12 @@ function App() {
             {/* 404 */}
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </ErrorBoundary>
         </Router>
       </NotificationProvider>
       </SchoolProvider>
     </AuthProvider>
     </ThemeProvider>
-    </ErrorBoundary>
   );
 }
 

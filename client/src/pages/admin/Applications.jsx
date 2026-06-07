@@ -132,11 +132,13 @@ const Applications = () => {
   };
 
   const handleApprove = async (id) => {
+    const prevState = applications;
     try {
       await applicationAPI.updateStatus(id, { status: 'APPROVED' });
       setApplications(prev => prev.map(a => a.id === id ? { ...a, status: 'Approved' } : a));
       showToast('Application approved successfully!');
     } catch {
+      setApplications(prevState);
       showToast('Failed to approve application.', 'error');
     }
   };

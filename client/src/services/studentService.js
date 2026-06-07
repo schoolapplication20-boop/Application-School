@@ -53,7 +53,8 @@ export const fetchStudents = async ({ page = 0, size = 20, search = '', classNam
       totalPages:    pageData?.totalPages    ?? 1,
       currentPage:   pageData?.number        ?? page,
     };
-  } catch {
+  } catch (err) {
+    console.error('[studentService] fetchStudents failed:', err?.response?.status, err?.message);
     return { content: [], totalElements: 0, totalPages: 0, currentPage: 0 };
   }
 };
@@ -100,7 +101,8 @@ export const deleteStudent = async (id) => {
   try {
     await adminAPI.deleteStudent(id);
     return true;
-  } catch {
+  } catch (err) {
+    console.error('[studentService] deleteStudent failed:', err?.response?.status, err?.message);
     return false;
   }
 };
