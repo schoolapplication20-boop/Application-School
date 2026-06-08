@@ -66,7 +66,7 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
         @Param("status") String status,
         Pageable pageable);
 
-    @Query("SELECT s FROM Student s WHERE s.schoolId = :schoolId AND (LOWER(s.name) LIKE LOWER(CONCAT('%',:s,'%')) OR LOWER(s.rollNumber) LIKE LOWER(CONCAT('%',:s,'%')) OR s.parentMobile LIKE CONCAT('%',:s,'%') OR s.motherMobile LIKE CONCAT('%',:s,'%') OR s.guardianMobile LIKE CONCAT('%',:s,'%'))")
+    @Query("SELECT s FROM Student s WHERE s.schoolId = :schoolId AND (LOWER(s.name) LIKE LOWER(CONCAT('%',:s,'%')) ESCAPE '\\' OR LOWER(s.rollNumber) LIKE LOWER(CONCAT('%',:s,'%')) ESCAPE '\\' OR s.parentMobile LIKE CONCAT('%',:s,'%') ESCAPE '\\' OR s.motherMobile LIKE CONCAT('%',:s,'%') ESCAPE '\\' OR s.guardianMobile LIKE CONCAT('%',:s,'%') ESCAPE '\\')")
     List<Student> searchBySchoolAndNameRollOrPhone(@Param("schoolId") Long schoolId, @Param("s") String search);
 
     @Query("SELECT s FROM Student s WHERE s.schoolId = :schoolId AND LOWER(s.rollNumber) = LOWER(:roll) AND LOWER(s.className) = LOWER(:cls) AND LOWER(COALESCE(s.section,'')) = LOWER(COALESCE(:sec,''))")
@@ -126,15 +126,14 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
 
     long countByIsActive(Boolean isActive);
 
-    @Query("SELECT s FROM Student s WHERE s.isActive = true AND (LOWER(s.name) LIKE LOWER(CONCAT('%',:search,'%')) OR LOWER(s.rollNumber) LIKE LOWER(CONCAT('%',:search,'%')))")
+    @Query("SELECT s FROM Student s WHERE s.isActive = true AND (LOWER(s.name) LIKE LOWER(CONCAT('%',:search,'%')) ESCAPE '\\' OR LOWER(s.rollNumber) LIKE LOWER(CONCAT('%',:search,'%')) ESCAPE '\\')")
     Page<Student> searchStudents(@Param("search") String search, Pageable pageable);
 
-    @Query("SELECT s FROM Student s WHERE LOWER(s.name) LIKE LOWER(CONCAT('%',:s,'%')) OR LOWER(s.rollNumber) LIKE LOWER(CONCAT('%',:s,'%')) OR s.parentMobile LIKE CONCAT('%',:s,'%') OR s.motherMobile LIKE CONCAT('%',:s,'%') OR s.guardianMobile LIKE CONCAT('%',:s,'%')")
+    @Query("SELECT s FROM Student s WHERE LOWER(s.name) LIKE LOWER(CONCAT('%',:s,'%')) ESCAPE '\\' OR LOWER(s.rollNumber) LIKE LOWER(CONCAT('%',:s,'%')) ESCAPE '\\' OR s.parentMobile LIKE CONCAT('%',:s,'%') ESCAPE '\\' OR s.motherMobile LIKE CONCAT('%',:s,'%') ESCAPE '\\' OR s.guardianMobile LIKE CONCAT('%',:s,'%') ESCAPE '\\'")
     List<Student> searchByNameRollOrPhone(@Param("s") String search);
 
-    /** Pageable overload of searchByNameRollOrPhone — use this for user-facing searches
-     *  to avoid loading the entire student table. Caller must escape '%' and '_' in :s with '\'. */
-    @Query("SELECT s FROM Student s WHERE LOWER(s.name) LIKE LOWER(CONCAT('%',:s,'%')) OR LOWER(s.rollNumber) LIKE LOWER(CONCAT('%',:s,'%')) OR s.parentMobile LIKE CONCAT('%',:s,'%') OR s.motherMobile LIKE CONCAT('%',:s,'%') OR s.guardianMobile LIKE CONCAT('%',:s,'%')")
+    /** Pageable overload of searchByNameRollOrPhone. Caller must escape '%' and '_' in :s with '\'. */
+    @Query("SELECT s FROM Student s WHERE LOWER(s.name) LIKE LOWER(CONCAT('%',:s,'%')) ESCAPE '\\' OR LOWER(s.rollNumber) LIKE LOWER(CONCAT('%',:s,'%')) ESCAPE '\\' OR s.parentMobile LIKE CONCAT('%',:s,'%') ESCAPE '\\' OR s.motherMobile LIKE CONCAT('%',:s,'%') ESCAPE '\\' OR s.guardianMobile LIKE CONCAT('%',:s,'%') ESCAPE '\\'")
     Page<Student> searchByNameRollOrPhonePageable(@Param("s") String search, Pageable pageable);
 
     @Query("SELECT s FROM Student s WHERE LOWER(s.rollNumber) = LOWER(:roll) AND LOWER(s.className) = LOWER(:cls) AND LOWER(COALESCE(s.section,'')) = LOWER(COALESCE(:sec,''))")

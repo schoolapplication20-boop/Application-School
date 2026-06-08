@@ -126,7 +126,7 @@ public class SalaryService {
 
     @Transactional
     public ApiResponse<SalaryPayment> collectPayment(Long id, Map<String, Object> body, Long schoolId) {
-        return salaryRepository.findById(id)
+        return salaryRepository.findByIdForUpdate(id)
             .map(s -> {
                 if (schoolId != null && s.getSchoolId() != null && !schoolId.equals(s.getSchoolId()))
                     return ApiResponse.<SalaryPayment>error("Access denied: salary record belongs to another school");
@@ -141,11 +141,15 @@ public class SalaryService {
 
                 String receiptNo = str(body, "receiptNumber", "RCP-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
 
-                // Use paidDate from request body if provided, otherwise default to today
                 LocalDate paidDate = LocalDate.now();
                 String paidDateStr = str(body, "paidDate", null);
                 if (paidDateStr != null && !paidDateStr.isBlank()) {
-                    try { paidDate = LocalDate.parse(paidDateStr); } catch (Exception ignored) { }
+                    try {
+                        LocalDate parsed = LocalDate.parse(paidDateStr);
+                        if (parsed.isAfter(LocalDate.now()))
+                            return ApiResponse.<SalaryPayment>error("Payment date cannot be in the future");
+                        paidDate = parsed;
+                    } catch (Exception ignored) { }
                 }
 
                 SalaryPayment payment = SalaryPayment.builder()

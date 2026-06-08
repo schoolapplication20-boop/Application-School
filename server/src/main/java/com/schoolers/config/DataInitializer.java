@@ -117,8 +117,9 @@ public class DataInitializer {
     @Order(3)
     CommandLineRunner initChatbotFaqs(ChatbotFaqRepository faqRepo) {
         return args -> {
-            // Always reseed so language columns stay up to date
-            faqRepo.deleteAll();
+            // Only seed when the table is empty to avoid wiping admin-edited FAQ content
+            // and to prevent a brief window of empty FAQ responses during restart.
+            if (faqRepo.count() > 0) return;
             var faqs = new ArrayList<ChatbotFaq>();
 
             // ── GENERAL ───────────────────────────────────────────────────────

@@ -176,7 +176,7 @@ public class AuthService {
 
             // ── Step 3d: APPLICATION_OWNER 2FA — send OTP before issuing JWT ──
             if (user.getRole() == User.Role.APPLICATION_OWNER) {
-                String otp = String.format("%06d", 100000 + new SecureRandom().nextInt(900000));
+                String otp = String.format("%06d", new SecureRandom().nextInt(1_000_000));
                 user.setResetOtp(hashOtp(otp, user.getEmail()));
                 user.setOtpExpiry(LocalDateTime.now(ZoneOffset.UTC).plusMinutes(5));
                 userRepository.save(user);
@@ -376,7 +376,7 @@ public class AuthService {
         log.info("[register] Created school id={} schoolId={} code={}", school.getId(), school.getSchoolId(), code);
 
         // ── Create SUPER_ADMIN (inactive until email is verified) ───────────────
-        String verifyOtp = String.format("%06d", 100000 + new SecureRandom().nextInt(900000));
+        String verifyOtp = String.format("%06d", new SecureRandom().nextInt(1_000_000));
         LocalDateTime otpExpiry = LocalDateTime.now(ZoneOffset.UTC).plusMinutes(15);
 
         User superAdmin = User.builder()
@@ -470,8 +470,8 @@ public class AuthService {
         if (userRepository.existsByEmailIgnoreCase(normalizedEmail))
             return ApiResponse.error("This email is already registered. Use a different email or try Forgot Password.");
 
-        String otp = String.format("%06d", 100000 + new SecureRandom().nextInt(900000));
-        LocalDateTime otpExpiry = LocalDateTime.now(ZoneOffset.UTC).plusDays(1);
+        String otp = String.format("%06d", new SecureRandom().nextInt(1_000_000));
+        LocalDateTime otpExpiry = LocalDateTime.now(ZoneOffset.UTC).plusMinutes(15);
 
         User studentUser = userRepository.save(User.builder()
                 .name(student.getName())
@@ -515,6 +515,7 @@ public class AuthService {
         String candidate = base;
         int n = 1;
         while (schoolRepository.existsByCode(candidate)) {
+            if (n > 9999) throw new IllegalStateException("Could not generate a unique school code for: " + base);
             candidate = (base.length() > 7 ? base.substring(0, 7) : base) + n++;
         }
         return candidate;
@@ -568,7 +569,7 @@ public class AuthService {
                 return ApiResponse.success("If this account exists, an OTP has been sent.", null);
             }
 
-            String otp = String.format("%06d", 100000 + new SecureRandom().nextInt(900000));
+            String otp = String.format("%06d", new SecureRandom().nextInt(1_000_000));
             LocalDateTime expiry = LocalDateTime.now(ZoneOffset.UTC).plusMinutes(10);
             // Hash uses the resolved email as salt (consistent for this user regardless of identifier format)
             user.setResetOtp(hashOtp(otp, resolvedEmail.toLowerCase()));
@@ -580,7 +581,7 @@ public class AuthService {
                 return ApiResponse.success("If this account exists, an OTP has been sent.", null);
             } catch (Exception mailEx) {
                 log.error("[forgotPassword] Failed to send OTP email to {}: {}", resolvedEmail, mailEx.getMessage());
-                return ApiResponse.error("Failed to send OTP email. Please check your email configuration.");
+                return ApiResponse.success("If this account exists, an OTP has been sent.", null);
             }
         } catch (Exception e) {
             log.error("[forgotPassword] Unexpected error: {}", e.getMessage());
@@ -614,21 +615,35 @@ public class AuthService {
             if (user == null) return ApiResponse.error(INVALID_MSG);
         }
 
-        String dbOtpHash = user.getResetOtp();
-        // Salt for verification = user's registered email (same as in forgotPassword)
-        String emailSalt = user.getEmail() != null ? user.getEmail().toLowerCase() : identifier.trim().toLowerCase();
-        String submittedHash = hashOtp(otp.trim(), emailSalt);
-        if (dbOtpHash == null || !constantTimeEquals(dbOtpHash.trim(), submittedHash))
+        // Brute-force protection: invalidate OTP after 5 wrong attempts
+        int otpAttempts = user.getFailedLoginAttempts() == null ? 0 : user.getFailedLoginAttempts();
+        if (otpAttempts >= 5) {
+            user.setResetOtp(null);
+            user.setOtpExpiry(null);
+            user.setFailedLoginAttempts(0);
+            userRepository.save(user);
             return ApiResponse.error(INVALID_MSG);
+        }
 
+        String dbOtpHash = user.getResetOtp();
         LocalDateTime expiry = user.getOtpExpiry();
         if (expiry != null && LocalDateTime.now(ZoneOffset.UTC).isAfter(expiry))
             return ApiResponse.error(INVALID_MSG);
+
+        // Salt for verification = user's registered email (same as in forgotPassword)
+        String emailSalt = user.getEmail() != null ? user.getEmail().toLowerCase() : identifier.trim().toLowerCase();
+        String submittedHash = hashOtp(otp.trim(), emailSalt);
+        if (dbOtpHash == null || !constantTimeEquals(dbOtpHash.trim(), submittedHash)) {
+            user.setFailedLoginAttempts(otpAttempts + 1);
+            userRepository.save(user);
+            return ApiResponse.error(INVALID_MSG);
+        }
 
         // Mark OTP as verified — resetPassword() checks for this sentinel before allowing reset.
         // 15-minute window: prevents the verified state from persisting indefinitely.
         user.setResetOtp("VERIFIED");
         user.setOtpExpiry(LocalDateTime.now(ZoneOffset.UTC).plusMinutes(15));
+        user.setFailedLoginAttempts(0);
         userRepository.save(user);
 
         return ApiResponse.success("OTP verified successfully", "OTP verified");
@@ -643,7 +658,7 @@ public class AuthService {
 
         if (isEmail) {
             user = userRepository.findByEmailIgnoreCase(identifier.trim().toLowerCase()).orElse(null);
-            if (user == null) return ApiResponse.error("Identifier not registered.");
+            if (user == null) return ApiResponse.error("OTP verification required before resetting password.");
         } else {
             // Try mobile, then admission number (same resolution order)
             user = userRepository.findByMobile(identifier.trim()).orElse(null);
@@ -654,7 +669,7 @@ public class AuthService {
                     user = userRepository.findById(students.get(0).getStudentUserId()).orElse(null);
                 }
             }
-            if (user == null) return ApiResponse.error("Identifier not registered.");
+            if (user == null) return ApiResponse.error("OTP verification required before resetting password.");
         }
 
         if (!"VERIFIED".equals(user.getResetOtp()))

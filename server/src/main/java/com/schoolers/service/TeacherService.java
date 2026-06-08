@@ -660,8 +660,17 @@ public class TeacherService {
         if (user == null)
             return ApiResponse.error("This student's login account was not found. Please contact admin.");
 
+        if (newPassword == null || newPassword.length() < 8)
+            return ApiResponse.error("Password must be at least 8 characters.");
+        if (!newPassword.matches(".*[A-Z].*"))
+            return ApiResponse.error("Password must contain at least one uppercase letter.");
+        if (!newPassword.matches(".*[0-9].*"))
+            return ApiResponse.error("Password must contain at least one number.");
+        if (!newPassword.matches(".*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?].*"))
+            return ApiResponse.error("Password must contain at least one special character.");
+
         user.setPassword(passwordEncoder.encode(newPassword));
-        user.setFirstLogin(true); // forces student to change password on next login
+        user.setFirstLogin(true);
         userRepository.save(user);
         return ApiResponse.success("Password reset successfully. Student must change it on next login.", "reset");
     }

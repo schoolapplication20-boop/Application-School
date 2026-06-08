@@ -42,7 +42,7 @@ public class SalaryPayment {
     @Builder.Default
     private String paymentMode = "Cash";
 
-    @Column(name = "receipt_number", length = 50)
+    @Column(name = "receipt_number", length = 50, unique = true)
     private String receiptNumber;
 
     @Column(length = 255)

@@ -25,7 +25,7 @@ public interface FeeRepository extends JpaRepository<Fee, Long> {
     @Query("SELECT COALESCE(SUM(f.paidAmount),0) FROM Fee f WHERE f.schoolId = :schoolId AND f.status = 'PAID'")
     BigDecimal sumPaidFeesBySchool(@Param("schoolId") Long schoolId);
 
-    @Query("SELECT COALESCE(SUM(f.amount),0) FROM Fee f WHERE f.schoolId = :schoolId AND f.status = 'PENDING'")
+    @Query("SELECT COALESCE(SUM(f.amount - COALESCE(f.paidAmount,0)),0) FROM Fee f WHERE f.schoolId = :schoolId AND f.status IN ('PENDING','PARTIAL')")
     BigDecimal sumPendingFeesBySchool(@Param("schoolId") Long schoolId);
 
     @Query("SELECT COALESCE(SUM(f.paidAmount),0) FROM Fee f WHERE f.schoolId = :schoolId AND f.status = 'PAID' AND EXTRACT(MONTH FROM f.createdAt) = :month AND EXTRACT(YEAR FROM f.createdAt) = :year")
@@ -45,8 +45,8 @@ public interface FeeRepository extends JpaRepository<Fee, Long> {
     @Query("SELECT COALESCE(SUM(f.amount),0) FROM Fee f WHERE f.status = 'PENDING'")
     BigDecimal sumPendingFees();
 
-    @Query("SELECT COALESCE(SUM(f.amount),0) FROM Fee f WHERE f.status = 'PAID' AND MONTH(f.createdAt) = :month AND YEAR(f.createdAt) = :year")
-    BigDecimal sumPaidFeesByMonth(int month, int year);
+    @Query(value = "SELECT COALESCE(SUM(f.paid_amount),0) FROM fees f WHERE f.status = 'PAID' AND EXTRACT(MONTH FROM f.created_at) = :month AND EXTRACT(YEAR FROM f.created_at) = :year", nativeQuery = true)
+    BigDecimal sumPaidFeesByMonth(@Param("month") int month, @Param("year") int year);
 
     @Modifying @Transactional
     void deleteByStudentId(Long studentId);

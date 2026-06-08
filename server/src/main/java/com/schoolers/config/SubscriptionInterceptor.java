@@ -60,19 +60,24 @@ public class SubscriptionInterceptor implements HandlerInterceptor {
     }
 
     private boolean isExpired(Long schoolId) {
-        long[] entry = cache.get(schoolId);
         long now = System.currentTimeMillis();
-        if (entry != null && now < entry[0]) {
-            // cache hit — entry[1] == 1 means expired
-            return entry[1] == 1;
+        // Atomic compute: read-check-write in a single ConcurrentHashMap operation
+        long[] result = cache.compute(schoolId, (k, entry) -> {
+            if (entry != null && now < entry[0]) {
+                return entry; // cache hit — return unchanged
+            }
+            // cache miss or stale — query DB
+            boolean expired = schoolRepository.findById(k)
+                    .map(s -> s.getSubscriptionExpiry() != null
+                            && !s.getSubscriptionExpiry().isAfter(LocalDate.now()))
+                    .orElse(false);
+            return new long[]{now + CACHE_TTL_MS, expired ? 1 : 0};
+        });
+        // Evict if cache grows too large (simple size guard)
+        if (cache.size() > 10_000) {
+            cache.clear();
         }
-        // cache miss or stale — query DB
-        boolean expired = schoolRepository.findById(schoolId)
-                .map(s -> s.getSubscriptionExpiry() != null
-                        && !s.getSubscriptionExpiry().isAfter(LocalDate.now()))
-                .orElse(false);
-        cache.put(schoolId, new long[]{now + CACHE_TTL_MS, expired ? 1 : 0});
-        return expired;
+        return result[1] == 1;
     }
 
     private String extractToken(HttpServletRequest request) {

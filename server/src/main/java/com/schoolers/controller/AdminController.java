@@ -61,6 +61,13 @@ public class AdminController {
 
     private Long getCurrentUserId(Authentication auth) {
         if (auth == null) return null;
+        if (auth.getDetails() instanceof java.util.Map) {
+            Object v = ((java.util.Map<?, ?>) auth.getDetails()).get("userId");
+            if (v != null) {
+                if (v instanceof Long) return (Long) v;
+                try { return Long.parseLong(v.toString()); } catch (NumberFormatException e) { /* fall through */ }
+            }
+        }
         return userRepository.findByEmailIgnoreCase(auth.getName())
                 .map(com.schoolers.model.User::getId)
                 .orElse(null);
@@ -485,7 +492,7 @@ public class AdminController {
         if (body.get("receivedBy") == null || body.get("receivedBy").toString().isBlank()) {
             body.put("receivedBy", auth != null ? auth.getName() : "Admin");
         }
-        var response = adminService.collectInstallmentFee(installmentId, body);
+        var response = adminService.collectInstallmentFee(installmentId, body, schoolId);
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 

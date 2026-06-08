@@ -194,9 +194,19 @@ public class SuperAdminController {
     @PreAuthorize("hasRole('APPLICATION_OWNER')")
     public ResponseEntity<ApiResponse<String>> reactivateSchool(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         String expiryStr = body.get("expiryDate") != null ? body.get("expiryDate").toString() : null;
-        java.time.LocalDate newExpiry = expiryStr != null && !expiryStr.isBlank()
-            ? java.time.LocalDate.parse(expiryStr)
-            : java.time.LocalDate.now().plusYears(1);
+        java.time.LocalDate newExpiry;
+        if (expiryStr != null && !expiryStr.isBlank()) {
+            try {
+                newExpiry = java.time.LocalDate.parse(expiryStr);
+            } catch (java.time.format.DateTimeParseException e) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("Invalid date format. Use YYYY-MM-DD."));
+            }
+            if (!newExpiry.isAfter(java.time.LocalDate.now())) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("Expiry date must be in the future."));
+            }
+        } else {
+            newExpiry = java.time.LocalDate.now().plusYears(1);
+        }
         ApiResponse<String> response = superAdminService.reactivateSchool(id, newExpiry);
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }

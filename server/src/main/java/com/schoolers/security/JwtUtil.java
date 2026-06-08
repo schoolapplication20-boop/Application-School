@@ -57,23 +57,32 @@ public class JwtUtil {
 
     /** Extracts the schoolId claim embedded in the JWT at login time. Returns null for platform-level accounts. */
     public Long extractSchoolId(String token) {
+        Object schoolId = extractAllClaims(token).get("schoolId");
+        if (schoolId == null) return null;
         try {
-            Object schoolId = extractAllClaims(token).get("schoolId");
-            if (schoolId == null) return null;
             return Long.parseLong(schoolId.toString());
-        } catch (Exception e) {
+        } catch (NumberFormatException | ClassCastException e) {
+            org.slf4j.LoggerFactory.getLogger(JwtUtil.class)
+                .warn("JWT schoolId claim is not a valid Long: {}", schoolId);
+            return null;
+        }
+    }
+
+    /** Extracts the userId claim embedded in the JWT at login time. */
+    public Long extractUserId(String token) {
+        Object userId = extractAllClaims(token).get("userId");
+        if (userId == null) return null;
+        try {
+            return Long.parseLong(userId.toString());
+        } catch (NumberFormatException | ClassCastException e) {
             return null;
         }
     }
 
     /** Extracts the role claim embedded in the JWT at login time. */
     public String extractRole(String token) {
-        try {
-            Object role = extractAllClaims(token).get("role");
-            return role != null ? role.toString() : null;
-        } catch (Exception e) {
-            return null;
-        }
+        Object role = extractAllClaims(token).get("role");
+        return role != null ? role.toString() : null;
     }
 
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {

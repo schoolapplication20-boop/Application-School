@@ -187,7 +187,6 @@ public class AdminService {
                 .username(username)
                 .studentId(studentId)
                 .password(passwordEncoder.encode(rawPassword))
-                .tempPassword(rawPassword)
                 .role(User.Role.STUDENT)
                 .isActive(true)
                 .firstLogin(true)
@@ -755,8 +754,7 @@ public class AdminService {
                 Map<String, Object> creds = new LinkedHashMap<>();
                 creds.put("email", user.getEmail());
                 creds.put("firstLogin", Boolean.TRUE.equals(user.getFirstLogin()));
-                // Only expose plain-text password while the student hasn't logged in yet
-                creds.put("tempPassword", Boolean.TRUE.equals(user.getFirstLogin()) ? user.getTempPassword() : null);
+                creds.put("tempPassword", null);
                 creds.put("isActive", user.getIsActive());
                 return ApiResponse.success("Credentials retrieved", creds);
             }).orElse(ApiResponse.<Map<String, Object>>error("Student user account not found."));
@@ -865,7 +863,6 @@ public class AdminService {
                     .email(normalizedEmail)
                     .mobile(normalizedMobile)
                     .password(passwordEncoder.encode(rawPassword))
-                    .tempPassword(rawPassword)
                     .role(User.Role.TEACHER)
                     .isActive(!"Inactive".equalsIgnoreCase(req.getStatus()))
                     .firstLogin(true)
@@ -1379,10 +1376,11 @@ public class AdminService {
         List<Student> results;
 
         if (hasQuery) {
-            // Name / roll / phone search
+            // Name / roll / phone search — escape LIKE wildcards to prevent injection
+            String escapedQuery = query.trim().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
             results = (schoolId != null)
-                    ? studentRepository.searchBySchoolAndNameRollOrPhone(schoolId, query.trim())
-                    : studentRepository.searchByNameRollOrPhone(query.trim());
+                    ? studentRepository.searchBySchoolAndNameRollOrPhone(schoolId, escapedQuery)
+                    : studentRepository.searchByNameRollOrPhone(escapedQuery);
 
             // Narrow by class + section using exact matching (not CONTAINS)
             if (hasCls) {
@@ -1716,10 +1714,7 @@ public class AdminService {
     public ApiResponse<List<StudentFeeAssignment>> getAllStudentFeeAssignments(Long schoolId) {
         if (schoolId == null) return ApiResponse.success(java.util.List.of());
         // Filter via student ownership since StudentFeeAssignment has schoolId column
-        List<StudentFeeAssignment> all = studentFeeAssignmentRepository.findAllByOrderByCreatedAtDesc();
-        java.util.Set<Long> schoolStudentIds = studentRepository.findBySchoolId(schoolId)
-                .stream().map(Student::getId).collect(java.util.stream.Collectors.toSet());
-        return ApiResponse.success(all.stream().filter(a -> schoolStudentIds.contains(a.getStudentId())).toList());
+        return ApiResponse.success(studentFeeAssignmentRepository.findBySchoolIdOrderByCreatedAtDesc(schoolId));
     }
 
     public ApiResponse<StudentFeeAssignment> getStudentFeeAssignment(Long studentId, Long schoolId) {
@@ -1928,9 +1923,10 @@ public class AdminService {
 
         String term = str(body, "term", null);
         feePaymentRepository.save(FeePayment.builder()
-                .feeId(0L)                          // 0 = new assignment-based payment (fee_id NOT NULL legacy constraint)
+                .feeId(0L)
                 .assignmentId(saved.getId())
                 .studentId(saved.getStudentId())
+                .schoolId(schoolId)
                 .studentName(saved.getStudentName())
                 .rollNumber(saved.getRollNumber())
                 .className(saved.getClassName())
@@ -1973,7 +1969,7 @@ public class AdminService {
      * Marks the installment PAID and updates the parent assignment's paidAmount.
      */
     @Transactional
-    public ApiResponse<FeeInstallment> collectInstallmentFee(Long installmentId, Map<String, Object> body) {
+    public ApiResponse<FeeInstallment> collectInstallmentFee(Long installmentId, Map<String, Object> body, Long schoolId) {
         FeeInstallment installment = feeInstallmentRepository.findById(installmentId).orElse(null);
         if (installment == null) return ApiResponse.error("Installment not found");
         if (installment.getStatus() == FeeInstallment.Status.PAID)
@@ -1982,6 +1978,12 @@ public class AdminService {
         StudentFeeAssignment assignment = studentFeeAssignmentRepository
                 .findById(installment.getAssignmentId()).orElse(null);
         if (assignment == null) return ApiResponse.error("Fee assignment not found");
+
+        if (schoolId != null) {
+            Student tenantCheck = studentRepository.findById(assignment.getStudentId()).orElse(null);
+            if (tenantCheck == null || schoolMismatch(schoolId, tenantCheck.getSchoolId()))
+                return ApiResponse.error("Unauthorized");
+        }
 
         // Use the receipt number sent by the frontend (same as collectAssignmentFee).
         // The frontend generates a timestamped receipt; we validate uniqueness here.
@@ -2087,37 +2089,7 @@ public class AdminService {
         StudentFeeAssignment assignment = studentFeeAssignmentRepository
                 .findFirstByStudentIdOrderByCreatedAtDesc(studentId).orElse(null);
 
-        // If no assignment exists yet, try to auto-create one from the class fee structure
-        if (assignment == null) {
-            Student student = studentRepository.findById(studentId).orElse(null);
-            if (student != null && student.getSchoolId() != null && student.getClassName() != null) {
-                // Find the fee structure for this student's class in their school
-                ClassFeeStructure cfs = classFeeStructureRepository
-                        .findByClassNameAndAcademicYearAndSchoolId(student.getClassName(), currentAcademicYear(), student.getSchoolId())
-                        .orElse(null);
-                if (cfs == null) {
-                    // Fall back: any structure for this class in this school, regardless of academic year
-                    cfs = classFeeStructureRepository.findBySchoolId(student.getSchoolId()).stream()
-                            .filter(c -> c.getClassName().equalsIgnoreCase(student.getClassName()))
-                            .findFirst().orElse(null);
-                }
-                if (cfs != null && cfs.getTotalFee().compareTo(BigDecimal.ZERO) > 0) {
-                    String year = cfs.getAcademicYear() != null ? cfs.getAcademicYear() : currentAcademicYear();
-                    StudentFeeAssignment newAssignment = StudentFeeAssignment.builder()
-                            .studentId(studentId)
-                            .studentName(student.getName())
-                            .rollNumber(student.getRollNumber())
-                            .className(student.getClassName())
-                            .academicYear(year)
-                            .totalFee(cfs.getTotalFee())
-                            .paidAmount(BigDecimal.ZERO)
-                            .status(StudentFeeAssignment.Status.PENDING)
-                            .schoolId(student.getSchoolId())
-                            .build();
-                    assignment = studentFeeAssignmentRepository.save(newAssignment);
-                }
-            }
-        }
+        // Read-only endpoint — no auto-creation; admin must explicitly assign fees
 
         if (assignment == null) {
             Map<String, Object> emptySummary = new LinkedHashMap<>();

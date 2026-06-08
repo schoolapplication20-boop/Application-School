@@ -52,6 +52,7 @@ public class JwtFilter extends OncePerRequestFilter {
                         new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                 Map<String, Object> claimsDetails = new HashMap<>();
                 claimsDetails.put("schoolId", jwtUtil.extractSchoolId(token));
+                claimsDetails.put("userId",   jwtUtil.extractUserId(token));
                 claimsDetails.put("role",     role);
                 authToken.setDetails(claimsDetails);
                 SecurityContextHolder.getContext().setAuthentication(authToken);

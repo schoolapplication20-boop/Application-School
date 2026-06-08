@@ -137,7 +137,6 @@ public class SuperAdminService {
                     .email(normalizedEmail)
                     .mobile(normalizedMobile)
                     .password(passwordEncoder.encode(rawPassword))
-                    .tempPassword(rawPassword)
                     .role(User.Role.ADMIN)
                     .isActive(true)
                     .firstLogin(true)
@@ -284,7 +283,6 @@ public class SuperAdminService {
                     .email(normalizedEmail)
                     .mobile(normalizedMobile)
                     .password(passwordEncoder.encode(rawPassword))
-                    .tempPassword(rawPassword)
                     .role(User.Role.SUPER_ADMIN)
                     .schoolId(displayIdAsLong)   // store display number (1, 2, 3…) not DB PK
                     .isActive(true)

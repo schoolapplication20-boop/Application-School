@@ -482,15 +482,8 @@ public class DatabaseMigration implements CommandLineRunner {
         exec("UPDATE users SET reset_otp = NULL WHERE reset_otp IS NOT NULL AND reset_otp <> 'VERIFIED' AND LENGTH(reset_otp) < 64");
         log.debug("Legacy short-format OTP tokens invalidated.");
 
-        // ── users: unlock ALL currently-locked accounts (one-time recovery) ──────
-        // Accounts accumulated stale failed_login_attempts across sessions and got
-        // locked before the threshold was raised to 10.  Reset every locked account
-        // so admins/super-admins can log in again without using Forgot Password.
-        execRaw(
-            "UPDATE users SET locked_until = NULL, failed_login_attempts = 0 " +
-            "WHERE locked_until IS NOT NULL"
-        );
-        log.info("Released all locked user accounts (locked_until → NULL).");
+        // NOTE: Blanket account-unlock removed — it defeated brute-force lockout protection
+        // by resetting lockouts on every restart. Use the admin unlock endpoint for targeted unlocks.
 
         // ── Production performance indexes ───────────────────────────────────────
         // These cover the most common query patterns in production.

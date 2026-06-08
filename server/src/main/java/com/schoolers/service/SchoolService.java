@@ -148,7 +148,6 @@ public class SchoolService {
                     .email(adminEmail.trim().toLowerCase())
                     .mobile(adminMobile)   // already null-normalised above
                     .password(passwordEncoder.encode(tempPass))
-                    .tempPassword(tempPass)
                     .role(User.Role.ADMIN)
                     .schoolId(school.getSchoolId().longValue())  // store display number, not DB PK
                     .firstLogin(true)

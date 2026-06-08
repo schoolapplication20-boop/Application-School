@@ -8,12 +8,17 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.persistence.LockModeType;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface SalaryRepository extends JpaRepository<Salary, Long> {
+
+    @org.springframework.data.jpa.repository.Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT s FROM Salary s WHERE s.id = :id")
+    Optional<Salary> findByIdForUpdate(@Param("id") Long id);
 
     // ── School-scoped queries (multi-tenant) ──────────────────────────────────
 

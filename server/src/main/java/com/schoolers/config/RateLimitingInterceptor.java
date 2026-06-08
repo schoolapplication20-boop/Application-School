@@ -9,6 +9,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
+import org.springframework.scheduling.annotation.Scheduled;
+
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -79,7 +81,8 @@ public class RateLimitingInterceptor implements HandlerInterceptor {
 
         // Login and register: 20 attempts per 15 minutes per IP.
         // Per-account lockout (5 wrong passwords → permanent lock) is handled in AuthService.
-        if (path.contains("/api/auth/login") || path.contains("/api/auth/register")) {
+        if (path.equals("/api/auth/login") || path.startsWith("/api/auth/login/")
+                || path.equals("/api/auth/register") || path.startsWith("/api/auth/register/")) {
             return loginBuckets.computeIfAbsent(ipAddress, k -> Bucket4j.builder()
                     .addLimit(Bandwidth.classic(20, Refill.intervally(20, java.time.Duration.ofMinutes(15))))
                     .build());
@@ -98,7 +101,8 @@ public class RateLimitingInterceptor implements HandlerInterceptor {
                 .build());
     }
 
-    /** Remove buckets for IPs that haven't been seen in the last hour. Returns count removed. */
+    /** Remove buckets for IPs that haven't been seen in the last hour. Runs automatically every hour. */
+    @Scheduled(fixedDelay = 3_600_000)
     public int evictStaleBuckets() {
         long staleThreshold = System.currentTimeMillis() - 60 * 60 * 1000L;
         int removed = 0;
