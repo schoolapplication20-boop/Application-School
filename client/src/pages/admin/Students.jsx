@@ -1008,7 +1008,10 @@ export default function Students() {
                         value={formData.rollNo}
                         min="1"
                         max={capacityInfo?.capacity || undefined}
-                        onChange={set('rollNo')} />
+                        onChange={e => {
+                          setFormData(fd => ({ ...fd, rollNo: e.target.value }));
+                          if (errors.rollNo) setErrors(er => ({ ...er, rollNo: '' }));
+                        }} />
                       {errors.rollNo && <div className="invalid-feedback">{errors.rollNo}</div>}
                     </div>
                     <div className="col-md-4">
