@@ -262,7 +262,7 @@ function ScheduleModal({ initial, onClose, onSaved, dbClasses = [], dbSections =
                 <label style={labelStyle}>Class *</label>
                 <select value={common.className} onChange={e => setC('className', e.target.value)} style={inputStyle(commonErrors.className)}>
                   <option value="">Select Class</option>
-                  {dbClasses.map(c => <option key={c} value={c}>Class {c}</option>)}
+                  {dbClasses.map(c => <option key={c} value={c}>{formatClassName(c)}</option>)}
                 </select>
                 {commonErrors.className && <div style={{ color: '#c53030', fontSize: 11, marginTop: 3 }}>{commonErrors.className}</div>}
               </div>
@@ -591,7 +591,7 @@ export default function ExamSchedulePage() {
           </div>
           <select className="es-input" value={filterClass} onChange={e => setFilterClass(e.target.value)}>
             <option value="">All Classes</option>
-            {dbClasses.map(c => <option key={c} value={c}>Class {c}</option>)}
+            {dbClasses.map(c => <option key={c} value={c}>{formatClassName(c)}</option>)}
           </select>
           <select className="es-input" value={filterType} onChange={e => setFilterType(e.target.value)}>
             <option value="">All Types</option>
@@ -643,7 +643,7 @@ export default function ExamSchedulePage() {
                         {s.instructions && <div style={{ fontSize: 11, color: '#a0aec0', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.instructions}</div>}
                       </td>
                       <td style={{ padding: '13px 16px' }}>
-                        <div style={{ fontWeight: 600, color: '#3182ce' }}>Class {s.className}</div>
+                        <div style={{ fontWeight: 600, color: '#3182ce' }}>{formatClassName(s.className)}</div>
                         {s.section && <div style={{ fontSize: 11, color: '#a0aec0' }}>Section {s.section}</div>}
                       </td>
                       <td style={{ padding: '13px 16px', fontWeight: 600, color: '#2d3748' }}>{s.subject}</td>
