@@ -50,6 +50,8 @@ public class DataInitializer {
                 ownerPassword = "SuperAdmin@123"; // fallback for local dev only
                 log.warn("[DataInitializer] APP_OWNER_PASSWORD env var not set — using insecure default. Set this in production!");
             }
+            // Lambda below requires an effectively-final variable
+            final String resolvedPassword = ownerPassword;
 
             // ── Role Hierarchy ─────────────────────────────────────────────────────
             // APPLICATION_OWNER : platform-level account, schoolId = NULL.
@@ -96,7 +98,7 @@ public class DataInitializer {
                             .name("Application Owner")
                             .email(ownerEmail)
                             .mobile(ownerMobile)
-                            .password(passwordEncoder.encode(ownerPassword))
+                            .password(passwordEncoder.encode(resolvedPassword))
                             .role(User.Role.APPLICATION_OWNER)
                             .schoolId(null)
                             .isActive(true)
