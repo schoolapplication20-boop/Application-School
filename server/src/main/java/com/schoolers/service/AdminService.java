@@ -1345,7 +1345,7 @@ public class AdminService {
         // ── Step 2: Class-level records ────────────────────────────────────────
         attendanceRepository.deleteByClassId(id);
         timetableRepository.deleteByClassSection(classSection);
-        messageRepository.deleteByClassSection(classSection);
+        messageRepository.deleteByClassSectionAndSchoolId(classSection, classSchoolId);
         leaveRequestRepository.deleteByClassSection(classSection);
         classDiaryRepository.deleteByClassNameAndSection(className, section);
         log.info("[deleteClass] class-level records deleted for " + classSection);
