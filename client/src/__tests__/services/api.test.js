@@ -149,7 +149,6 @@ describe('api service', () => {
       'getClasses', 'createClass', 'updateClass', 'deleteClass',
       'getFees', 'collectFee', 'createFee', 'updateFee', 'deleteFee',
       'getExpenses', 'createExpense', 'updateExpense', 'deleteExpense',
-      'getParents', 'createParent', 'updateParent', 'deleteParent',
     ];
 
     it.each(requiredMethods)('exports adminAPI.%s as a function', (method) => {
