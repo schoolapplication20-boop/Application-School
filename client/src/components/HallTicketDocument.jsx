@@ -12,6 +12,7 @@
  */
 import React, { useMemo } from 'react';
 import { useSchool } from '../context/SchoolContext';
+import { formatClassName } from '../utils/format';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -528,8 +529,7 @@ export default function HallTicketDocument({ ticket, schedules = [] }) {
               <div style={S.fieldBlock}>
                 <span style={S.fieldLabel}>Class & Section</span>
                 <span style={S.fieldValue}>
-                  {ticket.className ? `Class ${ticket.className}` : '—'}
-                  {ticket.section ? ` – ${ticket.section}` : ''}
+                  {ticket.className ? formatClassName(ticket.className, ticket.section) : '—'}
                 </span>
               </div>
               <div style={S.fieldBlock}>

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '../../components/Layout';
 import { examinationAPI, adminAPI } from '../../services/api';
 import { sortClassNames } from '../../utils/classOrder';
+import { formatClassName } from '../../utils/format';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const EXAM_TYPES = ['ANNUAL', 'HALFYEARLY', 'QUARTERLY', 'MIDTERM', 'UNIT_TEST'];
@@ -692,7 +693,7 @@ export default function ExamSchedulePage() {
       {showModal && <ScheduleModal initial={editItem} onClose={closeModal} onSaved={handleSaved} dbClasses={dbClasses} dbSections={dbSections} />}
       {deleteTarget && (
         <ConfirmDialog
-          message={`Delete "${deleteTarget.examName}" — ${deleteTarget.subject} (Class ${deleteTarget.className})? This cannot be undone.`}
+          message={`Delete "${deleteTarget.examName}" — ${deleteTarget.subject} (${formatClassName(deleteTarget.className)})? This cannot be undone.`}
           onConfirm={handleDelete}
           onCancel={() => setDeleteTarget(null)}
         />

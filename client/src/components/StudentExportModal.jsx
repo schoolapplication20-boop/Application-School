@@ -8,6 +8,7 @@
  */
 import React, { useState, useMemo, useEffect } from 'react';
 import { exportStudentsToExcel, ACADEMIC_YEARS, getCurrentAY } from '../utils/excelExport';
+import { formatClassName } from '../utils/format';
 
 const MAX_HISTORY = 20;
 
@@ -83,7 +84,7 @@ function HistoryRow({ entry, onRedownload, onDelete }) {
         </div>
         <div style={{ fontSize: '11px', color: '#a0aec0', marginTop: '2px' }}>
           {entry.records} records · {entry.academicYear}
-          {entry.className !== 'All' ? ` · Class ${entry.className}` : ''}
+          {entry.className !== 'All' ? ` · ${formatClassName(entry.className)}` : ''}
           {entry.section !== 'All' ? `-${entry.section}` : ''}
           {' · '}{new Date(entry.downloadedAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' })}
         </div>
@@ -307,7 +308,7 @@ export default function StudentExportModal({ students, onClose }) {
                       <optgroup key={g.group} label={g.group}>
                         {g.items.map(c => (
                           <option key={c} value={c}>
-                            {['Nursery', 'LKG', 'UKG'].includes(c) ? c : `Class ${c}`}
+                            {formatClassName(c)}
                           </option>
                         ))}
                       </optgroup>
@@ -419,7 +420,7 @@ export default function StudentExportModal({ students, onClose }) {
                             const val = {
                               'Student Name':     s.name,
                               'Roll Number':      s.rollNo,
-                              'Class':            s.class ? `Class ${s.class}` : '',
+                              'Class':            formatClassName(s.class),
                               'Section':          s.section,
                               'Date of Birth':    s.dob,
                               'Blood Group':      s.bloodGroup,

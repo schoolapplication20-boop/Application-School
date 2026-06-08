@@ -4,6 +4,7 @@ import Toast from '../../components/Toast';
 import StudentExportModal from '../../components/StudentExportModal';
 import BulkImportModal from '../../components/BulkImportModal';
 import { sortClassNames } from '../../utils/classOrder';
+import { formatClassName } from '../../utils/format';
 import {
   fetchStudents as apiFetchStudents,
   createStudent as apiCreateStudent,
@@ -1338,7 +1339,7 @@ export default function Students() {
                 {/* Basic Info */}
                 <ViewSection title="Basic Information" icon="badge">
                   <ViewRow label="Date of Birth" value={formatDOB(selectedStudent.dob)} />
-                  <ViewRow label="Class / Section" value={`Class ${(selectedStudent.class || '').replace(/^class\s+/i, '')}${selectedStudent.section ? `-${selectedStudent.section}` : ''}`} />
+                  <ViewRow label="Class / Section" value={formatClassName(selectedStudent.class, selectedStudent.section) || '—'} />
                   <ViewRow label="Roll Number" value={selectedStudent.rollNo} mono />
                   <ViewRow label="Admission Number" value={selectedStudent.admissionNumber} mono />
                   {selectedStudent.bloodGroup && <ViewRow label="Blood Group" value={selectedStudent.bloodGroup} />}

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Layout from '../../components/Layout';
 import { studentAPI } from '../../services/api';
+import { formatClassName } from '../../utils/format';
 
 const fmtDate = (d) => {
   if (!d) return '—';
@@ -139,7 +140,7 @@ export default function StudentAssignments() {
                             </div>
                             {a.description && <p style={{ fontSize: 13, color: 'var(--text-secondary, #4a5568)', margin: '0 0 8px', lineHeight: 1.5 }}>{a.description}</p>}
                             <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-                              {a.className && <span style={{ fontSize: 12, color: 'var(--text-muted, #718096)', display: 'flex', alignItems: 'center', gap: 3 }}><span className="material-icons" style={{ fontSize: 13 }}>class</span>Class {a.className}</span>}
+                              {a.className && <span style={{ fontSize: 12, color: 'var(--text-muted, #718096)', display: 'flex', alignItems: 'center', gap: 3 }}><span className="material-icons" style={{ fontSize: 13 }}>class</span>{formatClassName(a.className)}</span>}
                               {a.dueDate && (
                                 <span style={{ fontSize: 12, color: overdue ? '#ef4444' : 'var(--text-muted, #718096)', fontWeight: overdue ? 700 : 400, display: 'flex', alignItems: 'center', gap: 3 }}>
                                   <span className="material-icons" style={{ fontSize: 13 }}>{overdue ? 'warning' : 'event'}</span>
@@ -185,7 +186,7 @@ export default function StudentAssignments() {
                               <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary, #2d3748)', margin: 0 }}>{a.title}</h3>
                             </div>
                             <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: sub?.notes || graded ? 10 : 0 }}>
-                              {a.className && <span style={{ fontSize: 12, color: 'var(--text-muted, #718096)', display: 'flex', alignItems: 'center', gap: 3 }}><span className="material-icons" style={{ fontSize: 13 }}>class</span>Class {a.className}</span>}
+                              {a.className && <span style={{ fontSize: 12, color: 'var(--text-muted, #718096)', display: 'flex', alignItems: 'center', gap: 3 }}><span className="material-icons" style={{ fontSize: 13 }}>class</span>{formatClassName(a.className)}</span>}
                               {a.dueDate && <span style={{ fontSize: 12, color: 'var(--text-muted, #718096)', display: 'flex', alignItems: 'center', gap: 3 }}><span className="material-icons" style={{ fontSize: 13 }}>event</span>Due: {fmtDate(a.dueDate)}</span>}
                               <span style={{ fontSize: 12, color: '#718096', display: 'flex', alignItems: 'center', gap: 3 }}><span className="material-icons" style={{ fontSize: 13 }}>schedule</span>Submitted: {sub?.submittedAt ? new Date(sub.submittedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : ''}</span>
                             </div>

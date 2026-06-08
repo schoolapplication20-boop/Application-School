@@ -3,6 +3,7 @@
  * Generates a styled .xlsx file from student data using SheetJS.
  */
 import * as XLSX from 'xlsx';
+import { formatClassName } from './format';
 
 const ACADEMIC_YEARS = ['2024-25', '2025-26', '2026-27'];
 
@@ -24,7 +25,7 @@ const toRow = (s, idx) => ({
   'S.No':                  idx + 1,
   'Student Name':          s.name           || '',
   'Roll Number':           s.rollNo         || '',
-  'Class':                 s.class          ? `Class ${s.class}` : '',
+  'Class':                 formatClassName(s.class),
   'Section':               s.section        || '',
   'Date of Birth':         s.dob            || '',
   'Blood Group':           s.bloodGroup     || '',

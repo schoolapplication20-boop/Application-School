@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { formatClassName } from '../../utils/format';
 import Layout from '../../components/Layout';
 import { adminAPI } from '../../services/api';
 import Toast from '../../components/Toast';
@@ -1117,8 +1118,7 @@ function StudentsPanel({ students, setStudents, routes, stops, buses, showToast 
                         <span style={{ fontWeight: 600, fontSize: 13 }}>{s.name || s.studentName}</span>
                         <span style={{ fontSize: 11, color: '#718096' }}>
                           ID: {s.id || s.studentId}
-                          {(s.class || s.className) ? ` · Class ${s.class || s.className}` : ''}
-                          {(s.section || s.sectionName) ? `-${s.section || s.sectionName}` : ''}
+                          {(s.class || s.className) ? ` · ${formatClassName(s.class || s.className, s.section || s.sectionName)}` : ''}
                         </span>
                       </div>
                     ))

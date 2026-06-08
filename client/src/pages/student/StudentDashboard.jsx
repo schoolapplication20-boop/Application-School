@@ -7,6 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import { studentAPI } from '../../services/api';
 import { SkeletonDashboard } from '../../components/SkeletonLoader';
 import SEOMeta from '../../components/SEOMeta';
+import { formatClassName } from '../../utils/format';
 
 const gradeBg    = { 'A+': '#f0fff4', 'A': '#f0fff4', 'B+': '#ebf8ff', 'B': '#ebf8ff', 'C': '#fffaf0', 'F': '#fff5f5' };
 const gradeColor = { 'A+': '#276749', 'A': '#276749', 'B+': '#2b6cb0', 'B': '#2b6cb0', 'C': '#c05621', 'F': '#c53030' };
@@ -88,9 +89,7 @@ export default function StudentDashboard() {
 
   // Display name and info — fall back to user object if profile not loaded yet
   const displayName  = profile?.name || user?.name || 'Student';
-  const classSection = profile
-    ? `${(profile.className || '').replace(/^class\s+/i, '')}${profile.section ? `-${profile.section}` : ''}`.trim() || '—'
-    : '—';
+  const classSection = profile ? formatClassName(profile.className, profile.section) || '—' : '—';
 
   if (loading) {
     return (
@@ -142,7 +141,7 @@ export default function StudentDashboard() {
               <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, color: '#fff', lineHeight: 1.2 }}>{displayName}</h1>
               <div style={{ marginTop: 6, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <span style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', borderRadius: 20, padding: '3px 12px', fontSize: 12, fontWeight: 600 }}>
-                  {classSection !== '—' ? `Class ${classSection}` : 'Class not assigned'}
+                  {classSection !== '—' ? classSection : 'Class not assigned'}
                 </span>
                 {profile?.bloodGroup && (
                   <span style={{ background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.85)', borderRadius: 20, padding: '3px 12px', fontSize: 12 }}>

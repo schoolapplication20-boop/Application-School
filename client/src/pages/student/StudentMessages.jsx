@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '../../components/Layout';
 import { messageAPI } from '../../services/api';
+import { formatClassName } from '../../utils/format';
 
 const CATEGORIES = ['ALL', 'GENERAL', 'ACADEMIC', 'ANNOUNCEMENT', 'EXAM', 'FEE', 'URGENT'];
 
@@ -216,7 +217,7 @@ export default function StudentMessages() {
                       From <strong>{selected.senderName}</strong> ({selected.senderRole?.replace('_', ' ')})
                     </span>
                     <span style={{ fontSize: 13, color: '#a0aec0' }}>
-                      {selected.isSchoolWide ? 'School-wide message' : selected.classSection ? `Class ${selected.classSection}` : 'Direct message'}
+                      {selected.isSchoolWide ? 'School-wide message' : selected.classSection ? formatClassName(selected.classSection) : 'Direct message'}
                     </span>
                   </div>
                 </div>
