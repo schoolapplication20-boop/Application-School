@@ -2268,20 +2268,37 @@ public class AdminService {
                     if (schoolId != null && expense.getSchoolId() != null
                             && !schoolId.equals(expense.getSchoolId()))
                         return ApiResponse.<Expense>error("Expense not found");
-                    if (body.containsKey("title"))       expense.setTitle(str(body, "title", expense.getTitle()));
-                    if (body.containsKey("description")) expense.setDescription(str(body, "description", expense.getDescription()));
+                    if (body.containsKey("title")) {
+                        String t = str(body, "title", expense.getTitle());
+                        if (t == null || t.isBlank()) return ApiResponse.<Expense>error("Title is required");
+                        if (t.length() > 200) return ApiResponse.<Expense>error("Title cannot exceed 200 characters");
+                        expense.setTitle(t);
+                    }
+                    if (body.containsKey("description")) {
+                        String d = str(body, "description", expense.getDescription());
+                        if (d != null && d.length() > 500) return ApiResponse.<Expense>error("Description cannot exceed 500 characters");
+                        expense.setDescription(d);
+                    }
                     if (body.containsKey("paymentMode")) expense.setPaymentMode(str(body, "paymentMode", expense.getPaymentMode()));
                     if (body.containsKey("status") && body.get("status") != null) {
                         try { expense.setStatus(Expense.PaymentStatus.valueOf(body.get("status").toString().toUpperCase())); }
                         catch (Exception ignored) {}
                     }
                     if (body.containsKey("amount") && body.get("amount") != null) {
-                        try { expense.setAmount(new BigDecimal(body.get("amount").toString())); }
-                        catch (Exception ignored) {}
+                        try {
+                            BigDecimal amt = new BigDecimal(body.get("amount").toString());
+                            if (amt.compareTo(BigDecimal.ZERO) <= 0)
+                                return ApiResponse.<Expense>error("Amount must be greater than zero");
+                            expense.setAmount(amt);
+                        } catch (Exception ignored) {}
                     }
                     if (body.containsKey("date") && body.get("date") != null) {
-                        try { expense.setDate(LocalDate.parse(body.get("date").toString())); }
-                        catch (Exception ignored) {}
+                        try {
+                            LocalDate d = LocalDate.parse(body.get("date").toString());
+                            if (d.isAfter(LocalDate.now()))
+                                return ApiResponse.<Expense>error("Expense date cannot be in the future");
+                            expense.setDate(d);
+                        } catch (Exception ignored) {}
                     }
                     return ApiResponse.success("Expense updated", expenseRepository.save(expense));
                 })

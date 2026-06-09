@@ -252,6 +252,8 @@ public class LeaveService {
                 ? teacher.getName()
                 : userOpt.get().getName();
         String remark = str(body, "teacherRemark", null);
+        if (remark != null && remark.length() > 500)
+            return ApiResponse.error("Remark cannot exceed 500 characters");
 
         leave.setStatus(newStatus);
         leave.setTeacherRemark(remark != null && !remark.isBlank() ? remark.trim() : null);
