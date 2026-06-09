@@ -152,6 +152,13 @@ public class MessageService {
         }
         if (schoolId == null) return ApiResponse.error("School context is required");
 
+        // Verify target student belongs to the same school
+        if (targetStudentId != null) {
+            Student targetStudent = studentRepository.findById(targetStudentId).orElse(null);
+            if (targetStudent == null || !schoolId.equals(targetStudent.getSchoolId()))
+                return ApiResponse.error("Student not found");
+        }
+
         // Teachers can only send to their own class
         if ("TEACHER".equals(sender.getRole().name())) {
             Optional<Teacher> teacherOpt = teacherRepository.findByUserId(sender.getId());
