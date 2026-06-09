@@ -154,6 +154,10 @@ public class SalaryService {
                     } catch (Exception ignored) { }
                 }
 
+                String remarks = str(body, "remarks", null);
+                if (remarks != null && remarks.length() > 500)
+                    return ApiResponse.<SalaryPayment>error("Remarks cannot exceed 500 characters");
+
                 SalaryPayment payment = SalaryPayment.builder()
                     .salaryId(id)
                     .staffId(s.getStaffId())
@@ -162,7 +166,7 @@ public class SalaryService {
                     .paidDate(paidDate)
                     .paymentMode(str(body, "paymentMode", "Cash"))
                     .receiptNumber(receiptNo)
-                    .remarks(str(body, "remarks", null))
+                    .remarks(remarks)
                     .month(s.getMonth())
                     .year(s.getYear())
                     .schoolId(s.getSchoolId())
