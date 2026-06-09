@@ -17,6 +17,10 @@ public class ChatbotController {
     public ResponseEntity<ApiResponse<String>> chat(
             @RequestParam String message,
             @RequestParam(defaultValue = "en") String lang) {
+        if (message == null || message.isBlank())
+            return ResponseEntity.badRequest().body(ApiResponse.error("Message is required."));
+        if (message.length() > 500)
+            return ResponseEntity.badRequest().body(ApiResponse.error("Message cannot exceed 500 characters."));
         String answer = chatbotService.getAnswer(message, lang);
         return ResponseEntity.ok(ApiResponse.success("OK", answer));
     }
