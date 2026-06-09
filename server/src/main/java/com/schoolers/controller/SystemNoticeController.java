@@ -32,6 +32,8 @@ public class SystemNoticeController {
     public ResponseEntity<ApiResponse<SystemNotice>> setNotice(@RequestBody SystemNoticeRequest req) {
         if (req.getMessage() == null || req.getMessage().isBlank())
             return ResponseEntity.badRequest().body(ApiResponse.error("Message is required."));
+        if (req.getMessage().length() > 5000)
+            return ResponseEntity.badRequest().body(ApiResponse.error("Message cannot exceed 5000 characters."));
 
         String severity = req.getSeverity() != null ? req.getSeverity().toUpperCase() : "WARNING";
         if (!severity.equals("INFO") && !severity.equals("WARNING") && !severity.equals("CRITICAL"))

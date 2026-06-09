@@ -37,6 +37,9 @@ public class AiController {
             if (request.getMessage() == null || request.getMessage().isBlank())
                 return ResponseEntity.badRequest()
                     .body(ApiResponse.error("Message cannot be empty."));
+            if (request.getMessage().length() > 2000)
+                return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Message cannot exceed 2000 characters."));
 
             String reply = aiService.chat(request.getMessage(), request.getHistory(), schoolId, role, userId);
             return ResponseEntity.ok(ApiResponse.success("OK", reply));
