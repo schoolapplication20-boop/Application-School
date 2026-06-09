@@ -122,7 +122,7 @@ class AuthServiceTest {
         void wrongPassword_decrementsAttempts() {
             User user = activeAdmin();
             when(userRepository.findByEmailIgnoreCaseForUpdate("admin@school.com")).thenReturn(Optional.of(user));
-            when(schoolRepository.findBySchoolId(5)).thenReturn(Optional.of(activeSchool()));
+            // School lookup only runs after a correct password — omitted intentionally
             when(passwordEncoder.matches("WrongPw", "hashed_pw")).thenReturn(false);
 
             ApiResponse<LoginResponse> resp = authService.login(loginReq("admin@school.com", "WrongPw", "ADMIN"));
@@ -138,7 +138,7 @@ class AuthServiceTest {
             User user = activeAdmin();
             user.setFailedLoginAttempts(9); // one more makes 10 (new threshold)
             when(userRepository.findByEmailIgnoreCaseForUpdate("admin@school.com")).thenReturn(Optional.of(user));
-            when(schoolRepository.findBySchoolId(5)).thenReturn(Optional.of(activeSchool()));
+            // School lookup only runs after a correct password — omitted intentionally
             when(passwordEncoder.matches(any(), any())).thenReturn(false);
 
             ApiResponse<LoginResponse> resp = authService.login(loginReq("admin@school.com", "Bad", "ADMIN"));
@@ -202,7 +202,8 @@ class AuthServiceTest {
 
             when(userRepository.findByEmailIgnoreCaseForUpdate("admin@school.com")).thenReturn(Optional.of(user));
             when(schoolRepository.findBySchoolId(5)).thenReturn(Optional.of(expiredSchool));
-            // no passwordEncoder stub — login exits at subscription-expiry check before password check
+            // Subscription check runs after password passes, so we need a correct-password stub
+            when(passwordEncoder.matches("Password1!", "hashed_pw")).thenReturn(true);
 
             ApiResponse<LoginResponse> resp = authService.login(loginReq("admin@school.com", "Password1!", "ADMIN"));
 
