@@ -266,7 +266,7 @@ export default function TeacherLeaveRequest() {
                     <div className="col-12">
                       <label className="form-label small fw-medium">Reason *</label>
                       <textarea className="form-control form-control-sm" rows={3}
-                        placeholder="Describe the reason for leave…" value={formData.reason}
+                        placeholder="Describe the reason for leave…" maxLength={1000} value={formData.reason}
                         onChange={e => setFormData({ ...formData, reason: e.target.value })} required />
                     </div>
                   </div>

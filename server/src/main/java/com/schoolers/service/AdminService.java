@@ -1066,9 +1066,9 @@ public class AdminService {
         }
 
         // ── Step 3: Leave requests submitted by this teacher ──────────────────
-        if (linkedUserId != null) {
-            leaveRequestRepository.deleteByRequesterId(linkedUserId);
-        }
+        // Teacher leave requests store the Teacher entity ID, not the User ID.
+        leaveRequestRepository.deleteByRequesterIdAndRequesterType(id,
+                com.schoolers.model.LeaveRequest.RequesterType.TEACHER);
 
         // ── Step 4: Salary records and their payments ─────────────────────────
         List<com.schoolers.model.Salary> salaries = salaryRepository.findByStaffId(id);
