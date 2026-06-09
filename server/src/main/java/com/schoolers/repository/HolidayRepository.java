@@ -15,18 +15,18 @@ public interface HolidayRepository extends JpaRepository<Holiday, Long> {
     List<Holiday> findBySchoolIdOrderByDateAsc(Long schoolId);
 
     // School-scoped: non-recurring holidays in a given month/year
-    @Query("SELECT h FROM Holiday h WHERE h.schoolId = :schoolId AND h.recurring = false AND YEAR(h.date) = :year AND MONTH(h.date) = :month")
+    @Query(value = "SELECT * FROM holidays WHERE school_id = :schoolId AND recurring = false AND EXTRACT(YEAR FROM date) = :year AND EXTRACT(MONTH FROM date) = :month", nativeQuery = true)
     List<Holiday> findNonRecurringByMonthYearAndSchool(@Param("schoolId") Long schoolId, @Param("year") int year, @Param("month") int month);
 
     // School-scoped: recurring holidays whose month matches
-    @Query("SELECT h FROM Holiday h WHERE h.schoolId = :schoolId AND h.recurring = true AND MONTH(h.date) = :month")
+    @Query(value = "SELECT * FROM holidays WHERE school_id = :schoolId AND recurring = true AND EXTRACT(MONTH FROM date) = :month", nativeQuery = true)
     List<Holiday> findRecurringByMonthAndSchool(@Param("schoolId") Long schoolId, @Param("month") int month);
 
     // Legacy (no schoolId) — kept for backward compat
-    @Query("SELECT h FROM Holiday h WHERE h.recurring = false AND YEAR(h.date) = :year AND MONTH(h.date) = :month")
+    @Query(value = "SELECT * FROM holidays WHERE recurring = false AND EXTRACT(YEAR FROM date) = :year AND EXTRACT(MONTH FROM date) = :month", nativeQuery = true)
     List<Holiday> findNonRecurringByMonthYear(@Param("year") int year, @Param("month") int month);
 
-    @Query("SELECT h FROM Holiday h WHERE h.recurring = true AND MONTH(h.date) = :month")
+    @Query(value = "SELECT * FROM holidays WHERE recurring = true AND EXTRACT(MONTH FROM date) = :month", nativeQuery = true)
     List<Holiday> findRecurringByMonth(@Param("month") int month);
 
     @org.springframework.data.jpa.repository.Modifying

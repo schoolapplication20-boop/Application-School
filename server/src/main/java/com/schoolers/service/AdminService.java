@@ -68,6 +68,7 @@ public class AdminService {
     @Autowired private SalaryPaymentRepository salaryPaymentRepository;
     @Autowired private GradeScaleRepository gradeScaleRepository;
     @Autowired private AuditLogService auditLogService;
+    @Autowired private TokenBlacklistService tokenBlacklistService;
     private static final String CHARS = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#$!";
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final java.util.regex.Pattern EMAIL_PATTERN =
@@ -581,8 +582,14 @@ public class AdminService {
                         student.setAddress(str(body, "address", str(body, "permanentAddress", student.getAddress())));
                     if (body.containsKey("alternateAddress"))
                         student.setAlternateAddress(str(body, "alternateAddress", student.getAlternateAddress()));
-                    if (body.containsKey("status"))
-                        student.setIsActive(!"Inactive".equalsIgnoreCase(str(body, "status", "Active")));
+                    if (body.containsKey("status")) {
+                        boolean newActive = !"Inactive".equalsIgnoreCase(str(body, "status", "Active"));
+                        student.setIsActive(newActive);
+                        if (student.getStudentUserId() != null) {
+                            if (!newActive) tokenBlacklistService.revokeUser(student.getStudentUserId());
+                            else            tokenBlacklistService.restoreUser(student.getStudentUserId());
+                        }
+                    }
                     if (body.containsKey("photo") || body.containsKey("photoUrl"))
                         student.setPhotoUrl(str(body, "photo", str(body, "photoUrl", student.getPhotoUrl())));
                     if (body.containsKey("idProof"))
@@ -971,7 +978,14 @@ public class AdminService {
                     if (req.getQualification() != null) teacher.setQualification(req.getQualification());
                     if (req.getExperience() != null)    teacher.setExperience(req.getExperience());
                     if (req.getJoiningDate() != null)   teacher.setJoiningDate(parseDate(req.getJoiningDate()));
-                    if (req.getStatus() != null)        teacher.setIsActive(!"Inactive".equalsIgnoreCase(req.getStatus()));
+                    if (req.getStatus() != null) {
+                        boolean newActive = !"Inactive".equalsIgnoreCase(req.getStatus());
+                        teacher.setIsActive(newActive);
+                        if (teacher.getUser() != null) {
+                            if (!newActive) tokenBlacklistService.revokeUser(teacher.getUser().getId());
+                            else            tokenBlacklistService.restoreUser(teacher.getUser().getId());
+                        }
+                    }
                     if (req.getTeacherType() != null)   teacher.setTeacherType(normalizeTeacherType(req.getTeacherType()));
                     if (!isClassTeacherRole(teacher.getTeacherType())) {
                         teacher.setPrimaryClassId(null);
@@ -1563,6 +1577,7 @@ public class AdminService {
                 .orElse(ApiResponse.error("Fee record not found"));
     }
 
+    @Transactional
     public ApiResponse<Fee> updateFee(Long id, Map<String, Object> body, Long schoolId) {
         return feeRepository.findById(id)
                 .map(fee -> {
@@ -1795,12 +1810,14 @@ public class AdminService {
                             .academicYear(academicYear)
                             .paidAmount(BigDecimal.ZERO)
                             .status(StudentFeeAssignment.Status.PENDING)
+                            .schoolId(student.getSchoolId())
                             .build());
 
             assignment.setStudentName(student.getName());
             assignment.setRollNumber(student.getRollNumber());
             assignment.setClassName(student.getClassName());
             assignment.setTotalFee(totalFee);
+            if (assignment.getSchoolId() == null) assignment.setSchoolId(student.getSchoolId());
 
             String remarks = str(body, "remarks", null);
             assignment.setRemarks(remarks != null && !remarks.isBlank() ? remarks : null);
@@ -1864,6 +1881,7 @@ public class AdminService {
                             .amount(instAmt)
                             .dueDate(instDue)
                             .status(FeeInstallment.Status.PENDING)
+                            .schoolId(saved.getSchoolId())
                             .build());
                 }
             }

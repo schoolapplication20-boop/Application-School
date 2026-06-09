@@ -258,7 +258,7 @@ public class SalaryService {
         YearMonth ym = YearMonth.of(year, month);
         int totalDays    = ym.lengthOfMonth();
         int weekends     = countWeekends(ym);
-        int extraHolidays = countExtraHolidays(ym, month, year);
+        int extraHolidays = countExtraHolidays(ym, month, year, s.getSchoolId());
         int rawWorkingDays = totalDays - weekends - extraHolidays;
         // Fix: guard against division by zero — if all days are weekends/holidays, pay the full net salary
         if (rawWorkingDays <= 0) {
@@ -312,9 +312,13 @@ public class SalaryService {
         return count;
     }
 
-    private int countExtraHolidays(YearMonth ym, int month, int year) {
-        List<Holiday> nonRecurring = holidayRepository.findNonRecurringByMonthYear(year, month);
-        List<Holiday> recurring    = holidayRepository.findRecurringByMonth(month);
+    private int countExtraHolidays(YearMonth ym, int month, int year, Long schoolId) {
+        List<Holiday> nonRecurring = (schoolId != null)
+                ? holidayRepository.findNonRecurringByMonthYearAndSchool(schoolId, year, month)
+                : holidayRepository.findNonRecurringByMonthYear(year, month);
+        List<Holiday> recurring    = (schoolId != null)
+                ? holidayRepository.findRecurringByMonthAndSchool(schoolId, month)
+                : holidayRepository.findRecurringByMonth(month);
 
         long count = nonRecurring.stream()
             .filter(h -> !isWeekend(h.getDate()))

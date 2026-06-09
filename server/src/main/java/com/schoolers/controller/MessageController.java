@@ -18,16 +18,26 @@ import java.util.Map;
 public class MessageController {
 
     @Autowired private MessageService messageService;
-    @Autowired private com.schoolers.repository.UserRepository userRepository;
 
+    @SuppressWarnings("unchecked")
     private boolean isOwnerOrAdmin(Long userId, Authentication auth) {
         if (auth == null) return false;
-        var userOpt = userRepository.findByEmailIgnoreCase(auth.getName());
-        if (userOpt.isEmpty()) return false;
-        var u = userOpt.get();
-        return u.getId().equals(userId)
-                || u.getRole().name().equals("SUPER_ADMIN")
-                || u.getRole().name().equals("ADMIN");
+        // Prefer JWT claims (no DB hit) over a full user lookup
+        if (auth.getDetails() instanceof java.util.Map) {
+            java.util.Map<?, ?> claims = (java.util.Map<?, ?>) auth.getDetails();
+            Object claimUserId = claims.get("userId");
+            if (claimUserId != null) {
+                try {
+                    Long callerId = claimUserId instanceof Long ? (Long) claimUserId
+                            : Long.parseLong(claimUserId.toString());
+                    if (callerId.equals(userId)) return true;
+                } catch (NumberFormatException ignored) {}
+            }
+            Object role = claims.get("role");
+            if (role != null && (role.toString().equals("SUPER_ADMIN") || role.toString().equals("ADMIN")))
+                return true;
+        }
+        return false;
     }
 
     // ── Existing 1-to-1 endpoints ─────────────────────────────────────────────
@@ -45,12 +55,8 @@ public class MessageController {
     @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','TEACHER','STUDENT')")
     public ResponseEntity<ApiResponse<List<Message>>> getConversation(
             @RequestParam Long u1, @RequestParam Long u2, Authentication auth) {
-        var callerOpt = userRepository.findByEmailIgnoreCase(auth.getName());
-        if (callerOpt.isEmpty()) return ResponseEntity.status(403).body(ApiResponse.error("Access denied"));
-        Long callerId = callerOpt.get().getId();
-        if (!callerId.equals(u1) && !callerId.equals(u2)) {
+        if (!isOwnerOrAdmin(u1, auth) && !isOwnerOrAdmin(u2, auth))
             return ResponseEntity.status(403).body(ApiResponse.error("Access denied"));
-        }
         return ResponseEntity.ok(messageService.getConversation(u1, u2));
     }
 

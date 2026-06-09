@@ -43,11 +43,12 @@ public class OwnerController {
         if (owner == null)
             return ResponseEntity.status(403).body(ApiResponse.error("Owner account not found."));
 
-        String otp    = String.format("%06d", 100000 + RANDOM.nextInt(900000));
+        String otp    = String.format("%06d", RANDOM.nextInt(1_000_000));
         String hashed = AuthService.hashOtp(otp, owner.getEmail().toLowerCase());
 
         owner.setResetOtp(hashed);
         owner.setOtpExpiry(LocalDateTime.now(ZoneOffset.UTC).plusMinutes(10));
+        owner.setFailedLoginAttempts(0);
         userRepository.save(owner);
 
         try {
@@ -81,8 +82,18 @@ public class OwnerController {
         if (owner.getOtpExpiry() == null || LocalDateTime.now(ZoneOffset.UTC).isAfter(owner.getOtpExpiry())) {
             owner.setResetOtp(null);
             owner.setOtpExpiry(null);
+            owner.setFailedLoginAttempts(0);
             userRepository.save(owner);
             return ResponseEntity.badRequest().body(ApiResponse.error("OTP has expired. Please request a new one."));
+        }
+
+        int attempts = owner.getFailedLoginAttempts() == null ? 0 : owner.getFailedLoginAttempts();
+        if (attempts >= 5) {
+            owner.setResetOtp(null);
+            owner.setOtpExpiry(null);
+            owner.setFailedLoginAttempts(0);
+            userRepository.save(owner);
+            return ResponseEntity.badRequest().body(ApiResponse.error("Too many incorrect attempts. Please request a new OTP."));
         }
 
         String submitted = AuthService.hashOtp(otp.trim(), owner.getEmail().toLowerCase());
@@ -90,12 +101,17 @@ public class OwnerController {
                 owner.getResetOtp().trim().getBytes(java.nio.charset.StandardCharsets.UTF_8),
                 submitted.getBytes(java.nio.charset.StandardCharsets.UTF_8));
 
-        if (!match)
-            return ResponseEntity.badRequest().body(ApiResponse.error("Invalid OTP. Please try again."));
+        if (!match) {
+            owner.setFailedLoginAttempts(attempts + 1);
+            userRepository.save(owner);
+            int remaining = 5 - (attempts + 1);
+            return ResponseEntity.badRequest().body(ApiResponse.error("Invalid OTP. " + remaining + " attempt(s) remaining."));
+        }
 
         // Clear OTP after successful use
         owner.setResetOtp(null);
         owner.setOtpExpiry(null);
+        owner.setFailedLoginAttempts(0);
         userRepository.save(owner);
 
         return ResponseEntity.ok(ApiResponse.success("OTP verified."));

@@ -28,7 +28,9 @@ public class TokenBlacklistService {
 
     @Autowired private RevokedTokenRepository revokedTokenRepository;
 
-    private final Set<String> revokedHashes = ConcurrentHashMap.newKeySet();
+    private final Set<String> revokedHashes   = ConcurrentHashMap.newKeySet();
+    /** In-memory set of user IDs whose tokens are all revoked (e.g. account deactivated). */
+    private final Set<Long>   revokedUserIds  = ConcurrentHashMap.newKeySet();
 
     /** Load all non-expired revoked tokens from DB into the in-memory set on startup. */
     @PostConstruct
@@ -61,6 +63,15 @@ public class TokenBlacklistService {
     public boolean isRevoked(String token) {
         return revokedHashes.contains(sha256(token));
     }
+
+    /** Revoke all tokens for a user (e.g. when account is deactivated). In-memory; cleared on restart. */
+    public void revokeUser(Long userId)   { if (userId != null) revokedUserIds.add(userId); }
+
+    /** Restore a previously revoked user (e.g. re-activation). */
+    public void restoreUser(Long userId)  { if (userId != null) revokedUserIds.remove(userId); }
+
+    /** Returns true if all tokens for this userId are considered revoked. */
+    public boolean isUserRevoked(Long userId) { return userId != null && revokedUserIds.contains(userId); }
 
     /** Called by MaintenanceService to purge expired entries from both DB and in-memory set. */
     public int purgeExpired() {

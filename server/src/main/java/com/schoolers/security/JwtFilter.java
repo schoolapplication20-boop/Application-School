@@ -35,11 +35,17 @@ public class JwtFilter extends OncePerRequestFilter {
 
         if (token != null && jwtUtil.isValidToken(token) && !tokenBlacklistService.isRevoked(token)) {
             String username = jwtUtil.extractUsername(token);
+            Long   userId   = jwtUtil.extractUserId(token);
+
+            // Reject if the user's account has been deactivated since this token was issued
+            if (tokenBlacklistService.isUserRevoked(userId)) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType("application/json");
+                response.getWriter().write("{\"success\":false,\"message\":\"Account deactivated.\"}");
+                return;
+            }
 
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                // Build UserDetails from JWT claims — no DB hit needed.
-                // The JWT signature is already verified by isValidToken() above, and the token
-                // is confirmed not revoked, so the role claim is trustworthy.
                 String role = jwtUtil.extractRole(token);
                 String authority = (role != null && !role.isBlank()) ? "ROLE_" + role : "ROLE_USER";
                 UserDetails userDetails = new org.springframework.security.core.userdetails.User(
@@ -52,7 +58,7 @@ public class JwtFilter extends OncePerRequestFilter {
                         new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                 Map<String, Object> claimsDetails = new HashMap<>();
                 claimsDetails.put("schoolId", jwtUtil.extractSchoolId(token));
-                claimsDetails.put("userId",   jwtUtil.extractUserId(token));
+                claimsDetails.put("userId",   userId);
                 claimsDetails.put("role",     role);
                 authToken.setDetails(claimsDetails);
                 SecurityContextHolder.getContext().setAuthentication(authToken);
