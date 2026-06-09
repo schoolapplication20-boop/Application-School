@@ -1344,7 +1344,9 @@ public class AdminService {
             feePaymentRepository.deleteByStudentId(sid);
             transportFeeRepository.deleteByStudentId(sid);
             transportStudentAssignmentRepository.deleteByStudentId(sid);
-            leaveRequestRepository.deleteByRequesterId(sid);
+            leaveRequestRepository.deleteByRequesterIdAndRequesterType(sid,
+                    com.schoolers.model.LeaveRequest.RequesterType.STUDENT);
+            assignmentSubmissionRepository.deleteByStudentId(sid);
             messageRepository.deleteByTargetStudentId(sid);
             List<com.schoolers.model.StudentFeeAssignment> fas =
                     studentFeeAssignmentRepository.findByStudentId(sid);
