@@ -6,7 +6,7 @@ import '../../styles/auth.css';
 
 const ResetPassword = () => {
   const navigate = useNavigate();
-  const { user, getDashboardPath, updateUser } = useAuth();
+  const { user, getDashboardPath, updateUser, logout } = useAuth();
 
   const isFirstLogin = !!user?.firstLogin;
 
@@ -58,9 +58,10 @@ const ResetPassword = () => {
         currentPassword: formData.previousPassword,
         newPassword: formData.newPassword,
       });
-      updateUser({ firstLogin: false });
-      setSuccess('Password changed successfully! Redirecting...');
-      navTimerRef.current = setTimeout(() => navigate(getDashboardPath()), 1800);
+      // Backend revokes all existing sessions on password change (S-15).
+      // Log out locally and redirect to login so user re-authenticates with the new password.
+      setSuccess('Password changed successfully! Please log in with your new password.');
+      navTimerRef.current = setTimeout(() => { logout(); navigate('/login'); }, 2000);
     } catch (err) {
       const msg = err.response?.data?.message || 'Failed to change password. Please try again.';
       setError(msg);

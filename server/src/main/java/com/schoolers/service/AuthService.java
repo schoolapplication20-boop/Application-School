@@ -31,13 +31,14 @@ public class AuthService {
 
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
-    @Autowired private UserRepository    userRepository;
-    @Autowired private StudentRepository studentRepository;
-    @Autowired private SchoolRepository  schoolRepository;
-    @Autowired private TeacherRepository teacherRepository;
-    @Autowired private JwtUtil           jwtUtil;
-    @Autowired private PasswordEncoder   passwordEncoder;
-    @Autowired private EmailService      emailService;
+    @Autowired private UserRepository        userRepository;
+    @Autowired private StudentRepository     studentRepository;
+    @Autowired private SchoolRepository      schoolRepository;
+    @Autowired private TeacherRepository     teacherRepository;
+    @Autowired private JwtUtil               jwtUtil;
+    @Autowired private PasswordEncoder       passwordEncoder;
+    @Autowired private EmailService          emailService;
+    @Autowired private TokenBlacklistService tokenBlacklistService;
 
     private static final int MAX_LOGIN_ATTEMPTS = 5;
 
@@ -103,25 +104,9 @@ public class AuthService {
                         + "Please use 'Forgot Password' to reset your password and unlock your account.");
             }
 
-            // ── Single school lookup reused for subscription, branding, and setup checks ──
-            java.util.Optional<School> cachedSchoolOpt = java.util.Optional.empty();
-            if (user.getRole() != User.Role.APPLICATION_OWNER && user.getSchoolId() != null) {
-                cachedSchoolOpt = schoolRepository.findBySchoolId(user.getSchoolId().intValue());
-                if (cachedSchoolOpt.isEmpty()) cachedSchoolOpt = schoolRepository.findById(user.getSchoolId());
-
-                boolean schoolActive = cachedSchoolOpt.map(s -> Boolean.TRUE.equals(s.getIsActive())).orElse(true);
-                if (!schoolActive)
-                    return ApiResponse.error("Your school's subscription has ended. Please reach out to the My-Skoolz team to reactivate.");
-
-                boolean expired = cachedSchoolOpt.map(s ->
-                    s.getSubscriptionExpiry() != null &&
-                    !s.getSubscriptionExpiry().isAfter(java.time.LocalDate.now())
-                ).orElse(false);
-                if (expired)
-                    return ApiResponse.error("Your school's subscription has expired. Please contact the My-Skoolz team to renew.");
-            }
-
             // ── Step 3: Password ───────────────────────────────────────────
+            // Password is validated BEFORE subscription checks (S-21) so that unauthenticated
+            // requests cannot probe whether a school's subscription is active or expired.
             if (request.getPassword() == null || request.getPassword().isBlank())
                 return ApiResponse.error("Password is required.");
             if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
@@ -152,6 +137,25 @@ public class AuthService {
             if (user.getFailedLoginAttempts() != null && user.getFailedLoginAttempts() > 0) {
                 user.setFailedLoginAttempts(0);
                 userRepository.save(user);
+            }
+
+            // ── Single school lookup reused for subscription, branding, and setup checks ──
+            // Runs after password is verified so unauthenticated callers can't probe subscription state (S-21).
+            java.util.Optional<School> cachedSchoolOpt = java.util.Optional.empty();
+            if (user.getRole() != User.Role.APPLICATION_OWNER && user.getSchoolId() != null) {
+                cachedSchoolOpt = schoolRepository.findBySchoolId(user.getSchoolId().intValue());
+                if (cachedSchoolOpt.isEmpty()) cachedSchoolOpt = schoolRepository.findById(user.getSchoolId());
+
+                boolean schoolActive = cachedSchoolOpt.map(s -> Boolean.TRUE.equals(s.getIsActive())).orElse(true);
+                if (!schoolActive)
+                    return ApiResponse.error("Your school's subscription has ended. Please reach out to the My-Skoolz team to reactivate.");
+
+                boolean expired = cachedSchoolOpt.map(s ->
+                    s.getSubscriptionExpiry() != null &&
+                    !s.getSubscriptionExpiry().isAfter(java.time.LocalDate.now())
+                ).orElse(false);
+                if (expired)
+                    return ApiResponse.error("Your school's subscription has expired. Please contact the My-Skoolz team to renew.");
             }
 
             // ── Step 3b: Role validation — selectedRole must match actual DB role ──
@@ -696,6 +700,8 @@ public class AuthService {
         user.setLockedUntil(null);
         user.setFailedLoginAttempts(0);
         userRepository.save(user);
+        // Revoke all existing sessions so stolen tokens can't be reused (S-15)
+        tokenBlacklistService.revokeUser(user.getId());
         return ApiResponse.success("Password reset successfully", "Password updated");
     }
 
@@ -715,6 +721,8 @@ public class AuthService {
         user.setFirstLogin(false);
         user.setTempPassword(null);
         userRepository.save(user);
+        // Invalidate any existing tokens so the user re-authenticates with the new password (S-16)
+        tokenBlacklistService.revokeUser(user.getId());
         return ApiResponse.success("Password set successfully", "Password updated");
     }
 
@@ -732,6 +740,8 @@ public class AuthService {
         user.setFirstLogin(false);
         user.setTempPassword(null);
         userRepository.save(user);
+        // Invalidate existing tokens; user must re-login with new password (S-15)
+        tokenBlacklistService.revokeUser(user.getId());
         return ApiResponse.success("Password changed successfully", "Password updated");
     }
 

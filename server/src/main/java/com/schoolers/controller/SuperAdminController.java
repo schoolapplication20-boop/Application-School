@@ -44,6 +44,19 @@ public class SuperAdminController {
                 .orElse(null);
     }
 
+    @SuppressWarnings("unchecked")
+    private String getCurrentRole(Authentication auth) {
+        if (auth == null) return null;
+        if (auth.getDetails() instanceof java.util.Map) {
+            Object v = ((java.util.Map<?, ?>) auth.getDetails()).get("role");
+            if (v != null) return v.toString();
+        }
+        return auth.getAuthorities().stream()
+                .findFirst()
+                .map(a -> a.getAuthority().replace("ROLE_", ""))
+                .orElse(null);
+    }
+
     private static String strVal(Map<String, Object> m, String key) {
         Object v = m.get(key);
         return v != null ? v.toString().trim() : "";
@@ -94,11 +107,10 @@ public class SuperAdminController {
     }
 
     // ── GET /api/superadmin/super-admins ──────────────────────────────────────
-    // Only the platform Application Owner (schoolId=null) may list super admins.
+    // Only the platform Application Owner may list super admins.
     @GetMapping("/super-admins")
     public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getSuperAdmins(Authentication auth) {
-        Long callerSchoolId = getCurrentSchoolId(auth);
-        if (callerSchoolId != null)
+        if (!"APPLICATION_OWNER".equals(getCurrentRole(auth)))
             return ResponseEntity.status(403)
                     .body(ApiResponse.error("Only the Application Owner can view Super Admin accounts."));
         return ResponseEntity.ok(superAdminService.getSuperAdmins());
@@ -132,6 +144,9 @@ public class SuperAdminController {
         if (schoolNumber == null || schoolNumber < 1)
             return ResponseEntity.badRequest().body(ApiResponse.error("School ID is required and must be a positive number"));
 
+        if (!"APPLICATION_OWNER".equals(getCurrentRole(auth)))
+            return ResponseEntity.status(403)
+                    .body(ApiResponse.error("Only the Application Owner can create Super Admin accounts."));
         Long callerSchoolId = getCurrentSchoolId(auth);
         ApiResponse<AdminCreatedResponse> response = superAdminService.createSuperAdmin(
                 name, email, mobile.isEmpty() ? null : mobile,
@@ -148,8 +163,7 @@ public class SuperAdminController {
     @DeleteMapping("/super-admins/{id}")
     public ResponseEntity<ApiResponse<String>> deleteSuperAdmin(
             @PathVariable Long id, Authentication auth) {
-        Long callerSchoolId = getCurrentSchoolId(auth);
-        if (callerSchoolId != null)
+        if (!"APPLICATION_OWNER".equals(getCurrentRole(auth)))
             return ResponseEntity.status(403)
                     .body(ApiResponse.error("Only the Application Owner can delete Super Admin accounts."));
         ApiResponse<String> response = superAdminService.deleteSuperAdmin(id);

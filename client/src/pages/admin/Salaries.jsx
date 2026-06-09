@@ -8,6 +8,7 @@ const currentYear = new Date().getFullYear();
 const YEARS = [String(currentYear - 1), String(currentYear), String(currentYear + 1)];
 
 const fmt = (n) => `₹${Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const todayStr = () => new Date().toISOString().slice(0, 10);
 
 const statusBadge = (s) => {
   const k     = String(s || '').toUpperCase();
@@ -40,7 +41,7 @@ export default function Salaries() {
   // Forms
   const [editForm,    setEditForm]    = useState({});
   const [leavesForm,  setLeavesForm]  = useState({ leavesTaken: 0 });
-  const [payForm,     setPayForm]     = useState({ amount: '', paymentMode: 'Cash', receiptNumber: '', remarks: '' });
+  const [payForm,     setPayForm]     = useState({ amount: '', paymentMode: 'Cash', receiptNumber: '', remarks: '', paidDate: todayStr() });
   const [addForm,     setAddForm]     = useState({ staffName: '', role: '', department: '', basic: '' });
   const [holidayForm, setHolidayForm] = useState({ name: '', date: '', recurring: false });
   const [payHistory,  setPayHistory]  = useState([]);
@@ -165,7 +166,7 @@ export default function Salaries() {
   // ── COLLECT PAYMENT ───────────────────────────────────────────────────────
 
   const openPay = async (r) => {
-    setPayForm({ amount: '', paymentMode: 'Cash', receiptNumber: '', remarks: '' });
+    setPayForm({ amount: '', paymentMode: 'Cash', receiptNumber: '', remarks: '', paidDate: todayStr() });
     setPayModal(r);
     try {
       const res = await salaryAPI.getPayments(r.id);
@@ -182,6 +183,7 @@ export default function Salaries() {
         paymentMode: payForm.paymentMode,
         receiptNumber: payForm.receiptNumber || undefined,
         remarks: payForm.remarks || undefined,
+        paidDate: payForm.paidDate || todayStr(),
       });
       showToast('Payment collected successfully');
       setPayModal(null);
@@ -669,6 +671,10 @@ export default function Salaries() {
                   <div className="col-md-6">
                     <label className="form-label small fw-medium">Receipt Number</label>
                     <input className="form-control form-control-sm" value={payForm.receiptNumber} onChange={e => setPayForm(f=>({...f, receiptNumber: e.target.value}))} placeholder="Auto-generated if empty" />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label small fw-medium">Payment Date *</label>
+                    <input type="date" className="form-control form-control-sm" max={todayStr()} value={payForm.paidDate} onChange={e => setPayForm(f=>({...f, paidDate: e.target.value}))} />
                   </div>
                   <div className="col-md-6">
                     <label className="form-label small fw-medium">Remarks</label>
