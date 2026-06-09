@@ -31,6 +31,7 @@ public class SchoolEventService {
     public ApiResponse<SchoolEvent> createEvent(Map<String, Object> body, Authentication auth, Long schoolId) {
         String title = str(body, "title");
         if (title == null || title.isBlank()) return ApiResponse.error("Title is required");
+        if (title.length() > 200) return ApiResponse.error("Title cannot exceed 200 characters");
         String startDateStr = str(body, "startDate");
         if (startDateStr == null) return ApiResponse.error("Start date is required");
 
@@ -44,10 +45,13 @@ public class SchoolEventService {
             try { endDate = LocalDate.parse(endDateStr); } catch (Exception ignored) {}
         }
 
+        String description = str(body, "description");
+        if (description != null && description.length() > 500) return ApiResponse.error("Description cannot exceed 500 characters");
+
         Long userId = resolveUserId(auth);
         SchoolEvent event = SchoolEvent.builder()
                 .title(title.trim())
-                .description(str(body, "description"))
+                .description(description)
                 .startDate(startDate)
                 .endDate(endDate)
                 .eventType(str(body, "eventType") != null ? str(body, "eventType") : "EVENT")
@@ -64,9 +68,15 @@ public class SchoolEventService {
         if (schoolId != null && !schoolId.equals(event.getSchoolId())) return ApiResponse.error("Unauthorized");
 
         String title = str(body, "title");
-        if (title != null && !title.isBlank()) event.setTitle(title.trim());
+        if (title != null && !title.isBlank()) {
+            if (title.length() > 200) return ApiResponse.error("Title cannot exceed 200 characters");
+            event.setTitle(title.trim());
+        }
         String desc = str(body, "description");
-        if (desc != null) event.setDescription(desc);
+        if (desc != null) {
+            if (desc.length() > 500) return ApiResponse.error("Description cannot exceed 500 characters");
+            event.setDescription(desc);
+        }
         String type = str(body, "eventType");
         if (type != null) event.setEventType(type);
         String startStr = str(body, "startDate");
