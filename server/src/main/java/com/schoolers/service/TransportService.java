@@ -384,13 +384,21 @@ public class TransportService {
         Long studentId = longVal(body, "studentId", null);
         if (studentId == null) return ApiResponse.error("Student ID is required");
 
+        java.math.BigDecimal amount = null;
+        if (body.get("amount") != null) {
+            try { amount = new java.math.BigDecimal(body.get("amount").toString()); }
+            catch (NumberFormatException e) { return ApiResponse.error("Invalid amount format"); }
+            if (amount.compareTo(java.math.BigDecimal.ZERO) <= 0)
+                return ApiResponse.error("Amount must be greater than zero");
+        }
+
         TransportFee fee = TransportFee.builder()
                 .studentId(studentId)
                 .studentName(str(body, "studentName", null))
                 .busNo(str(body, "busNo", null))
                 .route(str(body, "route", null))
                 .month(str(body, "month", null))
-                .amount(body.get("amount") != null ? new java.math.BigDecimal(body.get("amount").toString()) : null)
+                .amount(amount)
                 .status(TransportFee.Status.PENDING)
                 .schoolId(schoolId)
                 .build();
@@ -405,8 +413,11 @@ public class TransportService {
         if (body.containsKey("amount")) {
             Object amountObj = body.get("amount");
             if (amountObj == null) return ApiResponse.error("amount is required.");
-            try { fee.setAmount(new java.math.BigDecimal(amountObj.toString())); }
-            catch (NumberFormatException e) { return ApiResponse.error("Invalid amount format."); }
+            try {
+                java.math.BigDecimal amt = new java.math.BigDecimal(amountObj.toString());
+                if (amt.compareTo(java.math.BigDecimal.ZERO) <= 0) return ApiResponse.error("Amount must be greater than zero");
+                fee.setAmount(amt);
+            } catch (NumberFormatException e) { return ApiResponse.error("Invalid amount format."); }
         }
         if (body.containsKey("status")) {
             try { fee.setStatus(TransportFee.Status.valueOf(str(body, "status", "PENDING"))); }
@@ -466,7 +477,7 @@ public class TransportService {
                 .stopName(str(body, "stopName", null))
                 .pickupTime(str(body, "pickupTime", null))
                 .dropTime(str(body, "dropTime", null))
-                .fee(body.get("fee") != null ? new BigDecimal(body.get("fee").toString()) : BigDecimal.ZERO)
+                .fee(body.get("fee") != null ? new BigDecimal(body.get("fee").toString()).max(BigDecimal.ZERO) : BigDecimal.ZERO)
                 .emergencyContact(str(body, "emergencyContact", null))
                 .notes(str(body, "notes", null))
                 .status(str(body, "status", "Active"))
