@@ -196,6 +196,7 @@ export default function AdminMessages() {
                   value={form.content}
                   onChange={e => setForm(f => ({ ...f, content: e.target.value }))}
                   placeholder="Type your message here…"
+                  maxLength={5000}
                   rows={5}
                   style={{ width: '100%', padding: '9px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14, resize: 'vertical', boxSizing: 'border-box', outline: 'none' }}
                 />

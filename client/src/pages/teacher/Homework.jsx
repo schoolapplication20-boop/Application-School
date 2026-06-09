@@ -372,6 +372,7 @@ export default function Homework() {
                 <label className="form-label small fw-medium">Homework Assigned *</label>
                 <textarea className="form-control form-control-sm" rows={3}
                   placeholder="e.g. Solve exercises 1–10 from page 78"
+                  maxLength={2000}
                   value={form.homework}
                   onChange={e => setForm(prev => ({ ...prev, homework: e.target.value }))}
                   required />
@@ -384,6 +385,7 @@ export default function Homework() {
                 </label>
                 <textarea className="form-control form-control-sm" rows={2}
                   placeholder="Additional notes, classwork summary..."
+                  maxLength={2000}
                   value={form.description}
                   onChange={e => setForm(prev => ({ ...prev, description: e.target.value }))} />
               </div>

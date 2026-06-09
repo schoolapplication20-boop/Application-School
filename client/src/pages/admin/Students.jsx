@@ -1237,14 +1237,14 @@ export default function Students() {
                     <div className="col-12">
                       <label className="form-label fw-medium small">Permanent Address *</label>
                       <textarea className={`form-control form-control-sm ${errors.permanentAddress ? 'is-invalid' : ''}`}
-                        rows={2} placeholder="House No, Street, Area, City, State, PIN"
+                        rows={2} maxLength={500} placeholder="House No, Street, Area, City, State, PIN"
                         value={formData.permanentAddress} onChange={set('permanentAddress')} />
                       {errors.permanentAddress && <div className="invalid-feedback">{errors.permanentAddress}</div>}
                     </div>
                     <div className="col-12">
                       <label className="form-label fw-medium small">Alternate / Current Address <span className="text-muted">(Optional)</span></label>
                       <textarea className="form-control form-control-sm"
-                        rows={2} placeholder="Leave blank if same as permanent address"
+                        rows={2} maxLength={500} placeholder="Leave blank if same as permanent address"
                         value={formData.alternateAddress} onChange={set('alternateAddress')} />
                     </div>
                   </div>

@@ -153,6 +153,7 @@ export default function StudentLeaveRequest() {
               <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#4a5568', marginBottom: 6 }}>Reason *</label>
               <textarea
                 rows={3}
+                maxLength={1000}
                 value={form.reason}
                 onChange={e => setForm(f => ({ ...f, reason: e.target.value }))}
                 placeholder="Describe the reason for your leave..."

@@ -1202,6 +1202,7 @@ function OwnerDashboard() {
                           value={issueNote}
                           onChange={e => setIssueNote(e.target.value)}
                           placeholder="Add a note for internal tracking..."
+                          maxLength={2000}
                           rows={2}
                           style={{ width: '100%', padding: '8px 12px', fontSize: 12, border: '1.5px solid #e2e8f0', borderRadius: 8, outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit' }}
                         />
@@ -1276,6 +1277,7 @@ function OwnerDashboard() {
             value={noticeForm.message}
             onChange={e => setNoticeForm(f => ({ ...f, message: e.target.value }))}
             placeholder="e.g. We have scheduled a maintenance upgrade on Saturday, 24 May from 2:00 AM – 4:00 AM IST. The platform may be unavailable during this window."
+            maxLength={5000}
             rows={3}
             style={{ width: '100%', border: '1.5px solid #e2e8f0', borderRadius: 8, padding: '10px 12px', fontSize: 13, resize: 'vertical', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
           />
@@ -2092,7 +2094,7 @@ function CreateSuperAdminWizard({ onClose, onCreated }) {
           {step === 2 && (
             <div>
               <WizardField label="Street Address" required>
-                <textarea value={form.address} onChange={on('address')} rows={2} placeholder="Building no, street name, area…" style={{ ...inp(false), resize: 'vertical' }} />
+                <textarea value={form.address} onChange={on('address')} rows={2} maxLength={500} placeholder="Building no, street name, area…" style={{ ...inp(false), resize: 'vertical' }} />
               </WizardField>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 18px' }}>
                 <WizardField label="City" required><input value={form.city}    onChange={on('city')}    placeholder="e.g. Mumbai"     style={inp(false)} /></WizardField>
@@ -2693,7 +2695,7 @@ function EditSchoolWizard({ sa, onClose, onSaved }) {
           {step === 2 && (
             <div>
               <WizardField label="Street Address" required>
-                <textarea value={form.address} onChange={on('address')} rows={2} placeholder="Building no, street name, area…" style={{ ...inp(false), resize: 'vertical' }} />
+                <textarea value={form.address} onChange={on('address')} rows={2} maxLength={500} placeholder="Building no, street name, area…" style={{ ...inp(false), resize: 'vertical' }} />
               </WizardField>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 18px' }}>
                 <WizardField label="City" required><input value={form.city}    onChange={on('city')}    placeholder="e.g. Mumbai"      style={inp(false)} /></WizardField>

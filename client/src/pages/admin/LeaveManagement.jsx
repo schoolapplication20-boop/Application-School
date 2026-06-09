@@ -323,7 +323,7 @@ export default function LeaveManagement() {
                   </div>
                 </div>
                 <label className="form-label small fw-medium">Remark to Teacher (optional)</label>
-                <textarea className="form-control form-control-sm" rows={2} value={comment}
+                <textarea className="form-control form-control-sm" rows={2} maxLength={500} value={comment}
                   onChange={e => setComment(e.target.value)} placeholder="Add a remark for the teacher…" />
               </div>
               <div className="modal-footer">

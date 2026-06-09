@@ -727,7 +727,7 @@ export default function Fees() {
               <div style={{ gridColumn: '1/-1' }}>
                 <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Remarks</label>
                 <textarea value={assignForm.remarks} onChange={e => setAssignForm(f => ({ ...f, remarks: e.target.value }))}
-                  rows={2} placeholder="Optional notes (e.g., scholarship, concession)"
+                  rows={2} maxLength={500} placeholder="Optional notes (e.g., scholarship, concession)"
                   style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none', resize: 'none', boxSizing: 'border-box' }} />
               </div>
 

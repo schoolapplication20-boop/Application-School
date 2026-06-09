@@ -171,7 +171,7 @@ export default function SchoolCalendar() {
                 </div>
                 <div style={{ gridColumn: '1/-1' }}>
                   <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary, #4a5568)', display: 'block', marginBottom: 5 }}>Description</label>
-                  <textarea rows={2} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Optional description" style={{ ...inp, resize: 'vertical' }} />
+                  <textarea rows={2} maxLength={500} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Optional description" style={{ ...inp, resize: 'vertical' }} />
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 10 }}>

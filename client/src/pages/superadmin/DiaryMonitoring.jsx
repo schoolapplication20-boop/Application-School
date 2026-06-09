@@ -355,6 +355,7 @@ export default function DiaryMonitoring() {
                   <label className="form-label small fw-medium">Admin Comment <span style={{ color: '#a0aec0' }}>(optional)</span></label>
                   <textarea className="form-control form-control-sm" rows={3}
                     placeholder="Add a comment for the teacher..."
+                    maxLength={1000}
                     value={reviewForm.adminComment}
                     onChange={e => setReviewForm(prev => ({ ...prev, adminComment: e.target.value }))} />
                 </div>

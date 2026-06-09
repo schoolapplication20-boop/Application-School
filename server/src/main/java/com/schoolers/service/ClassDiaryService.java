@@ -68,9 +68,11 @@ public class ClassDiaryService {
 
         String topic = str(body, "topic", null);
         if (topic == null || topic.isBlank()) return ApiResponse.error("Topic is required");
+        if (topic.length() > 200) return ApiResponse.error("Topic cannot exceed 200 characters");
 
         String homework = str(body, "homework", null);
         if (homework == null || homework.isBlank()) return ApiResponse.error("Homework is required");
+        if (homework.length() > 2000) return ApiResponse.error("Homework cannot exceed 2000 characters");
 
         Long teacherId = longVal(body, "teacherId", null);
         if (teacherId == null) return ApiResponse.error("Teacher ID is required");
@@ -78,6 +80,11 @@ public class ClassDiaryService {
         String subject = str(body, "subject", null);
         LocalDate diaryDate = parseDate(str(body, "diaryDate", null));
         if (diaryDate == null) diaryDate = LocalDate.now();
+
+        String remarks = str(body, "remarks", null);
+        if (remarks != null && remarks.length() > 500) return ApiResponse.error("Remarks cannot exceed 500 characters");
+        String description = str(body, "description", null);
+        if (description != null && description.length() > 2000) return ApiResponse.error("Description cannot exceed 2000 characters");
 
         Long schoolId = longVal(body, "schoolId", null);
 
@@ -100,10 +107,10 @@ public class ClassDiaryService {
                 .diaryDate(diaryDate)
                 .topic(topic)
                 .homework(homework)
-                .remarks(str(body, "remarks", null))
+                .remarks(remarks)
                 .imageUrl(str(body, "imageUrl", null))
                 .imageName(str(body, "imageName", null))
-                .description(str(body, "description", null))
+                .description(description)
                 .schoolId(schoolId)
                 .build();
 
@@ -120,14 +127,28 @@ public class ClassDiaryService {
                     }
                     if (body.containsKey("topic")) {
                         String topic = str(body, "topic", null);
-                        if (topic != null && !topic.isBlank()) diary.setTopic(topic);
+                        if (topic != null && !topic.isBlank()) {
+                            if (topic.length() > 200) return ApiResponse.<ClassDiary>error("Topic cannot exceed 200 characters");
+                            diary.setTopic(topic);
+                        }
                     }
                     if (body.containsKey("homework")) {
                         String hw = str(body, "homework", null);
-                        if (hw != null && !hw.isBlank()) diary.setHomework(hw);
+                        if (hw != null && !hw.isBlank()) {
+                            if (hw.length() > 2000) return ApiResponse.<ClassDiary>error("Homework cannot exceed 2000 characters");
+                            diary.setHomework(hw);
+                        }
                     }
-                    if (body.containsKey("remarks"))     diary.setRemarks(str(body, "remarks", diary.getRemarks()));
-                    if (body.containsKey("description")) diary.setDescription(str(body, "description", diary.getDescription()));
+                    if (body.containsKey("remarks")) {
+                        String r = str(body, "remarks", diary.getRemarks());
+                        if (r != null && r.length() > 500) return ApiResponse.<ClassDiary>error("Remarks cannot exceed 500 characters");
+                        diary.setRemarks(r);
+                    }
+                    if (body.containsKey("description")) {
+                        String d = str(body, "description", diary.getDescription());
+                        if (d != null && d.length() > 2000) return ApiResponse.<ClassDiary>error("Description cannot exceed 2000 characters");
+                        diary.setDescription(d);
+                    }
                     if (body.containsKey("imageUrl"))    diary.setImageUrl(str(body, "imageUrl", diary.getImageUrl()));
                     if (body.containsKey("imageName"))   diary.setImageName(str(body, "imageName", diary.getImageName()));
                     return ApiResponse.success("Diary entry updated", diaryRepository.save(diary));

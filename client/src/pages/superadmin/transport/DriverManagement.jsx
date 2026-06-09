@@ -272,7 +272,7 @@ export default function DriverManagement() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 16 }}>
                 <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568' }}>Address</label>
                 <textarea value={form.address} onChange={e => setForm({ ...form, address: e.target.value })}
-                  placeholder="Driver's residential address" rows={2}
+                  placeholder="Driver's residential address" maxLength={500} rows={2}
                   style={{ padding: '9px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none', resize: 'vertical' }} />
               </div>
               <div style={{ display: 'flex', gap: 12, marginTop: 24, justifyContent: 'flex-end' }}>

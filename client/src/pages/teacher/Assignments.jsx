@@ -302,6 +302,7 @@ export default function Assignments() {
                   <input
                     type="text" className="form-control form-control-sm"
                     placeholder="Assignment title"
+                    maxLength={200}
                     value={formData.title}
                     onChange={e => setFormData(f => ({ ...f, title: e.target.value }))}
                   />
@@ -311,6 +312,7 @@ export default function Assignments() {
                   <textarea
                     className="form-control form-control-sm" rows={3}
                     placeholder="Assignment instructions…"
+                    maxLength={5000}
                     value={formData.description}
                     onChange={e => setFormData(f => ({ ...f, description: e.target.value }))}
                   />
@@ -408,6 +410,7 @@ export default function Assignments() {
                           <div style={{ minWidth: 200 }}>
                             <input
                               type="text" placeholder="Grade (e.g. A, 85/100)"
+                              maxLength={50}
                               value={gradeForm.grade}
                               onChange={e => setGradeForm(f => ({ ...f, grade: e.target.value }))}
                               style={{ width: '100%', padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12, marginBottom: 6, boxSizing: 'border-box' }}
@@ -415,6 +418,7 @@ export default function Assignments() {
                             <textarea
                               placeholder="Feedback (optional)"
                               rows={2}
+                              maxLength={2000}
                               value={gradeForm.feedback}
                               onChange={e => setGradeForm(f => ({ ...f, feedback: e.target.value }))}
                               style={{ width: '100%', padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12, resize: 'none', marginBottom: 6, boxSizing: 'border-box' }}

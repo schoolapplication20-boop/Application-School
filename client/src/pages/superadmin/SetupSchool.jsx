@@ -398,7 +398,7 @@ const SetupSchool = () => {
               <SectionTitle icon="location_on" title="School Address" />
               <Field label="Street Address" required error={errors.address}>
                 <textarea name="address" value={form.address} onChange={onChange}
-                  rows={2} placeholder="Building no, street name, area..."
+                  rows={2} maxLength={500} placeholder="Building no, street name, area..."
                   style={{ ...inputStyle(!!errors.address), resize: 'vertical' }}
                   onFocus={e => e.target.style.borderColor = '#0de1e8'}
                   onBlur={e => e.target.style.borderColor = errors.address ? '#fc8181' : '#e2e8f0'} />

@@ -289,6 +289,7 @@ function ScheduleModal({ initial, onClose, onSaved, dbClasses = [], dbSections =
                 <label style={labelStyle}>Instructions / Notes</label>
                 <textarea value={common.instructions} onChange={e => setC('instructions', e.target.value)} rows={2}
                   placeholder="e.g., Bring admit card. No electronic devices allowed."
+                  maxLength={2000}
                   style={{ ...inputStyle(), resize: 'vertical', fontFamily: 'inherit' }} />
               </div>
             </div>

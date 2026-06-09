@@ -246,6 +246,7 @@ export default function StudentAssignments() {
                 </label>
                 <textarea
                   rows={5}
+                  maxLength={5000}
                   value={notes}
                   onChange={e => setNotes(e.target.value)}
                   placeholder="Write your answer, notes, or any relevant information…"

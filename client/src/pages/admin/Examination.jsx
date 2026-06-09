@@ -747,6 +747,7 @@ export default function Examination() {
                     <label>Instructions / Notes</label>
                     <textarea
                       placeholder="e.g. Bring your admit card. No electronic devices allowed."
+                      maxLength={2000}
                       value={schedForm.instructions}
                       onChange={e => setSchedForm(f => ({ ...f, instructions: e.target.value }))}
                       style={{ minHeight: 56 }}

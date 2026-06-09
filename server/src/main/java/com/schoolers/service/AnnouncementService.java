@@ -58,8 +58,18 @@ public class AnnouncementService {
                 .map(a -> {
                     if (schoolId != null && a.getSchoolId() != null && !schoolId.equals(a.getSchoolId()))
                         return ApiResponse.<Announcement>error("Access denied: announcement belongs to another school");
-                    if (body.containsKey("title"))      a.setTitle(str(body, "title", a.getTitle()));
-                    if (body.containsKey("content"))    a.setContent(str(body, "content", a.getContent()));
+                    if (body.containsKey("title")) {
+                        String t = str(body, "title", a.getTitle());
+                        if (t == null || t.isBlank()) return ApiResponse.<Announcement>error("Title is required");
+                        if (t.length() > 200) return ApiResponse.<Announcement>error("Title cannot exceed 200 characters");
+                        a.setTitle(t);
+                    }
+                    if (body.containsKey("content")) {
+                        String c = str(body, "content", a.getContent());
+                        if (c == null || c.isBlank()) return ApiResponse.<Announcement>error("Content is required");
+                        if (c.length() > 10000) return ApiResponse.<Announcement>error("Content cannot exceed 10000 characters");
+                        a.setContent(c);
+                    }
                     if (body.containsKey("targetRole")) a.setTargetRole(str(body, "targetRole", a.getTargetRole()));
                     if (body.containsKey("isActive"))   a.setIsActive(Boolean.TRUE.equals(body.get("isActive")));
                     return ApiResponse.success("Announcement updated", announcementRepository.save(a));

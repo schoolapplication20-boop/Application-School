@@ -604,6 +604,12 @@ public class TeacherService {
     }
 
     public ApiResponse<Assignment> createAssignment(Assignment assignment) {
+        if (assignment.getTitle() == null || assignment.getTitle().isBlank())
+            return ApiResponse.error("Assignment title is required");
+        if (assignment.getTitle().length() > 200)
+            return ApiResponse.error("Assignment title cannot exceed 200 characters");
+        if (assignment.getDescription() != null && assignment.getDescription().length() > 5000)
+            return ApiResponse.error("Assignment description cannot exceed 5000 characters");
         // The frontend sends user.id (User table PK) as teacherId, not Teacher profile PK.
         if (assignment.getTeacherId() != null && assignment.getSchoolId() == null) {
             teacherRepository.findByUserId(assignment.getTeacherId())

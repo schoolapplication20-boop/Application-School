@@ -482,7 +482,7 @@ const Applications = () => {
                   <div style={{ gridColumn: '1/-1' }}>
                     <label style={{ fontSize: '13px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '4px' }}>Permanent Address *</label>
                     <textarea style={{ ...iStyle(formErrors.permanentAddress), minHeight: '64px', resize: 'vertical' }}
-                      placeholder="Enter permanent address" value={formData.permanentAddress}
+                      placeholder="Enter permanent address" maxLength={500} value={formData.permanentAddress}
                       onChange={e => setFormData({ ...formData, permanentAddress: e.target.value })} />
                     {formErrors.permanentAddress && <p style={errStyle}>{formErrors.permanentAddress}</p>}
                   </div>
@@ -490,7 +490,7 @@ const Applications = () => {
                   <div style={{ gridColumn: '1/-1' }}>
                     <label style={{ fontSize: '13px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '4px' }}>Alternate Address <span style={{ color: '#a0aec0', fontWeight: 400 }}>(optional)</span></label>
                     <textarea style={{ ...iStyle(), minHeight: '64px', resize: 'vertical' }}
-                      placeholder="Enter alternate address" value={formData.alternateAddress}
+                      placeholder="Enter alternate address" maxLength={500} value={formData.alternateAddress}
                       onChange={e => setFormData({ ...formData, alternateAddress: e.target.value })} />
                   </div>
 
@@ -657,6 +657,7 @@ const Applications = () => {
               <textarea
                 style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', minHeight: '100px', resize: 'vertical', fontFamily: 'Poppins, sans-serif', outline: 'none', boxSizing: 'border-box' }}
                 placeholder="Enter rejection reason..."
+                maxLength={1000}
                 value={rejectReason}
                 onChange={e => { setRejectReason(e.target.value); setFormErrors({}); }}
               />
