@@ -40,8 +40,12 @@ public class IssueReportController {
 
         if (title == null || title.isBlank())
             return ResponseEntity.badRequest().body(ApiResponse.error("Title is required."));
+        if (title.length() > 200)
+            return ResponseEntity.badRequest().body(ApiResponse.error("Title cannot exceed 200 characters."));
         if (description == null || description.isBlank())
             return ResponseEntity.badRequest().body(ApiResponse.error("Description is required."));
+        if (description.length() > 5000)
+            return ResponseEntity.badRequest().body(ApiResponse.error("Description cannot exceed 5000 characters."));
 
         // Resolve reporter info from the JWT
         String reporterEmail = auth != null ? auth.getName() : null;
@@ -131,7 +135,11 @@ public class IssueReportController {
             try { issue.setStatus(IssueReport.Status.valueOf(status.toUpperCase())); }
             catch (IllegalArgumentException ignored) { }
         }
-        if (ownerNote != null) issue.setOwnerNote(ownerNote);
+        if (ownerNote != null) {
+            if (ownerNote.length() > 2000)
+                return ResponseEntity.badRequest().body(ApiResponse.error("Owner note cannot exceed 2000 characters."));
+            issue.setOwnerNote(ownerNote);
+        }
 
         return ResponseEntity.ok(ApiResponse.success(issueReportRepository.save(issue)));
     }
