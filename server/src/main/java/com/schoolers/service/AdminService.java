@@ -2752,16 +2752,29 @@ public class AdminService {
             }
         }
 
+        String dstClassName = dst + (dstSec.isBlank() ? "" : "-" + dstSec);
         batch.forEach(s -> {
             s.setClassName(dst);
             s.setSection(dstSec.isBlank() ? null : dstSec);
         });
         studentRepository.saveAll(batch);
 
+        // Sync className on any open (non-PAID) fee assignments so reports stay accurate (F-13)
+        String currentYear = currentAcademicYear();
+        List<Long> batchIds = batch.stream().map(Student::getId).collect(java.util.stream.Collectors.toList());
+        if (!batchIds.isEmpty()) {
+            List<StudentFeeAssignment> openAssignments = studentFeeAssignmentRepository
+                    .findByStudentIdIn(batchIds).stream()
+                    .filter(a -> currentYear.equals(a.getAcademicYear()) && a.getStatus() != StudentFeeAssignment.Status.PAID)
+                    .collect(java.util.stream.Collectors.toList());
+            openAssignments.forEach(a -> a.setClassName(dstClassName));
+            if (!openAssignments.isEmpty()) studentFeeAssignmentRepository.saveAll(openAssignments);
+        }
+
         Map<String, Object> result = new HashMap<>();
         result.put("promoted", batch.size());
         result.put("fromClass", src + (srcSec.isBlank() ? "" : "-" + srcSec));
-        result.put("toClass",   dst + (dstSec.isBlank() ? "" : "-" + dstSec));
+        result.put("toClass",   dstClassName);
         return ApiResponse.success("Promoted " + batch.size() + " students to " + dst, result);
     }
 

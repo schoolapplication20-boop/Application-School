@@ -15,6 +15,7 @@ public interface StudentFeeAssignmentRepository extends JpaRepository<StudentFee
     Optional<StudentFeeAssignment> findByStudentIdAndAcademicYear(Long studentId, String academicYear);
     Optional<StudentFeeAssignment> findFirstByStudentIdOrderByCreatedAtDesc(Long studentId);
     List<StudentFeeAssignment> findByStudentId(Long studentId);
+    List<StudentFeeAssignment> findByStudentIdIn(List<Long> studentIds);
     List<StudentFeeAssignment> findAllByOrderByCreatedAtDesc();
     void deleteByStudentId(Long studentId);
 
