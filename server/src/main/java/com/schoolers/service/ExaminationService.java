@@ -52,19 +52,34 @@ public class ExaminationService {
     }
 
     public ApiResponse<ExamSchedule> createSchedule(Map<String, Object> body, Long schoolId) {
+        String examName = (String) body.get("examName");
+        if (examName == null || examName.isBlank()) return ApiResponse.error("Exam name is required");
+        String className = (String) body.get("className");
+        if (className == null || className.isBlank()) return ApiResponse.error("Class is required");
+        String subject = (String) body.get("subject");
+        if (subject == null || subject.isBlank()) return ApiResponse.error("Subject is required");
+        String examDateStr = (String) body.get("examDate");
+        if (examDateStr == null || examDateStr.isBlank()) return ApiResponse.error("Exam date is required");
+        LocalDate examDate;
+        try { examDate = LocalDate.parse(examDateStr); } catch (Exception e) { return ApiResponse.error("Invalid exam date format"); }
+        int maxMarks = parseIntSafe(body.get("maxMarks"), 100);
+        if (maxMarks <= 0) return ApiResponse.error("Max marks must be greater than zero");
+        String instructions = (String) body.getOrDefault("instructions", "");
+        if (instructions.length() > 2000) return ApiResponse.error("Instructions cannot exceed 2000 characters");
+
         ExamSchedule schedule = ExamSchedule.builder()
-                .examName((String) body.get("examName"))
+                .examName(examName)
                 .examType((String) body.get("examType"))
-                .className((String) body.get("className"))
+                .className(className)
                 .section((String) body.getOrDefault("section", ""))
-                .subject((String) body.get("subject"))
-                .examDate(LocalDate.parse((String) body.get("examDate")))
+                .subject(subject)
+                .examDate(examDate)
                 .startTime((String) body.get("startTime"))
                 .endTime((String) body.get("endTime"))
                 .hallNumber((String) body.get("hallNumber"))
-                .maxMarks(parseIntSafe(body.get("maxMarks"), 100))
+                .maxMarks(maxMarks)
                 .status((String) body.getOrDefault("status", "SCHEDULED"))
-                .instructions((String) body.getOrDefault("instructions", ""))
+                .instructions(instructions)
                 .schoolId(schoolId)
                 .build();
         return ApiResponse.success("Exam schedule created", examScheduleRepository.save(schedule));
