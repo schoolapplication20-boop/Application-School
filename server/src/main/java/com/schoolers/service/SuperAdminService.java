@@ -36,6 +36,7 @@ public class SuperAdminService {
     @Autowired private HallTicketRepository              hallTicketRepository;
     @Autowired private CertificateRepository             certificateRepository;
     @Autowired private AssignmentRepository              assignmentRepository;
+    @Autowired private AssignmentSubmissionRepository    assignmentSubmissionRepository;
     @Autowired private ClassDiaryRepository              classDiaryRepository;
     @Autowired private LeaveRequestRepository            leaveRequestRepository;
     @Autowired private FeePaymentRepository              feePaymentRepository;
@@ -541,6 +542,7 @@ public class SuperAdminService {
         marksRepository.deleteBySchoolId(sid);
         hallTicketRepository.deleteBySchoolId(sid);
         certificateRepository.deleteBySchoolId(sid);
+        assignmentSubmissionRepository.deleteBySchoolId(sid);
         assignmentRepository.deleteBySchoolId(sid);
         classDiaryRepository.deleteBySchoolId(sid);
         examScheduleRepository.deleteBySchoolId(sid);

@@ -118,6 +118,7 @@ export default function TeacherSelfAttendance() {
             placeholder="Add a note (optional)..."
             value={note}
             onChange={e => setNote(e.target.value)}
+            maxLength={500}
             rows={2}
             style={{
               width: '100%', padding: '10px 14px', borderRadius: 10,

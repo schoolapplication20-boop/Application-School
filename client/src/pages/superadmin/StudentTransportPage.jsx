@@ -652,6 +652,7 @@ export default function StudentTransportPage() {
                     value={form.notes}
                     onChange={e => handleChange('notes', e.target.value)}
                     placeholder="e.g. Child needs assistance boarding, allergic to dust, pick up from gate 2..."
+                    maxLength={500}
                   />
                 </>
               )}

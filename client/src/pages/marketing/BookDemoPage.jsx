@@ -223,6 +223,7 @@ const BookDemoPage = () => {
                   value={formData.message}
                   onChange={handleChange}
                   rows="4"
+                  maxLength={1000}
                   placeholder="Any specific features or concerns you'd like to discuss?"
                 ></textarea>
               </div>

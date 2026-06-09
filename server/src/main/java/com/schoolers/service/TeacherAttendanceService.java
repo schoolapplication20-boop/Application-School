@@ -43,6 +43,8 @@ public class TeacherAttendanceService {
 
         LocalDate date = LocalDate.now();
         String note = str(body, "note", null);
+        if (note != null && note.length() > 500)
+            return ApiResponse.error("Note cannot exceed 500 characters");
 
         // Upsert — update if already marked today
         TeacherAttendance record = repo.findByTeacherIdAndDate(teacher.getId(), date)

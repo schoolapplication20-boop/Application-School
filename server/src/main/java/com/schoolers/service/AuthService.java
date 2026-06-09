@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.security.MessageDigest;
 import java.security.SecureRandom;
@@ -47,6 +48,7 @@ public class AuthService {
 
     // ── Login ─────────────────────────────────────────────────────────────────
 
+    @Transactional
     public ApiResponse<LoginResponse> login(LoginRequest request) {
         try {
             // ── Step 1: Resolve the user ───────────────────────────────────
@@ -63,7 +65,7 @@ public class AuthService {
                 if (request.getEmail() == null || request.getEmail().isBlank())
                     return ApiResponse.error("Email is required.");
                 username = request.getEmail().trim().toLowerCase();
-                user = userRepository.findByEmailIgnoreCase(username).orElse(null);
+                user = userRepository.findByEmailIgnoreCaseForUpdate(username).orElse(null);
                 if (user == null) {
                     user = userRepository.findByUsername(username).orElse(null);
                     if (user != null) username = user.getEmail();

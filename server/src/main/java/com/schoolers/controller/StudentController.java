@@ -169,7 +169,7 @@ public class StudentController {
         if (studentOpt.isEmpty()) return ResponseEntity.status(404).body(ApiResponse.error("Student profile not found."));
         Student student = studentOpt.get();
 
-        if (!assignmentRepository.existsById(id)) {
+        if (!assignmentRepository.existsByIdAndSchoolId(id, student.getSchoolId())) {
             return ResponseEntity.status(404).body(ApiResponse.error("Assignment not found."));
         }
 

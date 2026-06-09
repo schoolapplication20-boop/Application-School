@@ -67,6 +67,7 @@ public class AdminService {
     @Autowired private MessageRepository messageRepository;
     @Autowired private SalaryPaymentRepository salaryPaymentRepository;
     @Autowired private GradeScaleRepository gradeScaleRepository;
+    @Autowired private AssignmentSubmissionRepository assignmentSubmissionRepository;
     @Autowired private AuditLogService auditLogService;
     @Autowired private TokenBlacklistService tokenBlacklistService;
     private static final String CHARS = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#$!";
@@ -688,9 +689,11 @@ public class AdminService {
         studentFeeAssignmentRepository.deleteByStudentId(id);
         log.info("[deleteStudent] fee payments, assignments & installments deleted");
 
-        // ── Step 4: Leave requests ─────────────────────────────────────────────
-        leaveRequestRepository.deleteByRequesterId(id);
-        log.info("[deleteStudent] leave requests deleted");
+        // ── Step 4: Leave requests & assignment submissions ───────────────────
+        leaveRequestRepository.deleteByRequesterIdAndRequesterType(id,
+                com.schoolers.model.LeaveRequest.RequesterType.STUDENT);
+        assignmentSubmissionRepository.deleteByStudentId(id);
+        log.info("[deleteStudent] leave requests and submissions deleted");
 
         // ── Step 5: Notifications & direct messages for this student ──────────
         if (linkedUserId != null) {
@@ -1053,8 +1056,11 @@ public class AdminService {
         User linkedUser = teacher.getUser();
         Long linkedUserId = linkedUser != null ? linkedUser.getId() : null;
 
-        // ── Step 1: Timetable, homework, assignments, marks ───────────────────
+        // ── Step 1: Timetable, homework, assignments (with submissions), marks ──
         timetableRepository.deleteByTeacherId(id);
+        // Delete submissions before assignments to avoid orphaned records
+        assignmentRepository.findByTeacherIdAndSchoolId(id, teacher.getSchoolId())
+                .forEach(a -> assignmentSubmissionRepository.deleteByAssignmentId(a.getId()));
         assignmentRepository.deleteByTeacherId(id);
         marksRepository.deleteByTeacherId(id);
         classDiaryRepository.deleteByTeacherId(id);

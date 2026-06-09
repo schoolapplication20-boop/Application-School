@@ -19,6 +19,7 @@ public interface AssignmentRepository extends JpaRepository<Assignment, Long> {
     List<Assignment> findBySchoolIdOrderByCreatedAtDesc(Long schoolId);
     List<Assignment> findByTeacherIdAndSchoolId(Long teacherId, Long schoolId);
     List<Assignment> findByClassNameAndSchoolIdOrderByCreatedAtDesc(String className, Long schoolId);
+    boolean existsByIdAndSchoolId(Long id, Long schoolId);
 
     @Modifying @Transactional
     void deleteByTeacherId(Long teacherId);
