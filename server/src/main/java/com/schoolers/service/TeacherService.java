@@ -333,6 +333,8 @@ public class TeacherService {
             if (record.get("studentId") == null) continue;
             Long studentId = Long.valueOf(record.get("studentId").toString());
             LocalDate date = LocalDate.parse(record.get("date").toString());
+            if (date.isAfter(LocalDate.now()))
+                return ApiResponse.error("Attendance cannot be marked for a future date");
 
             String statusStr = record.get("status").toString().toUpperCase();
             Attendance.Status status;
