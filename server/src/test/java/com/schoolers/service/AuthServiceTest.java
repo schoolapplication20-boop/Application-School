@@ -6,6 +6,7 @@ import com.schoolers.dto.LoginResponse;
 import com.schoolers.model.School;
 import com.schoolers.model.User;
 import com.schoolers.repository.SchoolRepository;
+import com.schoolers.repository.StudentRepository;
 import com.schoolers.repository.TeacherRepository;
 import com.schoolers.repository.UserRepository;
 import com.schoolers.security.JwtUtil;
@@ -40,12 +41,14 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
 
-    @Mock private UserRepository    userRepository;
-    @Mock private SchoolRepository  schoolRepository;
-    @Mock private TeacherRepository teacherRepository;
-    @Mock private JwtUtil           jwtUtil;
-    @Mock private PasswordEncoder   passwordEncoder;
-    @Mock private EmailService      emailService;
+    @Mock private UserRepository         userRepository;
+    @Mock private SchoolRepository       schoolRepository;
+    @Mock private StudentRepository      studentRepository;
+    @Mock private TeacherRepository      teacherRepository;
+    @Mock private JwtUtil                jwtUtil;
+    @Mock private PasswordEncoder        passwordEncoder;
+    @Mock private EmailService           emailService;
+    @Mock private TokenBlacklistService  tokenBlacklistService;
 
     @InjectMocks
     private AuthService authService;
@@ -89,7 +92,7 @@ class AuthServiceTest {
         @DisplayName("success: returns JWT token and user DTO for ADMIN")
         void success_adminLogin() {
             User user = activeAdmin();
-            when(userRepository.findByEmailIgnoreCase("admin@school.com"))
+            when(userRepository.findByEmailIgnoreCaseForUpdate("admin@school.com"))
                     .thenReturn(Optional.of(user));
             when(passwordEncoder.matches("Password1!", "hashed_pw")).thenReturn(true);
             when(schoolRepository.findBySchoolId(5)).thenReturn(Optional.of(activeSchool()));
@@ -106,7 +109,7 @@ class AuthServiceTest {
         @Test
         @DisplayName("user not found: returns generic error (no enumeration)")
         void userNotFound_returnsError() {
-            when(userRepository.findByEmailIgnoreCase("ghost@school.com")).thenReturn(Optional.empty());
+            // findByEmailIgnoreCaseForUpdate returns empty by default (Mockito)
             when(userRepository.findByUsername("ghost@school.com")).thenReturn(Optional.empty());
 
             ApiResponse<LoginResponse> resp = authService.login(loginReq("ghost@school.com", "pw", "ADMIN"));
@@ -118,7 +121,7 @@ class AuthServiceTest {
         @DisplayName("wrong password: returns remaining-attempts message and increments counter")
         void wrongPassword_decrementsAttempts() {
             User user = activeAdmin();
-            when(userRepository.findByEmailIgnoreCase("admin@school.com")).thenReturn(Optional.of(user));
+            when(userRepository.findByEmailIgnoreCaseForUpdate("admin@school.com")).thenReturn(Optional.of(user));
             when(schoolRepository.findBySchoolId(5)).thenReturn(Optional.of(activeSchool()));
             when(passwordEncoder.matches("WrongPw", "hashed_pw")).thenReturn(false);
 
@@ -134,7 +137,7 @@ class AuthServiceTest {
         void fiveWrongPasswords_locksAccount() {
             User user = activeAdmin();
             user.setFailedLoginAttempts(9); // one more makes 10 (new threshold)
-            when(userRepository.findByEmailIgnoreCase("admin@school.com")).thenReturn(Optional.of(user));
+            when(userRepository.findByEmailIgnoreCaseForUpdate("admin@school.com")).thenReturn(Optional.of(user));
             when(schoolRepository.findBySchoolId(5)).thenReturn(Optional.of(activeSchool()));
             when(passwordEncoder.matches(any(), any())).thenReturn(false);
 
@@ -153,7 +156,7 @@ class AuthServiceTest {
             User user = activeAdmin();
             // Lock must be in the future for the time-based check to recognise it
             user.setLockedUntil(LocalDateTime.now(ZoneOffset.UTC).plusYears(50));
-            when(userRepository.findByEmailIgnoreCase("admin@school.com")).thenReturn(Optional.of(user));
+            when(userRepository.findByEmailIgnoreCaseForUpdate("admin@school.com")).thenReturn(Optional.of(user));
 
             ApiResponse<LoginResponse> resp = authService.login(loginReq("admin@school.com", "Password1!", "ADMIN"));
 
@@ -167,7 +170,7 @@ class AuthServiceTest {
         void inactiveAccount_rejectsLogin() {
             User user = activeAdmin();
             user.setIsActive(false);
-            when(userRepository.findByEmailIgnoreCase("admin@school.com")).thenReturn(Optional.of(user));
+            when(userRepository.findByEmailIgnoreCaseForUpdate("admin@school.com")).thenReturn(Optional.of(user));
 
             ApiResponse<LoginResponse> resp = authService.login(loginReq("admin@school.com", "Password1!", "ADMIN"));
 
@@ -179,7 +182,7 @@ class AuthServiceTest {
         @DisplayName("role mismatch: denies login when claimed role != DB role")
         void roleMismatch_deniesLogin() {
             User user = activeAdmin(); // role = ADMIN
-            when(userRepository.findByEmailIgnoreCase("admin@school.com")).thenReturn(Optional.of(user));
+            when(userRepository.findByEmailIgnoreCaseForUpdate("admin@school.com")).thenReturn(Optional.of(user));
             when(schoolRepository.findBySchoolId(5)).thenReturn(Optional.of(activeSchool()));
             when(passwordEncoder.matches("Password1!", "hashed_pw")).thenReturn(true);
 
@@ -197,7 +200,7 @@ class AuthServiceTest {
             School expiredSchool = activeSchool();
             expiredSchool.setSubscriptionExpiry(LocalDate.now().minusDays(1));
 
-            when(userRepository.findByEmailIgnoreCase("admin@school.com")).thenReturn(Optional.of(user));
+            when(userRepository.findByEmailIgnoreCaseForUpdate("admin@school.com")).thenReturn(Optional.of(user));
             when(schoolRepository.findBySchoolId(5)).thenReturn(Optional.of(expiredSchool));
             // no passwordEncoder stub — login exits at subscription-expiry check before password check
 
@@ -219,7 +222,7 @@ class AuthServiceTest {
                     .failedLoginAttempts(0)
                     .build();
 
-            when(userRepository.findByEmailIgnoreCase("owner@platform.com")).thenReturn(Optional.of(owner));
+            when(userRepository.findByEmailIgnoreCaseForUpdate("owner@platform.com")).thenReturn(Optional.of(owner));
             when(passwordEncoder.matches("Password1!", "hashed_pw")).thenReturn(true);
             // Email sending must succeed
             doNothing().when(emailService).sendOwnerLoginOtp(any(), any());
@@ -238,7 +241,7 @@ class AuthServiceTest {
         void successfulLogin_resetsFailedAttempts() {
             User user = activeAdmin();
             user.setFailedLoginAttempts(3); // had 3 prior failures
-            when(userRepository.findByEmailIgnoreCase("admin@school.com")).thenReturn(Optional.of(user));
+            when(userRepository.findByEmailIgnoreCaseForUpdate("admin@school.com")).thenReturn(Optional.of(user));
             when(schoolRepository.findBySchoolId(5)).thenReturn(Optional.of(activeSchool()));
             when(passwordEncoder.matches("Password1!", "hashed_pw")).thenReturn(true);
             when(jwtUtil.generateToken(any(UserDetails.class), any())).thenReturn("jwt");
