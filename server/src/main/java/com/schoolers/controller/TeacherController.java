@@ -376,6 +376,10 @@ public class TeacherController {
         if (!assignmentOwned) {
             return ResponseEntity.status(403).body(ApiResponse.error("Assignment not found or access denied"));
         }
+        if (body.containsKey("grade") && body.get("grade") instanceof String g && g.length() > 50)
+            return ResponseEntity.badRequest().body(ApiResponse.error("Grade cannot exceed 50 characters"));
+        if (body.containsKey("feedback") && body.get("feedback") instanceof String fb && fb.length() > 2000)
+            return ResponseEntity.badRequest().body(ApiResponse.error("Feedback cannot exceed 2000 characters"));
         return submissionRepository.findById(subId)
                 .filter(s -> s.getAssignmentId().equals(id))
                 .map(s -> {

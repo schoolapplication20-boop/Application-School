@@ -95,6 +95,8 @@ public class LeaveService {
             return ApiResponse.error("To date is required");
         if (reason == null || reason.isBlank())
             return ApiResponse.error("Reason is required");
+        if (reason.length() > 1000)
+            return ApiResponse.error("Reason cannot exceed 1000 characters");
 
         LocalDate fromDate, toDate;
         try {
@@ -326,6 +328,10 @@ public class LeaveService {
             requesterTypeStr = str(body, "requesterType", "TEACHER");
         }
 
+        String reason = str(body, "reason", null);
+        if (reason != null && reason.length() > 1000)
+            return ApiResponse.error("Reason cannot exceed 1000 characters");
+
         String requesterName = str(body, "requesterName", "Unknown");
         String leaveType     = str(body, "leaveType", null);
 
@@ -337,7 +343,7 @@ public class LeaveService {
                 .leaveType(leaveType)
                 .fromDate(fromDate)
                 .toDate(toDate)
-                .reason(str(body, "reason", null))
+                .reason(reason)
                 .status(LeaveRequest.Status.PENDING)
                 .schoolId(schoolId)
                 .build();
@@ -376,6 +382,8 @@ public class LeaveService {
                         return ApiResponse.<LeaveRequest>error("Access denied: leave request belongs to another school");
                     String statusStr    = str(body, "status",       null);
                     String adminComment = str(body, "adminComment", leave.getAdminComment());
+                    if (adminComment != null && adminComment.length() > 500)
+                        return ApiResponse.<LeaveRequest>error("Admin comment cannot exceed 500 characters");
                     String reviewedBy   = str(body, "reviewedBy",   leave.getReviewedBy());
 
                     LeaveRequest.Status newStatus = leave.getStatus();

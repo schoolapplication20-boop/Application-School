@@ -2213,6 +2213,7 @@ public class AdminService {
         try {
             String title = str(body, "title", "");
             if (title.isBlank()) return ApiResponse.error("Title is required");
+            if (title.length() > 200) return ApiResponse.error("Title cannot exceed 200 characters");
 
             String amtRaw = body.get("amount") != null ? body.get("amount").toString() : "";
             if (amtRaw.isBlank()) return ApiResponse.error("Amount is required");
