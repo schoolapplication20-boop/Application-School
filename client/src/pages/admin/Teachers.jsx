@@ -378,8 +378,11 @@ export default function Teachers() {
       e.mobile = 'Mobile must be exactly 10 digits';
 
     if (!editTeacher) {
-      if (!form.password.trim())        e.password = 'Password is required';
-      else if (form.password.length < 8) e.password = 'Password must be at least 8 characters';
+      if (!form.password.trim()) {
+        e.password = 'Password is required';
+      } else if (!/^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*()\-_=+\[\]{};':"\\|,.<>/?]).{8,}$/.test(form.password)) {
+        e.password = 'Password must be 8+ characters with uppercase, number, and special character';
+      }
     }
 
     if ((form.teacherType === 'CLASS_TEACHER' || form.teacherType === 'BOTH') && !form.primaryClassId)

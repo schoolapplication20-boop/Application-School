@@ -396,8 +396,11 @@ public class TeacherController {
     /** Returns all marks for every student in a class in one query — eliminates N+1 per-student calls. */
     @GetMapping("/marks/by-class/{classId}")
     public ResponseEntity<ApiResponse<List<Marks>>> getMarksByClass(@PathVariable Long classId) {
-        Long schoolId = resolveTeacherSchoolId();
-        ApiResponse<List<com.schoolers.model.Student>> studentsResp = teacherService.getClassStudents(classId);
+        Long teacherId = resolveTeacherId(null);
+        Long schoolId  = resolveTeacherSchoolId();
+        // Use teacher-scoped lookup so a teacher cannot read students from classes they don't own
+        ApiResponse<List<com.schoolers.model.Student>> studentsResp = teacherService.getClassStudents(teacherId, classId);
+        if (!studentsResp.isSuccess()) return ResponseEntity.status(403).body(ApiResponse.error(studentsResp.getMessage()));
         List<com.schoolers.model.Student> students = studentsResp.getData() != null ? studentsResp.getData() : java.util.List.of();
         if (students.isEmpty()) return ResponseEntity.ok(ApiResponse.success(java.util.List.of()));
         List<Long> ids = students.stream().map(com.schoolers.model.Student::getId).collect(java.util.stream.Collectors.toList());

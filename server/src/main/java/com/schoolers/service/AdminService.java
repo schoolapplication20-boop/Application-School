@@ -1122,6 +1122,7 @@ public class AdminService {
                     user.setTempPassword(null);
                     user.setFirstLogin(true);
                     userRepository.save(user);
+                    tokenBlacklistService.revokeUser(user.getId());
                     auditLogService.log(null, "SYSTEM", "ADMIN", schoolId, "PASSWORD_RESET", "Teacher", teacherId,
                             "Password reset for teacher id=" + teacherId, null);
                     return ApiResponse.success("Password reset successfully", "Password updated");

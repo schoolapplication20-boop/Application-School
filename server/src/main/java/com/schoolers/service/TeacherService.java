@@ -38,6 +38,9 @@ public class TeacherService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private TokenBlacklistService tokenBlacklistService;
+
     // ── Classes ────────────────────────────────────────────────────────────────
 
     public ApiResponse<List<ClassRoom>> getTeacherClasses(Long teacherId) {
@@ -672,6 +675,7 @@ public class TeacherService {
         user.setPassword(passwordEncoder.encode(newPassword));
         user.setFirstLogin(true);
         userRepository.save(user);
+        tokenBlacklistService.revokeUser(user.getId());
         return ApiResponse.success("Password reset successfully. Student must change it on next login.", "reset");
     }
 
@@ -680,7 +684,12 @@ public class TeacherService {
     /** Single-query bulk fetch — replaces N per-student getMarksByStudent calls on the Marks page. */
     public List<Marks> getMarksByStudentIds(List<Long> studentIds, Long schoolId) {
         if (studentIds == null || studentIds.isEmpty()) return java.util.List.of();
-        return marksRepository.findByStudentIdsAndExamType(studentIds, null);
+        List<Marks> all = marksRepository.findByStudentIdsAndExamType(studentIds, null);
+        // Filter by school to prevent cross-tenant leakage if studentIds came from an untrusted source
+        if (schoolId != null) {
+            all = all.stream().filter(m -> schoolId.equals(m.getSchoolId())).collect(java.util.stream.Collectors.toList());
+        }
+        return all;
     }
 
     public ApiResponse<List<Marks>> getMarksByStudent(Long studentId, Long authSchoolId) {
