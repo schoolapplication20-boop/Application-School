@@ -703,4 +703,44 @@ export const issueAPI = {
 };
 
 // ============================================
+// ONLINE EXAM APIs
+// ============================================
+
+export const onlineExamTeacherAPI = {
+  // Exam CRUD
+  createExam:      (data)           => api.post('/api/teacher/online-exams', data),
+  listExams:       ()               => api.get('/api/teacher/online-exams'),
+  getExam:         (id)             => api.get(`/api/teacher/online-exams/${id}`),
+  updateExam:      (id, data)       => api.put(`/api/teacher/online-exams/${id}`, data),
+  deleteExam:      (id)             => api.delete(`/api/teacher/online-exams/${id}`),
+
+  // Questions
+  addQuestion:     (id, data)       => api.post(`/api/teacher/online-exams/${id}/questions`, data),
+  updateQuestion:  (id, qId, data)  => api.put(`/api/teacher/online-exams/${id}/questions/${qId}`, data),
+  deleteQuestion:  (id, qId)        => api.delete(`/api/teacher/online-exams/${id}/questions/${qId}`),
+
+  // Lifecycle
+  publishExam:     (id)             => api.post(`/api/teacher/online-exams/${id}/publish`),
+  closeExam:       (id)             => api.post(`/api/teacher/online-exams/${id}/close`),
+
+  // Results & Grading
+  getResults:      (id)             => api.get(`/api/teacher/online-exams/${id}/results`),
+  gradeAttempt:    (id, aId, data)  => api.put(`/api/teacher/online-exams/${id}/attempts/${aId}/grade`, data),
+};
+
+export const onlineExamStudentAPI = {
+  listExams:       ()    => api.get('/api/student/online-exams'),
+  getExam:         (id)  => api.get(`/api/student/online-exams/${id}`),
+  startExam:       (id)  => api.post(`/api/student/online-exams/${id}/start`),
+  saveAnswers:     (id, data) => api.put(`/api/student/online-exams/${id}/save`, data),
+  submitExam:      (id)  => api.post(`/api/student/online-exams/${id}/submit`),
+  getMyResult:     (id)  => api.get(`/api/student/online-exams/${id}/my-result`),
+};
+
+export const onlineExamAdminAPI = {
+  listExams:       ()    => api.get('/api/admin/online-exams'),
+  getResults:      (id)  => api.get(`/api/admin/online-exams/${id}/results`),
+};
+
+// ============================================
 export default api;

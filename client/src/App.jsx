@@ -73,6 +73,11 @@ import Timetable from './pages/admin/Timetable';
 import Examination from './pages/admin/Examination';
 import ExaminationView from './pages/teacher/ExaminationView';
 
+// Online Exam Pages
+import OnlineExams from './pages/teacher/OnlineExams';
+import OnlineExamTake from './pages/student/OnlineExamTake';
+import OnlineExamsAdmin from './pages/admin/OnlineExamsAdmin';
+
 // Student Pages
 import StudentDashboard      from './pages/student/StudentDashboard';
 import StudentAttendance     from './pages/student/StudentAttendance';
@@ -184,6 +189,7 @@ function App() {
             <Route path="/admin/teacher-attendance"   element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']}><TeacherAttendanceView /></ProtectedRoute>} />
             <Route path="/admin/timetable"         element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} permKey="timetable"><Timetable /></ProtectedRoute>} />
             <Route path="/admin/examination"       element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} permKey="examination"><Examination /></ProtectedRoute>} />
+            <Route path="/admin/online-exams"      element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} permKey="examination"><OnlineExamsAdmin /></ProtectedRoute>} />
 
             {/* APPLICATION_OWNER platform dashboard */}
             <Route path="/owner/dashboard" element={
@@ -225,6 +231,7 @@ function App() {
             <Route path="/teacher/examination"    element={<ProtectedRoute allowedRoles={['TEACHER']} moduleKey="examination"><ExaminationView /></ProtectedRoute>} />
             <Route path="/teacher/my-attendance"  element={<ProtectedRoute allowedRoles={['TEACHER']} moduleKey="attendance"><TeacherSelfAttendance /></ProtectedRoute>} />
             <Route path="/teacher/assignments"    element={<ProtectedRoute allowedRoles={['TEACHER']} moduleKey="diary"><Assignments /></ProtectedRoute>} />
+            <Route path="/teacher/online-exams"   element={<ProtectedRoute allowedRoles={['TEACHER']} moduleKey="examination"><OnlineExams /></ProtectedRoute>} />
             <Route path="/teacher/appointments"   element={<ProtectedRoute allowedRoles={['TEACHER']}><TeacherAppointments /></ProtectedRoute>} />
             <Route path="/teacher/meeting-slots"  element={<ProtectedRoute allowedRoles={['TEACHER']}><TeacherMeetingSlots /></ProtectedRoute>} />
 
@@ -240,6 +247,7 @@ function App() {
             <Route path="/student/report-card"    element={<ProtectedRoute allowedRoles={['STUDENT']} moduleKey="examination"><ReportCard /></ProtectedRoute>} />
             <Route path="/student/appointments"   element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentAppointments /></ProtectedRoute>} />
             <Route path="/student/meetings"       element={<ProtectedRoute allowedRoles={['STUDENT']}><MeetingBookings /></ProtectedRoute>} />
+            <Route path="/student/online-exams"   element={<ProtectedRoute allowedRoles={['STUDENT']} moduleKey="examination"><OnlineExamTake /></ProtectedRoute>} />
 
             {/* Shared routes (all authenticated roles) */}
             <Route path="/school/calendar"          element={<ProtectedRoute allowedRoles={['ADMIN','SUPER_ADMIN','TEACHER','STUDENT']}><SchoolCalendar /></ProtectedRoute>} />
