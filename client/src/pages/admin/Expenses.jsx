@@ -177,6 +177,7 @@ function ExpenseModal({ initial, addedBy, addedById, onClose, onSaved, onError }
               </label>
               <input
                 style={inp} type="date"
+                max={today()}
                 value={form.date}
                 onChange={e => set('date', e.target.value)}
               />

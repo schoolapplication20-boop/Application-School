@@ -392,6 +392,7 @@ const Applications = () => {
                   <div>
                     <label style={{ fontSize: '13px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '4px' }}>Date of Birth *</label>
                     <input type="date" style={iStyle(formErrors.dob)} value={formData.dob}
+                      max={new Date().toISOString().slice(0, 10)}
                       onChange={e => setFormData({ ...formData, dob: e.target.value })} />
                     {formErrors.dob && <p style={errStyle}>{formErrors.dob}</p>}
                   </div>

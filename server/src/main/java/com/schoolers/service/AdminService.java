@@ -2228,6 +2228,8 @@ public class AdminService {
             LocalDate date;
             try { date = LocalDate.parse(body.get("date").toString()); }
             catch (Exception e) { return ApiResponse.error("Invalid date format"); }
+            if (date.isAfter(LocalDate.now()))
+                return ApiResponse.error("Expense date cannot be in the future");
 
             Expense.PaymentStatus status = Expense.PaymentStatus.UNPAID;
             try { status = Expense.PaymentStatus.valueOf(str(body, "status", "UNPAID").toUpperCase()); }
