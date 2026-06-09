@@ -33,6 +33,20 @@ public class ApplicationService {
     public ApiResponse<AdmissionApplication> create(Map<String, Object> body, Long schoolId) {
         String studentName = str(body, "studentName", null);
         if (studentName == null || studentName.isBlank()) return ApiResponse.error("Student name is required");
+        if (studentName.length() > 100) return ApiResponse.error("Student name cannot exceed 100 characters");
+
+        String dobStr = str(body, "dob", null);
+        if (dobStr != null && !dobStr.isBlank()) {
+            try {
+                java.time.LocalDate dob = java.time.LocalDate.parse(dobStr);
+                if (!dob.isBefore(java.time.LocalDate.now()))
+                    return ApiResponse.error("Date of birth must be in the past");
+            } catch (java.time.format.DateTimeParseException ignored) {}
+        }
+
+        String permAddr = str(body, "permanentAddress", null);
+        if (permAddr != null && permAddr.length() > 500)
+            return ApiResponse.error("Permanent address cannot exceed 500 characters");
 
         AdmissionApplication app = AdmissionApplication.builder()
                 .studentName(studentName)

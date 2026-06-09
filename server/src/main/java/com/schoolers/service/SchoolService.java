@@ -54,9 +54,17 @@ public class SchoolService {
                                                           String logoUrl,
                                                           String creatorEmail) {
         // ── 1. Early validation (before any DB writes) ─────────────────────
+        String name = str(data, "name");
+        if (name == null || name.isBlank())
+            return ApiResponse.error("School name is required.");
+        if (name.length() > 200)
+            return ApiResponse.error("School name cannot exceed 200 characters.");
+
         String code = (String) data.get("code");
         if (code == null || code.isBlank())
             return ApiResponse.error("School code is required.");
+        if (code.length() > 20)
+            return ApiResponse.error("School code cannot exceed 20 characters.");
         if (schoolRepository.existsByCode(code.toUpperCase()))
             return ApiResponse.error("A school with code '" + code.toUpperCase() + "' already exists.");
 
