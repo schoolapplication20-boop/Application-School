@@ -6,3 +6,6 @@ ALTER TABLE fee_installments ADD COLUMN IF NOT EXISTS carry_over  DECIMAL(10,2) 
 -- Widen columns that were too short for real-world class names / section strings
 ALTER TABLE attendance     ALTER COLUMN class_name    TYPE VARCHAR(50);
 ALTER TABLE leave_requests ALTER COLUMN class_section TYPE VARCHAR(50);
+
+-- Rejection/approval notes for admission applications
+ALTER TABLE admission_applications ADD COLUMN IF NOT EXISTS admin_notes TEXT;

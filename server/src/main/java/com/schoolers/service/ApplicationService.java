@@ -61,7 +61,7 @@ public class ApplicationService {
                 .guardianPhone(str(body, "guardianPhone", str(body, "guardianMobile", null)))
                 .email(str(body, "email", null))
                 .prevSchool(str(body, "prevSchool", null))
-                .permanentAddress(str(body, "permanentAddress", null))
+                .permanentAddress(permAddr)
                 .alternateAddress(str(body, "alternateAddress", null))
                 .idProof(str(body, "idProof", null))
                 .idProofName(str(body, "idProofName", null))
@@ -91,6 +91,11 @@ public class ApplicationService {
                     if (statusStr != null) {
                         try { app.setStatus(AdmissionApplication.Status.valueOf(statusStr.toUpperCase())); }
                         catch (IllegalArgumentException ignored) {}
+                    }
+                    String notes = str(body, "adminNotes", null);
+                    if (notes != null) {
+                        if (notes.length() > 1000) return ApiResponse.<AdmissionApplication>error("Admin notes cannot exceed 1000 characters");
+                        app.setAdminNotes(notes.isBlank() ? null : notes.trim());
                     }
                     return ApiResponse.success("Application updated", applicationRepository.save(app));
                 })

@@ -69,8 +69,8 @@ public class AdmissionApplication {
     @Builder.Default
     private Status status = Status.PENDING;
 
-    // @Column(name = "admin_notes", columnDefinition = "TEXT")
-    // private String adminNotes;
+    @Column(name = "admin_notes", columnDefinition = "TEXT")
+    private String adminNotes;
 
     @Column(name = "id_proof", columnDefinition = "TEXT")
     private String idProof;
