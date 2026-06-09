@@ -38,7 +38,9 @@ public class AnnouncementService {
         String title = str(body, "title", null);
         String content = str(body, "content", null);
         if (title == null || title.isBlank()) return ApiResponse.error("Title is required");
+        if (title.length() > 200) return ApiResponse.error("Title cannot exceed 200 characters");
         if (content == null || content.isBlank()) return ApiResponse.error("Content is required");
+        if (content.length() > 10000) return ApiResponse.error("Content cannot exceed 10000 characters");
 
         Announcement announcement = Announcement.builder()
                 .title(title)

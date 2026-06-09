@@ -38,6 +38,7 @@ public class MessageService {
         if (senderId == null) return ApiResponse.error("Sender ID is required");
         if (receiverId == null) return ApiResponse.error("Receiver ID is required");
         if (content == null || content.isBlank()) return ApiResponse.error("Message content is required");
+        if (content.length() > 5000) return ApiResponse.error("Message content cannot exceed 5000 characters");
 
         String senderName = str(body, "senderName", "Someone");
         Message msg = Message.builder()
@@ -136,6 +137,7 @@ public class MessageService {
 
         String content = str(body, "content", null);
         if (content == null || content.isBlank()) return ApiResponse.error("Content is required");
+        if (content.length() > 5000) return ApiResponse.error("Message content cannot exceed 5000 characters");
 
         String title = str(body, "title", "Message");
         String category = str(body, "category", "GENERAL");
