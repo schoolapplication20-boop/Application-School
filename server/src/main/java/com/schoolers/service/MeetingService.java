@@ -47,6 +47,10 @@ public class MeetingService {
         if (meetingDate.isBefore(LocalDate.now()))
             return ApiResponse.error("Meeting date cannot be in the past");
 
+        String topic = str(body, "topic");
+        if (topic != null && topic.length() > 200)
+            return ApiResponse.error("Topic cannot exceed 200 characters");
+
         MeetingSlot slot = MeetingSlot.builder()
                 .teacherId(teacher.getId())
                 .teacherName(teacher.getName())
@@ -54,7 +58,7 @@ public class MeetingService {
                 .meetingDate(meetingDate)
                 .startTime(start)
                 .endTime(end)
-                .topic(str(body, "topic"))
+                .topic(topic)
                 .maxBookings(1)
                 .build();
 
@@ -137,6 +141,10 @@ public class MeetingService {
             return ApiResponse.error("Slot is fully booked");
         }
 
+        String notes = str(body, "notes");
+        if (notes != null && notes.length() > 500)
+            return ApiResponse.error("Notes cannot exceed 500 characters");
+
         MeetingBooking booking = MeetingBooking.builder()
                 .slotId(slotId)
                 .studentId(student.getId())
@@ -144,7 +152,7 @@ public class MeetingService {
                 .parentName(student.getParentName())
                 .parentEmail(student.getParentEmail())
                 .schoolId(student.getSchoolId())
-                .notes(str(body, "notes"))
+                .notes(notes)
                 .build();
 
         MeetingBooking saved = bookingRepository.save(booking);
