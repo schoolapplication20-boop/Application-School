@@ -103,6 +103,7 @@ export default function StudentSignup() {
                   <input
                     className="auth-input"
                     type="number"
+                    min="1"
                     placeholder="e.g. 1001"
                     value={form.schoolId}
                     onChange={e => set('schoolId', e.target.value)}

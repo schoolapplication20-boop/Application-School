@@ -35,6 +35,10 @@ public class AppointmentService {
             return ApiResponse.error("Please select a valid future date.");
         if (topic == null || topic.isBlank())
             return ApiResponse.error("Topic is required.");
+        if (topic.length() > 200)
+            return ApiResponse.error("Topic cannot exceed 200 characters.");
+        if (studentNote != null && studentNote.length() > 500)
+            return ApiResponse.error("Note cannot exceed 500 characters.");
 
         ParentTeacherAppointment appt = ParentTeacherAppointment.builder()
                 .teacherId(classTeacher.getId())
@@ -81,6 +85,10 @@ public class AppointmentService {
             return ApiResponse.error("Please select a valid future date.");
         if (topic == null || topic.isBlank())
             return ApiResponse.error("Topic is required.");
+        if (topic.length() > 200)
+            return ApiResponse.error("Topic cannot exceed 200 characters.");
+        if (teacherNote != null && teacherNote.length() > 500)
+            return ApiResponse.error("Note cannot exceed 500 characters.");
 
         ParentTeacherAppointment appt = ParentTeacherAppointment.builder()
                 .teacherId(teacher.getId())
@@ -122,6 +130,8 @@ public class AppointmentService {
                 && newStatus != ParentTeacherAppointment.Status.REJECTED))
             return ApiResponse.error("Status must be ACCEPTED or REJECTED.");
 
+        if (teacherNote != null && teacherNote.length() > 500)
+            return ApiResponse.error("Note cannot exceed 500 characters.");
         appt.setStatus(newStatus);
         if (teacherNote != null && !teacherNote.isBlank()) appt.setTeacherNote(teacherNote.trim());
 

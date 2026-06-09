@@ -563,7 +563,7 @@ const SetupSchool = () => {
               <SectionTitle icon="menu_book" title="Academic Configuration" />
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 24px' }}>
                 <Field label="Total Classes / Grades" error={errors.totalClasses}>
-                  <input name="totalClasses" type="number" value={form.totalClasses} onChange={onChange}
+                  <input name="totalClasses" type="number" min="1" max="100" value={form.totalClasses} onChange={onChange}
                     placeholder="e.g. 12"
                     style={inputStyle(!!errors.totalClasses)}
                     onFocus={e => e.target.style.borderColor = '#0de1e8'}

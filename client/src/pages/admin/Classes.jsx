@@ -574,6 +574,8 @@ const Classes = () => {
                   </label>
                   <input
                     type="number"
+                    min="1"
+                    max="1000"
                     style={{ ...iStyle, width: '100%', boxSizing: 'border-box' }}
                     placeholder="Max students"
                     value={formData.capacity || ''}

@@ -207,6 +207,8 @@ const BookDemoPage = () => {
                     type="number"
                     id="studentCount"
                     name="studentCount"
+                    min="1"
+                    max="100000"
                     value={formData.studentCount}
                     onChange={handleChange}
                     required
