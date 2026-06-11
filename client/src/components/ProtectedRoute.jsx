@@ -56,7 +56,7 @@ const MODULE_NAMES = {
  */
 const ProtectedRoute = ({ children, allowedRoles, permKey, moduleKey }) => {
   const { isAuthenticated, isLoading, user, getDashboardPath, hasPermission } = useAuth();
-  const { hasFeature } = useSchool();
+  const { hasFeature, hasRoleModule } = useSchool();
   const location = useLocation();
 
   // ── Loading ────────────────────────────────────────────────────────────────
@@ -125,9 +125,16 @@ const ProtectedRoute = ({ children, allowedRoles, permKey, moduleKey }) => {
 
   // School-level feature gate: check if the App Owner has disabled this module.
   // Applies to all roles (TEACHER, STUDENT, ADMIN, SUPER_ADMIN) when moduleKey is set.
+  // For TEACHER/STUDENT, also honour the per-role module overrides set by the
+  // App Owner (school.features.teacherModules / .studentModules).
   const effectiveModuleKey = moduleKey || permKey;
-  if (effectiveModuleKey && !hasFeature(effectiveModuleKey)) {
-    return <ModuleDisabled module={MODULE_NAMES[effectiveModuleKey] || effectiveModuleKey} />;
+  if (effectiveModuleKey) {
+    const enabled = (user?.role === 'TEACHER' || user?.role === 'STUDENT')
+      ? hasRoleModule(user.role, effectiveModuleKey)
+      : hasFeature(effectiveModuleKey);
+    if (!enabled) {
+      return <ModuleDisabled module={MODULE_NAMES[effectiveModuleKey] || effectiveModuleKey} />;
+    }
   }
 
   return children;

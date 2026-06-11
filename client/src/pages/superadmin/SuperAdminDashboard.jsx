@@ -27,6 +27,28 @@ const ALL_MODULES = [
 
 const DEFAULT_PERMS = ALL_MODULES.reduce((acc, m) => ({ ...acc, [m.key]: true }), {});
 
+// Modules that actually appear in the Teacher / Student portal sidebars.
+// Used for the per-role overrides nested under school.features.teacherModules
+// and school.features.studentModules.
+const TEACHER_MODULES = [
+  { key: 'students',    label: 'My Students',         icon: 'group' },
+  { key: 'timetable',   label: 'My Schedule',         icon: 'schedule' },
+  { key: 'attendance',  label: 'Attendance',          icon: 'fact_check' },
+  { key: 'diary',       label: 'Class Diary',         icon: 'menu_book' },
+  { key: 'examination', label: 'Marks & Exams',       icon: 'verified' },
+  { key: 'messages',    label: 'Messages',            icon: 'chat' },
+  { key: 'leave',       label: 'Leave',               icon: 'event_busy' },
+];
+
+const STUDENT_MODULES = [
+  { key: 'attendance',  label: 'Attendance',          icon: 'fact_check' },
+  { key: 'diary',       label: 'Class Diary',         icon: 'menu_book' },
+  { key: 'fees',        label: 'Pay Fees',            icon: 'payments' },
+  { key: 'leave',       label: 'Leave Request',       icon: 'event_busy' },
+  { key: 'messages',    label: 'Messages',            icon: 'chat' },
+  { key: 'examination', label: 'Exams & Report Card', icon: 'verified' },
+];
+
 // ─── Utility ──────────────────────────────────────────────────────────────────
 const initials = (name = '') =>
   name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?';
@@ -196,8 +218,22 @@ function OwnerDashboard() {
       ? (typeof raw === 'string' ? (() => { try { return JSON.parse(raw); } catch { return null; } })() : raw)
       : null;
     const defaults = ALL_MODULES.reduce((acc, m) => ({ ...acc, [m.key]: true }), {});
-    setModuleToggles({ ...defaults, ...(parsed || {}) });
+    const teacherDefaults = TEACHER_MODULES.reduce((acc, m) => ({ ...acc, [m.key]: true }), {});
+    const studentDefaults = STUDENT_MODULES.reduce((acc, m) => ({ ...acc, [m.key]: true }), {});
+    setModuleToggles({
+      ...defaults,
+      ...(parsed || {}),
+      teacherModules: { ...teacherDefaults, ...(parsed?.teacherModules || {}) },
+      studentModules: { ...studentDefaults, ...(parsed?.studentModules || {}) },
+    });
     setModulesModal(sa);
+  };
+
+  const toggleRoleModule = (roleKey, moduleKey) => {
+    setModuleToggles(prev => ({
+      ...prev,
+      [roleKey]: { ...prev[roleKey], [moduleKey]: prev[roleKey]?.[moduleKey] === false },
+    }));
   };
 
   const saveModules = async () => {
@@ -1491,6 +1527,70 @@ function OwnerDashboard() {
 
               <div style={{ marginTop: 12, padding: '10px 12px', background: '#fffbeb', borderRadius: 8, border: '1px solid #fcd34d', fontSize: 12, color: '#92400e' }}>
                 <strong>Note:</strong> Disabled modules are hidden from navigation and direct URL access shows a "Module not enabled" page.
+              </div>
+
+              {/* ── Teacher Portal modules ── */}
+              <div style={{ marginTop: 20, marginBottom: 8, fontSize: 13, fontWeight: 800, color: '#1a202c', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span className="material-icons" style={{ fontSize: 18, color: '#4f46e5' }}>person</span>
+                Teacher Portal Modules
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                {TEACHER_MODULES.map(m => {
+                  const enabled = moduleToggles.teacherModules?.[m.key] !== false;
+                  return (
+                    <button
+                      key={m.key}
+                      onClick={() => toggleRoleModule('teacherModules', m.key)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '10px 14px', borderRadius: 10, cursor: 'pointer',
+                        border: `1.5px solid ${enabled ? '#c7d2fe' : '#e2e8f0'}`,
+                        background: enabled ? '#eef2ff' : '#f8fafc',
+                        textAlign: 'left', transition: 'all 0.15s',
+                      }}
+                    >
+                      <span className="material-icons" style={{ fontSize: 18, color: enabled ? '#4f46e5' : '#cbd5e0', flexShrink: 0 }}>{m.icon}</span>
+                      <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: enabled ? '#3730a3' : '#94a3b8' }}>{m.label}</span>
+                      <span className="material-icons" style={{ fontSize: 20, color: enabled ? '#4f46e5' : '#cbd5e0', flexShrink: 0 }}>
+                        {enabled ? 'toggle_on' : 'toggle_off'}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* ── Student Portal modules ── */}
+              <div style={{ marginTop: 20, marginBottom: 8, fontSize: 13, fontWeight: 800, color: '#1a202c', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span className="material-icons" style={{ fontSize: 18, color: '#0d9488' }}>school</span>
+                Student Portal Modules
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                {STUDENT_MODULES.map(m => {
+                  const enabled = moduleToggles.studentModules?.[m.key] !== false;
+                  return (
+                    <button
+                      key={m.key}
+                      onClick={() => toggleRoleModule('studentModules', m.key)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '10px 14px', borderRadius: 10, cursor: 'pointer',
+                        border: `1.5px solid ${enabled ? '#99f6e4' : '#e2e8f0'}`,
+                        background: enabled ? '#f0fdfa' : '#f8fafc',
+                        textAlign: 'left', transition: 'all 0.15s',
+                      }}
+                    >
+                      <span className="material-icons" style={{ fontSize: 18, color: enabled ? '#0d9488' : '#cbd5e0', flexShrink: 0 }}>{m.icon}</span>
+                      <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: enabled ? '#115e59' : '#94a3b8' }}>{m.label}</span>
+                      <span className="material-icons" style={{ fontSize: 20, color: enabled ? '#0d9488' : '#cbd5e0', flexShrink: 0 }}>
+                        {enabled ? 'toggle_on' : 'toggle_off'}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div style={{ marginTop: 12, padding: '10px 12px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12, color: '#64748b' }}>
+                <strong>Note:</strong> These per-portal toggles only apply on top of the modules enabled above — turning a module off above hides it for everyone regardless of these settings.
               </div>
             </div>
 

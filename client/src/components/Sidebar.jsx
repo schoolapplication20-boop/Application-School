@@ -76,7 +76,7 @@ const studentNavItems = [
 const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
   const { user, logout }                    = useAuth();
   const navigate                            = useNavigate();
-  const { school, logoVersion, loadSchool, hasFeature } = useSchool();
+  const { school, logoVersion, loadSchool, hasFeature, hasRoleModule } = useSchool();
   const [logoError, setLogoError]           = useState(false);
   const [logoHover, setLogoHover]           = useState(false);
   const [uploading,  setUploading]          = useState(false);
@@ -184,10 +184,10 @@ const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
       }
 
       case 'TEACHER':
-        return [{ label: 'Navigation', items: teacherNavItems.filter(item => item.moduleKey === null || hasFeature(item.moduleKey)) }];
+        return [{ label: 'Navigation', items: teacherNavItems.filter(item => item.moduleKey === null || hasRoleModule('TEACHER', item.moduleKey)) }];
 
       case 'STUDENT':
-        return [{ label: 'Navigation', items: studentNavItems.filter(item => item.moduleKey === null || hasFeature(item.moduleKey)) }];
+        return [{ label: 'Navigation', items: studentNavItems.filter(item => item.moduleKey === null || hasRoleModule('STUDENT', item.moduleKey)) }];
 
       default:
         return [];
