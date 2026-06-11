@@ -471,9 +471,10 @@ select {
 }
 
 /* ── Report card print isolation ─────────────────────────────────────────────
-   Mirrors the hall-ticket pattern: adding .printing-report-card to <body>
-   makes everything invisible except #report-card, then @media print renders
-   only that node on paper. */
+   Adding .printing-report-card to <body> makes everything invisible except
+   #report-card (visibility, not display — see note below), then pins it to
+   the page via position:fixed so it prints regardless of where it sits in
+   the layout DOM. */
 body.printing-report-card * {
   visibility: hidden;
 }
@@ -497,25 +498,20 @@ body.printing-report-card #report-card {
     margin: 10mm 14mm;
   }
 
-  body.printing-report-card > * {
-    display: none !important;
-  }
-
+  /* NOTE: do NOT set display:none on body's direct children here — #report-card
+     is nested deep inside #root, and display:none on an ancestor removes the
+     whole subtree from the render tree (no descendant override can undo it),
+     which is what produced the blank print page. Visibility + position:fixed
+     above already isolates #report-card without touching ancestor display. */
   body.printing-report-card #report-card {
-    display: block !important;
-    position: static !important;
-    width: 100% !important;
     box-shadow: none !important;
     border-radius: 0 !important;
-    margin: 0 !important;
-    padding: 0 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
     color-adjust: exact !important;
   }
 
   body.printing-report-card #report-card * {
-    visibility: visible !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
     color-adjust: exact !important;
