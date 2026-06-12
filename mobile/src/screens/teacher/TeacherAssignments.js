@@ -1,22 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Modal, ScrollView } from 'react-native';
 import api from '../../services/api';
+import useCachedFetch from '../../hooks/useCachedFetch';
+import OfflineBanner from '../../components/OfflineBanner';
 
 export default function TeacherAssignments() {
-  const [assignments, setAssignments] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data, loading, isOffline, reload } = useCachedFetch('/api/teacher/assignments');
+  const assignments = data || [];
   const [modalVisible, setModalVisible] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ title: '', description: '', classSection: '', dueDate: '', maxMarks: '100' });
-
-  const load = () => {
-    api.get('/api/teacher/assignments')
-      .then(res => setAssignments(res.data.data || []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => { load(); }, []);
 
   const submit = async () => {
     if (!form.title.trim()) { Alert.alert('Error', 'Title is required.'); return; }
@@ -34,7 +27,7 @@ export default function TeacherAssignments() {
       Alert.alert('Success', 'Assignment posted.');
       setModalVisible(false);
       setForm({ title: '', description: '', classSection: '', dueDate: '', maxMarks: '100' });
-      load();
+      reload();
     } catch (err) { Alert.alert('Error', err?.response?.data?.message || 'Failed to post assignment.'); }
     finally { setSubmitting(false); }
   };
@@ -47,7 +40,7 @@ export default function TeacherAssignments() {
         onPress: async () => {
           try {
             await api.delete(`/api/teacher/assignments/${id}`);
-            load();
+            reload();
           } catch { Alert.alert('Error', 'Failed to delete.'); }
         }
       }
@@ -58,6 +51,7 @@ export default function TeacherAssignments() {
 
   return (
     <View style={styles.container}>
+      <OfflineBanner visible={isOffline} />
       <TouchableOpacity style={styles.addBtn} onPress={() => setModalVisible(true)}>
         <Text style={styles.addBtnText}>+ Post Assignment</Text>
       </TouchableOpacity>

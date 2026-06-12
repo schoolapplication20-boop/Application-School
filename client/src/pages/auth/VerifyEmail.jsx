@@ -81,12 +81,12 @@ export default function VerifyEmail() {
             <div style={{ textAlign: 'center', padding: '8px 0' }}>
               <span className="material-icons" style={{ fontSize: 52, color: '#10b981', display: 'block', marginBottom: 12 }}>verified</span>
               <h2 style={{ margin: '0 0 8px', fontSize: 20, fontWeight: 800 }}>Email Verified!</h2>
-              <p style={{ color: '#6b7280', fontSize: 14 }}>Your account is active. Redirecting to login…</p>
+              <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>Your account is active. Redirecting to login…</p>
             </div>
           ) : (
             <>
               <h2 style={{ textAlign: 'center', marginBottom: 4, fontSize: 20, fontWeight: 800 }}>Verify Your Email</h2>
-              <p style={{ textAlign: 'center', color: '#6b7280', fontSize: 14, marginBottom: 24 }}>
+              <p style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: 14, marginBottom: 24 }}>
                 Enter the 6-digit code sent to <strong>{email || 'your email'}</strong>
               </p>
 
@@ -118,9 +118,9 @@ export default function VerifyEmail() {
                       onPaste={i === 0 ? handlePaste : undefined}
                       style={{
                         width: 44, height: 52, textAlign: 'center', fontSize: 22, fontWeight: 700,
-                        border: digit ? '2px solid #4f46e5' : '2px solid #e5e7eb',
-                        borderRadius: 10, outline: 'none', background: digit ? '#eef2ff' : '#fff',
-                        color: '#1e293b', transition: 'border-color 0.15s',
+                        border: digit ? '2px solid #4f46e5' : '2px solid var(--border-strong)',
+                        borderRadius: 10, outline: 'none', background: digit ? '#eef2ff' : 'var(--surface)',
+                        color: 'var(--text-primary)', transition: 'border-color 0.15s',
                       }}
                     />
                   ))}
@@ -131,11 +131,11 @@ export default function VerifyEmail() {
                 </button>
               </form>
 
-              <p style={{ textAlign: 'center', marginTop: 20, fontSize: 13, color: '#6b7280' }}>
+              <p style={{ textAlign: 'center', marginTop: 20, fontSize: 13, color: 'var(--text-secondary)' }}>
                 Already verified?{' '}
                 <Link to="/login?role=STUDENT" className="auth-link">Sign in</Link>
               </p>
-              <p style={{ textAlign: 'center', fontSize: 12, color: '#9ca3af' }}>
+              <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>
                 Didn't receive the code? Check your spam folder. The code expires in 24 hours.
               </p>
             </>

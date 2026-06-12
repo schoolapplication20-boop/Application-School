@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Layout from '../../components/Layout';
-import Toast from '../../components/Toast';
+import Button from '../../components/Button';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { leaveAPI } from '../../services/api';
+import { useToast } from '../../context/ToastContext';
 
 const fmt = (d) => {
   if (!d) return '';
@@ -29,7 +30,6 @@ export default function TeacherLeaveRequest() {
   const [refreshing, setRefreshing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [showModal, setShowModal]   = useState(false);
-  const [toast, setToast]           = useState(null);
   const prevLeaveDecisionCount = useRef(0);
   const [formData, setFormData] = useState({
     leaveType: 'Medical',
@@ -38,10 +38,7 @@ export default function TeacherLeaveRequest() {
     reason:    '',
   });
 
-  const showToast = (msg, type = 'success') => {
-    setToast({ message: msg, type });
-    setTimeout(() => setToast(null), 3500);
-  };
+  const showToast = useToast();
 
   const loadLeaves = async (silent = false) => {
     if (!user?.id) return;
@@ -115,8 +112,6 @@ export default function TeacherLeaveRequest() {
 
   return (
     <Layout pageTitle="Leave Request">
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-
       <div className="page-header">
         <h1>My Leave Requests</h1>
         <p>Apply for leave — requests are reviewed and approved by Admin</p>
@@ -143,27 +138,27 @@ export default function TeacherLeaveRequest() {
       {/* Table */}
       <div className="data-table-card">
         <div className="search-filter-bar">
-          <div style={{ flex: 1, fontWeight: 700, fontSize: '15px', color: '#2d3748' }}>My Leave History</div>
+          <div style={{ flex: 1, fontWeight: 700, fontSize: '15px', color: 'var(--text-primary)' }}>My Leave History</div>
           <button onClick={() => loadLeaves(true)} disabled={refreshing}
-            style={{ marginRight: 8, border: '1px solid #e2e8f0', background: '#fff', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', color: '#718096', fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }}>
+            style={{ marginRight: 8, border: '1px solid var(--border-strong)', background: 'var(--surface)', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }}>
             <span className="material-icons" style={{ fontSize: 16, animation: refreshing ? 'spin 1s linear infinite' : 'none' }}>refresh</span>
             {refreshing ? 'Refreshing…' : 'Refresh'}
           </button>
-          <button className="btn-add" onClick={() => setShowModal(true)}>
+          <Button variant="add" onClick={() => setShowModal(true)}>
             <span className="material-icons">add</span> Apply for Leave
-          </button>
+          </Button>
         </div>
 
         {loading ? (
-          <div style={{ padding: '40px', textAlign: 'center', color: '#a0aec0' }}>
+          <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
             <span className="material-icons" style={{ fontSize: 36, display: 'block', marginBottom: 8, animation: 'spin 1s linear infinite' }}>autorenew</span>
             Loading…
           </div>
         ) : leaves.length === 0 ? (
           <div className="empty-state" style={{ padding: '40px' }}>
-            <span className="material-icons" style={{ fontSize: 48, color: '#e2e8f0' }}>event_busy</span>
-            <h3 style={{ color: '#a0aec0', marginTop: 12 }}>No leave requests yet</h3>
-            <p style={{ color: '#cbd5e0' }}>Click "Apply for Leave" to submit a request.</p>
+            <span className="material-icons" style={{ fontSize: 48, color: 'var(--border-strong)' }}>event_busy</span>
+            <h3 style={{ color: 'var(--text-muted)', marginTop: 12 }}>No leave requests yet</h3>
+            <p style={{ color: 'var(--text-muted)' }}>Click "Apply for Leave" to submit a request.</p>
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
@@ -194,20 +189,20 @@ export default function TeacherLeaveRequest() {
                       </td>
                       <td style={{ fontSize: '13px' }}>{l.fromDate || '—'}</td>
                       <td style={{ fontSize: '13px' }}>{l.toDate   || '—'}</td>
-                      <td style={{ fontSize: '12px', color: '#718096', maxWidth: '180px' }}>{l.reason}</td>
-                      <td style={{ fontSize: '12px', color: '#a0aec0' }}>{fmt(l.createdAt)}</td>
+                      <td style={{ fontSize: '12px', color: 'var(--text-secondary)', maxWidth: '180px' }}>{l.reason}</td>
+                      <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{fmt(l.createdAt)}</td>
                       <td style={{ maxWidth: '180px' }}>
                         {decided ? (
                           <div>
-                            <div style={{ fontSize: '12px', color: '#718096' }}>{l.adminComment || 'No remark'}</div>
+                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{l.adminComment || 'No remark'}</div>
                             {l.reviewedBy && (
-                              <div style={{ fontSize: '11px', color: '#a0aec0', marginTop: 2 }}>
+                              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: 2 }}>
                                 by {l.reviewedBy} · {fmt(l.reviewedAt)}
                               </div>
                             )}
                           </div>
                         ) : (
-                          <span style={{ fontSize: '12px', color: '#a0aec0', fontStyle: 'italic' }}>Awaiting admin review</span>
+                          <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic' }}>Awaiting admin review</span>
                         )}
                       </td>
                       <td>
@@ -272,13 +267,13 @@ export default function TeacherLeaveRequest() {
                   </div>
                 </div>
                 <div className="modal-footer">
-                  <button type="button" className="btn btn-secondary"
+                  <Button variant="secondary"
                     onClick={() => { setShowModal(false); setFormData({ leaveType: 'Medical', fromDate: '', toDate: '', reason: '' }); }} disabled={submitting}>
                     Cancel
-                  </button>
-                  <button type="submit" className="btn btn-primary" disabled={submitting}>
+                  </Button>
+                  <Button variant="primary" type="submit" disabled={submitting}>
                     {submitting ? 'Submitting…' : 'Submit Request'}
-                  </button>
+                  </Button>
                 </div>
               </form>
             </div>

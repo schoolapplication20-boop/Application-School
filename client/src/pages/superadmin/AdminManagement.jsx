@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import Layout from '../../components/Layout';
-import Toast from '../../components/Toast';
+import Button from '../../components/Button';
 import { superAdminAPI, onboardingVerifyAPI } from '../../services/api';
 import { addLog } from '../../services/activityLog';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
 
 const MODULES = [
   { key: 'students',     label: 'Students',          icon: 'school',                 desc: 'Add, edit, view student records' },
@@ -42,7 +43,6 @@ export default function AdminManagement() {
   const [formErrors,   setFormErrors]   = useState({});
   const [search,       setSearch]       = useState('');
   const [filterStatus, setFilterStatus] = useState('');
-  const [toast,        setToast]        = useState(null);
   // Success modal after admin creation (shows generated password)
   const [successModal,  setSuccessModal]  = useState(null); // { name, email, password }
   const [showPassword,  setShowPassword]  = useState(false);
@@ -68,7 +68,7 @@ export default function AdminManagement() {
   const [saSuccessModal, setSaSuccessModal] = useState(null); // { name, email, password, schoolName, schoolCode }
   const [showSaPassword, setShowSaPassword] = useState(false);
 
-  const showToast = (msg, type = 'success') => setToast({ message: msg, type });
+  const showToast = useToast();
 
   const loadAdmins = useCallback(async () => {
     try {
@@ -339,7 +339,7 @@ export default function AdminManagement() {
 
   const iStyle = (err) => ({
     padding: '10px 12px',
-    border: `1.5px solid ${err ? '#e53e3e' : '#e2e8f0'}`,
+    border: `1.5px solid ${err ? '#e53e3e' : 'var(--border-strong)'}`,
     borderRadius: '8px',
     fontSize: '13px',
     width: '100%',
@@ -351,8 +351,6 @@ export default function AdminManagement() {
 
   return (
     <Layout pageTitle="Admin Management">
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
         <div className="page-header" style={{ marginBottom: 0 }}>
           <h1>Admin Management</h1>
@@ -363,21 +361,21 @@ export default function AdminManagement() {
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
           {activeTab === 'admins' ? (
-            <button className="btn-add" onClick={() => { setEditAdmin(null); setFormData(emptyForm); setFormErrors({}); setShowModal(true); }}>
+            <Button variant="add" onClick={() => { setEditAdmin(null); setFormData(emptyForm); setFormErrors({}); setShowModal(true); }}>
               <span className="material-icons">add</span> Add Admin
-            </button>
+            </Button>
           ) : (
-            <button className="btn-add" style={{ background: 'linear-gradient(135deg,#7c3aed,#553c9a)' }}
+            <Button variant="add" style={{ background: 'linear-gradient(135deg,#7c3aed,#553c9a)' }}
               onClick={() => { setSaForm({ name: '', email: '', mobile: '', schoolName: '', schoolCode: '' }); setSaErrors({}); setShowSaModal(true); }}>
               <span className="material-icons">add</span> Add Super Admin
-            </button>
+            </Button>
           )}
         </div>
       </div>
 
       {/* Tab bar — only shown to Application Owner (platform admin) */}
       {isPlatformAdmin && (
-        <div style={{ display: 'flex', gap: '4px', marginBottom: '24px', borderBottom: '2px solid #e2e8f0', paddingBottom: '0' }}>
+        <div style={{ display: 'flex', gap: '4px', marginBottom: '24px', borderBottom: '2px solid var(--border-strong)', paddingBottom: '0' }}>
           {[
             { id: 'admins',      label: 'School Admins',   icon: 'manage_accounts' },
             { id: 'superadmins', label: 'Super Admins',    icon: 'admin_panel_settings' },
@@ -386,8 +384,8 @@ export default function AdminManagement() {
               style={{
                 padding: '10px 20px', border: 'none', cursor: 'pointer', fontWeight: 700,
                 fontSize: '13px', borderRadius: '8px 8px 0 0', display: 'flex', alignItems: 'center', gap: '6px',
-                background: activeTab === tab.id ? '#fff' : 'transparent',
-                color:      activeTab === tab.id ? '#7c3aed' : '#718096',
+                background: activeTab === tab.id ? 'var(--surface)' : 'transparent',
+                color:      activeTab === tab.id ? '#7c3aed' : 'var(--text-secondary)',
                 borderBottom: activeTab === tab.id ? '2px solid #7c3aed' : '2px solid transparent',
                 marginBottom: '-2px',
               }}>
@@ -443,13 +441,13 @@ export default function AdminManagement() {
                 </thead>
                 <tbody>
                   {saLoading ? (
-                    <tr><td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: '#a0aec0' }}>Loading...</td></tr>
+                    <tr><td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>Loading...</td></tr>
                   ) : superAdmins.length === 0 ? (
                     <tr><td colSpan={5}>
                       <div className="empty-state" style={{ padding: '40px' }}>
-                        <span className="material-icons" style={{ fontSize: 48, color: '#e2e8f0', display: 'block', marginBottom: 8 }}>admin_panel_settings</span>
-                        <h3 style={{ color: '#a0aec0' }}>No Super Admins yet</h3>
-                        <p style={{ color: '#cbd5e0' }}>Click "Add Super Admin" to create one.</p>
+                        <span className="material-icons" style={{ fontSize: 48, color: 'var(--border-strong)', display: 'block', marginBottom: 8 }}>admin_panel_settings</span>
+                        <h3 style={{ color: 'var(--text-muted)' }}>No Super Admins yet</h3>
+                        <p style={{ color: 'var(--text-muted)' }}>Click "Add Super Admin" to create one.</p>
                       </div>
                     </td></tr>
                   ) : superAdmins.map(sa => (
@@ -460,25 +458,25 @@ export default function AdminManagement() {
                             {sa.name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}
                           </div>
                           <div>
-                            <div style={{ fontWeight: 700, fontSize: '13px', color: '#2d3748' }}>{sa.name}</div>
-                            <div style={{ fontSize: '11px', color: '#a0aec0' }}>{sa.email}</div>
+                            <div style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text-primary)' }}>{sa.name}</div>
+                            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{sa.email}</div>
                           </div>
                         </div>
                       </td>
-                      <td style={{ fontSize: '12px', color: '#2d3748', fontWeight: 600 }}>
-                        {sa.schoolName || <span style={{ color: '#a0aec0' }}>—</span>}
+                      <td style={{ fontSize: '12px', color: 'var(--text-primary)', fontWeight: 600 }}>
+                        {sa.schoolName || <span style={{ color: 'var(--text-muted)' }}>—</span>}
                       </td>
                       <td>
                         {sa.schoolCode ? (
                           <span style={{ padding: '2px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 700, background: '#ede9fe', color: '#7c3aed', fontFamily: 'monospace', letterSpacing: '0.06em' }}>{sa.schoolCode}</span>
-                        ) : <span style={{ color: '#a0aec0', fontSize: '12px' }}>—</span>}
+                        ) : <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>—</span>}
                       </td>
                       <td>
                         <span style={{ padding: '3px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: 700, background: sa.needsSchoolSetup ? '#fffbeb' : '#f0fff4', color: sa.needsSchoolSetup ? '#d97706' : '#38a169' }}>
                           {sa.needsSchoolSetup ? 'Pending Setup' : 'Setup Complete'}
                         </span>
                       </td>
-                      <td style={{ fontSize: '12px', color: '#718096' }}>
+                      <td style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
                         {sa.createdAt ? new Date(sa.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
                       </td>
                     </tr>
@@ -537,13 +535,13 @@ export default function AdminManagement() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: '#a0aec0' }}>Loading admins...</td></tr>
+                <tr><td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>Loading admins...</td></tr>
               ) : filtered.length === 0 ? (
                 <tr><td colSpan={5}>
                   <div className="empty-state" style={{ padding: '40px' }}>
-                    <span className="material-icons" style={{ fontSize: 48, color: '#e2e8f0', display: 'block', marginBottom: 8 }}>manage_accounts</span>
-                    <h3 style={{ color: '#a0aec0' }}>No admins found</h3>
-                    <p style={{ color: '#cbd5e0' }}>Click "Add Admin" to create one.</p>
+                    <span className="material-icons" style={{ fontSize: 48, color: 'var(--border-strong)', display: 'block', marginBottom: 8 }}>manage_accounts</span>
+                    <h3 style={{ color: 'var(--text-muted)' }}>No admins found</h3>
+                    <p style={{ color: 'var(--text-muted)' }}>Click "Add Admin" to create one.</p>
                   </div>
                 </td></tr>
               ) : filtered.map(a => {
@@ -556,15 +554,15 @@ export default function AdminManagement() {
                           {a.name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}
                         </div>
                         <div>
-                          <div style={{ fontWeight: 700, fontSize: '13px', color: '#2d3748' }}>{a.name}</div>
-                          <div style={{ fontSize: '11px', color: '#a0aec0' }}>{a.email}</div>
+                          <div style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text-primary)' }}>{a.name}</div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{a.email}</div>
                         </div>
                       </div>
                     </td>
-                    <td style={{ fontSize: '12px', color: '#718096' }}>
+                    <td style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
                       {a.mobile ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <span className="material-icons" style={{ fontSize: '13px', color: '#a0aec0' }}>phone</span>
+                          <span className="material-icons" style={{ fontSize: '13px', color: 'var(--text-muted)' }}>phone</span>
                           {a.mobile}
                         </div>
                       ) : '—'}
@@ -574,29 +572,23 @@ export default function AdminManagement() {
                         {isActive ? 'Active' : 'Inactive'}
                       </button>
                     </td>
-                    <td style={{ fontSize: '12px', color: '#718096' }}>
+                    <td style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
                       {a.createdAt ? new Date(a.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
                     </td>
                     <td>
                       <div className="action-btns">
-                        <button className="action-btn action-btn-view" title="View" onClick={() => { setViewAdmin(a); setShowView(true); }}>
-                          <span className="material-icons">visibility</span>
-                        </button>
+                        <Button variant="view" onClick={() => { setViewAdmin(a); setShowView(true); }} />
                         {/* Key icon — only visible to SUPER_ADMIN */}
                         {isSuperAdmin && (
                           <button
                             title={a.tempPassword ? 'View Login Credentials' : 'Password already changed by user'}
                             onClick={() => { setShowCredPwd(false); setCredModal({ name: a.name, email: a.email, tempPassword: a.tempPassword }); }}
-                            style={{ padding: '6px', border: '1.5px solid', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', background: a.tempPassword ? '#fffbeb' : '#f7fafc', borderColor: a.tempPassword ? '#f6c93e' : '#e2e8f0' }}>
-                            <span className="material-icons" style={{ fontSize: '16px', color: a.tempPassword ? '#d97706' : '#a0aec0' }}>key</span>
+                            style={{ padding: '6px', border: '1.5px solid', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', background: a.tempPassword ? '#fffbeb' : 'var(--surface-alt)', borderColor: a.tempPassword ? '#f6c93e' : 'var(--border-strong)' }}>
+                            <span className="material-icons" style={{ fontSize: '16px', color: a.tempPassword ? '#d97706' : 'var(--text-muted)' }}>key</span>
                           </button>
                         )}
-                        <button className="action-btn action-btn-edit" title="Edit" onClick={() => handleEdit(a)}>
-                          <span className="material-icons">edit</span>
-                        </button>
-                        <button className="action-btn action-btn-delete" title="Delete" onClick={() => handleDelete(a)}>
-                          <span className="material-icons">delete</span>
-                        </button>
+                        <Button variant="edit" onClick={() => handleEdit(a)} />
+                        <Button variant="delete" onClick={() => handleDelete(a)} />
                       </div>
                     </td>
                   </tr>
@@ -622,18 +614,18 @@ export default function AdminManagement() {
 
               {/* Basic Info */}
               <div style={{ marginBottom: '20px' }}>
-                <div style={{ fontSize: '12px', fontWeight: 700, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <span className="material-icons" style={{ color: '#76C442', fontSize: '16px' }}>person</span> Account Details
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                   <div>
-                    <label style={{ fontSize: '13px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '4px' }}>Full Name *</label>
+                    <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Full Name *</label>
                     <input style={iStyle(formErrors.name)} placeholder="Admin's full name" value={formData.name}
                       onChange={e => setFormData({ ...formData, name: e.target.value })} />
                     {formErrors.name && <p style={errStyle}>{formErrors.name}</p>}
                   </div>
                   <div>
-                    <label style={{ fontSize: '13px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '4px' }}>
+                    <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
                       Email Address {editAdmin ? '' : '*'}
                     </label>
                     {!editAdmin ? (
@@ -678,7 +670,7 @@ export default function AdminManagement() {
                     )}
                   </div>
                   <div>
-                    <label style={{ fontSize: '13px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '4px' }}>
+                    <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
                       Phone Number *
                     </label>
                     <input type="tel" style={iStyle(formErrors.mobile)} placeholder="10-digit mobile" maxLength={10}
@@ -700,14 +692,14 @@ export default function AdminManagement() {
 
               {/* Permissions */}
               <div>
-                <div style={{ fontSize: '12px', fontWeight: 700, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'space-between' }}>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <span className="material-icons" style={{ color: '#76C442', fontSize: '16px' }}>lock</span>
                     Module Permissions
                   </div>
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button type="button" onClick={() => toggleAll(true)} style={{ padding: '4px 10px', border: '1px solid #76C442', borderRadius: '6px', background: '#f0fff4', color: '#76C442', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>Enable All</button>
-                    <button type="button" onClick={() => toggleAll(false)} style={{ padding: '4px 10px', border: '1px solid #e2e8f0', borderRadius: '6px', background: '#fff', color: '#718096', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>Disable All</button>
+                    <button type="button" onClick={() => toggleAll(false)} style={{ padding: '4px 10px', border: '1px solid var(--border-strong)', borderRadius: '6px', background: 'var(--surface)', color: 'var(--text-secondary)', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>Disable All</button>
                   </div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
@@ -715,15 +707,15 @@ export default function AdminManagement() {
                     const enabled = formData.permissions[m.key];
                     return (
                       <div key={m.key} onClick={() => togglePerm(m.key)}
-                        style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', border: `1.5px solid ${enabled ? '#76C442' : '#e2e8f0'}`, borderRadius: '10px', cursor: 'pointer', background: enabled ? '#f0fff4' : '#fafafa', transition: 'all 0.15s', userSelect: 'none' }}>
-                        <div style={{ width: 32, height: 32, borderRadius: '8px', background: enabled ? '#76C44220' : '#f0f4f8', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <span className="material-icons" style={{ fontSize: '16px', color: enabled ? '#76C442' : '#a0aec0' }}>{m.icon}</span>
+                        style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', border: `1.5px solid ${enabled ? '#76C442' : 'var(--border-strong)'}`, borderRadius: '10px', cursor: 'pointer', background: enabled ? '#f0fff4' : 'var(--surface-alt)', transition: 'all 0.15s', userSelect: 'none' }}>
+                        <div style={{ width: 32, height: 32, borderRadius: '8px', background: enabled ? '#76C44220' : 'var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <span className="material-icons" style={{ fontSize: '16px', color: enabled ? '#76C442' : 'var(--text-muted)' }}>{m.icon}</span>
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: '12px', fontWeight: 700, color: enabled ? '#276749' : '#4a5568' }}>{m.label}</div>
-                          <div style={{ fontSize: '10px', color: '#a0aec0' }}>{m.desc}</div>
+                          <div style={{ fontSize: '12px', fontWeight: 700, color: enabled ? '#276749' : 'var(--text-secondary)' }}>{m.label}</div>
+                          <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{m.desc}</div>
                         </div>
-                        <div style={{ width: '36px', height: '20px', borderRadius: '10px', background: enabled ? '#76C442' : '#e2e8f0', position: 'relative', flexShrink: 0, transition: 'background 0.2s' }}>
+                        <div style={{ width: '36px', height: '20px', borderRadius: '10px', background: enabled ? '#76C442' : 'var(--border-strong)', position: 'relative', flexShrink: 0, transition: 'background 0.2s' }}>
                           <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: '#fff', position: 'absolute', top: '2px', left: enabled ? '18px' : '2px', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
                         </div>
                       </div>
@@ -734,7 +726,7 @@ export default function AdminManagement() {
             </div>
             <div className="modal-footer">
               <button onClick={() => { setShowModal(false); setEditAdmin(null); setFormData(emptyForm); setFormErrors({}); }}
-                style={{ padding: '10px 20px', border: '1.5px solid #e2e8f0', borderRadius: '8px', background: '#fff', cursor: 'pointer', fontWeight: 600 }}>Cancel</button>
+                style={{ padding: '10px 20px', border: '1.5px solid var(--border-strong)', borderRadius: '8px', background: 'var(--surface)', color: 'var(--text-secondary)', cursor: 'pointer', fontWeight: 600 }}>Cancel</button>
               <button onClick={handleSave} disabled={saving}
                 style={{ padding: '10px 24px', background: saving ? '#a0aec0' : '#76C442', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer' }}>
                 {saving ? 'Saving...' : (editAdmin ? 'Update Admin' : 'Create Admin')}
@@ -775,27 +767,27 @@ export default function AdminManagement() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
 
                 {/* Name */}
-                <div style={{ background: '#f7fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px 16px' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Name</div>
-                  <div style={{ fontSize: '14px', fontWeight: 600, color: '#2d3748' }}>{successModal.name}</div>
+                <div style={{ background: 'var(--surface-alt)', border: '1px solid var(--border-strong)', borderRadius: '10px', padding: '14px 16px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Name</div>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>{successModal.name}</div>
                 </div>
 
                 {/* Email */}
-                <div style={{ background: '#f7fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px 16px' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Email (Login ID)</div>
+                <div style={{ background: 'var(--surface-alt)', border: '1px solid var(--border-strong)', borderRadius: '10px', padding: '14px 16px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Email (Login ID)</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <span className="material-icons" style={{ fontSize: '17px', color: '#76C442', flexShrink: 0 }}>email</span>
-                    <span style={{ fontSize: '14px', fontWeight: 600, color: '#2d3748', flex: 1, wordBreak: 'break-all' }}>{successModal.email}</span>
+                    <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', flex: 1, wordBreak: 'break-all' }}>{successModal.email}</span>
                     <button onClick={() => { navigator.clipboard.writeText(successModal.email); showToast('Email copied!'); }} title="Copy email"
-                      style={{ padding: '5px', border: '1px solid #e2e8f0', borderRadius: '6px', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-                      <span className="material-icons" style={{ fontSize: '15px', color: '#718096' }}>content_copy</span>
+                      style={{ padding: '5px', border: '1px solid var(--border-strong)', borderRadius: '6px', background: 'var(--surface)', cursor: 'pointer', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                      <span className="material-icons" style={{ fontSize: '15px', color: 'var(--text-secondary)' }}>content_copy</span>
                     </button>
                   </div>
                 </div>
 
                 {/* Password */}
-                <div style={{ background: successModal.password ? '#fffbeb' : '#f7fafc', border: `1px solid ${successModal.password ? '#fcd34d' : '#e2e8f0'}`, borderRadius: '10px', padding: '14px 16px' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Generated Password</div>
+                <div style={{ background: successModal.password ? '#fffbeb' : 'var(--surface-alt)', border: `1px solid ${successModal.password ? '#fcd34d' : 'var(--border-strong)'}`, borderRadius: '10px', padding: '14px 16px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Generated Password</div>
                   {successModal.password ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <span className="material-icons" style={{ fontSize: '17px', color: '#d97706', flexShrink: 0 }}>lock</span>
@@ -803,20 +795,20 @@ export default function AdminManagement() {
                         {showPassword ? successModal.password : '•'.repeat(successModal.password.length)}
                       </span>
                       <button onClick={() => setShowPassword(v => !v)} title={showPassword ? 'Hide password' : 'Show password'}
-                        style={{ padding: '5px', border: '1px solid #e2e8f0', borderRadius: '6px', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-                        <span className="material-icons" style={{ fontSize: '15px', color: '#718096' }}>
+                        style={{ padding: '5px', border: '1px solid var(--border-strong)', borderRadius: '6px', background: 'var(--surface)', cursor: 'pointer', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                        <span className="material-icons" style={{ fontSize: '15px', color: 'var(--text-secondary)' }}>
                           {showPassword ? 'visibility_off' : 'visibility'}
                         </span>
                       </button>
                       <button onClick={() => { navigator.clipboard.writeText(successModal.password); showToast('Password copied!'); }} title="Copy password"
-                        style={{ padding: '5px', border: '1px solid #e2e8f0', borderRadius: '6px', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-                        <span className="material-icons" style={{ fontSize: '15px', color: '#718096' }}>content_copy</span>
+                        style={{ padding: '5px', border: '1px solid var(--border-strong)', borderRadius: '6px', background: 'var(--surface)', cursor: 'pointer', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                        <span className="material-icons" style={{ fontSize: '15px', color: 'var(--text-secondary)' }}>content_copy</span>
                       </button>
                     </div>
                   ) : (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span className="material-icons" style={{ fontSize: '17px', color: '#48bb78' }}>check_circle</span>
-                      <span style={{ fontSize: '13px', fontWeight: 600, color: '#718096' }}>Password has been changed by the user</span>
+                      <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>Password has been changed by the user</span>
                     </div>
                   )}
                 </div>
@@ -858,15 +850,15 @@ export default function AdminManagement() {
               </div>
               <div className="modal-body" style={{ padding: '20px 24px', maxHeight: '72vh', overflowY: 'auto' }}>
                 {/* Admin info */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px', background: '#f7fafc', borderRadius: '12px', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px', background: 'var(--surface-alt)', borderRadius: '12px', marginBottom: '20px' }}>
                   <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'linear-gradient(135deg,#76C442,#5fa832)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '17px', fontWeight: 700, flexShrink: 0 }}>
                     {viewAdmin.name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: '15px', color: '#2d3748' }}>{viewAdmin.name}</div>
-                    <div style={{ fontSize: '12px', color: '#a0aec0' }}>{viewAdmin.email}</div>
+                    <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text-primary)' }}>{viewAdmin.name}</div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{viewAdmin.email}</div>
                     {viewAdmin.mobile && (
-                      <div style={{ fontSize: '12px', color: '#718096', display: 'flex', alignItems: 'center', gap: '3px', marginTop: '2px' }}>
+                      <div style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '3px', marginTop: '2px' }}>
                         <span className="material-icons" style={{ fontSize: '12px' }}>phone</span>
                         {viewAdmin.mobile}
                       </div>
@@ -879,7 +871,7 @@ export default function AdminManagement() {
 
                 {/* Module Permissions */}
                 <div>
-                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <span className="material-icons" style={{ color: '#76C442', fontSize: '16px' }}>lock</span>
                       Module Permissions
@@ -892,12 +884,12 @@ export default function AdminManagement() {
                     {MODULES.map(m => {
                       const enabled = viewPerms[m.key];
                       return (
-                        <div key={m.key} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 12px', border: `1.5px solid ${enabled ? '#76C442' : '#e2e8f0'}`, borderRadius: '10px', background: enabled ? '#f0fff4' : '#fafafa' }}>
-                          <div style={{ width: 28, height: 28, borderRadius: '7px', background: enabled ? '#76C44220' : '#f0f4f8', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <span className="material-icons" style={{ fontSize: '15px', color: enabled ? '#76C442' : '#cbd5e0' }}>{m.icon}</span>
+                        <div key={m.key} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 12px', border: `1.5px solid ${enabled ? '#76C442' : 'var(--border-strong)'}`, borderRadius: '10px', background: enabled ? '#f0fff4' : 'var(--surface-alt)' }}>
+                          <div style={{ width: 28, height: 28, borderRadius: '7px', background: enabled ? '#76C44220' : 'var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <span className="material-icons" style={{ fontSize: '15px', color: enabled ? '#76C442' : 'var(--text-muted)' }}>{m.icon}</span>
                           </div>
-                          <span style={{ fontSize: '12px', fontWeight: 600, color: enabled ? '#276749' : '#a0aec0', flex: 1, minWidth: 0 }}>{m.label}</span>
-                          <span className="material-icons" style={{ fontSize: '16px', color: enabled ? '#76C442' : '#e2e8f0', flexShrink: 0 }}>
+                          <span style={{ fontSize: '12px', fontWeight: 600, color: enabled ? '#276749' : 'var(--text-muted)', flex: 1, minWidth: 0 }}>{m.label}</span>
+                          <span className="material-icons" style={{ fontSize: '16px', color: enabled ? '#76C442' : 'var(--border-strong)', flexShrink: 0 }}>
                             {enabled ? 'check_circle' : 'cancel'}
                           </span>
                         </div>
@@ -907,7 +899,7 @@ export default function AdminManagement() {
                 </div>
               </div>
               <div className="modal-footer">
-                <button onClick={() => setShowView(false)} style={{ padding: '10px 20px', border: '1.5px solid #e2e8f0', borderRadius: '8px', background: '#fff', cursor: 'pointer', fontWeight: 600 }}>Close</button>
+                <button onClick={() => setShowView(false)} style={{ padding: '10px 20px', border: '1.5px solid var(--border-strong)', borderRadius: '8px', background: 'var(--surface)', color: 'var(--text-secondary)', cursor: 'pointer', fontWeight: 600 }}>Close</button>
                 <button onClick={() => { setShowView(false); handleEdit(viewAdmin); }} style={{ padding: '10px 20px', background: '#76C442', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>Edit Admin</button>
               </div>
             </div>
@@ -930,35 +922,35 @@ export default function AdminManagement() {
 
             <div className="modal-body" style={{ padding: '24px' }}>
               {/* Admin info */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', padding: '12px', background: '#f7fafc', borderRadius: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', padding: '12px', background: 'var(--surface-alt)', borderRadius: '10px' }}>
                 <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg,#76C442,#5fa832)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: '15px', flexShrink: 0 }}>
                   {credModal.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                 </div>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: '14px', color: '#2d3748' }}>{credModal.name}</div>
-                  <div style={{ fontSize: '12px', color: '#718096' }}>Admin Account</div>
+                  <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text-primary)' }}>{credModal.name}</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Admin Account</div>
                 </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 {/* Email */}
-                <div style={{ background: '#f7fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px 16px' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
+                <div style={{ background: 'var(--surface-alt)', border: '1px solid var(--border-strong)', borderRadius: '10px', padding: '14px 16px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
                     Email (Login ID)
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <span className="material-icons" style={{ fontSize: '18px', color: '#76C442' }}>email</span>
-                    <span style={{ fontSize: '14px', fontWeight: 600, color: '#2d3748', flex: 1 }}>{credModal.email}</span>
+                    <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', flex: 1 }}>{credModal.email}</span>
                     <button onClick={() => { navigator.clipboard.writeText(credModal.email); showToast('Email copied!'); }}
-                      style={{ padding: '4px', border: '1px solid #e2e8f0', borderRadius: '6px', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-                      <span className="material-icons" style={{ fontSize: '15px', color: '#718096' }}>content_copy</span>
+                      style={{ padding: '4px', border: '1px solid var(--border-strong)', borderRadius: '6px', background: 'var(--surface)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                      <span className="material-icons" style={{ fontSize: '15px', color: 'var(--text-secondary)' }}>content_copy</span>
                     </button>
                   </div>
                 </div>
 
                 {/* Password */}
-                <div style={{ background: credModal.tempPassword ? '#fffbeb' : '#f7fafc', border: `1px solid ${credModal.tempPassword ? '#fcd34d' : '#e2e8f0'}`, borderRadius: '10px', padding: '14px 16px' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
+                <div style={{ background: credModal.tempPassword ? '#fffbeb' : 'var(--surface-alt)', border: `1px solid ${credModal.tempPassword ? '#fcd34d' : 'var(--border-strong)'}`, borderRadius: '10px', padding: '14px 16px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
                     Generated Password
                   </div>
                   {credModal.tempPassword ? (
@@ -968,18 +960,18 @@ export default function AdminManagement() {
                         {showCredPwd ? credModal.tempPassword : '•'.repeat(credModal.tempPassword.length)}
                       </span>
                       <button onClick={() => setShowCredPwd(v => !v)} title={showCredPwd ? 'Hide' : 'Show'}
-                        style={{ padding: '4px', border: '1px solid #e2e8f0', borderRadius: '6px', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-                        <span className="material-icons" style={{ fontSize: '15px', color: '#718096' }}>
+                        style={{ padding: '4px', border: '1px solid var(--border-strong)', borderRadius: '6px', background: 'var(--surface)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                        <span className="material-icons" style={{ fontSize: '15px', color: 'var(--text-secondary)' }}>
                           {showCredPwd ? 'visibility_off' : 'visibility'}
                         </span>
                       </button>
                       <button onClick={() => { navigator.clipboard.writeText(credModal.tempPassword); showToast('Password copied!'); }}
-                        style={{ padding: '4px', border: '1px solid #e2e8f0', borderRadius: '6px', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-                        <span className="material-icons" style={{ fontSize: '15px', color: '#718096' }}>content_copy</span>
+                        style={{ padding: '4px', border: '1px solid var(--border-strong)', borderRadius: '6px', background: 'var(--surface)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                        <span className="material-icons" style={{ fontSize: '15px', color: 'var(--text-secondary)' }}>content_copy</span>
                       </button>
                     </div>
                   ) : (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#718096' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)' }}>
                       <span className="material-icons" style={{ fontSize: '18px', color: '#48bb78' }}>check_circle</span>
                       <span style={{ fontSize: '13px', fontWeight: 600 }}>Password has been changed by the user</span>
                     </div>
@@ -1028,18 +1020,18 @@ export default function AdminManagement() {
               </div>
 
               {/* Account Details section */}
-              <div style={{ fontSize: '12px', fontWeight: 700, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span className="material-icons" style={{ color: '#7c3aed', fontSize: '16px' }}>person</span> Account Details
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '20px' }}>
                 <div>
-                  <label style={{ fontSize: '13px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '4px' }}>Full Name *</label>
+                  <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Full Name *</label>
                   <input style={iStyle(saErrors.name)} placeholder="Super Admin name" value={saForm.name}
                     onChange={e => { setSaForm(f => ({ ...f, name: e.target.value })); setSaErrors(p => ({ ...p, name: undefined })); }} />
                   {saErrors.name && <p style={errStyle}>{saErrors.name}</p>}
                 </div>
                 <div>
-                  <label style={{ fontSize: '13px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '4px' }}>Email Address *</label>
+                  <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Email Address *</label>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <input type="email" style={{ ...iStyle(saErrors.email), flex: 1 }}
                       placeholder="superadmin@school.com" value={saForm.email}
@@ -1075,7 +1067,7 @@ export default function AdminManagement() {
                   {saErrors.email && <p style={errStyle}>{saErrors.email}</p>}
                 </div>
                 <div>
-                  <label style={{ fontSize: '13px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '4px' }}>Phone Number *</label>
+                  <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Phone Number *</label>
                   <input type="tel" style={iStyle(saErrors.mobile)} placeholder="10-digit mobile" maxLength={10}
                     value={saForm.mobile}
                     onChange={e => { setSaForm(f => ({ ...f, mobile: e.target.value.replace(/\D/g, '').slice(0,10) })); setSaErrors(p => ({ ...p, mobile: undefined })); }} />
@@ -1091,29 +1083,29 @@ export default function AdminManagement() {
               </div>
 
               {/* School Details section */}
-              <div style={{ fontSize: '12px', fontWeight: 700, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span className="material-icons" style={{ color: '#7c3aed', fontSize: '16px' }}>school</span> School Assignment
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                 <div>
-                  <label style={{ fontSize: '13px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '4px' }}>School Name *</label>
+                  <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>School Name *</label>
                   <input style={iStyle(saErrors.schoolName)} placeholder="e.g. Springfield High School" value={saForm.schoolName}
                     onChange={e => { setSaForm(f => ({ ...f, schoolName: e.target.value })); setSaErrors(p => ({ ...p, schoolName: undefined })); }} />
                   {saErrors.schoolName && <p style={errStyle}>{saErrors.schoolName}</p>}
                 </div>
                 <div>
-                  <label style={{ fontSize: '13px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '4px' }}>School Code / ID *</label>
+                  <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>School Code / ID *</label>
                   <input style={iStyle(saErrors.schoolCode)} placeholder="e.g. SPRHS (2–10 chars)"
                     value={saForm.schoolCode}
                     onChange={e => { setSaForm(f => ({ ...f, schoolCode: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') })); setSaErrors(p => ({ ...p, schoolCode: undefined })); }} />
                   {saErrors.schoolCode && <p style={errStyle}>{saErrors.schoolCode}</p>}
-                  <p style={{ fontSize: '11px', color: '#a0aec0', marginTop: '3px' }}>Alphanumeric, unique identifier for this school</p>
+                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px' }}>Alphanumeric, unique identifier for this school</p>
                 </div>
               </div>
             </div>
             <div className="modal-footer">
               <button onClick={() => setShowSaModal(false)}
-                style={{ padding: '10px 20px', border: '1.5px solid #e2e8f0', borderRadius: '8px', background: '#fff', cursor: 'pointer', fontWeight: 600 }}>Cancel</button>
+                style={{ padding: '10px 20px', border: '1.5px solid var(--border-strong)', borderRadius: '8px', background: 'var(--surface)', color: 'var(--text-secondary)', cursor: 'pointer', fontWeight: 600 }}>Cancel</button>
               <button onClick={handleCreateSuperAdmin} disabled={saSaving}
                 style={{ padding: '10px 24px', background: saSaving ? '#a0aec0' : 'linear-gradient(135deg,#7c3aed,#553c9a)', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: 700, cursor: saSaving ? 'not-allowed' : 'pointer' }}>
                 {saSaving ? 'Creating...' : 'Create Super Admin'}
@@ -1148,37 +1140,37 @@ export default function AdminManagement() {
                 </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ background: '#f7fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px 16px' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>School</div>
-                  <div style={{ fontSize: '14px', fontWeight: 600, color: '#2d3748' }}>{saSuccessModal.schoolName}</div>
-                  <div style={{ fontSize: '12px', color: '#718096', marginTop: '2px' }}>Code: <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#7c3aed' }}>{saSuccessModal.schoolCode}</span></div>
+                <div style={{ background: 'var(--surface-alt)', border: '1px solid var(--border-strong)', borderRadius: '10px', padding: '14px 16px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>School</div>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>{saSuccessModal.schoolName}</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>Code: <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#7c3aed' }}>{saSuccessModal.schoolCode}</span></div>
                 </div>
-                <div style={{ background: '#f7fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px 16px' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Email (Login ID)</div>
+                <div style={{ background: 'var(--surface-alt)', border: '1px solid var(--border-strong)', borderRadius: '10px', padding: '14px 16px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Email (Login ID)</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <span className="material-icons" style={{ fontSize: '17px', color: '#7c3aed', flexShrink: 0 }}>email</span>
-                    <span style={{ fontSize: '14px', fontWeight: 600, color: '#2d3748', flex: 1, wordBreak: 'break-all' }}>{saSuccessModal.email}</span>
+                    <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', flex: 1, wordBreak: 'break-all' }}>{saSuccessModal.email}</span>
                     <button onClick={() => { navigator.clipboard.writeText(saSuccessModal.email); showToast('Email copied!'); }} title="Copy"
-                      style={{ padding: '5px', border: '1px solid #e2e8f0', borderRadius: '6px', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-                      <span className="material-icons" style={{ fontSize: '15px', color: '#718096' }}>content_copy</span>
+                      style={{ padding: '5px', border: '1px solid var(--border-strong)', borderRadius: '6px', background: 'var(--surface)', cursor: 'pointer', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                      <span className="material-icons" style={{ fontSize: '15px', color: 'var(--text-secondary)' }}>content_copy</span>
                     </button>
                   </div>
                 </div>
                 {saSuccessModal.password && (
                   <div style={{ background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: '10px', padding: '14px 16px' }}>
-                    <div style={{ fontSize: '11px', fontWeight: 700, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Generated Password</div>
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Generated Password</div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <span className="material-icons" style={{ fontSize: '17px', color: '#d97706', flexShrink: 0 }}>lock</span>
                       <span style={{ flex: 1, fontSize: '15px', fontWeight: 700, color: '#92400e', fontFamily: 'monospace', letterSpacing: '0.12em', wordBreak: 'break-all' }}>
                         {showSaPassword ? saSuccessModal.password : '•'.repeat(saSuccessModal.password.length)}
                       </span>
                       <button onClick={() => setShowSaPassword(v => !v)}
-                        style={{ padding: '5px', border: '1px solid #e2e8f0', borderRadius: '6px', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-                        <span className="material-icons" style={{ fontSize: '15px', color: '#718096' }}>{showSaPassword ? 'visibility_off' : 'visibility'}</span>
+                        style={{ padding: '5px', border: '1px solid var(--border-strong)', borderRadius: '6px', background: 'var(--surface)', cursor: 'pointer', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                        <span className="material-icons" style={{ fontSize: '15px', color: 'var(--text-secondary)' }}>{showSaPassword ? 'visibility_off' : 'visibility'}</span>
                       </button>
                       <button onClick={() => { navigator.clipboard.writeText(saSuccessModal.password); showToast('Password copied!'); }}
-                        style={{ padding: '5px', border: '1px solid #e2e8f0', borderRadius: '6px', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-                        <span className="material-icons" style={{ fontSize: '15px', color: '#718096' }}>content_copy</span>
+                        style={{ padding: '5px', border: '1px solid var(--border-strong)', borderRadius: '6px', background: 'var(--surface)', cursor: 'pointer', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                        <span className="material-icons" style={{ fontSize: '15px', color: 'var(--text-secondary)' }}>content_copy</span>
                       </button>
                     </div>
                   </div>

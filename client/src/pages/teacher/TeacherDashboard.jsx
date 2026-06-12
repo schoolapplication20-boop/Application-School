@@ -338,16 +338,16 @@ export default function TeacherDashboard() {
         {stats.map((s, i) => (
           s.isText ? (
             <div key={i} style={{
-              background: '#fff', borderRadius: 18, padding: '22px 20px 18px',
-              boxShadow: '0 2px 14px rgba(0,0,0,0.07)', border: '1px solid #f0f4f8',
+              background: 'var(--surface)', borderRadius: 18, padding: '22px 20px 18px',
+              boxShadow: '0 2px 14px rgba(0,0,0,0.07)', border: '1px solid var(--border)',
               position: 'relative', overflow: 'hidden',
             }}>
               <div style={{ position: 'absolute', top: -24, right: -24, width: 90, height: 90, borderRadius: '50%', background: s.color + '14', pointerEvents: 'none' }} />
               <div style={{ width: 50, height: 50, borderRadius: 14, background: `linear-gradient(135deg,${s.color}22,${s.color}40)`, border: `1.5px solid ${s.color}35`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
                 <span className="material-icons" style={{ color: s.color, fontSize: 26 }}>{s.icon}</span>
               </div>
-              <div style={{ fontSize: 17, fontWeight: 800, color: '#1a202c', lineHeight: 1.2, marginBottom: 6, letterSpacing: '-0.3px', fontFamily: 'Poppins,sans-serif' }}>{s.value}</div>
-              <div style={{ fontSize: 12.5, fontWeight: 600, color: '#8a99b0', letterSpacing: '0.02em' }}>{s.title}</div>
+              <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2, marginBottom: 6, letterSpacing: '-0.3px', fontFamily: 'Poppins,sans-serif' }}>{s.value}</div>
+              <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.02em' }}>{s.title}</div>
               <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 4, background: `linear-gradient(90deg,${s.color},${s.color}50)`, borderRadius: '0 0 18px 18px' }} />
             </div>
           ) : (
@@ -357,24 +357,24 @@ export default function TeacherDashboard() {
       </div>
 
       {/* Quick Actions */}
-      <div style={{ background: '#fff', borderRadius: 18, padding: '22px 24px', boxShadow: '0 2px 14px rgba(0,0,0,0.07)', border: '1px solid #f0f4f8', marginBottom: 24 }}>
+      <div style={{ background: 'var(--surface)', borderRadius: 18, padding: '22px 24px', boxShadow: '0 2px 14px rgba(0,0,0,0.07)', border: '1px solid var(--border)', marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18 }}>
           <div style={{ width: 4, height: 20, background: 'linear-gradient(180deg,#0de1e8,#4361ee)', borderRadius: 2 }} />
-          <span style={{ fontSize: 15, fontWeight: 700, color: '#1a202c' }}>Quick Actions</span>
+          <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>Quick Actions</span>
         </div>
         <div className="quick-actions-grid">
           {QUICK_ACTIONS.map(action => (
             <div
               key={action.label}
               onClick={() => navigate(action.path)}
-              style={{ borderRadius: 14, padding: '16px 12px', cursor: 'pointer', background: '#fafbfc', border: '1.5px solid #f0f4f8', textAlign: 'center', transition: 'transform 0.15s, box-shadow 0.15s' }}
+              style={{ borderRadius: 14, padding: '16px 12px', cursor: 'pointer', background: 'var(--surface-alt)', border: '1.5px solid var(--border)', textAlign: 'center', transition: 'transform 0.15s, box-shadow 0.15s' }}
               onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 8px 24px ${action.color}28`; e.currentTarget.style.borderColor = action.color + '50'; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = '#f0f4f8'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = 'var(--border)'; }}
             >
               <div style={{ width: 48, height: 48, borderRadius: 13, background: action.grad, border: `1.5px solid ${action.color}35`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px' }}>
                 <span className="material-icons" style={{ fontSize: 24, color: action.color }}>{action.icon}</span>
               </div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#2d3748', lineHeight: 1.3 }}>{action.label}</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.3 }}>{action.label}</div>
             </div>
           ))}
         </div>
@@ -384,13 +384,13 @@ export default function TeacherDashboard() {
       <div className="grid-1-1" style={{ marginBottom: '24px' }}>
 
         {/* Today's Schedule */}
-        <div style={{ background: '#fff', borderRadius: 18, padding: '22px 24px', boxShadow: '0 2px 14px rgba(0,0,0,0.07)', border: '1px solid #f0f4f8' }}>
+        <div style={{ background: 'var(--surface)', borderRadius: 18, padding: '22px 24px', boxShadow: '0 2px 14px rgba(0,0,0,0.07)', border: '1px solid var(--border)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{ width: 4, height: 20, background: 'linear-gradient(180deg,#4361ee,#0de1e8)', borderRadius: 2 }} />
               <div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: '#1a202c' }}>Today's Schedule</div>
-                <div style={{ fontSize: 12, color: '#a0aec0', marginTop: 1 }}>{todayName} · {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long' })}</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>Today's Schedule</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>{todayName} · {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long' })}</div>
               </div>
             </div>
             <span style={{ padding: '4px 12px', background: '#4361ee18', color: '#4361ee', borderRadius: '20px', fontSize: '12px', fontWeight: 600 }}>
@@ -399,7 +399,7 @@ export default function TeacherDashboard() {
           </div>
 
           {todaySchedule.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '32px 16px', color: '#a0aec0' }}>
+            <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--text-muted)' }}>
               <span className="material-icons" style={{ fontSize: 40, display: 'block', marginBottom: 8 }}>event_available</span>
               <div style={{ fontSize: 13, fontWeight: 600 }}>No schedule assigned yet</div>
               <div style={{ fontSize: 12, marginTop: 4 }}>
@@ -411,26 +411,26 @@ export default function TeacherDashboard() {
               {todaySchedule.map((entry, i) => {
                 const color = subjectColor(entry.subject);
                 return (
-                  <div key={entry.id} style={{ padding: '14px 0', borderBottom: i < todaySchedule.length - 1 ? '1px solid #f7fafc' : 'none', display: 'flex', alignItems: 'flex-start' }}>
-                    <div style={{ minWidth: '90px', fontSize: '12px', fontWeight: 600, color: '#a0aec0', paddingTop: 2 }}>
+                  <div key={entry.id} style={{ padding: '14px 0', borderBottom: i < todaySchedule.length - 1 ? '1px solid var(--border)' : 'none', display: 'flex', alignItems: 'flex-start' }}>
+                    <div style={{ minWidth: '90px', fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', paddingTop: 2 }}>
                       {formatTime(entry.startTime)}
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', margin: '0 12px' }}>
                       <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: color }} />
-                      {i < todaySchedule.length - 1 && <div style={{ width: '2px', height: '28px', background: '#e2e8f0' }} />}
+                      {i < todaySchedule.length - 1 && <div style={{ width: '2px', height: '28px', background: 'var(--border-strong)' }} />}
                     </div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '14px', fontWeight: 600, color: '#2d3748' }}>{entry.subject}</div>
+                      <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>{entry.subject}</div>
                       <div style={{ display: 'flex', gap: '8px', marginTop: '3px', flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: '11px', color: '#a0aec0' }}>Class {entry.classSection}</span>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Class {entry.classSection}</span>
                         {entry.room && (
                           <>
-                            <span style={{ fontSize: '11px', color: '#a0aec0' }}>•</span>
-                            <span style={{ fontSize: '11px', color: '#a0aec0' }}>Room {entry.room}</span>
+                            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>•</span>
+                            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Room {entry.room}</span>
                           </>
                         )}
-                        <span style={{ fontSize: '11px', color: '#a0aec0' }}>•</span>
-                        <span style={{ fontSize: '11px', color: '#a0aec0' }}>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>•</span>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
                           Until {formatTime(entry.endTime)}
                         </span>
                       </div>
@@ -449,12 +449,12 @@ export default function TeacherDashboard() {
         </div>
 
         {/* Attendance Trend */}
-        <div style={{ background: '#fff', borderRadius: 18, padding: '22px 24px', boxShadow: '0 2px 14px rgba(0,0,0,0.07)', border: '1px solid #f0f4f8' }}>
+        <div style={{ background: 'var(--surface)', borderRadius: 18, padding: '22px 24px', boxShadow: '0 2px 14px rgba(0,0,0,0.07)', border: '1px solid var(--border)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18 }}>
             <div style={{ width: 4, height: 20, background: 'linear-gradient(180deg,#0de1e8,#38b2ac)', borderRadius: 2 }} />
             <div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: '#1a202c' }}>Attendance Trend</div>
-              <div style={{ fontSize: 12, color: '#a0aec0', marginTop: 1 }}>Weekly attendance overview</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>Attendance Trend</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>Weekly attendance overview</div>
             </div>
           </div>
           <LineChartComponent
@@ -466,13 +466,13 @@ export default function TeacherDashboard() {
       </div>
 
       {/* Assigned Classes */}
-      <div style={{ background: '#fff', borderRadius: 18, boxShadow: '0 2px 14px rgba(0,0,0,0.07)', border: '1px solid #f0f4f8', marginBottom: 24 }}>
-        <div style={{ padding: '20px 24px', borderBottom: '1px solid #f0f4f8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ background: 'var(--surface)', borderRadius: 18, boxShadow: '0 2px 14px rgba(0,0,0,0.07)', border: '1px solid var(--border)', marginBottom: 24 }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ width: 4, height: 20, background: 'linear-gradient(180deg,#276749,#38a169)', borderRadius: 2 }} />
             <div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: '#1a202c' }}>My Assigned Classes</div>
-              <div style={{ fontSize: 12, color: '#a0aec0', marginTop: 2 }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>My Assigned Classes</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
                 {assignedClasses.length > 0
                   ? `${assignedClasses.length} class${assignedClasses.length > 1 ? 'es' : ''} · ${classStudents.filter(s => s.status !== 'Inactive').length} active students`
                   : 'No classes assigned yet'}
@@ -487,7 +487,7 @@ export default function TeacherDashboard() {
         </div>
 
         {assignedClasses.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '48px 20px', color: '#a0aec0' }}>
+          <div style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--text-muted)' }}>
             <span className="material-icons" style={{ fontSize: 48, display: 'block', marginBottom: 10 }}>class</span>
             <div style={{ fontSize: 14, fontWeight: 600 }}>No classes assigned</div>
             <div style={{ fontSize: 12, marginTop: 4 }}>Ask your admin to assign classes to your profile</div>
@@ -519,7 +519,7 @@ export default function TeacherDashboard() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
                     <div>
                       <div style={{ fontSize: 13, fontWeight: 600, color, lineHeight: 1, marginBottom: 2 }}>Class</div>
-                      <div style={{ fontSize: 26, fontWeight: 800, color: '#1a202c', lineHeight: 1.1 }}>
+                      <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.1 }}>
                         {cls.name}{cls.section ? `-${cls.section}` : ''}
                       </div>
                     </div>
@@ -528,11 +528,11 @@ export default function TeacherDashboard() {
                     </div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <div style={{ fontSize: 12, color: '#4a5568' }}>
-                      <span className="material-icons" style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 4, color: '#a0aec0' }}>person</span>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                      <span className="material-icons" style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 4, color: 'var(--text-muted)' }}>person</span>
                       <strong>{active.length}</strong> active students
                     </div>
-                    <div style={{ fontSize: 12, color: '#a0aec0' }}>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                       {teacherProfile?.subject || 'Subject not set'}
                     </div>
                   </div>
@@ -545,13 +545,13 @@ export default function TeacherDashboard() {
 
       {/* Students Table (first 8) */}
       {classStudents.length > 0 && (
-        <div style={{ background: '#fff', borderRadius: 18, boxShadow: '0 2px 14px rgba(0,0,0,0.07)', border: '1px solid #f0f4f8' }}>
-          <div style={{ padding: '20px 24px', borderBottom: '1px solid #f0f4f8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ background: 'var(--surface)', borderRadius: 18, boxShadow: '0 2px 14px rgba(0,0,0,0.07)', border: '1px solid var(--border)' }}>
+          <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{ width: 4, height: 20, background: 'linear-gradient(180deg,#3182ce,#0de1e8)', borderRadius: 2 }} />
               <div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: '#1a202c' }}>My Students</div>
-                <div style={{ fontSize: 12, color: '#a0aec0', marginTop: 2 }}>Students in your assigned classes</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>My Students</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Students in your assigned classes</div>
               </div>
             </div>
             <button onClick={() => navigate('/teacher/attendance')}
@@ -562,24 +562,24 @@ export default function TeacherDashboard() {
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
-                <tr style={{ background: '#f7fafc' }}>
+                <tr style={{ background: 'var(--surface-alt)' }}>
                   {['Student', 'Roll No', 'Class', 'Status'].map(h => (
-                    <th key={h} style={{ padding: '11px 16px', textAlign: 'left', fontWeight: 700, color: '#4a5568', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+                    <th key={h} style={{ padding: '11px 16px', textAlign: 'left', fontWeight: 700, color: 'var(--text-secondary)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {classStudents.slice(0, 8).map((s, i) => (
-                  <tr key={s.id} style={{ borderBottom: '1px solid #f0f4f8', background: i % 2 === 0 ? '#fff' : '#fafbfc' }}>
+                  <tr key={s.id} style={{ borderBottom: '1px solid var(--border)', background: i % 2 === 0 ? 'var(--surface)' : 'var(--surface-alt)' }}>
                     <td style={{ padding: '12px 16px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <div style={{ width: 32, height: 32, borderRadius: 8, background: '#0de1e820', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#276749' }}>
                           {s.name.charAt(0)}
                         </div>
-                        <span style={{ fontWeight: 600, color: '#2d3748' }}>{s.name}</span>
+                        <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{s.name}</span>
                       </div>
                     </td>
-                    <td style={{ padding: '12px 16px', color: '#718096' }}>{s.rollNo || '—'}</td>
+                    <td style={{ padding: '12px 16px', color: 'var(--text-secondary)' }}>{s.rollNo || '—'}</td>
                     <td style={{ padding: '12px 16px' }}>
                       <span style={{ padding: '3px 10px', background: '#e8f4fd', color: '#2c5282', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
                         {studentClassKey(s)}
@@ -599,7 +599,7 @@ export default function TeacherDashboard() {
               </tbody>
             </table>
             {classStudents.length > 8 && (
-              <div style={{ padding: '12px 16px', textAlign: 'center', fontSize: 12, color: '#a0aec0', borderTop: '1px solid #f0f4f8' }}>
+              <div style={{ padding: '12px 16px', textAlign: 'center', fontSize: 12, color: 'var(--text-muted)', borderTop: '1px solid var(--border)' }}>
                 Showing 8 of {classStudents.length} students ·{' '}
                 <button onClick={() => navigate('/teacher/attendance')} style={{ background: 'none', border: 'none', color: '#0de1e8', fontWeight: 600, cursor: 'pointer', fontSize: 12 }}>
                   See all

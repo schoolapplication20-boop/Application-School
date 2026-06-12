@@ -7,6 +7,8 @@ import com.schoolers.model.Teacher;
 import com.schoolers.model.User;
 import com.schoolers.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
@@ -16,35 +18,46 @@ import java.util.stream.Collectors;
 @Service
 public class MessageService {
 
+    /** Cap on message lists returned by these endpoints, to avoid unbounded growth over time. */
+    private static final int MAX_MESSAGE_RESULTS = 200;
+    private static final Pageable MESSAGE_RESULTS_PAGE = PageRequest.of(0, MAX_MESSAGE_RESULTS);
+
+    /** Push notification body is truncated to this length so it stays readable in a mobile notification banner. */
+    private static final int PUSH_BODY_MAX_LENGTH = 120;
+
     @Autowired private MessageRepository messageRepository;
     @Autowired private UserRepository userRepository;
     @Autowired private StudentRepository studentRepository;
     @Autowired private TeacherRepository teacherRepository;
+    @Autowired private ExpoPushService expoPushService;
 
     // ── Existing 1-to-1 message methods ──────────────────────────────────────
 
     public ApiResponse<List<Message>> getMessagesForUser(Long userId) {
-        return ApiResponse.success(messageRepository.findAllByUserId(userId));
+        return ApiResponse.success(messageRepository.findAllByUserId(userId, MESSAGE_RESULTS_PAGE));
     }
 
     public ApiResponse<List<Message>> getConversation(Long u1, Long u2) {
-        return ApiResponse.success(messageRepository.findConversation(u1, u2));
+        // Fetch the most recent messages (newest first) and reverse to chronological order
+        List<Message> recent = messageRepository.findConversationDesc(u1, u2, MESSAGE_RESULTS_PAGE);
+        Collections.reverse(recent);
+        return ApiResponse.success(recent);
     }
 
-    public ApiResponse<Message> sendMessage(Map<String, Object> body) {
-        Long senderId = longVal(body, "senderId", null);
+    public ApiResponse<Message> sendMessage(Map<String, Object> body, Authentication auth) {
+        User sender = resolveUser(auth);
+        if (sender == null) return ApiResponse.error("Unauthorized");
+
         Long receiverId = longVal(body, "receiverId", null);
         String content = str(body, "content", null);
-        if (senderId == null) return ApiResponse.error("Sender ID is required");
         if (receiverId == null) return ApiResponse.error("Receiver ID is required");
         if (content == null || content.isBlank()) return ApiResponse.error("Message content is required");
         if (content.length() > 5000) return ApiResponse.error("Message content cannot exceed 5000 characters");
 
-        String senderName = str(body, "senderName", "Someone");
         Message msg = Message.builder()
-                .senderId(senderId)
-                .senderName(senderName)
-                .senderRole(str(body, "senderRole", null))
+                .senderId(sender.getId())
+                .senderName(sender.getName())
+                .senderRole(sender.getRole().name())
                 .receiverId(receiverId)
                 .receiverName(str(body, "receiverName", null))
                 .receiverRole(str(body, "receiverRole", null))
@@ -52,6 +65,10 @@ public class MessageService {
                 .build();
         Message saved = messageRepository.save(msg);
         return ApiResponse.success("Message sent", saved);
+    }
+
+    public Optional<Message> findById(Long id) {
+        return messageRepository.findById(id);
     }
 
     public ApiResponse<String> markAsRead(Long id) {
@@ -83,7 +100,7 @@ public class MessageService {
 
         String classSection = buildClassSection(student.getClassName(), student.getSection());
         List<Message> messages = messageRepository.findForStudent(
-                student.getSchoolId(), classSection, student.getId());
+                student.getSchoolId(), classSection, student.getId(), MESSAGE_RESULTS_PAGE);
 
         List<Map<String, Object>> result = messages.stream()
                 .map(m -> toStudentDto(m, user.getId()))
@@ -104,7 +121,7 @@ public class MessageService {
 
         String classSection = buildClassSection(student.getClassName(), student.getSection());
         List<Message> messages = messageRepository.findForStudent(
-                student.getSchoolId(), classSection, student.getId());
+                student.getSchoolId(), classSection, student.getId(), MESSAGE_RESULTS_PAGE);
 
         long unread = messages.stream()
                 .filter(m -> !isReadByUser(m, user.getId()))
@@ -182,7 +199,49 @@ public class MessageService {
                 .readByUserIds("")
                 .build();
 
-        return ApiResponse.success("Message broadcast", messageRepository.save(msg));
+        Message saved = messageRepository.save(msg);
+        sendPushForBroadcast(saved);
+        return ApiResponse.success("Message broadcast", saved);
+    }
+
+    /** Sends a push notification to the students targeted by a broadcast message, if they have a registered device. */
+    private void sendPushForBroadcast(Message msg) {
+        List<String> tokens = new ArrayList<>();
+
+        if (msg.getTargetStudentId() != null) {
+            userRepository.findByStudentId(msg.getTargetStudentId())
+                    .map(User::getPushToken)
+                    .filter(t -> t != null && !t.isBlank())
+                    .ifPresent(tokens::add);
+        } else if (Boolean.TRUE.equals(msg.getIsSchoolWide())) {
+            for (User u : userRepository.findByRoleAndSchoolId(User.Role.STUDENT, msg.getSchoolId())) {
+                if (u.getPushToken() != null && !u.getPushToken().isBlank()) tokens.add(u.getPushToken());
+            }
+            // School-wide announcements are addressed to staff too — notify them, excluding the sender.
+            for (User.Role staffRole : List.of(User.Role.TEACHER, User.Role.ADMIN, User.Role.SUPER_ADMIN)) {
+                for (User u : userRepository.findByRoleAndSchoolId(staffRole, msg.getSchoolId())) {
+                    if (u.getId().equals(msg.getSenderId())) continue;
+                    if (u.getPushToken() != null && !u.getPushToken().isBlank()) tokens.add(u.getPushToken());
+                }
+            }
+        } else if (msg.getClassSection() != null) {
+            List<Long> studentIds = studentRepository.findBySchoolId(msg.getSchoolId()).stream()
+                    .filter(s -> msg.getClassSection().equals(buildClassSection(s.getClassName(), s.getSection())))
+                    .map(Student::getId)
+                    .collect(Collectors.toList());
+            for (User u : userRepository.findByStudentIdIn(studentIds)) {
+                if (u.getPushToken() != null && !u.getPushToken().isBlank()) tokens.add(u.getPushToken());
+            }
+        }
+
+        if (tokens.isEmpty()) return;
+
+        String title = msg.getTitle() != null ? msg.getTitle() : "Message";
+        String body = msg.getContent().length() > PUSH_BODY_MAX_LENGTH
+                ? msg.getContent().substring(0, PUSH_BODY_MAX_LENGTH) + "…"
+                : msg.getContent();
+        Map<String, Object> data = Map.of("type", "message", "messageId", msg.getId());
+        expoPushService.sendToMany(tokens, title, body, data);
     }
 
     /** GET /api/messages/broadcasts — list broadcasts visible to authenticated admin/teacher */
@@ -193,7 +252,7 @@ public class MessageService {
         Long schoolId = user.getSchoolId();
         if (schoolId == null) return ApiResponse.error("No school context");
 
-        List<Message> msgs = messageRepository.findBroadcastsBySchool(schoolId);
+        List<Message> msgs = messageRepository.findBroadcastsBySchool(schoolId, MESSAGE_RESULTS_PAGE);
         List<Map<String, Object>> result = msgs.stream().map(m -> {
             Map<String, Object> dto = new LinkedHashMap<>();
             dto.put("id", m.getId());

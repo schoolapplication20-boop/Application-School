@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Layout from '../../components/Layout';
-import Toast from '../../components/Toast';
 import { onlineExamStudentAPI } from '../../services/api';
+import { useToast } from '../../context/ToastContext';
 
 function formatDue(dt) {
   if (!dt) return '—';
@@ -64,7 +64,7 @@ function CountdownTimer({ dueDateTime }) {
 
   if (!dueDateTime) return null;
   const diff = msLeft(dueDateTime);
-  const color = diff < 600000 ? '#c53030' : diff < 3600000 ? '#d69e2e' : '#2d3748';
+  const color = diff < 600000 ? '#c53030' : diff < 3600000 ? '#d69e2e' : 'var(--text-primary)';
 
   return (
     <span style={{ fontFamily: 'monospace', fontSize: 16, fontWeight: 700, color }}>
@@ -84,7 +84,6 @@ export default function OnlineExamTake() {
   const [view,         setView]         = useState('list');   // 'list' | 'take' | 'result'
   const [exams,        setExams]        = useState([]);
   const [loading,      setLoading]      = useState(true);
-  const [toast,        setToast]        = useState(null);
 
   // Active exam taking state
   const [activeExam,   setActiveExam]   = useState(null);
@@ -101,10 +100,7 @@ export default function OnlineExamTake() {
 
   const autoSaveRef = useRef(null);
 
-  const showToast = (message, type = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3500);
-  };
+  const showToast = useToast();
 
   // ── Load exam list ─────────────────────────────────────────────────────────
   const loadExams = useCallback(async () => {
@@ -251,22 +247,20 @@ export default function OnlineExamTake() {
   if (view === 'list') {
     return (
       <Layout pageTitle="Online Exams">
-        {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-
         <div className="page-header">
           <h1>Online Exams</h1>
           <p>View and take your scheduled online exams</p>
         </div>
 
         {loading ? (
-          <div style={{ padding: 60, textAlign: 'center', color: '#a0aec0' }}>
+          <div style={{ padding: 60, textAlign: 'center', color: 'var(--text-muted)' }}>
             <span className="material-icons" style={{ fontSize: 40, display: 'block', marginBottom: 10, animation: 'spin 1s linear infinite' }}>autorenew</span>
             Loading exams…
           </div>
         ) : exams.length === 0 ? (
           <div style={{ padding: 60, textAlign: 'center' }}>
-            <span className="material-icons" style={{ fontSize: 56, color: '#e2e8f0', display: 'block', marginBottom: 12 }}>quiz</span>
-            <p style={{ color: '#a0aec0', fontSize: 14 }}>No exams available for your class right now.</p>
+            <span className="material-icons" style={{ fontSize: 56, color: 'var(--border-strong)', display: 'block', marginBottom: 12 }}>quiz</span>
+            <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>No exams available for your class right now.</p>
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
@@ -279,20 +273,20 @@ export default function OnlineExamTake() {
               const canView = as === 'SUBMITTED' || as === 'GRADED';
 
               return (
-                <div key={exam.id} style={{ border: '1px solid #e2e8f0', borderRadius: 14, padding: 20, background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+                <div key={exam.id} style={{ border: '1px solid var(--border-strong)', borderRadius: 14, padding: 20, background: 'var(--surface)', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                         <span className="material-icons" style={{ fontSize: 20, color: '#0de1e8' }}>quiz</span>
-                        <h3 style={{ fontSize: 15, fontWeight: 700, color: '#2d3748', margin: 0 }}>{exam.title}</h3>
+                        <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{exam.title}</h3>
                       </div>
                       {exam.subject && (
-                        <div style={{ fontSize: 12, color: '#718096', marginBottom: 4 }}>
+                        <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 }}>
                           <span className="material-icons" style={{ fontSize: 13, verticalAlign: 'middle', marginRight: 4 }}>book</span>
                           {exam.subject}
                         </div>
                       )}
-                      <div style={{ fontSize: 12, color: '#718096' }}>
+                      <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
                         <span className="material-icons" style={{ fontSize: 13, verticalAlign: 'middle', marginRight: 4 }}>person</span>
                         {exam.teacherName || 'Teacher'}
                       </div>
@@ -305,7 +299,7 @@ export default function OnlineExamTake() {
                           {as === 'IN_PROGRESS' ? 'In Progress' : as === 'SUBMITTED' ? 'Submitted' : 'Graded'}
                         </span>
                       ) : (
-                        <span style={{ padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 700, background: '#edf2f7', color: '#718096' }}>
+                        <span style={{ padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 700, background: 'var(--surface-alt)', color: 'var(--text-secondary)' }}>
                           {isPastDue ? 'Missed' : 'Not Started'}
                         </span>
                       )}
@@ -317,7 +311,7 @@ export default function OnlineExamTake() {
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', fontSize: 12, color: '#718096', marginBottom: 14 }}>
+                  <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', fontSize: 12, color: 'var(--text-secondary)', marginBottom: 14 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                       <span className="material-icons" style={{ fontSize: 13 }}>help_outline</span>
                       {exam.questionCount ?? 0} questions
@@ -341,7 +335,7 @@ export default function OnlineExamTake() {
                   )}
 
                   {exam.instructions && (
-                    <div style={{ fontSize: 12, color: '#4a5568', padding: '8px 10px', background: '#f7fafc', borderRadius: 6, marginBottom: 12, lineHeight: 1.5 }}>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', padding: '8px 10px', background: 'var(--surface-alt)', borderRadius: 6, marginBottom: 12, lineHeight: 1.5 }}>
                       {exam.instructions.length > 120 ? exam.instructions.slice(0, 120) + '…' : exam.instructions}
                     </div>
                   )}
@@ -374,31 +368,29 @@ export default function OnlineExamTake() {
   if (view === 'result') {
     return (
       <Layout pageTitle="Exam Result">
-        {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20, fontSize: 13, color: '#718096' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20, fontSize: 13, color: 'var(--text-secondary)' }}>
           <button onClick={() => setView('list')}
             style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#0de1e8', fontWeight: 600, fontSize: 13, padding: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
             <span className="material-icons" style={{ fontSize: 15 }}>arrow_back</span> Back to Exams
           </button>
-          {activeExam && <><span>|</span><span style={{ fontWeight: 700, color: '#2d3748' }}>{activeExam.title || activeExam.examTitle}</span></>}
+          {activeExam && <><span>|</span><span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{activeExam.title || activeExam.examTitle}</span></>}
         </div>
 
         {loadingResult ? (
-          <div style={{ padding: 60, textAlign: 'center', color: '#a0aec0' }}>
+          <div style={{ padding: 60, textAlign: 'center', color: 'var(--text-muted)' }}>
             <span className="material-icons" style={{ fontSize: 36, display: 'block', marginBottom: 10, animation: 'spin 1s linear infinite' }}>autorenew</span>
             Loading result…
           </div>
         ) : resultData ? (
           <div>
             {/* Score card */}
-            <div style={{ border: '1px solid #e2e8f0', borderRadius: 14, padding: 24, marginBottom: 20, background: '#fff', textAlign: 'center' }}>
+            <div style={{ border: '1px solid var(--border-strong)', borderRadius: 14, padding: 24, marginBottom: 20, background: 'var(--surface)', textAlign: 'center' }}>
               <div style={{ fontSize: 40, fontWeight: 800, color: resultData.isGraded ? '#276749' : '#2b6cb0', marginBottom: 6 }}>
                 {resultData.totalScore !== null && resultData.totalScore !== undefined
                   ? `${resultData.totalScore} / ${resultData.totalMarks}`
                   : 'Pending'}
               </div>
-              <div style={{ fontSize: 14, color: '#718096', marginBottom: 12 }}>
+              <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 12 }}>
                 {resultData.isGraded ? 'Final Score' : 'Partial Score (Written answers pending grading)'}
               </div>
               <span style={{ padding: '4px 16px', borderRadius: 20, fontSize: 13, fontWeight: 700,
@@ -410,24 +402,24 @@ export default function OnlineExamTake() {
 
             {/* Answer breakdown */}
             <div className="data-table-card">
-              <div style={{ padding: '14px 20px', borderBottom: '1px solid #edf2f7', fontWeight: 700, fontSize: 14, color: '#2d3748' }}>
+              <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>
                 Answer Breakdown
               </div>
               <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {(resultData.answers || []).map((ans, idx) => (
-                  <div key={ans.questionId} style={{ border: '1px solid #edf2f7', borderRadius: 10, padding: 14 }}>
+                  <div key={ans.questionId} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 14 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
                       <div style={{ flex: 1 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                          <span style={{ width: 22, height: 22, borderRadius: '50%', background: '#edf2f7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#4a5568', flexShrink: 0 }}>{idx + 1}</span>
+                          <span style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--surface-alt)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', flexShrink: 0 }}>{idx + 1}</span>
                           <span style={{ padding: '1px 6px', borderRadius: 8, fontSize: 10, fontWeight: 700,
                             background: ans.questionType === 'MCQ' ? '#ebf8ff' : '#faf5ff',
                             color: ans.questionType === 'MCQ' ? '#2b6cb0' : '#6b46c1' }}>
                             {ans.questionType}
                           </span>
-                          <span style={{ fontSize: 11, color: '#a0aec0' }}>{ans.marks} mark{ans.marks !== 1 ? 's' : ''}</span>
+                          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{ans.marks} mark{ans.marks !== 1 ? 's' : ''}</span>
                         </div>
-                        <div style={{ fontSize: 13, color: '#2d3748', marginBottom: 8 }}>{ans.questionText}</div>
+                        <div style={{ fontSize: 13, color: 'var(--text-primary)', marginBottom: 8 }}>{ans.questionText}</div>
 
                         {ans.questionType === 'MCQ' && (
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px', marginBottom: 8 }}>
@@ -437,7 +429,7 @@ export default function OnlineExamTake() {
                                 <div key={lbl} style={{
                                   fontSize: 12, padding: '3px 8px', borderRadius: 4,
                                   background: isStudent && ans.isCorrect ? '#f0fff4' : isStudent ? '#fff5f5' : 'transparent',
-                                  color: isStudent && ans.isCorrect ? '#276749' : isStudent ? '#c53030' : '#4a5568',
+                                  color: isStudent && ans.isCorrect ? '#276749' : isStudent ? '#c53030' : 'var(--text-secondary)',
                                   display: 'flex', alignItems: 'center', gap: 4,
                                 }}>
                                   <strong>{lbl}.</strong> {val}
@@ -450,8 +442,8 @@ export default function OnlineExamTake() {
                         )}
 
                         {ans.questionType === 'WRITTEN' && (
-                          <div style={{ fontSize: 12, padding: '6px 10px', background: '#f7fafc', borderRadius: 6, color: '#4a5568' }}>
-                            Your answer: <em>{ans.studentAnswer || <span style={{ color: '#a0aec0' }}>No answer provided</span>}</em>
+                          <div style={{ fontSize: 12, padding: '6px 10px', background: 'var(--surface-alt)', borderRadius: 6, color: 'var(--text-secondary)' }}>
+                            Your answer: <em>{ans.studentAnswer || <span style={{ color: 'var(--text-muted)' }}>No answer provided</span>}</em>
                           </div>
                         )}
                       </div>
@@ -485,21 +477,19 @@ export default function OnlineExamTake() {
 
     return (
       <Layout pageTitle={activeExam.title}>
-        {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-
         {/* Header bar */}
-        <div style={{ border: '1px solid #e2e8f0', borderRadius: 12, padding: '14px 20px', marginBottom: 20, background: '#fff', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+        <div style={{ border: '1px solid var(--border-strong)', borderRadius: 12, padding: '14px 20px', marginBottom: 20, background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, fontSize: 16, color: '#2d3748', marginBottom: 2 }}>{activeExam.title}</div>
-            <div style={{ fontSize: 12, color: '#718096' }}>{activeExam.subject} · {activeExam.totalMarks} marks · {questions.length} questions</div>
+            <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text-primary)', marginBottom: 2 }}>{activeExam.title}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{activeExam.subject} · {activeExam.totalMarks} marks · {questions.length} questions</div>
           </div>
           {activeExam.dueDateTime && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-              <span className="material-icons" style={{ fontSize: 18, color: '#718096' }}>timer</span>
+              <span className="material-icons" style={{ fontSize: 18, color: 'var(--text-secondary)' }}>timer</span>
               <CountdownTimer dueDateTime={activeExam.dueDateTime} />
             </div>
           )}
-          <div style={{ fontSize: 13, color: '#718096', flexShrink: 0 }}>
+          <div style={{ fontSize: 13, color: 'var(--text-secondary)', flexShrink: 0 }}>
             {answeredCount}/{questions.length} answered
           </div>
         </div>
@@ -516,8 +506,8 @@ export default function OnlineExamTake() {
 
         <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 16, alignItems: 'start' }}>
           {/* Question navigator */}
-          <div style={{ border: '1px solid #e2e8f0', borderRadius: 12, padding: 14, background: '#fff', position: 'sticky', top: 80 }}>
-            <div style={{ fontWeight: 700, fontSize: 13, color: '#4a5568', marginBottom: 10 }}>Questions</div>
+          <div style={{ border: '1px solid var(--border-strong)', borderRadius: 12, padding: 14, background: 'var(--surface)', position: 'sticky', top: 80 }}>
+            <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-secondary)', marginBottom: 10 }}>Questions</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
               {questions.map((qs, idx) => {
                 const ans = answers[qs.id];
@@ -526,9 +516,9 @@ export default function OnlineExamTake() {
                   <button key={qs.id}
                     onClick={() => setCurrentQ(idx)}
                     style={{
-                      border: idx === currentQ ? '2px solid #0de1e8' : '1.5px solid #e2e8f0',
-                      background: idx === currentQ ? '#e0fffe' : answered ? '#f0fff4' : '#f7fafc',
-                      color: idx === currentQ ? '#0de1e8' : answered ? '#276749' : '#a0aec0',
+                      border: idx === currentQ ? '2px solid #0de1e8' : '1.5px solid var(--border-strong)',
+                      background: idx === currentQ ? '#e0fffe' : answered ? '#f0fff4' : 'var(--surface-alt)',
+                      color: idx === currentQ ? '#0de1e8' : answered ? '#276749' : 'var(--text-muted)',
                       borderRadius: 6, padding: '5px', fontSize: 12, fontWeight: 700, cursor: 'pointer',
                     }}>
                     {idx + 1}
@@ -536,33 +526,33 @@ export default function OnlineExamTake() {
                 );
               })}
             </div>
-            <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 4, fontSize: 11, color: '#718096' }}>
+            <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 4, fontSize: 11, color: 'var(--text-secondary)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ width: 12, height: 12, background: '#f0fff4', border: '1.5px solid #c6f6d5', borderRadius: 3 }} />
                 Answered
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ width: 12, height: 12, background: '#f7fafc', border: '1.5px solid #e2e8f0', borderRadius: 3 }} />
+                <span style={{ width: 12, height: 12, background: 'var(--surface-alt)', border: '1.5px solid var(--border-strong)', borderRadius: 3 }} />
                 Not answered
               </div>
             </div>
           </div>
 
           {/* Question area */}
-          <div style={{ border: '1px solid #e2e8f0', borderRadius: 12, background: '#fff', overflow: 'hidden' }}>
+          <div style={{ border: '1px solid var(--border-strong)', borderRadius: 12, background: 'var(--surface)', overflow: 'hidden' }}>
             {q ? (
               <>
-                <div style={{ padding: '18px 24px', borderBottom: '1px solid #edf2f7' }}>
+                <div style={{ padding: '18px 24px', borderBottom: '1px solid var(--border)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                    <span style={{ fontWeight: 700, fontSize: 13, color: '#4a5568' }}>Question {currentQ + 1} of {questions.length}</span>
+                    <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-secondary)' }}>Question {currentQ + 1} of {questions.length}</span>
                     <span style={{ padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 700,
                       background: q.questionType === 'MCQ' ? '#ebf8ff' : '#faf5ff',
                       color: q.questionType === 'MCQ' ? '#2b6cb0' : '#6b46c1' }}>
                       {q.questionType}
                     </span>
-                    <span style={{ marginLeft: 'auto', fontSize: 12, color: '#a0aec0' }}>{q.marks} mark{q.marks !== 1 ? 's' : ''}</span>
+                    <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-muted)' }}>{q.marks} mark{q.marks !== 1 ? 's' : ''}</span>
                   </div>
-                  <div style={{ fontSize: 15, color: '#2d3748', lineHeight: 1.6 }}>{q.questionText}</div>
+                  <div style={{ fontSize: 15, color: 'var(--text-primary)', lineHeight: 1.6 }}>{q.questionText}</div>
                 </div>
 
                 <div style={{ padding: '18px 24px' }}>
@@ -573,17 +563,17 @@ export default function OnlineExamTake() {
                         return (
                           <label key={lbl} style={{
                             display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px',
-                            border: selected ? '2px solid #0de1e8' : '1.5px solid #e2e8f0',
+                            border: selected ? '2px solid #0de1e8' : '1.5px solid var(--border-strong)',
                             borderRadius: 10, cursor: 'pointer',
-                            background: selected ? '#e0fffe' : '#fff',
+                            background: selected ? '#e0fffe' : 'var(--surface)',
                             transition: 'all 0.1s',
                           }}>
                             <input type="radio" name={`q-${q.id}`} value={lbl}
                               checked={selected}
                               onChange={() => handleAnswer(q.id, lbl)}
                               style={{ width: 16, height: 16, accentColor: '#0de1e8', cursor: 'pointer' }} />
-                            <span style={{ fontWeight: 700, color: selected ? '#0de1e8' : '#4a5568', minWidth: 20 }}>{lbl}.</span>
-                            <span style={{ fontSize: 14, color: selected ? '#2d3748' : '#4a5568' }}>{val}</span>
+                            <span style={{ fontWeight: 700, color: selected ? '#0de1e8' : 'var(--text-secondary)', minWidth: 20 }}>{lbl}.</span>
+                            <span style={{ fontSize: 14, color: selected ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{val}</span>
                           </label>
                         );
                       })}
@@ -597,16 +587,16 @@ export default function OnlineExamTake() {
                   )}
                 </div>
 
-                <div style={{ padding: '14px 24px', borderTop: '1px solid #edf2f7', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+                <div style={{ padding: '14px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
                   <button onClick={() => setCurrentQ(prev => Math.max(0, prev - 1))}
                     disabled={currentQ === 0}
-                    style={{ padding: '8px 18px', border: '1.5px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: currentQ === 0 ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: 13, color: '#4a5568', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    style={{ padding: '8px 18px', border: '1.5px solid var(--border-strong)', borderRadius: 8, background: 'var(--surface)', cursor: currentQ === 0 ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: 13, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4 }}>
                     <span className="material-icons" style={{ fontSize: 16 }}>chevron_left</span> Previous
                   </button>
 
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button onClick={handleManualSave} disabled={saving}
-                      style={{ padding: '8px 16px', border: '1.5px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: saving ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: 13, color: '#4a5568', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      style={{ padding: '8px 16px', border: '1.5px solid var(--border-strong)', borderRadius: 8, background: 'var(--surface)', cursor: saving ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: 13, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4 }}>
                       {saving
                         ? <><span style={{ width: 12, height: 12, border: '2px solid rgba(0,0,0,0.2)', borderTopColor: '#4a5568', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} /> Saving…</>
                         : <><span className="material-icons" style={{ fontSize: 15 }}>save</span> Save Progress</>}
@@ -619,13 +609,13 @@ export default function OnlineExamTake() {
 
                   <button onClick={() => setCurrentQ(prev => Math.min(questions.length - 1, prev + 1))}
                     disabled={currentQ === questions.length - 1}
-                    style={{ padding: '8px 18px', border: '1.5px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: currentQ === questions.length - 1 ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: 13, color: '#4a5568', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    style={{ padding: '8px 18px', border: '1.5px solid var(--border-strong)', borderRadius: 8, background: 'var(--surface)', cursor: currentQ === questions.length - 1 ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: 13, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4 }}>
                     Next <span className="material-icons" style={{ fontSize: 16 }}>chevron_right</span>
                   </button>
                 </div>
               </>
             ) : (
-              <div style={{ padding: 40, textAlign: 'center', color: '#a0aec0' }}>No questions available.</div>
+              <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>No questions available.</div>
             )}
           </div>
         </div>
@@ -637,13 +627,13 @@ export default function OnlineExamTake() {
               <div className="modal-header">
                 <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Submit Exam</h3>
                 <button onClick={() => setShowConfirm(false)} disabled={submitting}
-                  style={{ border: 'none', background: 'none', fontSize: 20, cursor: 'pointer', color: '#718096' }}>✕</button>
+                  style={{ border: 'none', background: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--text-secondary)' }}>✕</button>
               </div>
               <div className="modal-body" style={{ padding: '20px 24px' }}>
-                <p style={{ color: '#4a5568', marginBottom: 8 }}>
+                <p style={{ color: 'var(--text-secondary)', marginBottom: 8 }}>
                   You have answered <strong>{answeredCount}</strong> of <strong>{questions.length}</strong> questions.
                 </p>
-                <p style={{ color: '#4a5568', margin: 0 }}>
+                <p style={{ color: 'var(--text-secondary)', margin: 0 }}>
                   Once submitted, you cannot change your answers. Are you sure you want to submit?
                 </p>
                 {answeredCount < questions.length && (
@@ -655,7 +645,7 @@ export default function OnlineExamTake() {
               </div>
               <div className="modal-footer">
                 <button onClick={() => setShowConfirm(false)} disabled={submitting}
-                  style={{ padding: '9px 20px', border: '1.5px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: 'pointer', fontWeight: 600 }}>
+                  style={{ padding: '9px 20px', border: '1.5px solid var(--border-strong)', borderRadius: 8, background: 'var(--surface)', cursor: 'pointer', fontWeight: 600 }}>
                   Continue Exam
                 </button>
                 <button onClick={handleSubmit} disabled={submitting}

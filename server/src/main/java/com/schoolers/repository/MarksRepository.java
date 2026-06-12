@@ -51,6 +51,9 @@ public interface MarksRepository extends JpaRepository<Marks, Long> {
     void deleteByStudentId(Long studentId);
 
     @Modifying @Transactional
+    void deleteByStudentIdIn(List<Long> studentIds);
+
+    @Modifying @Transactional
     void deleteByTeacherId(Long teacherId);
 
     @org.springframework.data.jpa.repository.Modifying

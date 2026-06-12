@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity } from 'react-native';
-import api from '../../services/api';
+import useCachedFetch from '../../hooks/useCachedFetch';
+import OfflineBanner from '../../components/OfflineBanner';
 
 const EXAM_TYPES = ['All', 'Unit Test 1', 'Unit Test 2', 'Mid Term', 'Final Exam', 'Annual Exam'];
 
@@ -11,16 +12,9 @@ const gradeColor = (g) => ({
 }[g] || '#64748b');
 
 export default function StudentMarks() {
-  const [marks, setMarks] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data, loading, isOffline } = useCachedFetch('/api/student/marks');
+  const marks = data || [];
   const [filter, setFilter] = useState('All');
-
-  useEffect(() => {
-    api.get('/api/student/marks')
-      .then(res => setMarks(res.data.data || []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
 
   const filtered = filter === 'All' ? marks : marks.filter(m => m.examType === filter);
 
@@ -34,6 +28,7 @@ export default function StudentMarks() {
 
   return (
     <View style={styles.container}>
+      <OfflineBanner visible={isOffline} />
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow}>
         {EXAM_TYPES.map(t => (
           <TouchableOpacity

@@ -74,7 +74,7 @@ const validate = (step, form) => {
 // ── Helper: labelled form field ───────────────────────────────────────────────
 const Field = ({ label, error, children, required }) => (
   <div style={{ marginBottom: '18px' }}>
-    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#4a5568', marginBottom: '5px' }}>
+    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '5px' }}>
       {label}{required && <span style={{ color: '#e53e3e', marginLeft: 2 }}>*</span>}
     </label>
     {children}
@@ -83,9 +83,9 @@ const Field = ({ label, error, children, required }) => (
 );
 
 const inputStyle = (hasError) => ({
-  width: '100%', padding: '10px 12px', border: `1.5px solid ${hasError ? '#fc8181' : '#e2e8f0'}`,
-  borderRadius: '8px', fontSize: '14px', color: '#2d3748', outline: 'none',
-  boxSizing: 'border-box', transition: 'border-color 0.2s', background: '#fff',
+  width: '100%', padding: '10px 12px', border: `1.5px solid ${hasError ? '#fc8181' : 'var(--border-strong)'}`,
+  borderRadius: '8px', fontSize: '14px', color: 'var(--text-primary)', outline: 'none',
+  boxSizing: 'border-box', transition: 'border-color 0.2s', background: 'var(--surface)',
 });
 
 const selectStyle = { ...inputStyle(false), cursor: 'pointer' };
@@ -266,15 +266,15 @@ const SetupSchool = () => {
   // ── Success screen ────────────────────────────────────────────────────────
   if (done) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f7fafc' }}>
-        <div style={{ background: '#fff', borderRadius: '20px', padding: '48px 40px', maxWidth: '500px', width: '100%', textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,0.1)' }}>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface-alt)' }}>
+        <div style={{ background: 'var(--surface)', borderRadius: '20px', padding: '48px 40px', maxWidth: '500px', width: '100%', textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,0.1)' }}>
           <div style={{ width: 72, height: 72, borderRadius: '50%', background: '#e6f9ed', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
             <span className="material-icons" style={{ fontSize: 40, color: '#38a169' }}>check_circle</span>
           </div>
-          <h2 style={{ fontWeight: 800, color: '#2d3748', marginBottom: 8 }}>
+          <h2 style={{ fontWeight: 800, color: 'var(--text-primary)', marginBottom: 8 }}>
             {isUpdateMode ? 'School Setup Complete!' : 'School Created!'}
           </h2>
-          <p style={{ color: '#718096', marginBottom: 24 }}>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: 24 }}>
             <strong>{done.school?.name}</strong> has been set up successfully.
           </p>
           {done.adminEmail && (
@@ -289,7 +289,7 @@ const SetupSchool = () => {
             {/* "Setup Another" only makes sense in legacy platform-admin flow */}
             {!isUpdateMode && (
               <button onClick={() => { setDone(null); setForm(INITIAL); setCurrentStep(0); }}
-                style={{ padding: '10px 24px', border: '1.5px solid #e2e8f0', borderRadius: 8, background: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+                style={{ padding: '10px 24px', border: '1.5px solid var(--border-strong)', borderRadius: 8, background: 'var(--surface)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
                 Setup Another
               </button>
             )}
@@ -305,13 +305,13 @@ const SetupSchool = () => {
 
   // ── Stepper layout ────────────────────────────────────────────────────────
   return (
-    <div style={{ minHeight: '100vh', background: '#f7fafc', padding: '32px 16px' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--surface-alt)', padding: '32px 16px' }}>
       <div style={{ maxWidth: 860, margin: '0 auto' }}>
 
         {/* Header */}
         <div style={{ marginBottom: 28, textAlign: 'center' }}>
-          <h1 style={{ fontSize: 26, fontWeight: 800, color: '#2d3748', margin: 0 }}>Setup New School</h1>
-          <p style={{ color: '#718096', marginTop: 6 }}>Configure every detail of your school in one place</p>
+          <h1 style={{ fontSize: 26, fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>Setup New School</h1>
+          <p style={{ color: 'var(--text-secondary)', marginTop: 6 }}>Configure every detail of your school in one place</p>
         </div>
 
         {/* Step Indicators */}
@@ -325,9 +325,9 @@ const SetupSchool = () => {
                 style={{
                   display: 'flex', alignItems: 'center', gap: 6, flex: '0 0 auto',
                   padding: '8px 14px', borderRadius: 30, fontSize: 12, fontWeight: 600,
-                  background: active ? '#0de1e8' : done_ ? '#e6f9ed' : '#fff',
-                  color: active ? '#fff' : done_ ? '#276749' : '#a0aec0',
-                  border: `1.5px solid ${active ? '#0de1e8' : done_ ? '#9ae6b4' : '#e2e8f0'}`,
+                  background: active ? '#0de1e8' : done_ ? '#e6f9ed' : 'var(--surface)',
+                  color: active ? '#fff' : done_ ? '#276749' : 'var(--text-muted)',
+                  border: `1.5px solid ${active ? '#0de1e8' : done_ ? '#9ae6b4' : 'var(--border-strong)'}`,
                   cursor: done_ ? 'pointer' : 'default', transition: 'all 0.2s',
                 }}
                 onClick={() => done_ && setCurrentStep(i)}
@@ -342,7 +342,7 @@ const SetupSchool = () => {
         </div>
 
         {/* Form Card */}
-        <div style={{ background: '#fff', borderRadius: 16, boxShadow: '0 4px 24px rgba(0,0,0,0.07)', padding: '32px 36px' }}>
+        <div style={{ background: 'var(--surface)', borderRadius: 16, boxShadow: '0 4px 24px rgba(0,0,0,0.07)', padding: '32px 36px' }}>
 
           {/* ── STEP: Basic Info ─────────────────────────────────────────── */}
           {stepId === 'basic' && (
@@ -356,8 +356,8 @@ const SetupSchool = () => {
                       onChange={onChange} placeholder="e.g. 1"
                       style={{ ...inputStyle(!!errors.schoolId), width: 140, fontWeight: 700, fontSize: 18, textAlign: 'center' }}
                       onFocus={e => e.target.style.borderColor = '#0de1e8'}
-                      onBlur={e => e.target.style.borderColor = errors.schoolId ? '#fc8181' : '#e2e8f0'} />
-                    <span style={{ fontSize: 13, color: '#718096' }}>Unique numeric identifier for this school (e.g. 1, 2, 3)</span>
+                      onBlur={e => e.target.style.borderColor = errors.schoolId ? '#fc8181' : 'var(--border-strong)'} />
+                    <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Unique numeric identifier for this school (e.g. 1, 2, 3)</span>
                   </div>
                 </Field>
               </div>
@@ -367,14 +367,14 @@ const SetupSchool = () => {
                     placeholder="e.g. Greenfield International School"
                     style={inputStyle(!!errors.name)}
                     onFocus={e => e.target.style.borderColor = '#0de1e8'}
-                    onBlur={e => e.target.style.borderColor = errors.name ? '#fc8181' : '#e2e8f0'} />
+                    onBlur={e => e.target.style.borderColor = errors.name ? '#fc8181' : 'var(--border-strong)'} />
                 </Field>
                 <Field label="School Code (unique)" required error={errors.code}>
                   <input name="code" value={form.code} onChange={e => onChange({ target: { name: 'code', value: e.target.value.toUpperCase() } })}
                     placeholder="e.g. GIS001"
                     style={inputStyle(!!errors.code)}
                     onFocus={e => e.target.style.borderColor = '#0de1e8'}
-                    onBlur={e => e.target.style.borderColor = errors.code ? '#fc8181' : '#e2e8f0'} />
+                    onBlur={e => e.target.style.borderColor = errors.code ? '#fc8181' : 'var(--border-strong)'} />
                 </Field>
                 <Field label="Board / Curriculum" error={errors.board}>
                   <select name="board" value={form.board} onChange={onChange} style={selectStyle}>
@@ -386,7 +386,7 @@ const SetupSchool = () => {
                     placeholder="e.g. 2024-2025"
                     style={inputStyle(!!errors.academicYear)}
                     onFocus={e => e.target.style.borderColor = '#0de1e8'}
-                    onBlur={e => e.target.style.borderColor = errors.academicYear ? '#fc8181' : '#e2e8f0'} />
+                    onBlur={e => e.target.style.borderColor = errors.academicYear ? '#fc8181' : 'var(--border-strong)'} />
                 </Field>
               </div>
             </div>
@@ -401,32 +401,32 @@ const SetupSchool = () => {
                   rows={2} maxLength={500} placeholder="Building no, street name, area..."
                   style={{ ...inputStyle(!!errors.address), resize: 'vertical' }}
                   onFocus={e => e.target.style.borderColor = '#0de1e8'}
-                  onBlur={e => e.target.style.borderColor = errors.address ? '#fc8181' : '#e2e8f0'} />
+                  onBlur={e => e.target.style.borderColor = errors.address ? '#fc8181' : 'var(--border-strong)'} />
               </Field>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 24px' }}>
                 <Field label="City" required error={errors.city}>
                   <input name="city" value={form.city} onChange={onChange} placeholder="City"
                     style={inputStyle(!!errors.city)}
                     onFocus={e => e.target.style.borderColor = '#0de1e8'}
-                    onBlur={e => e.target.style.borderColor = errors.city ? '#fc8181' : '#e2e8f0'} />
+                    onBlur={e => e.target.style.borderColor = errors.city ? '#fc8181' : 'var(--border-strong)'} />
                 </Field>
                 <Field label="State" required error={errors.state}>
                   <input name="state" value={form.state} onChange={onChange} placeholder="State"
                     style={inputStyle(!!errors.state)}
                     onFocus={e => e.target.style.borderColor = '#0de1e8'}
-                    onBlur={e => e.target.style.borderColor = errors.state ? '#fc8181' : '#e2e8f0'} />
+                    onBlur={e => e.target.style.borderColor = errors.state ? '#fc8181' : 'var(--border-strong)'} />
                 </Field>
                 <Field label="PIN Code" error={errors.pincode}>
                   <input name="pincode" value={form.pincode} onChange={onChange} placeholder="e.g. 500001"
                     style={inputStyle(!!errors.pincode)}
                     onFocus={e => e.target.style.borderColor = '#0de1e8'}
-                    onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
+                    onBlur={e => e.target.style.borderColor = 'var(--border-strong)'} />
                 </Field>
                 <Field label="Country" error={errors.country}>
                   <input name="country" value={form.country} onChange={onChange} placeholder="Country"
                     style={inputStyle(false)}
                     onFocus={e => e.target.style.borderColor = '#0de1e8'}
-                    onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
+                    onBlur={e => e.target.style.borderColor = 'var(--border-strong)'} />
                 </Field>
               </div>
             </div>
@@ -441,21 +441,21 @@ const SetupSchool = () => {
                   <input name="phone" value={form.phone} onChange={onChange} placeholder="+91 9876543210"
                     style={inputStyle(!!errors.phone)}
                     onFocus={e => e.target.style.borderColor = '#0de1e8'}
-                    onBlur={e => e.target.style.borderColor = errors.phone ? '#fc8181' : '#e2e8f0'} />
+                    onBlur={e => e.target.style.borderColor = errors.phone ? '#fc8181' : 'var(--border-strong)'} />
                 </Field>
                 <Field label="Official Email" required error={errors.email}>
                   <input name="email" type="email" value={form.email} onChange={onChange}
                     placeholder="principal@school.edu"
                     style={inputStyle(!!errors.email)}
                     onFocus={e => e.target.style.borderColor = '#0de1e8'}
-                    onBlur={e => e.target.style.borderColor = errors.email ? '#fc8181' : '#e2e8f0'} />
+                    onBlur={e => e.target.style.borderColor = errors.email ? '#fc8181' : 'var(--border-strong)'} />
                 </Field>
                 <Field label="Website" error={errors.website} style={{ gridColumn: '1 / -1' }}>
                   <input name="website" value={form.website} onChange={onChange}
                     placeholder="https://www.school.edu"
                     style={inputStyle(false)}
                     onFocus={e => e.target.style.borderColor = '#0de1e8'}
-                    onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
+                    onBlur={e => e.target.style.borderColor = 'var(--border-strong)'} />
                 </Field>
               </div>
             </div>
@@ -472,36 +472,36 @@ const SetupSchool = () => {
                   <div
                     onClick={() => logoInputRef.current?.click()}
                     style={{
-                      width: 100, height: 100, borderRadius: 12, border: '2px dashed #e2e8f0',
+                      width: 100, height: 100, borderRadius: 12, border: '2px dashed var(--border-strong)',
                       display: 'flex', flexDirection: 'column', alignItems: 'center',
                       justifyContent: 'center', cursor: 'pointer', overflow: 'hidden',
-                      background: logoPreview ? 'transparent' : '#fafafa', flexShrink: 0,
+                      background: logoPreview ? 'transparent' : 'var(--surface-alt)', flexShrink: 0,
                     }}
                     onMouseEnter={e => e.currentTarget.style.borderColor = '#0de1e8'}
-                    onMouseLeave={e => e.currentTarget.style.borderColor = '#e2e8f0'}
+                    onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border-strong)'}
                   >
                     {logoPreview ? (
                       <img src={logoPreview} alt="Logo preview"
                         style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                     ) : (
                       <>
-                        <span className="material-icons" style={{ fontSize: 32, color: '#cbd5e0' }}>add_photo_alternate</span>
-                        <span style={{ fontSize: 10, color: '#a0aec0', marginTop: 4 }}>Click to upload</span>
+                        <span className="material-icons" style={{ fontSize: 32, color: 'var(--text-muted)' }}>add_photo_alternate</span>
+                        <span style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>Click to upload</span>
                       </>
                     )}
                   </div>
                   <div>
                     <button type="button" onClick={() => logoInputRef.current?.click()}
-                      style={{ padding: '8px 18px', border: '1.5px solid #0de1e8', borderRadius: 8, background: '#fff', color: '#0de1e8', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+                      style={{ padding: '8px 18px', border: '1.5px solid #0de1e8', borderRadius: 8, background: 'var(--surface)', color: '#0de1e8', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
                       {logoPreview ? 'Change Logo' : 'Upload Logo'}
                     </button>
                     {logoPreview && (
                       <button type="button" onClick={() => { setLogoFile(null); setLogoPreview(null); }}
-                        style={{ marginLeft: 10, padding: '8px 14px', border: '1.5px solid #e2e8f0', borderRadius: 8, background: '#fff', color: '#718096', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+                        style={{ marginLeft: 10, padding: '8px 14px', border: '1.5px solid var(--border-strong)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
                         Remove
                       </button>
                     )}
-                    <div style={{ fontSize: 11, color: '#a0aec0', marginTop: 8 }}>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>
                       PNG, JPG or SVG · Max 5 MB
                     </div>
                   </div>
@@ -515,29 +515,29 @@ const SetupSchool = () => {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <input type="color" name="primaryColor" value={form.primaryColor}
                       onChange={onChange}
-                      style={{ width: 48, height: 40, padding: 2, border: '1.5px solid #e2e8f0', borderRadius: 8, cursor: 'pointer' }} />
+                      style={{ width: 48, height: 40, padding: 2, border: '1.5px solid var(--border-strong)', borderRadius: 8, cursor: 'pointer' }} />
                     <input name="primaryColor" value={form.primaryColor} onChange={onChange}
                       placeholder="#0de1e8" style={{ ...inputStyle(false), flex: 1 }}
                       onFocus={e => e.target.style.borderColor = '#0de1e8'}
-                      onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
+                      onBlur={e => e.target.style.borderColor = 'var(--border-strong)'} />
                   </div>
                 </Field>
                 <Field label="Secondary Color">
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <input type="color" name="secondaryColor" value={form.secondaryColor}
                       onChange={onChange}
-                      style={{ width: 48, height: 40, padding: 2, border: '1.5px solid #e2e8f0', borderRadius: 8, cursor: 'pointer' }} />
+                      style={{ width: 48, height: 40, padding: 2, border: '1.5px solid var(--border-strong)', borderRadius: 8, cursor: 'pointer' }} />
                     <input name="secondaryColor" value={form.secondaryColor} onChange={onChange}
                       placeholder="#0eb5da" style={{ ...inputStyle(false), flex: 1 }}
                       onFocus={e => e.target.style.borderColor = '#0de1e8'}
-                      onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
+                      onBlur={e => e.target.style.borderColor = 'var(--border-strong)'} />
                   </div>
                 </Field>
               </div>
 
               {/* Live preview */}
-              <div style={{ marginTop: 20, padding: '16px 20px', borderRadius: 12, border: '1.5px solid #e2e8f0', background: '#fafafa' }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: '#718096', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Theme Preview</div>
+              <div style={{ marginTop: 20, padding: '16px 20px', borderRadius: 12, border: '1.5px solid var(--border-strong)', background: 'var(--surface-alt)' }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Theme Preview</div>
                 <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                   <div style={{ width: 40, height: 40, borderRadius: 10, background: form.primaryColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {logoPreview
@@ -547,7 +547,7 @@ const SetupSchool = () => {
                   </div>
                   <div>
                     <div style={{ fontSize: 14, fontWeight: 700, color: form.primaryColor }}>{form.name || 'School Name'}</div>
-                    <div style={{ fontSize: 11, color: '#a0aec0' }}>Management System</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Management System</div>
                   </div>
                   <button style={{ marginLeft: 'auto', padding: '7px 16px', background: form.primaryColor, border: 'none', borderRadius: 8, color: '#fff', fontWeight: 600, fontSize: 12, cursor: 'default' }}>
                     Primary Button
@@ -567,14 +567,14 @@ const SetupSchool = () => {
                     placeholder="e.g. 12"
                     style={inputStyle(!!errors.totalClasses)}
                     onFocus={e => e.target.style.borderColor = '#0de1e8'}
-                    onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
+                    onBlur={e => e.target.style.borderColor = 'var(--border-strong)'} />
                 </Field>
                 <Field label="Sections (comma-separated)" error={errors.sections}>
                   <input name="sections" value={form.sections} onChange={onChange}
                     placeholder="e.g. A,B,C,D"
                     style={inputStyle(false)}
                     onFocus={e => e.target.style.borderColor = '#0de1e8'}
-                    onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
+                    onBlur={e => e.target.style.borderColor = 'var(--border-strong)'} />
                 </Field>
               </div>
               <div style={{ marginTop: 8, padding: '14px 18px', background: '#fffbeb', borderRadius: 10, border: '1px solid #fef3c7', fontSize: 13, color: '#92400e' }}>
@@ -599,7 +599,7 @@ const SetupSchool = () => {
                     placeholder="e.g. Ravi Kumar"
                     style={inputStyle(false)}
                     onFocus={e => e.target.style.borderColor = '#0de1e8'}
-                    onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
+                    onBlur={e => e.target.style.borderColor = 'var(--border-strong)'} />
                 </Field>
                 <Field label="Admin Email" error={errors.adminEmail || adminOtp.error}>
                   <div style={{ display: 'flex', gap: 8 }}>
@@ -608,7 +608,7 @@ const SetupSchool = () => {
                       disabled={adminOtp.verified}
                       style={{ ...inputStyle(!!errors.adminEmail), flex: 1 }}
                       onFocus={e => e.target.style.borderColor = '#0de1e8'}
-                      onBlur={e => e.target.style.borderColor = errors.adminEmail ? '#fc8181' : '#e2e8f0'}
+                      onBlur={e => e.target.style.borderColor = errors.adminEmail ? '#fc8181' : 'var(--border-strong)'}
                       onChange={e => { onChange(e); resetAdminOtp(); }} />
                     {!adminOtp.verified && form.adminEmail?.trim() && (
                       <button type="button" disabled={adminOtp.sending}
@@ -656,7 +656,7 @@ const SetupSchool = () => {
                     maxLength={10}
                     style={inputStyle(!!errors.adminMobile)}
                     onFocus={e => e.target.style.borderColor = '#0de1e8'}
-                    onBlur={e => e.target.style.borderColor = errors.adminMobile ? '#fc8181' : '#e2e8f0'} />
+                    onBlur={e => e.target.style.borderColor = errors.adminMobile ? '#fc8181' : 'var(--border-strong)'} />
                 </Field>
               </div>
             </div>
@@ -677,14 +677,14 @@ const SetupSchool = () => {
                     onClick={() => setForm(prev => ({ ...prev, subscriptionPlan: plan }))}
                     style={{
                       padding: '20px 16px', borderRadius: 12, cursor: 'pointer', textAlign: 'center',
-                      border: `2px solid ${form.subscriptionPlan === plan ? '#0de1e8' : '#e2e8f0'}`,
-                      background: form.subscriptionPlan === plan ? '#f0fff4' : '#fff',
+                      border: `2px solid ${form.subscriptionPlan === plan ? '#0de1e8' : 'var(--border-strong)'}`,
+                      background: form.subscriptionPlan === plan ? '#f0fff4' : 'var(--surface)',
                       transition: 'all 0.2s',
                     }}
                   >
                     <span className="material-icons" style={{ fontSize: 32, color, display: 'block', marginBottom: 8 }}>{icon}</span>
-                    <div style={{ fontWeight: 700, fontSize: 15, color: '#2d3748', marginBottom: 4 }}>{plan}</div>
-                    <div style={{ fontSize: 12, color: '#718096' }}>{desc}</div>
+                    <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-primary)', marginBottom: 4 }}>{plan}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{desc}</div>
                     {form.subscriptionPlan === plan && (
                       <div style={{ marginTop: 10, fontSize: 11, color: '#0de1e8', fontWeight: 700 }}>✓ Selected</div>
                     )}
@@ -695,7 +695,7 @@ const SetupSchool = () => {
                 <input name="subscriptionExpiry" type="date" value={form.subscriptionExpiry} onChange={onChange}
                   style={inputStyle(false)}
                   onFocus={e => e.target.style.borderColor = '#0de1e8'}
-                  onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
+                  onBlur={e => e.target.style.borderColor = 'var(--border-strong)'} />
               </Field>
             </div>
           )}
@@ -704,7 +704,7 @@ const SetupSchool = () => {
           {stepId === 'features' && (
             <div>
               <SectionTitle icon="toggle_on" title="Feature Toggles" />
-              <p style={{ color: '#718096', fontSize: 13, marginBottom: 20 }}>
+              <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginBottom: 20 }}>
                 Enable or disable modules for this school. These can be changed later.
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 14 }}>
@@ -724,22 +724,22 @@ const SetupSchool = () => {
                     style={{
                       display: 'flex', alignItems: 'center', gap: 14, padding: '14px 18px',
                       borderRadius: 12, cursor: 'pointer', transition: 'all 0.2s',
-                      border: `1.5px solid ${form.features[key] ? '#9ae6b4' : '#e2e8f0'}`,
-                      background: form.features[key] ? '#f0fff4' : '#fafafa',
+                      border: `1.5px solid ${form.features[key] ? '#9ae6b4' : 'var(--border-strong)'}`,
+                      background: form.features[key] ? '#f0fff4' : 'var(--surface-alt)',
                     }}
                   >
                     <div style={{
                       width: 38, height: 38, borderRadius: 10, flexShrink: 0,
-                      background: form.features[key] ? '#0de1e820' : '#f0f4f8',
+                      background: form.features[key] ? '#0de1e820' : 'var(--border)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
-                      <span className="material-icons" style={{ fontSize: 20, color: form.features[key] ? '#276749' : '#a0aec0' }}>{icon}</span>
+                      <span className="material-icons" style={{ fontSize: 20, color: form.features[key] ? '#276749' : 'var(--text-muted)' }}>{icon}</span>
                     </div>
-                    <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#2d3748' }}>{label}</span>
+                    <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{label}</span>
                     {/* Toggle Switch */}
                     <div style={{
                       width: 40, height: 22, borderRadius: 11, transition: 'background 0.2s',
-                      background: form.features[key] ? '#0de1e8' : '#cbd5e0', position: 'relative', flexShrink: 0,
+                      background: form.features[key] ? '#0de1e8' : 'var(--border-strong)', position: 'relative', flexShrink: 0,
                     }}>
                       <div style={{
                         position: 'absolute', top: 3, transition: 'left 0.2s',
@@ -763,17 +763,17 @@ const SetupSchool = () => {
           )}
 
           {/* ── Navigation Buttons ───────────────────────────────────────── */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 32, paddingTop: 20, borderTop: '1px solid #f0f4f8' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 32, paddingTop: 20, borderTop: '1px solid var(--border)' }}>
             <button type="button" onClick={goPrev} disabled={currentStep === 0}
               style={{
-                padding: '10px 24px', border: '1.5px solid #e2e8f0', borderRadius: 8,
-                background: '#fff', color: currentStep === 0 ? '#cbd5e0' : '#4a5568',
+                padding: '10px 24px', border: '1.5px solid var(--border-strong)', borderRadius: 8,
+                background: 'var(--surface)', color: currentStep === 0 ? 'var(--text-muted)' : 'var(--text-secondary)',
                 fontWeight: 600, fontSize: 13, cursor: currentStep === 0 ? 'not-allowed' : 'pointer',
               }}>
               ← Previous
             </button>
 
-            <span style={{ fontSize: 12, color: '#a0aec0' }}>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
               Step {currentStep + 1} of {STEPS.length}
             </span>
 
@@ -810,7 +810,7 @@ const SectionTitle = ({ icon, title }) => (
     <div style={{ width: 38, height: 38, borderRadius: 10, background: '#0de1e820', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <span className="material-icons" style={{ fontSize: 20, color: '#276749' }}>{icon}</span>
     </div>
-    <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#2d3748' }}>{title}</h3>
+    <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: 'var(--text-primary)' }}>{title}</h3>
   </div>
 );
 

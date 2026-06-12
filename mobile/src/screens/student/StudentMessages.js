@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import api from '../../services/api';
+import useCachedFetch from '../../hooks/useCachedFetch';
+import OfflineBanner from '../../components/OfflineBanner';
 
 const CAT_COLORS = {
   GENERAL: '#64748b', ACADEMIC: '#2563eb', ANNOUNCEMENT: '#7c3aed',
@@ -8,17 +10,10 @@ const CAT_COLORS = {
 };
 
 export default function StudentMessages() {
+  const { data, loading, isOffline } = useCachedFetch('/api/messages/student/inbox');
   const [messages, setMessages] = useState([]);
-  const [loading, setLoading] = useState(true);
 
-  const load = () => {
-    api.get('/api/messages/student/inbox')
-      .then(res => setMessages(res.data.data || []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => { load(); }, []);
+  useEffect(() => { if (data) setMessages(data); }, [data]);
 
   const markRead = async (id) => {
     try {
@@ -35,6 +30,7 @@ export default function StudentMessages() {
       data={messages}
       keyExtractor={(_, i) => i.toString()}
       contentContainerStyle={{ padding: 12 }}
+      ListHeaderComponent={<OfflineBanner visible={isOffline} />}
       renderItem={({ item }) => {
         const catColor = CAT_COLORS[item.category] || '#64748b';
         return (

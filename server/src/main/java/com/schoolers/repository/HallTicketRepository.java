@@ -23,8 +23,17 @@ public interface HallTicketRepository extends JpaRepository<HallTicket, Long> {
     List<HallTicket> findByExamTypeAndSchoolIdOrderByCreatedAtDesc(String examType, Long schoolId);
     List<HallTicket> findByStudentIdAndSchoolIdOrderByCreatedAtDesc(Long studentId, Long schoolId);
 
+    /** Batch duplicate-check: existing tickets for the given exam across a set of students (school-scoped). */
+    List<HallTicket> findByStudentIdInAndExamNameAndSchoolId(List<Long> studentIds, String examName, Long schoolId);
+
+    /** Batch duplicate-check: existing tickets for the given exam across a set of students (legacy, no schoolId). */
+    List<HallTicket> findByStudentIdInAndExamName(List<Long> studentIds, String examName);
+
     @Modifying @Transactional
     void deleteByStudentId(Long studentId);
+
+    @Modifying @Transactional
+    void deleteByStudentIdIn(List<Long> studentIds);
 
     @org.springframework.data.jpa.repository.Modifying
     @org.springframework.transaction.annotation.Transactional

@@ -12,6 +12,10 @@ import org.springframework.stereotype.Component;
  * Runs once at startup to patch any DB constraints that
  * Hibernate's ddl-auto=update cannot fix on its own.
  * Every statement is wrapped in its own try/catch — safe to run on every restart.
+ *
+ * LEGACY — frozen as of the Flyway introduction (see db/migration/V1__baseline.sql).
+ * Do not add new statements here; add a new versioned migration under
+ * db/migration instead.
  */
 @Component
 @Order(1)

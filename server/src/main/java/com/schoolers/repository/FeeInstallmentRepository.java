@@ -32,6 +32,10 @@ public interface FeeInstallmentRepository extends JpaRepository<FeeInstallment, 
 
     @Modifying
     @Transactional
+    void deleteByAssignmentIdIn(List<Long> assignmentIds);
+
+    @Modifying
+    @Transactional
     @Query("DELETE FROM FeeInstallment fi WHERE fi.assignmentId IN (SELECT sfa.id FROM StudentFeeAssignment sfa WHERE sfa.schoolId = :schoolId)")
     void deleteBySchoolId(@Param("schoolId") Long schoolId);
 }

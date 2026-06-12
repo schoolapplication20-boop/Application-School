@@ -8,6 +8,8 @@ import com.schoolers.model.User;
 import com.schoolers.repository.SchoolRepository;
 import com.schoolers.repository.UserRepository;
 import com.schoolers.service.SchoolService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +26,8 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/schools")
 public class SchoolController {
+
+    private static final Logger log = LoggerFactory.getLogger(SchoolController.class);
 
     @Autowired private SchoolService    schoolService;
     @Autowired private SchoolRepository schoolRepository;
@@ -66,8 +70,9 @@ public class SchoolController {
                     : ResponseEntity.badRequest().body(response);
 
         } catch (Exception e) {
+            log.error("[CreateSchool] Failed to create school", e);
             return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("Failed to create school: " + e.getMessage()));
+                    .body(ApiResponse.error("Failed to create school. Please check your input and try again."));
         }
     }
 
@@ -137,8 +142,9 @@ public class SchoolController {
                     : ResponseEntity.badRequest().body(response);
 
         } catch (Exception e) {
+            log.error("[UpdateSchool] Failed to update school id={}", id, e);
             return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("Failed to update school: " + e.getMessage()));
+                    .body(ApiResponse.error("Failed to update school. Please check your input and try again."));
         }
     }
 
@@ -180,7 +186,8 @@ public class SchoolController {
             schoolRepository.save(school);
             return ResponseEntity.ok(ApiResponse.success("Module settings updated.", null));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error("Failed to save features: " + e.getMessage()));
+            log.error("[UpdateSchoolFeatures] Failed to save features for school id={}", id, e);
+            return ResponseEntity.badRequest().body(ApiResponse.error("Failed to save module settings. Please try again."));
         }
     }
 
@@ -270,8 +277,9 @@ public class SchoolController {
                     ? ResponseEntity.ok(response)
                     : ResponseEntity.badRequest().body(response);
         } catch (Exception e) {
+            log.error("[UpdateLogo] Logo update failed for school id={}", id, e);
             return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("Logo update failed: " + e.getMessage()));
+                    .body(ApiResponse.error("Logo update failed. Please try again."));
         }
     }
 }

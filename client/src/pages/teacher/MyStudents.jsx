@@ -105,8 +105,8 @@ export default function MyStudents() {
     <Layout pageTitle="My Students">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#1a202c' }}>My Students</h1>
-          <p style={{ margin: '4px 0 0', color: '#718096', fontSize: 13 }}>
+          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--text-primary)' }}>My Students</h1>
+          <p style={{ margin: '4px 0 0', color: 'var(--text-secondary)', fontSize: 13 }}>
             View your class students and reset login passwords
           </p>
         </div>
@@ -116,7 +116,7 @@ export default function MyStudents() {
           <select
             value={selectedClass?.id ?? ''}
             onChange={e => setSelectedClass(classes.find(c => c.id === Number(e.target.value)))}
-            style={{ border: '1.5px solid #e2e8f0', borderRadius: 8, padding: '8px 12px', fontSize: 13, outline: 'none', color: '#2d3748' }}
+            style={{ border: '1.5px solid var(--border-strong)', borderRadius: 8, padding: '8px 12px', fontSize: 13, outline: 'none', color: 'var(--text-primary)' }}
           >
             {classes.map(cls => (
               <option key={cls.id} value={cls.id}>{classLabel(cls)}</option>
@@ -128,7 +128,7 @@ export default function MyStudents() {
       <div className="data-table-card">
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
-          <div style={{ fontWeight: 700, fontSize: 14, color: '#2d3748', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
             <span className="material-icons" style={{ color: '#3182ce', fontSize: 20 }}>group</span>
             {selectedClass ? classLabel(selectedClass) : 'Students'}
             {!loadingStudents && (
@@ -137,28 +137,28 @@ export default function MyStudents() {
               </span>
             )}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f8fafc', borderRadius: 8, padding: '6px 12px', border: '1.5px solid #e2e8f0' }}>
-            <span className="material-icons" style={{ fontSize: 16, color: '#a0aec0' }}>search</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--surface-alt)', borderRadius: 8, padding: '6px 12px', border: '1.5px solid var(--border-strong)' }}>
+            <span className="material-icons" style={{ fontSize: 16, color: 'var(--text-muted)' }}>search</span>
             <input
               value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Search name or roll no…"
-              style={{ border: 'none', outline: 'none', fontSize: 13, background: 'transparent', width: 180, color: '#2d3748' }}
+              style={{ border: 'none', outline: 'none', fontSize: 13, background: 'transparent', width: 180, color: 'var(--text-primary)' }}
             />
           </div>
         </div>
 
         {loadingClass || loadingStudents ? (
-          <div style={{ padding: 40, textAlign: 'center', color: '#a0aec0' }}>
+          <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
             <span className="material-icons" style={{ fontSize: 36, display: 'block', marginBottom: 8, animation: 'spin 1s linear infinite' }}>autorenew</span>
             Loading…
           </div>
         ) : classes.length === 0 ? (
-          <div style={{ padding: 48, textAlign: 'center', color: '#a0aec0' }}>
-            <span className="material-icons" style={{ fontSize: 48, display: 'block', marginBottom: 12, color: '#e2e8f0' }}>class</span>
+          <div style={{ padding: 48, textAlign: 'center', color: 'var(--text-muted)' }}>
+            <span className="material-icons" style={{ fontSize: 48, display: 'block', marginBottom: 12, color: 'var(--border-strong)' }}>class</span>
             You are not assigned to any class yet.
           </div>
         ) : filtered.length === 0 ? (
-          <div style={{ padding: 40, textAlign: 'center', color: '#a0aec0' }}>
+          <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
             {search ? 'No students match your search.' : 'No students found in this class.'}
           </div>
         ) : (
@@ -177,17 +177,17 @@ export default function MyStudents() {
               <tbody>
                 {filtered.map((s, idx) => (
                   <tr key={s.id}>
-                    <td style={{ color: '#a0aec0', fontSize: 12 }}>{idx + 1}</td>
+                    <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>{idx + 1}</td>
                     <td>
-                      <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 13, color: '#2d3748' }}>
+                      <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 13, color: 'var(--text-primary)' }}>
                         {s.rollNumber}
                       </span>
                     </td>
                     <td style={{ fontWeight: 600, fontSize: 13 }}>{s.name}</td>
-                    <td style={{ fontSize: 12, color: '#718096' }}>
+                    <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
                       {s.className}{s.section ? ` - ${s.section}` : ''}
                     </td>
-                    <td style={{ fontSize: 12, color: '#718096' }}>
+                    <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
                       {s.parentMobile || s.motherMobile || '—'}
                     </td>
                     <td>
@@ -232,7 +232,7 @@ export default function MyStudents() {
       {/* ── Reset Password Modal ─────────────────────────────────────────── */}
       {resetTarget && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div className="modal-card" style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 420, width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', maxHeight: '90vh', overflowY: 'auto' }}>
+          <div className="modal-card" style={{ background: 'var(--surface)', borderRadius: 16, padding: 28, maxWidth: 420, width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', maxHeight: '90vh', overflowY: 'auto' }}>
 
             {resetSuccess ? (
               /* ── Success state ── */
@@ -240,14 +240,14 @@ export default function MyStudents() {
                 <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#f0fff4', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
                   <span className="material-icons" style={{ fontSize: 30, color: '#38a169' }}>check_circle</span>
                 </div>
-                <div style={{ fontWeight: 800, fontSize: 17, color: '#1a202c', marginBottom: 8 }}>Password Reset!</div>
-                <p style={{ color: '#718096', fontSize: 13, lineHeight: 1.6, margin: '0 0 8px' }}>
+                <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--text-primary)', marginBottom: 8 }}>Password Reset!</div>
+                <p style={{ color: 'var(--text-secondary)', fontSize: 13, lineHeight: 1.6, margin: '0 0 8px' }}>
                   Password for <strong>{resetTarget.name}</strong> has been reset to:
                 </p>
-                <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 8, padding: '10px 16px', fontFamily: 'monospace', fontSize: 16, fontWeight: 700, color: '#2d3748', letterSpacing: 1, marginBottom: 12 }}>
+                <div style={{ background: 'var(--surface-alt)', border: '1.5px solid var(--border-strong)', borderRadius: 8, padding: '10px 16px', fontFamily: 'monospace', fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: 1, marginBottom: 12 }}>
                   {newPassword}
                 </div>
-                <p style={{ color: '#a0aec0', fontSize: 11, margin: '0 0 20px' }}>
+                <p style={{ color: 'var(--text-muted)', fontSize: 11, margin: '0 0 20px' }}>
                   Student will be asked to change this password on next login.
                 </p>
                 <button onClick={closeReset} style={{ padding: '10px 28px', borderRadius: 8, border: 'none', background: '#2563eb', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
@@ -262,20 +262,20 @@ export default function MyStudents() {
                     <span className="material-icons" style={{ color: '#2563eb', fontSize: 22 }}>lock_reset</span>
                   </div>
                   <div>
-                    <div style={{ fontWeight: 800, fontSize: 15, color: '#1a202c' }}>Reset Password</div>
-                    <div style={{ fontSize: 12, color: '#718096' }}>
+                    <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--text-primary)' }}>Reset Password</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
                       {resetTarget.name} · Roll {resetTarget.rollNumber}
                     </div>
                   </div>
                 </div>
 
                 <div style={{ marginBottom: 16 }}>
-                  <label style={{ fontSize: 11, fontWeight: 600, color: '#718096', display: 'block', marginBottom: 6 }}>New Password</label>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>New Password</label>
                   <input
                     type="text"
                     value={newPassword}
                     onChange={e => setNewPassword(e.target.value)}
-                    style={{ width: '100%', border: '1.5px solid #e2e8f0', borderRadius: 8, padding: '10px 12px', fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: 'monospace' }}
+                    style={{ width: '100%', border: '1.5px solid var(--border-strong)', borderRadius: 8, padding: '10px 12px', fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: 'monospace' }}
                     autoFocus
                   />
                   <button
@@ -286,12 +286,12 @@ export default function MyStudents() {
                   </button>
                 </div>
 
-                <p style={{ fontSize: 11, color: '#a0aec0', margin: '0 0 20px', lineHeight: 1.5 }}>
+                <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '0 0 20px', lineHeight: 1.5 }}>
                   The student will be required to change this password when they next log in.
                 </p>
 
                 <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-                  <button onClick={closeReset} disabled={resetting} style={{ padding: '9px 20px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: '#fff', color: '#4a5568', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+                  <button onClick={closeReset} disabled={resetting} style={{ padding: '9px 20px', borderRadius: 8, border: '1.5px solid var(--border-strong)', background: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
                     Cancel
                   </button>
                   <button
@@ -315,19 +315,19 @@ export default function MyStudents() {
       {/* ── Onboard Student Modal ────────────────────────────────────────── */}
       {onboardTarget && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 420, width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+          <div style={{ background: 'var(--surface)', borderRadius: 16, padding: 28, maxWidth: 420, width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
             {onboardResult ? (
               <div style={{ textAlign: 'center' }}>
                 <span className="material-icons" style={{ fontSize: 50, color: '#38a169' }}>how_to_reg</span>
                 <h3 style={{ marginTop: 12 }}>Account Created!</h3>
-                <p style={{ color: '#718096', fontSize: 13 }}>
+                <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
                   Login credentials for <strong>{onboardTarget.name}</strong>:
                 </p>
-                <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 8, padding: 12, textAlign: 'left', marginBottom: 16 }}>
-                  <div style={{ fontSize: 12, color: '#718096' }}>Email: <strong>{onboardEmail}</strong></div>
-                  <div style={{ fontSize: 12, color: '#718096', marginTop: 4 }}>Temp Password: <strong style={{ fontFamily: 'monospace' }}>{onboardResult.studentTempPassword}</strong></div>
+                <div style={{ background: 'var(--surface-alt)', border: '1.5px solid var(--border-strong)', borderRadius: 8, padding: 12, textAlign: 'left', marginBottom: 16 }}>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Email: <strong>{onboardEmail}</strong></div>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>Temp Password: <strong style={{ fontFamily: 'monospace' }}>{onboardResult.studentTempPassword}</strong></div>
                 </div>
-                <p style={{ fontSize: 11, color: '#a0aec0', marginBottom: 20 }}>Student will change this password on first login. A welcome email has been sent.</p>
+                <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 20 }}>Student will change this password on first login. A welcome email has been sent.</p>
                 <button onClick={() => setOnboardTarget(null)} style={{ padding: '10px 28px', borderRadius: 8, border: 'none', background: '#276749', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
                   Done
                 </button>
@@ -340,23 +340,23 @@ export default function MyStudents() {
                   </div>
                   <div>
                     <div style={{ fontWeight: 800, fontSize: 15 }}>Create Account</div>
-                    <div style={{ fontSize: 12, color: '#718096' }}>{onboardTarget.name} · Roll {onboardTarget.rollNumber}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{onboardTarget.name} · Roll {onboardTarget.rollNumber}</div>
                   </div>
                 </div>
                 <div style={{ marginBottom: 16 }}>
-                  <label style={{ fontSize: 11, fontWeight: 600, color: '#718096', display: 'block', marginBottom: 6 }}>Student Email Address</label>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Student Email Address</label>
                   <input
                     type="email"
                     value={onboardEmail}
                     onChange={e => setOnboardEmail(e.target.value)}
                     placeholder="student@email.com"
-                    style={{ width: '100%', border: '1.5px solid #e2e8f0', borderRadius: 8, padding: '10px 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', border: '1.5px solid var(--border-strong)', borderRadius: 8, padding: '10px 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
                     autoFocus
                   />
-                  <p style={{ fontSize: 11, color: '#a0aec0', marginTop: 6 }}>A welcome email with login credentials will be sent to this address.</p>
+                  <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>A welcome email with login credentials will be sent to this address.</p>
                 </div>
                 <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-                  <button onClick={() => setOnboardTarget(null)} disabled={onboarding} style={{ padding: '9px 20px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: '#fff', color: '#4a5568', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+                  <button onClick={() => setOnboardTarget(null)} disabled={onboarding} style={{ padding: '9px 20px', borderRadius: 8, border: '1.5px solid var(--border-strong)', background: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
                   <button onClick={handleOnboard} disabled={onboarding || !onboardEmail.trim()} style={{ padding: '9px 20px', borderRadius: 8, border: 'none', background: '#276749', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: onboarding ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 6 }}>
                     {onboarding ? 'Creating…' : <><span className="material-icons" style={{ fontSize: 16 }}>person_add</span> Create Account</>}
                   </button>

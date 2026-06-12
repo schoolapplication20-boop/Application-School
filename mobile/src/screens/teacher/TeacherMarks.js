@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, ScrollView, Modal } from 'react-native';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import useCachedFetch from '../../hooks/useCachedFetch';
+import OfflineBanner from '../../components/OfflineBanner';
 
 const EXAM_TYPES = ['Unit Test 1', 'Unit Test 2', 'Mid Term', 'Final Exam', 'Annual Exam'];
 
@@ -21,10 +23,11 @@ const gradeColor = (g) => ({ O: '#059669', 'A+': '#2563eb', A: '#7c3aed', 'B+': 
 
 export default function TeacherMarks() {
   const { user } = useAuth();
-  const [classes, setClasses] = useState([]);
+  const { data: classesData, loading: classesLoading, isOffline } = useCachedFetch('/api/teacher/classes');
+  const classes = classesData || [];
   const [selectedClass, setSelectedClass] = useState(null);
   const [students, setStudents] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [studentsLoading, setStudentsLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [studentMarks, setStudentMarks] = useState([]);
@@ -33,21 +36,15 @@ export default function TeacherMarks() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    api.get('/api/teacher/classes')
-      .then(res => {
-        const list = res.data.data || [];
-        setClasses(list);
-        if (list.length > 0) setSelectedClass(list[0]);
-      })
-      .finally(() => setLoading(false));
-  }, []);
+    if (classes.length > 0 && !selectedClass) setSelectedClass(classes[0]);
+  }, [classes]);
 
   useEffect(() => {
     if (!selectedClass) return;
-    setLoading(true);
+    setStudentsLoading(true);
     api.get(`/api/teacher/class/${selectedClass.id}/students`)
       .then(res => setStudents(res.data.data || []))
-      .finally(() => setLoading(false));
+      .finally(() => setStudentsLoading(false));
   }, [selectedClass]);
 
   const openStudent = async (student) => {
@@ -91,10 +88,11 @@ export default function TeacherMarks() {
     finally { setSubmitting(false); }
   };
 
-  if (loading && classes.length === 0) return <ActivityIndicator style={{ flex: 1 }} size="large" color="#10b981" />;
+  if (classesLoading && classes.length === 0) return <ActivityIndicator style={{ flex: 1 }} size="large" color="#10b981" />;
 
   return (
     <View style={styles.container}>
+      <OfflineBanner visible={isOffline} />
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.classRow}>
         {classes.map(c => (
           <TouchableOpacity key={c.id} style={[styles.classChip, selectedClass?.id === c.id && styles.classChipActive]} onPress={() => setSelectedClass(c)}>
@@ -103,7 +101,7 @@ export default function TeacherMarks() {
         ))}
       </ScrollView>
 
-      {loading ? <ActivityIndicator style={{ flex: 1 }} size="large" color="#10b981" /> : (
+      {studentsLoading ? <ActivityIndicator style={{ flex: 1 }} size="large" color="#10b981" /> : (
         <FlatList
           data={students}
           keyExtractor={s => s.id.toString()}

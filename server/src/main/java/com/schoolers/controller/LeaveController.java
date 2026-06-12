@@ -3,6 +3,7 @@ package com.schoolers.controller;
 import com.schoolers.dto.ApiResponse;
 import com.schoolers.model.LeaveRequest;
 import com.schoolers.repository.UserRepository;
+import com.schoolers.security.CurrentUserUtil;
 import com.schoolers.service.LeaveService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -23,25 +24,20 @@ public class LeaveController {
     @Autowired
     private UserRepository userRepository;
 
-    /** Returns the school_id of the currently authenticated user (null for platform-level SUPER_ADMIN). */
-    private Long getCurrentSchoolId(Authentication auth) {
-        if (auth == null) return null;
-        return userRepository.findByEmailIgnoreCase(auth.getName())
-                .map(com.schoolers.model.User::getSchoolId)
-                .orElse(null);
-    }
+    @Autowired
+    private CurrentUserUtil currentUserUtil;
 
     // ── Admin: student leaves — accessible to both ADMIN and SUPER_ADMIN (school owner) ──
     @GetMapping("/student")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<List<LeaveRequest>>> getStudentLeaves(Authentication auth) {
-        return ResponseEntity.ok(leaveService.getStudentLeaves(getCurrentSchoolId(auth)));
+        return ResponseEntity.ok(leaveService.getStudentLeaves(currentUserUtil.getCurrentSchoolId(auth)));
     }
 
     @GetMapping("/teacher")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<List<LeaveRequest>>> getTeacherLeaves(Authentication auth) {
-        return ResponseEntity.ok(leaveService.getTeacherLeaves(getCurrentSchoolId(auth)));
+        return ResponseEntity.ok(leaveService.getTeacherLeaves(currentUserUtil.getCurrentSchoolId(auth)));
     }
 
     // ── Student: submit leave ───────────────────────────────────────────────
@@ -89,7 +85,7 @@ public class LeaveController {
             @PathVariable Long requesterId,
             @RequestParam(defaultValue = "STUDENT") String type,
             Authentication auth) {
-        Long schoolId = getCurrentSchoolId(auth);
+        Long schoolId = currentUserUtil.getCurrentSchoolId(auth);
         var callerOpt = userRepository.findByEmailIgnoreCase(auth.getName());
         if (callerOpt.isPresent()) {
             var caller = callerOpt.get();
@@ -119,7 +115,7 @@ public class LeaveController {
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<?> updateStatus(
             @PathVariable Long id, @RequestBody Map<String, Object> body, Authentication auth) {
-        var response = leaveService.updateStatus(id, body, getCurrentSchoolId(auth));
+        var response = leaveService.updateStatus(id, body, currentUserUtil.getCurrentSchoolId(auth));
         return response.isSuccess()
                 ? ResponseEntity.ok(response)
                 : ResponseEntity.badRequest().body(response);
@@ -128,7 +124,7 @@ public class LeaveController {
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<?> delete(@PathVariable Long id, Authentication auth) {
-        var response = leaveService.delete(id, getCurrentSchoolId(auth));
+        var response = leaveService.delete(id, currentUserUtil.getCurrentSchoolId(auth));
         return response.isSuccess()
                 ? ResponseEntity.ok(response)
                 : ResponseEntity.notFound().build();

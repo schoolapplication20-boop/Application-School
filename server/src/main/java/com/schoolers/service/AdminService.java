@@ -30,11 +30,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 public class AdminService {
 
     private static final Logger log = LoggerFactory.getLogger(AdminService.class);
+
+    /** Cap on results returned by searchStudentsForFee to avoid returning an entire school roster. */
+    private static final int MAX_FEE_SEARCH_RESULTS = 100;
 
     @Autowired private StudentRepository studentRepository;
     @Autowired private TeacherRepository teacherRepository;
@@ -77,12 +82,12 @@ public class AdminService {
 
     /**
      * Returns true when a school-scoped admin is trying to access an entity
-     * from a different school. Both IDs must be non-null to trigger a mismatch.
-     * Platform-level SUPER_ADMINs (schoolId == null) always pass through.
+     * from a different school (or an entity with no school assigned at all).
+     * Platform-level SUPER_ADMINs (authSchoolId == null) always pass through.
      */
     private boolean schoolMismatch(Long authSchoolId, Long entitySchoolId) {
-        return authSchoolId != null && entitySchoolId != null
-                && !authSchoolId.equals(entitySchoolId);
+        if (authSchoolId == null) return false;
+        return !authSchoolId.equals(entitySchoolId);
     }
 
     private void cleanupOrphanUser(com.schoolers.model.User user) {
@@ -1332,33 +1337,39 @@ public class AdminService {
                 ? studentRepository.findBySchoolIdAndClassNameIgnoreCaseAndSectionIgnoreCase(classSchoolId, className, section)
                 : studentRepository.findByClassNameIgnoreCaseAndSectionIgnoreCase(className, section);
 
-        for (Student s : students) {
-            Long sid = s.getId();
-            Long sUserId = s.getStudentUserId();
+        if (!students.isEmpty()) {
+            List<Long> studentIds = students.stream().map(Student::getId).collect(Collectors.toList());
+            List<Long> studentUserIds = students.stream()
+                    .map(Student::getStudentUserId)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
 
-            marksRepository.deleteByStudentId(sid);
-            hallTicketRepository.deleteByStudentId(sid);
-            certificateRepository.deleteByStudentId(sid);
-            attendanceRepository.deleteByStudentId(sid);
-            feeRepository.deleteByStudentId(sid);
-            feePaymentRepository.deleteByStudentId(sid);
-            transportFeeRepository.deleteByStudentId(sid);
-            transportStudentAssignmentRepository.deleteByStudentId(sid);
-            leaveRequestRepository.deleteByRequesterIdAndRequesterType(sid,
+            marksRepository.deleteByStudentIdIn(studentIds);
+            hallTicketRepository.deleteByStudentIdIn(studentIds);
+            certificateRepository.deleteByStudentIdIn(studentIds);
+            attendanceRepository.deleteByStudentIdIn(studentIds);
+            feeRepository.deleteByStudentIdIn(studentIds);
+            feePaymentRepository.deleteByStudentIdIn(studentIds);
+            transportFeeRepository.deleteByStudentIdIn(studentIds);
+            transportStudentAssignmentRepository.deleteByStudentIdIn(studentIds);
+            leaveRequestRepository.deleteByRequesterIdInAndRequesterType(studentIds,
                     com.schoolers.model.LeaveRequest.RequesterType.STUDENT);
-            assignmentSubmissionRepository.deleteByStudentId(sid);
-            messageRepository.deleteByTargetStudentId(sid);
-            List<com.schoolers.model.StudentFeeAssignment> fas =
-                    studentFeeAssignmentRepository.findByStudentId(sid);
-            for (com.schoolers.model.StudentFeeAssignment fa : fas) {
-                feeInstallmentRepository.deleteByAssignmentId(fa.getId());
+            assignmentSubmissionRepository.deleteByStudentIdIn(studentIds);
+            messageRepository.deleteByTargetStudentIdIn(studentIds);
+
+            List<Long> assignmentIds = studentFeeAssignmentRepository.findByStudentIdIn(studentIds).stream()
+                    .map(com.schoolers.model.StudentFeeAssignment::getId)
+                    .collect(Collectors.toList());
+            if (!assignmentIds.isEmpty()) {
+                feeInstallmentRepository.deleteByAssignmentIdIn(assignmentIds);
             }
-            studentFeeAssignmentRepository.deleteByStudentId(sid);
-            if (sUserId != null) {
-                appNotificationRepository.deleteByUserId(sUserId);
-                userRepository.deleteById(sUserId);
+            studentFeeAssignmentRepository.deleteByStudentIdIn(studentIds);
+
+            if (!studentUserIds.isEmpty()) {
+                appNotificationRepository.deleteByUserIdIn(studentUserIds);
+                userRepository.deleteAllById(studentUserIds);
             }
-            studentRepository.deleteById(sid);
+            studentRepository.deleteAllById(studentIds);
         }
         log.info("[deleteClass] cascade-deleted " + students.size() + " students for class " + classSection);
 
@@ -1430,6 +1441,9 @@ public class AdminService {
                     : studentRepository.findByClassFlexible(combined, cls, sec);
         }
 
+        if (results.size() > MAX_FEE_SEARCH_RESULTS) {
+            results = results.subList(0, MAX_FEE_SEARCH_RESULTS);
+        }
         return ApiResponse.success(results);
     }
 
@@ -1689,11 +1703,16 @@ public class AdminService {
         int updatedCount = 0;
         if (schoolId != null && totalFee.compareTo(BigDecimal.ZERO) > 0) {
             List<Student> students = studentRepository.findBySchoolIdAndClassName(schoolId, className);
+            List<Long> studentIds = students.stream().map(Student::getId).collect(Collectors.toList());
+            Map<Long, StudentFeeAssignment> existingByStudentId = studentIds.isEmpty()
+                    ? Map.of()
+                    : studentFeeAssignmentRepository
+                            .findByStudentIdInAndAcademicYearAndSchoolId(studentIds, academicYear, schoolId).stream()
+                            .collect(Collectors.toMap(StudentFeeAssignment::getStudentId, a -> a));
             List<StudentFeeAssignment> toSave = new java.util.ArrayList<>();
             for (Student student : students) {
-                StudentFeeAssignment assignment = studentFeeAssignmentRepository
-                        .findByStudentIdAndAcademicYearAndSchoolId(student.getId(), academicYear, schoolId)
-                        .orElse(StudentFeeAssignment.builder()
+                StudentFeeAssignment assignment = existingByStudentId.getOrDefault(student.getId(),
+                        StudentFeeAssignment.builder()
                                 .studentId(student.getId())
                                 .academicYear(academicYear)
                                 .schoolId(schoolId)
@@ -2470,31 +2489,36 @@ public class AdminService {
         List<ClassRoom> classes = (schoolId != null)
                 ? classRoomRepository.findBySchoolIdAndIsActive(schoolId, true)
                 : classRoomRepository.findByIsActive(true);
-        List<Map<String, Object>> result = new java.util.ArrayList<>();
 
+        List<Object[]> rows = (schoolId != null)
+                ? attendanceRepository.countByClassAndStatusForSchoolAndDate(schoolId, date)
+                : attendanceRepository.countByClassAndStatusForDate(date);
+
+        Map<Long, long[]> countsByClassId = new java.util.HashMap<>();
+        for (Object[] row : rows) {
+            Long classId  = ((Number) row[0]).longValue();
+            String status = row[1].toString();
+            long count    = ((Number) row[2]).longValue();
+            long[] counts = countsByClassId.computeIfAbsent(classId, k -> new long[4]);
+            switch (status) {
+                case "PRESENT" -> counts[0] += count;
+                case "ABSENT"  -> counts[1] += count;
+                case "LEAVE"   -> counts[2] += count;
+                case "OTHERS"  -> counts[3] += count;
+            }
+        }
+
+        List<Map<String, Object>> result = new java.util.ArrayList<>();
         for (ClassRoom cls : classes) {
-            Long clsSchool = schoolId != null ? schoolId : cls.getSchoolId();
-            List<Object[]> rows = (clsSchool != null)
-                    ? attendanceRepository.countByStatusForSchoolAndClassAndDate(clsSchool, cls.getId(), date)
-                    : attendanceRepository.countByStatusForClassAndDate(cls.getId(), date);
+            long[] counts  = countsByClassId.getOrDefault(cls.getId(), new long[4]);
+            long present = counts[0], absent = counts[1], leave = counts[2], others = counts[3];
+
             Map<String, Object> entry = new LinkedHashMap<>();
             entry.put("classId",   cls.getId());
             entry.put("className", cls.getName());
             entry.put("section",   cls.getSection());
             entry.put("teacherId", cls.getTeacherId());
             entry.put("teacherName", cls.getTeacherName());
-
-            long present = 0, absent = 0, leave = 0, others = 0;
-            for (Object[] row : rows) {
-                String status = row[0].toString();
-                long count    = ((Number) row[1]).longValue();
-                switch (status) {
-                    case "PRESENT" -> present += count;
-                    case "ABSENT"  -> absent  += count;
-                    case "LEAVE"   -> leave   += count;
-                    case "OTHERS"  -> others  += count;
-                }
-            }
             entry.put("present", present);
             entry.put("absent",  absent);
             entry.put("leave",   leave);

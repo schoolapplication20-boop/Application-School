@@ -87,8 +87,8 @@ export default function TeacherAppointments() {
 
         <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
           <div>
-            <h1 style={{ fontSize: 22, fontWeight: 700, color: '#1a202c', margin: 0 }}>Parent-Teacher Appointments</h1>
-            <p style={{ color: '#718096', marginTop: 4, fontSize: 13 }}>Manage appointment requests with your class students.</p>
+            <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Parent-Teacher Appointments</h1>
+            <p style={{ color: 'var(--text-secondary)', marginTop: 4, fontSize: 13 }}>Manage appointment requests with your class students.</p>
           </div>
           {pendingCount > 0 && (
             <span style={{ background: '#c53030', color: '#fff', fontSize: 12, fontWeight: 700,
@@ -104,18 +104,18 @@ export default function TeacherAppointments() {
         {/* Respond modal */}
         {responding && (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-            <div className="modal-card" style={{ background: '#fff', borderRadius: 14, padding: 28, maxWidth: 460, width: '100%', boxShadow: '0 8px 32px rgba(0,0,0,0.18)', maxHeight: '90vh', overflowY: 'auto' }}>
-              <h3 style={{ fontSize: 16, fontWeight: 700, color: '#2d3748', margin: '0 0 6px' }}>Respond to Request</h3>
-              <p style={{ fontSize: 13, color: '#718096', margin: '0 0 20px' }}>
+            <div className="modal-card" style={{ background: 'var(--surface)', borderRadius: 14, padding: 28, maxWidth: 460, width: '100%', boxShadow: '0 8px 32px rgba(0,0,0,0.18)', maxHeight: '90vh', overflowY: 'auto' }}>
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 6px' }}>Respond to Request</h3>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 20px' }}>
                 {responding.studentName} · {responding.topic}
               </p>
               <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
                 {['ACCEPTED', 'REJECTED'].map(s => (
                   <button key={s} onClick={() => setRespondForm(f => ({ ...f, status: s }))}
                     style={{ flex: 1, padding: '9px 0', border: '2px solid',
-                      borderColor: respondForm.status === s ? (s === 'ACCEPTED' ? '#48bb78' : '#fc8181') : '#e2e8f0',
-                      background: respondForm.status === s ? (s === 'ACCEPTED' ? '#f0fff4' : '#fff5f5') : '#fff',
-                      color: respondForm.status === s ? (s === 'ACCEPTED' ? '#276749' : '#c53030') : '#718096',
+                      borderColor: respondForm.status === s ? (s === 'ACCEPTED' ? '#48bb78' : '#fc8181') : 'var(--border-strong)',
+                      background: respondForm.status === s ? (s === 'ACCEPTED' ? '#f0fff4' : '#fff5f5') : 'var(--surface)',
+                      color: respondForm.status === s ? (s === 'ACCEPTED' ? '#276749' : '#c53030') : 'var(--text-secondary)',
                       borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
                     {s === 'ACCEPTED' ? 'Accept' : 'Decline'}
                   </button>
@@ -124,25 +124,25 @@ export default function TeacherAppointments() {
               {respondForm.status === 'ACCEPTED' && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
                   <div>
-                    <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Confirm Date</label>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Confirm Date</label>
                     <input type="date" value={respondForm.confirmedDate} min={today()}
                       onChange={e => setRespondForm(f => ({ ...f, confirmedDate: e.target.value }))}
-                      style={{ width: '100%', padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, boxSizing: 'border-box' }} />
+                      style={{ width: '100%', padding: '8px 10px', border: '1px solid var(--border-strong)', borderRadius: 8, fontSize: 13, boxSizing: 'border-box' }} />
                   </div>
                   <div>
-                    <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Confirm Time</label>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Confirm Time</label>
                     <input type="time" value={respondForm.confirmedTime}
                       onChange={e => setRespondForm(f => ({ ...f, confirmedTime: e.target.value }))}
-                      style={{ width: '100%', padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, boxSizing: 'border-box' }} />
+                      style={{ width: '100%', padding: '8px 10px', border: '1px solid var(--border-strong)', borderRadius: 8, fontSize: 13, boxSizing: 'border-box' }} />
                   </div>
                 </div>
               )}
               <div style={{ marginBottom: 16 }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Note to Student/Parent (optional)</label>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Note to Student/Parent (optional)</label>
                 <textarea value={respondForm.teacherNote} maxLength={300}
                   onChange={e => setRespondForm(f => ({ ...f, teacherNote: e.target.value }))}
                   placeholder="Add a note…" rows={2}
-                  style={{ width: '100%', padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, resize: 'vertical', boxSizing: 'border-box' }} />
+                  style={{ width: '100%', padding: '8px 10px', border: '1px solid var(--border-strong)', borderRadius: 8, fontSize: 13, resize: 'vertical', boxSizing: 'border-box' }} />
               </div>
               <div style={{ display: 'flex', gap: 10 }}>
                 <button onClick={handleRespond} disabled={respondLoading}
@@ -152,7 +152,7 @@ export default function TeacherAppointments() {
                   {respondLoading ? 'Saving…' : (respondForm.status === 'ACCEPTED' ? 'Confirm Accept' : 'Confirm Decline')}
                 </button>
                 <button onClick={() => setResponding(null)}
-                  style={{ padding: '10px 18px', background: '#edf2f7', color: '#4a5568', border: 'none', borderRadius: 8, fontSize: 14, cursor: 'pointer' }}>
+                  style={{ padding: '10px 18px', background: 'var(--surface-alt)', color: 'var(--text-secondary)', border: 'none', borderRadius: 8, fontSize: 14, cursor: 'pointer' }}>
                   Back
                 </button>
               </div>
@@ -161,12 +161,12 @@ export default function TeacherAppointments() {
         )}
 
         {/* Tabs */}
-        <div style={{ display: 'flex', gap: 8, borderBottom: '2px solid #e2e8f0', marginBottom: 24 }}>
+        <div style={{ display: 'flex', gap: 8, borderBottom: '2px solid var(--border-strong)', marginBottom: 24 }}>
           {[{ key: 'list', label: 'All Appointments' }, { key: 'new', label: '+ Request Meeting' }].map(t => (
             <button key={t.key} onClick={() => { setTab(t.key); setError(''); setSuccess(''); }}
               style={{ padding: '10px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none',
                 background: 'none', borderBottom: tab === t.key ? '2px solid #4299e1' : '2px solid transparent',
-                color: tab === t.key ? '#4299e1' : '#718096', marginBottom: -2 }}>
+                color: tab === t.key ? '#4299e1' : 'var(--text-secondary)', marginBottom: -2 }}>
               {t.label}
             </button>
           ))}
@@ -174,23 +174,23 @@ export default function TeacherAppointments() {
 
         {tab === 'new' ? (
           students.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: 60, color: '#a0aec0' }}>
+            <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-muted)' }}>
               <span className="material-icons" style={{ fontSize: 48, display: 'block', marginBottom: 12, opacity: 0.4 }}>people_outline</span>
               <p style={{ fontWeight: 600, margin: 0 }}>No class assigned</p>
               <p style={{ fontSize: 13, marginTop: 6 }}>You must be assigned as a class teacher to request appointments.</p>
             </div>
           ) : (
-            <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 6px rgba(0,0,0,0.07)', padding: 28 }}>
-              <h2 style={{ fontSize: 16, fontWeight: 700, color: '#2d3748', marginBottom: 20, marginTop: 0 }}>
+            <div style={{ background: 'var(--surface)', borderRadius: 12, boxShadow: '0 1px 6px rgba(0,0,0,0.07)', padding: 28 }}>
+              <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 20, marginTop: 0 }}>
                 Request Meeting with Student / Parent
               </h2>
               <form onSubmit={handleRequest} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div>
-                  <label style={{ fontSize: 13, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 6 }}>
+                  <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
                     Student <span style={{ color: '#c53030' }}>*</span>
                   </label>
                   <select value={form.studentId} onChange={e => setForm(f => ({ ...f, studentId: e.target.value }))} required
-                    style={{ width: '100%', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}>
+                    style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--border-strong)', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}>
                     <option value="">Select a student…</option>
                     {students.map(s => (
                       <option key={s.id} value={s.id}>{s.name}{s.rollNumber ? ` (Roll: ${s.rollNumber})` : ''}</option>
@@ -199,40 +199,40 @@ export default function TeacherAppointments() {
                 </div>
 
                 <div>
-                  <label style={{ fontSize: 13, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 6 }}>
+                  <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
                     Topic <span style={{ color: '#c53030' }}>*</span>
                   </label>
                   <input value={form.topic} onChange={e => setForm(f => ({ ...f, topic: e.target.value }))}
                     placeholder="e.g. Academic performance, behaviour, attendance…"
                     maxLength={200} required
-                    style={{ width: '100%', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} />
+                    style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--border-strong)', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} />
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                   <div>
-                    <label style={{ fontSize: 13, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 6 }}>
+                    <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
                       Proposed Date <span style={{ color: '#c53030' }}>*</span>
                     </label>
                     <input type="date" value={form.proposedDate} min={today()} required
                       onChange={e => setForm(f => ({ ...f, proposedDate: e.target.value }))}
-                      style={{ width: '100%', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} />
+                      style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--border-strong)', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} />
                   </div>
                   <div>
-                    <label style={{ fontSize: 13, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 6 }}>
+                    <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
                       Proposed Time
                     </label>
                     <input type="time" value={form.proposedTime}
                       onChange={e => setForm(f => ({ ...f, proposedTime: e.target.value }))}
-                      style={{ width: '100%', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} />
+                      style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--border-strong)', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} />
                   </div>
                 </div>
 
                 <div>
-                  <label style={{ fontSize: 13, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 6 }}>Note</label>
+                  <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Note</label>
                   <textarea value={form.teacherNote} maxLength={500}
                     onChange={e => setForm(f => ({ ...f, teacherNote: e.target.value }))}
                     placeholder="Any details for the parent/student…" rows={3}
-                    style={{ width: '100%', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14, resize: 'vertical', boxSizing: 'border-box' }} />
+                    style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--border-strong)', borderRadius: 8, fontSize: 14, resize: 'vertical', boxSizing: 'border-box' }} />
                 </div>
 
                 <button type="submit" disabled={submitting}
@@ -244,11 +244,11 @@ export default function TeacherAppointments() {
             </div>
           )
         ) : loading ? (
-          <div style={{ textAlign: 'center', padding: 60, color: '#718096' }}>
+          <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-secondary)' }}>
             <span className="material-icons" style={{ fontSize: 40, display: 'block', marginBottom: 8 }}>hourglass_top</span>Loading…
           </div>
         ) : appointments.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 60, color: '#a0aec0' }}>
+          <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-muted)' }}>
             <span className="material-icons" style={{ fontSize: 52, display: 'block', marginBottom: 12, opacity: 0.4 }}>event_note</span>
             <p style={{ fontWeight: 600, margin: 0 }}>No appointments yet</p>
           </div>
@@ -259,17 +259,17 @@ export default function TeacherAppointments() {
               const studentRequested = String(appt.requestedBy || '').toUpperCase() === 'STUDENT';
               const canRespond = String(appt.status || '').toUpperCase() === 'PENDING' && studentRequested;
               return (
-                <div key={appt.id} style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', padding: 20 }}>
+                <div key={appt.id} style={{ background: 'var(--surface)', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', padding: 20 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10 }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
-                        <span style={{ fontSize: 15, fontWeight: 700, color: '#2d3748' }}>{appt.topic}</span>
+                        <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>{appt.topic}</span>
                         <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: s.bg, color: s.color }}>{s.label}</span>
                         {!studentRequested && (
                           <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, background: '#ebf8ff', color: '#2b6cb0', fontWeight: 600 }}>You requested</span>
                         )}
                       </div>
-                      <div style={{ fontSize: 13, color: '#718096' }}>
+                      <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
                         <span className="material-icons" style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 3 }}>person</span>
                         {appt.studentName}{appt.parentName ? ` (Parent: ${appt.parentName})` : ''}
                         {' · '}
@@ -277,10 +277,10 @@ export default function TeacherAppointments() {
                         {fmt(appt.proposedDate)}{appt.proposedTime ? ` at ${appt.proposedTime}` : ''}
                       </div>
                       {appt.studentNote && (
-                        <div style={{ fontSize: 12, color: '#718096', marginTop: 6, fontStyle: 'italic' }}>Student note: {appt.studentNote}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 6, fontStyle: 'italic' }}>Student note: {appt.studentNote}</div>
                       )}
                       {appt.teacherNote && (
-                        <div style={{ fontSize: 12, color: '#4a5568', marginTop: 6, background: '#f8fafc', borderRadius: 6, padding: '6px 10px' }}>
+                        <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 6, background: 'var(--surface-alt)', borderRadius: 6, padding: '6px 10px' }}>
                           Your note: {appt.teacherNote}
                         </div>
                       )}
@@ -293,7 +293,7 @@ export default function TeacherAppointments() {
                       </button>
                     )}
                   </div>
-                  <div style={{ fontSize: 11, color: '#a0aec0', marginTop: 10 }}>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 10 }}>
                     {studentRequested ? 'Student requested' : 'You requested'} · {new Date(appt.createdAt).toLocaleDateString('en-IN')}
                   </div>
                 </div>

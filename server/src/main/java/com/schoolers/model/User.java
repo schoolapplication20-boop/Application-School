@@ -119,6 +119,10 @@ public class User {
     @Column(name = "locked_until")
     private LocalDateTime lockedUntil;
 
+    /** Expo push notification token for the mobile app. Null if not registered or unsubscribed. */
+    @Column(name = "push_token", length = 255)
+    private String pushToken;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

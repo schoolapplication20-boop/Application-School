@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import Layout from '../../components/Layout';
-import Toast from '../../components/Toast';
 import { teacherAttendanceAPI } from '../../services/api';
+import { useToast } from '../../context/ToastContext';
 
 const STATUS_CONFIG = {
   PRESENT: { label: 'Present', icon: 'check_circle', color: '#16a34a', bg: '#f0fdf4', border: '#86efac' },
@@ -16,7 +16,6 @@ export default function TeacherSelfAttendance() {
   const [history,     setHistory]     = useState([]);
   const [loading,     setLoading]     = useState(true);
   const [saving,      setSaving]      = useState(false);
-  const [toast,       setToast]       = useState(null);
 
   const today = new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   const todayStr = new Date().toISOString().slice(0, 10);
@@ -32,10 +31,7 @@ export default function TeacherSelfAttendance() {
       .finally(() => setLoading(false));
   }, []);
 
-  const showToast = (msg, type = 'success') => {
-    setToast({ message: msg, type });
-    setTimeout(() => setToast(null), 3000);
-  };
+  const showToast = useToast();
 
   const handleMark = async () => {
     if (!selected) return showToast('Please select a status', 'error');
@@ -65,19 +61,17 @@ export default function TeacherSelfAttendance() {
     <Layout pageTitle="My Attendance">
       <div style={{ maxWidth: 700, margin: '0 auto', padding: '8px 0' }}>
 
-        {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-
         {/* Header */}
         <div style={{ marginBottom: 24 }}>
-          <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1a202c', margin: 0 }}>My Attendance</h2>
-          <p style={{ color: '#718096', margin: '4px 0 0', fontSize: 14 }}>{today}</p>
+          <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>My Attendance</h2>
+          <p style={{ color: 'var(--text-secondary)', margin: '4px 0 0', fontSize: 14 }}>{today}</p>
         </div>
 
         {/* Mark Today's Attendance */}
-        <div style={{ background: '#fff', borderRadius: 16, padding: 24, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: 24 }}>
+        <div style={{ background: 'var(--surface)', borderRadius: 16, padding: 24, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
             <span className="material-icons" style={{ color: '#7c3aed' }}>today</span>
-            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#2d3748' }}>
+            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
               Mark Today's Attendance
               {todayRecord && (
                 <span style={{ marginLeft: 10, fontSize: 12, fontWeight: 600, padding: '2px 10px', borderRadius: 20,
@@ -97,16 +91,16 @@ export default function TeacherSelfAttendance() {
                 onClick={() => setSelected(key)}
                 style={{
                   flex: 1, minWidth: 110, padding: '14px 10px',
-                  border: `2px solid ${selected === key ? cfg.color : '#e2e8f0'}`,
-                  borderRadius: 12, background: selected === key ? cfg.bg : '#fafafa',
+                  border: `2px solid ${selected === key ? cfg.color : 'var(--border-strong)'}`,
+                  borderRadius: 12, background: selected === key ? cfg.bg : 'var(--surface-alt)',
                   cursor: 'pointer', transition: 'all 0.2s',
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
                 }}
               >
-                <span className="material-icons" style={{ fontSize: 28, color: selected === key ? cfg.color : '#a0aec0' }}>
+                <span className="material-icons" style={{ fontSize: 28, color: selected === key ? cfg.color : 'var(--text-muted)' }}>
                   {cfg.icon}
                 </span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: selected === key ? cfg.color : '#718096' }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: selected === key ? cfg.color : 'var(--text-secondary)' }}>
                   {cfg.label}
                 </span>
               </button>
@@ -122,8 +116,8 @@ export default function TeacherSelfAttendance() {
             rows={2}
             style={{
               width: '100%', padding: '10px 14px', borderRadius: 10,
-              border: '1.5px solid #e2e8f0', fontSize: 14, resize: 'vertical',
-              outline: 'none', color: '#2d3748', boxSizing: 'border-box',
+              border: '1.5px solid var(--border-strong)', fontSize: 14, resize: 'vertical',
+              outline: 'none', color: 'var(--text-primary)', boxSizing: 'border-box',
             }}
           />
 
@@ -150,21 +144,21 @@ export default function TeacherSelfAttendance() {
             }}>
               <div style={{ fontSize: 28, fontWeight: 800, color: cfg.color }}>{stats[key] || 0}</div>
               <div style={{ fontSize: 12, fontWeight: 600, color: cfg.color }}>{cfg.label}</div>
-              <div style={{ fontSize: 11, color: '#a0aec0' }}>This Month</div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>This Month</div>
             </div>
           ))}
         </div>
 
         {/* History */}
-        <div style={{ background: '#fff', borderRadius: 16, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f4f8', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ background: 'var(--surface)', borderRadius: 16, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
             <span className="material-icons" style={{ color: '#7c3aed', fontSize: 20 }}>history</span>
-            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#2d3748' }}>This Month's History</h3>
+            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>This Month's History</h3>
           </div>
           {loading ? (
-            <div style={{ padding: 32, textAlign: 'center', color: '#a0aec0' }}>Loading…</div>
+            <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>Loading…</div>
           ) : history.length === 0 ? (
-            <div style={{ padding: 32, textAlign: 'center', color: '#a0aec0' }}>
+            <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>
               <span className="material-icons" style={{ fontSize: 40, display: 'block', marginBottom: 8 }}>event_note</span>
               No attendance marked yet this month
             </div>
@@ -174,15 +168,15 @@ export default function TeacherSelfAttendance() {
                 const cfg = STATUS_CONFIG[r.status] || STATUS_CONFIG.PRESENT;
                 return (
                   <div key={r.id} style={{
-                    padding: '14px 20px', borderBottom: '1px solid #f8fafc',
+                    padding: '14px 20px', borderBottom: '1px solid var(--border)',
                     display: 'flex', alignItems: 'center', gap: 14,
                   }}>
                     <span className="material-icons" style={{ color: cfg.color, fontSize: 22 }}>{cfg.icon}</span>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: '#2d3748' }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
                         {new Date(r.date).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}
                       </div>
-                      {r.note && <div style={{ fontSize: 12, color: '#718096', marginTop: 2 }}>{r.note}</div>}
+                      {r.note && <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{r.note}</div>}
                     </div>
                     <span style={{
                       padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700,

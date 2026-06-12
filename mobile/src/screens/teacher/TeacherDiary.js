@@ -1,28 +1,21 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, ScrollView, Modal } from 'react-native';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import useCachedFetch from '../../hooks/useCachedFetch';
+import OfflineBanner from '../../components/OfflineBanner';
 
 export default function TeacherDiary() {
   const { user } = useAuth();
-  const [entries, setEntries] = useState([]);
-  const [classes, setClasses] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: entriesData, loading: entriesLoading, isOffline: entriesOffline, reload: reloadEntries } = useCachedFetch('/api/diary/teacher');
+  const { data: classesData, loading: classesLoading, isOffline: classesOffline } = useCachedFetch('/api/teacher/classes');
+  const entries = entriesData || [];
+  const classes = classesData || [];
+  const loading = entriesLoading || classesLoading;
+  const isOffline = entriesOffline || classesOffline;
   const [modalVisible, setModalVisible] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ classId: '', className: '', section: '', subject: '', topic: '', homework: '', description: '', remarks: '', diaryDate: new Date().toISOString().slice(0, 10) });
-
-  const load = () => {
-    Promise.all([
-      api.get('/api/diary/teacher'),
-      api.get('/api/teacher/classes'),
-    ]).then(([dRes, cRes]) => {
-      setEntries(dRes.data.data || []);
-      setClasses(cRes.data.data || []);
-    }).catch(() => {}).finally(() => setLoading(false));
-  };
-
-  useEffect(() => { load(); }, []);
 
   const submit = async () => {
     if (!form.topic.trim()) { Alert.alert('Error', 'Topic is required.'); return; }
@@ -46,7 +39,7 @@ export default function TeacherDiary() {
       Alert.alert('Success', 'Diary entry created.');
       setModalVisible(false);
       setForm({ classId: '', className: '', section: '', subject: '', topic: '', homework: '', description: '', remarks: '', diaryDate: new Date().toISOString().slice(0, 10) });
-      load();
+      reloadEntries();
     } catch (err) { Alert.alert('Error', err?.response?.data?.message || 'Failed to create diary entry.'); }
     finally { setSubmitting(false); }
   };
@@ -55,6 +48,7 @@ export default function TeacherDiary() {
 
   return (
     <View style={styles.container}>
+      <OfflineBanner visible={isOffline} />
       <TouchableOpacity style={styles.addBtn} onPress={() => setModalVisible(true)}>
         <Text style={styles.addBtnText}>+ Add Diary Entry</Text>
       </TouchableOpacity>

@@ -87,7 +87,7 @@ export default function StudentLeaveRequest() {
 
   const inputStyle = (fieldErr) => ({
     width: '100%', padding: '10px 12px', borderRadius: 8,
-    border: `1px solid ${fieldErr ? '#e53e3e' : '#e2e8f0'}`,
+    border: `1px solid ${fieldErr ? '#e53e3e' : 'var(--border-strong)'}`,
     fontSize: 13, outline: 'none', boxSizing: 'border-box',
   });
 
@@ -112,7 +112,7 @@ export default function StudentLeaveRequest() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
               {/* Leave Type */}
               <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#4a5568', marginBottom: 6 }}>Leave Type</label>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Leave Type</label>
                 <select
                   value={form.leaveType}
                   onChange={e => setForm(f => ({ ...f, leaveType: e.target.value }))}
@@ -124,7 +124,7 @@ export default function StudentLeaveRequest() {
 
               {/* From Date */}
               <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#4a5568', marginBottom: 6 }}>From Date *</label>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>From Date *</label>
                 <input
                   type="date"
                   value={form.fromDate}
@@ -136,7 +136,7 @@ export default function StudentLeaveRequest() {
 
               {/* To Date */}
               <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#4a5568', marginBottom: 6 }}>To Date *</label>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>To Date *</label>
                 <input
                   type="date"
                   value={form.toDate}
@@ -150,7 +150,7 @@ export default function StudentLeaveRequest() {
 
             {/* Reason */}
             <div style={{ marginBottom: 20 }}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#4a5568', marginBottom: 6 }}>Reason *</label>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Reason *</label>
               <textarea
                 rows={3}
                 maxLength={1000}
@@ -185,7 +185,7 @@ export default function StudentLeaveRequest() {
             <button
               onClick={load}
               disabled={loading}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#718096', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}
             >
               <span className="material-icons" style={{ fontSize: 16, animation: loading ? 'spin 1s linear infinite' : 'none' }}>refresh</span>
               Refresh
@@ -193,12 +193,12 @@ export default function StudentLeaveRequest() {
           </div>
 
           {loading ? (
-            <div style={{ padding: '40px 0', textAlign: 'center', color: '#a0aec0', fontSize: 13 }}>
+            <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
               <span className="material-icons" style={{ fontSize: 32, display: 'block', marginBottom: 8 }}>hourglass_empty</span>
               Loading…
             </div>
           ) : leaves.length === 0 ? (
-            <div style={{ padding: '40px 0', textAlign: 'center', color: '#a0aec0', fontSize: 13 }}>
+            <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
               <span className="material-icons" style={{ fontSize: 40, display: 'block', marginBottom: 8, opacity: 0.4 }}>event_busy</span>
               No leave requests yet
             </div>
@@ -235,11 +235,11 @@ export default function StudentLeaveRequest() {
                           : <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: '#fffbeb', color: '#b7791f' }}>Pending</span>
                         }
                       </td>
-                      <td style={{ fontSize: 12, color: '#718096', fontStyle: l.teacherRemark ? 'normal' : 'italic' }}>
+                      <td style={{ fontSize: 12, color: 'var(--text-secondary)', fontStyle: l.teacherRemark ? 'normal' : 'italic' }}>
                         {l.teacherRemark || (String(l.status || '').toUpperCase() === 'PENDING' ? 'Awaiting review' : '—')}
                       </td>
-                      <td style={{ fontSize: 12, color: '#718096' }}>{l.reviewedBy || '—'}</td>
-                      <td style={{ fontSize: 11, color: '#a0aec0' }}>
+                      <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{l.reviewedBy || '—'}</td>
+                      <td style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                         {l.createdAt ? new Date(l.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
                       </td>
                     </tr>

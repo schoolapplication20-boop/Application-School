@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '../../components/Layout';
-import Toast from '../../components/Toast';
+import Button from '../../components/Button';
 import { diaryAPI, adminAPI } from '../../services/api';
 import { sortClassNames } from '../../utils/classOrder';
+import { useToast } from '../../context/ToastContext';
 
 const STATUS_COLOR  = { PENDING: '#ed8936', APPROVED: '#0de1e8', REJECTED: '#e53e3e' };
 const STATUS_BG     = { PENDING: '#fff7ed', APPROVED: '#f0fff4', REJECTED: '#fff5f5' };
@@ -13,7 +14,6 @@ export default function DiaryMonitoring() {
   const [entries,   setEntries]   = useState([]);
   const [teachers,  setTeachers]  = useState([]);
   const [loading,   setLoading]   = useState(true);
-  const [toast,     setToast]     = useState(null);
   const [preview,   setPreview]   = useState(null);   // entry for lightbox
   const [reviewing, setReviewing] = useState(null);   // entry for review modal
 
@@ -26,15 +26,8 @@ export default function DiaryMonitoring() {
   // Review form
   const [reviewForm, setReviewForm] = useState({ reviewStatus: '', adminComment: '' });
   const [reviewSaving, setReviewSaving] = useState(false);
-  const toastTimerRef = useRef(null);
 
-  useEffect(() => () => clearTimeout(toastTimerRef.current), []);
-
-  const showToast = (message, type = 'success') => {
-    clearTimeout(toastTimerRef.current);
-    setToast({ message, type });
-    toastTimerRef.current = setTimeout(() => setToast(null), 3500);
-  };
+  const showToast = useToast();
 
   const fetchEntries = useCallback(async () => {
     setLoading(true);
@@ -117,8 +110,6 @@ export default function DiaryMonitoring() {
 
   return (
     <Layout pageTitle="Homework / Diary Monitoring">
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-
       <div className="page-header">
         <h1>Homework / Diary Monitoring</h1>
         <p>Review all class diary entries uploaded by teachers</p>
@@ -181,24 +172,24 @@ export default function DiaryMonitoring() {
 
       {/* Entry Grid */}
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '60px', color: '#a0aec0' }}>
+        <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)' }}>
           <span className="material-icons" style={{ fontSize: 48, display: 'block', marginBottom: 12 }}>hourglass_empty</span>
           Loading diary entries...
         </div>
       ) : entries.length === 0 ? (
         <div className="data-table-card" style={{ textAlign: 'center', padding: '60px' }}>
-          <span className="material-icons" style={{ fontSize: 56, color: '#e2e8f0', display: 'block', marginBottom: 12 }}>photo_library</span>
-          <h3 style={{ color: '#a0aec0', margin: '0 0 8px' }}>No diary entries found</h3>
-          <p style={{ color: '#cbd5e0', margin: 0, fontSize: '14px' }}>Try adjusting the filters or wait for teachers to upload</p>
+          <span className="material-icons" style={{ fontSize: 56, color: 'var(--border-strong)', display: 'block', marginBottom: 12 }}>photo_library</span>
+          <h3 style={{ color: 'var(--text-muted)', margin: '0 0 8px' }}>No diary entries found</h3>
+          <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '14px' }}>Try adjusting the filters or wait for teachers to upload</p>
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
           {entries.map(entry => {
             const status = entry.reviewStatus || 'PENDING';
             return (
-              <div key={entry.id} style={{ border: '1.5px solid #f0f4f8', borderRadius: '14px', overflow: 'hidden', background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+              <div key={entry.id} style={{ border: '1.5px solid var(--border)', borderRadius: '14px', overflow: 'hidden', background: 'var(--surface)', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
                 {/* Image */}
-                <div style={{ position: 'relative', cursor: 'pointer', height: '180px', background: '#f7fafc' }}
+                <div style={{ position: 'relative', cursor: 'pointer', height: '180px', background: 'var(--surface-alt)' }}
                   onClick={() => setPreview(entry)}>
                   <img src={entry.imageUrl} alt="Diary"
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -227,20 +218,20 @@ export default function DiaryMonitoring() {
                 <div style={{ padding: '16px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: '14px', color: '#2d3748' }}>
+                      <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text-primary)' }}>
                         Class {entry.className}{entry.section ? ` - ${entry.section}` : ''}
                       </div>
-                      <div style={{ fontSize: '12px', color: '#a0aec0', marginTop: '2px' }}>
+                      <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
                         {entry.teacherName || 'Teacher'} · {entry.diaryDate}
                       </div>
                     </div>
-                    <span style={{ background: '#f0f4f8', color: '#4a5568', borderRadius: '8px', padding: '3px 8px', fontSize: '11px', fontWeight: 600 }}>
+                    <span style={{ background: 'var(--border)', color: 'var(--text-secondary)', borderRadius: '8px', padding: '3px 8px', fontSize: '11px', fontWeight: 600 }}>
                       {entry.subject || 'General'}
                     </span>
                   </div>
 
                   {entry.description && (
-                    <p style={{ fontSize: '12px', color: '#718096', margin: '0 0 10px', lineHeight: 1.5 }}>
+                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '0 0 10px', lineHeight: 1.5 }}>
                       {entry.description.length > 90 ? entry.description.slice(0, 90) + '…' : entry.description}
                     </p>
                   )}
@@ -262,7 +253,7 @@ export default function DiaryMonitoring() {
                       <span className="material-icons" style={{ fontSize: '14px' }}>rate_review</span> Review
                     </button>
                     <button onClick={() => handleDownload(entry)} title="Download"
-                      style={{ border: 'none', background: '#f0f4f8', color: '#4a5568', borderRadius: '8px', padding: '7px 10px', cursor: 'pointer' }}>
+                      style={{ border: 'none', background: 'var(--border)', color: 'var(--text-secondary)', borderRadius: '8px', padding: '7px 10px', cursor: 'pointer' }}>
                       <span className="material-icons" style={{ fontSize: '16px' }}>download</span>
                     </button>
                     <button onClick={() => handleDelete(entry.id)} title="Delete"
@@ -280,13 +271,13 @@ export default function DiaryMonitoring() {
       {/* Image Preview Lightbox */}
       {preview && (
         <div onClick={() => setPreview(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: '16px', overflow: 'hidden', maxWidth: '760px', width: '100%' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid #f0f4f8' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--surface)', borderRadius: '16px', overflow: 'hidden', maxWidth: '760px', width: '100%' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
               <div>
-                <div style={{ fontWeight: 700, color: '#2d3748', fontSize: '15px' }}>
+                <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '15px' }}>
                   Class {preview.className}{preview.section ? ` - ${preview.section}` : ''} · {preview.subject || 'General'}
                 </div>
-                <div style={{ fontSize: '12px', color: '#a0aec0', marginTop: '2px' }}>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
                   {preview.teacherName} · {preview.diaryDate}
                 </div>
               </div>
@@ -296,7 +287,7 @@ export default function DiaryMonitoring() {
                   <span className="material-icons" style={{ fontSize: '16px' }}>rate_review</span> Review
                 </button>
                 <button onClick={() => handleDownload(preview)}
-                  style={{ border: 'none', background: '#f0f4f8', color: '#4a5568', borderRadius: '8px', padding: '8px 14px', cursor: 'pointer', fontWeight: 600, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  style={{ border: 'none', background: 'var(--border)', color: 'var(--text-secondary)', borderRadius: '8px', padding: '8px 14px', cursor: 'pointer', fontWeight: 600, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <span className="material-icons" style={{ fontSize: '16px' }}>download</span> Download
                 </button>
                 <button onClick={() => setPreview(null)}
@@ -306,9 +297,9 @@ export default function DiaryMonitoring() {
               </div>
             </div>
             <img src={preview.imageUrl} alt="Diary full"
-              style={{ width: '100%', maxHeight: '520px', objectFit: 'contain', background: '#f7fafc' }} />
+              style={{ width: '100%', maxHeight: '520px', objectFit: 'contain', background: 'var(--surface-alt)' }} />
             {preview.description && (
-              <div style={{ padding: '16px 20px', fontSize: '13px', color: '#4a5568', borderTop: '1px solid #f0f4f8' }}>
+              <div style={{ padding: '16px 20px', fontSize: '13px', color: 'var(--text-secondary)', borderTop: '1px solid var(--border)' }}>
                 {preview.description}
               </div>
             )}
@@ -326,11 +317,11 @@ export default function DiaryMonitoring() {
                 <button className="btn-close" onClick={() => setReviewing(null)} />
               </div>
               <div className="modal-body">
-                <div style={{ marginBottom: '16px', padding: '12px', background: '#f7fafc', borderRadius: '10px', fontSize: '13px' }}>
-                  <div style={{ fontWeight: 700, color: '#2d3748', marginBottom: '4px' }}>
+                <div style={{ marginBottom: '16px', padding: '12px', background: 'var(--surface-alt)', borderRadius: '10px', fontSize: '13px' }}>
+                  <div style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>
                     Class {reviewing.className} · {reviewing.subject || 'General'} · {reviewing.diaryDate}
                   </div>
-                  <div style={{ color: '#718096' }}>Teacher: {reviewing.teacherName}</div>
+                  <div style={{ color: 'var(--text-secondary)' }}>Teacher: {reviewing.teacherName}</div>
                 </div>
 
                 <div className="mb-3">
@@ -340,9 +331,9 @@ export default function DiaryMonitoring() {
                       <button key={s} type="button"
                         onClick={() => setReviewForm(prev => ({ ...prev, reviewStatus: s }))}
                         style={{
-                          flex: 1, padding: '10px', border: `2px solid ${reviewForm.reviewStatus === s ? statusColor(s) : '#e2e8f0'}`,
-                          borderRadius: '10px', background: reviewForm.reviewStatus === s ? statusBg(s) : '#fff',
-                          color: reviewForm.reviewStatus === s ? statusColor(s) : '#a0aec0',
+                          flex: 1, padding: '10px', border: `2px solid ${reviewForm.reviewStatus === s ? statusColor(s) : 'var(--border-strong)'}`,
+                          borderRadius: '10px', background: reviewForm.reviewStatus === s ? statusBg(s) : 'var(--surface)',
+                          color: reviewForm.reviewStatus === s ? statusColor(s) : 'var(--text-muted)',
                           cursor: 'pointer', fontWeight: 700, fontSize: '12px', transition: 'all 0.2s',
                         }}>
                         {s}
@@ -352,7 +343,7 @@ export default function DiaryMonitoring() {
                 </div>
 
                 <div className="mb-2">
-                  <label className="form-label small fw-medium">Admin Comment <span style={{ color: '#a0aec0' }}>(optional)</span></label>
+                  <label className="form-label small fw-medium">Admin Comment <span style={{ color: 'var(--text-muted)' }}>(optional)</span></label>
                   <textarea className="form-control form-control-sm" rows={3}
                     placeholder="Add a comment for the teacher..."
                     maxLength={1000}
@@ -361,11 +352,11 @@ export default function DiaryMonitoring() {
                 </div>
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setReviewing(null)}>Cancel</button>
-                <button type="button" className="btn btn-primary" onClick={handleReviewSave} disabled={reviewSaving}
+                <Button variant="secondary" onClick={() => setReviewing(null)}>Cancel</Button>
+                <Button variant="primary" onClick={handleReviewSave} disabled={reviewSaving}
                   style={{ background: '#0de1e8', border: 'none' }}>
                   {reviewSaving ? 'Saving...' : 'Save Review'}
-                </button>
+                </Button>
               </div>
             </div>
           </div>

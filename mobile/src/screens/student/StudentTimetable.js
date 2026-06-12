@@ -1,22 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
-import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import useCachedFetch from '../../hooks/useCachedFetch';
+import OfflineBanner from '../../components/OfflineBanner';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export default function StudentTimetable() {
   const { user } = useAuth();
-  const [timetable, setTimetable] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [activeDay, setActiveDay] = useState(DAYS[new Date().getDay() - 1] || 'Monday');
 
-  useEffect(() => {
-    api.get('/api/timetable', { params: { studentId: user?.id } })
-      .then(res => setTimetable(res.data.data || []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+  const { data, loading, isOffline } = useCachedFetch('/api/timetable', { studentId: user?.id });
+  const timetable = data || [];
 
   if (loading) return <ActivityIndicator style={{ flex: 1 }} size="large" color="#2563eb" />;
 
@@ -24,6 +19,7 @@ export default function StudentTimetable() {
 
   return (
     <View style={styles.container}>
+      <OfflineBanner visible={isOffline} />
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dayRow}>
         {DAYS.map(d => (
           <Text

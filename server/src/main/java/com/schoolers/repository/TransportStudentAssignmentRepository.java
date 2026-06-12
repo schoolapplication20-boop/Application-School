@@ -22,6 +22,9 @@ public interface TransportStudentAssignmentRepository extends JpaRepository<Tran
     void deleteByStudentId(Long studentId);
 
     @Modifying @Transactional
+    void deleteByStudentIdIn(List<Long> studentIds);
+
+    @Modifying @Transactional
     void deleteByBusId(Long busId);
 
     @Modifying @Transactional

@@ -46,6 +46,10 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
 
     @Modifying
     @Transactional
+    void deleteByStudentIdIn(List<Long> studentIds);
+
+    @Modifying
+    @Transactional
     void deleteByClassId(Long classId);
 
     @Modifying
@@ -71,4 +75,10 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
 
     @Query("SELECT a.date, a.status, COUNT(a) FROM Attendance a WHERE a.schoolId = :schoolId AND a.classId = :cid GROUP BY a.date, a.status ORDER BY a.date DESC")
     List<Object[]> countByDateAndStatusForSchoolAndClass(@Param("schoolId") Long schoolId, @Param("cid") Long classId);
+
+    @Query("SELECT a.classId, a.status, COUNT(a) FROM Attendance a WHERE a.schoolId = :schoolId AND a.date = :date GROUP BY a.classId, a.status")
+    List<Object[]> countByClassAndStatusForSchoolAndDate(@Param("schoolId") Long schoolId, @Param("date") LocalDate date);
+
+    @Query("SELECT a.classId, a.status, COUNT(a) FROM Attendance a WHERE a.date = :date GROUP BY a.classId, a.status")
+    List<Object[]> countByClassAndStatusForDate(@Param("date") LocalDate date);
 }

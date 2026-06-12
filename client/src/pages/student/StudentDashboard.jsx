@@ -190,13 +190,13 @@ export default function StudentDashboard() {
 
       <div className="grid-3-2">
         {/* Attendance Chart */}
-        <div style={{ background: '#fff', borderRadius: 18, padding: '22px 24px', boxShadow: '0 2px 14px rgba(0,0,0,0.07)', border: '1px solid #f0f4f8' }}>
+        <div style={{ background: 'var(--surface)', borderRadius: 18, padding: '22px 24px', boxShadow: '0 2px 14px rgba(0,0,0,0.07)', border: '1px solid var(--border)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{ width: 4, height: 20, background: 'linear-gradient(180deg,#0de1e8,#3182ce)', borderRadius: 2 }} />
               <div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: '#1a202c' }}>Attendance Trend</div>
-                <div style={{ fontSize: 12, color: '#a0aec0', marginTop: 1 }}>Monthly attendance percentage</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>Attendance Trend</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>Monthly attendance percentage</div>
               </div>
             </div>
             <span style={{ padding: '4px 12px', background: '#0de1e818', color: '#0891b2', borderRadius: '20px', fontSize: '12px', fontWeight: 600 }}>
@@ -205,7 +205,7 @@ export default function StudentDashboard() {
           </div>
           {attendanceTrend.length > 0
             ? <LineChartComponent data={attendanceTrend} lines={[{ key: 'attendance', name: 'Attendance %', color: '#0de1e8' }]} height={200} />
-            : <div style={{ padding: '40px 0', textAlign: 'center', color: '#a0aec0', fontSize: 13 }}>No attendance data yet</div>
+            : <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>No attendance data yet</div>
           }
         </div>
 
@@ -229,15 +229,15 @@ export default function StudentDashboard() {
           </div>
 
           {/* Next due */}
-          <div style={{ background: '#fff', borderRadius: 18, padding: '20px 24px', boxShadow: '0 2px 14px rgba(0,0,0,0.07)', border: '1px solid #f0f4f8' }}>
+          <div style={{ background: 'var(--surface)', borderRadius: 18, padding: '20px 24px', boxShadow: '0 2px 14px rgba(0,0,0,0.07)', border: '1px solid var(--border)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
               <div style={{ width: 4, height: 18, background: 'linear-gradient(180deg,#e53e3e,#fc8181)', borderRadius: 2 }} />
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#2d3748' }}>Next Payment Due</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Next Payment Due</div>
             </div>
             {nextDue ? (
               <>
                 <div style={{ fontSize: 28, fontWeight: 900, color: '#e53e3e', marginBottom: 4 }}>₹{nextDue.amount?.toLocaleString()}</div>
-                <div style={{ fontSize: 13, color: '#718096', marginBottom: 16 }}>Due: {nextDue.dueDate || '—'}</div>
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>Due: {nextDue.dueDate || '—'}</div>
               </>
             ) : (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
@@ -254,31 +254,31 @@ export default function StudentDashboard() {
 
       <div className="grid-1-1" style={{ marginTop: 24 }}>
         {/* Recent Marks */}
-        <div style={{ background: '#fff', borderRadius: 18, boxShadow: '0 2px 14px rgba(0,0,0,0.07)', border: '1px solid #f0f4f8', overflow: 'hidden' }}>
-          <div style={{ padding: '20px 24px', borderBottom: '1px solid #f0f4f8', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ background: 'var(--surface)', borderRadius: 18, boxShadow: '0 2px 14px rgba(0,0,0,0.07)', border: '1px solid var(--border)', overflow: 'hidden' }}>
+          <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ width: 4, height: 20, background: 'linear-gradient(180deg,#805ad5,#4361ee)', borderRadius: 2 }} />
-            <span style={{ fontSize: 15, fontWeight: 700, color: '#1a202c' }}>Recent Marks</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>Recent Marks</span>
           </div>
           {recentMarks.length === 0 ? (
-            <div style={{ padding: '40px 0', textAlign: 'center', color: '#a0aec0', fontSize: 13 }}>
+            <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
               <span className="material-icons" style={{ fontSize: 36, display: 'block', marginBottom: 8 }}>grade</span>
               No marks recorded yet
             </div>
           ) : (
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
-                <tr style={{ background: '#f7fafc' }}>
+                <tr style={{ background: 'var(--surface-alt)' }}>
                   {['Subject', 'Exam', 'Score', 'Grade'].map(h => (
-                    <th key={h} style={{ padding: '11px 16px', textAlign: 'left', fontWeight: 700, color: '#4a5568', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+                    <th key={h} style={{ padding: '11px 16px', textAlign: 'left', fontWeight: 700, color: 'var(--text-secondary)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {recentMarks.map((m, i) => (
-                  <tr key={m.id} style={{ borderBottom: '1px solid #f0f4f8', background: i % 2 === 0 ? '#fff' : '#fafbfc' }}>
-                    <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 600, color: '#2d3748' }}>{m.subject}</td>
-                    <td style={{ padding: '12px 16px', fontSize: 12, color: '#718096' }}>{m.examType || '—'}</td>
-                    <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#1a202c' }}>{m.marks}/{m.maxMarks}</td>
+                  <tr key={m.id} style={{ borderBottom: '1px solid var(--border)', background: i % 2 === 0 ? 'var(--surface)' : 'var(--surface-alt)' }}>
+                    <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{m.subject}</td>
+                    <td style={{ padding: '12px 16px', fontSize: 12, color: 'var(--text-secondary)' }}>{m.examType || '—'}</td>
+                    <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{m.marks}/{m.maxMarks}</td>
                     <td style={{ padding: '12px 16px' }}>
                       <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: 700, background: gradeBg[m.grade] || '#f7fafc', color: gradeColor[m.grade] || '#4a5568' }}>
                         {m.grade || '—'}
@@ -292,10 +292,10 @@ export default function StudentDashboard() {
         </div>
 
         {/* Quick Links */}
-        <div style={{ background: '#fff', borderRadius: 18, boxShadow: '0 2px 14px rgba(0,0,0,0.07)', border: '1px solid #f0f4f8', overflow: 'hidden' }}>
-          <div style={{ padding: '20px 24px', borderBottom: '1px solid #f0f4f8', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ background: 'var(--surface)', borderRadius: 18, boxShadow: '0 2px 14px rgba(0,0,0,0.07)', border: '1px solid var(--border)', overflow: 'hidden' }}>
+          <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ width: 4, height: 20, background: 'linear-gradient(180deg,#0de1e8,#3182ce)', borderRadius: 2 }} />
-            <span style={{ fontSize: 15, fontWeight: 700, color: '#1a202c' }}>Quick Access</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>Quick Access</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
             {[
@@ -307,9 +307,11 @@ export default function StudentDashboard() {
               { label: 'Hall Ticket',     icon: 'verified',       path: '/student/examination',  color: '#3182ce' },
               { label: 'Class Diary',     icon: 'photo_library',  path: '/student/diary',        color: '#38b2ac' },
             ].map((item, i) => (
-              <div key={item.path} onClick={() => navigate(item.path)} style={{
+              <button key={item.path} onClick={() => navigate(item.path)} style={{
                 display: 'flex', alignItems: 'center', gap: 14, padding: '12px 20px',
-                borderBottom: i < 6 ? '1px solid #f0f4f8' : 'none', cursor: 'pointer', transition: 'background 0.15s',
+                borderBottom: i < 6 ? '1px solid var(--border)' : 'none', borderLeft: 'none', borderRight: 'none', borderTop: 'none',
+                cursor: 'pointer', transition: 'background 0.15s', background: 'transparent',
+                width: '100%', textAlign: 'left', font: 'inherit',
               }}
                 onMouseEnter={e => { e.currentTarget.style.background = item.color + '08'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
@@ -317,9 +319,9 @@ export default function StudentDashboard() {
                 <div style={{ width: 38, height: 38, borderRadius: 10, background: `linear-gradient(135deg,${item.color}20,${item.color}38)`, border: `1.5px solid ${item.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <span className="material-icons" style={{ fontSize: 18, color: item.color }}>{item.icon}</span>
                 </div>
-                <span style={{ fontSize: 13, fontWeight: 600, color: '#2d3748', flex: 1 }}>{item.label}</span>
-                <span className="material-icons" style={{ fontSize: 16, color: '#cbd5e0' }}>chevron_right</span>
-              </div>
+                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', flex: 1 }}>{item.label}</span>
+                <span className="material-icons" style={{ fontSize: 16, color: 'var(--text-muted)' }}>chevron_right</span>
+              </button>
             ))}
           </div>
         </div>

@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import SEOMeta from '../../components/SEOMeta';
+import { BASE_URL as BACKEND_URL } from '../../services/api';
 import './marketing.css';
 
 const WHATSAPP_NUMBER = '918333838252';
 const WHATSAPP_MSG = encodeURIComponent("Hi My-Skoolz, I'd like to know more about your school management platform.");
-const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 const ContactUsPage = () => {
   const contactEmail = 'schoolapplication20@gmail.com';

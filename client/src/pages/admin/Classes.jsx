@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Layout from '../../components/Layout';
-import Toast from '../../components/Toast';
+import Button from '../../components/Button';
 import { adminAPI } from '../../services/api';
+import { useToast } from '../../context/ToastContext';
 
 // Derive display category from class name
 const getCategory = (name) => {
@@ -28,7 +29,7 @@ const CATEGORIES = ['Pre-Primary', 'Primary', 'Secondary'];
 
 const initialForm = { className: '', section: '', teacher: '', teacherId: '', capacity: '' };
 
-const iStyle = { padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', background: '#fff', outline: 'none', fontFamily: 'Poppins, sans-serif' };
+const iStyle = { padding: '9px 12px', border: '1.5px solid var(--border-strong)', borderRadius: '8px', fontSize: '13px', background: 'var(--surface)', outline: 'none', fontFamily: 'Poppins, sans-serif' };
 
 const Classes = () => {
   const [classes,      setClasses]      = useState([]);
@@ -46,7 +47,6 @@ const Classes = () => {
   const [showModal,  setShowModal]  = useState(false);
   const [editClass,  setEditClass]  = useState(null);
   const [formData,   setFormData]   = useState(initialForm);
-  const [toast,      setToast]      = useState(null);
 
   // Student view panel
   const [viewClass,  setViewClass]  = useState(null);
@@ -55,15 +55,8 @@ const Classes = () => {
   // Confirmation dialogs
   const [deleteClassTarget,   setDeleteClassTarget]   = useState(null); // class row to delete
   const [deleteStudentTarget, setDeleteStudentTarget] = useState(null); // student to delete from view modal
-  const toastTimerRef = useRef(null);
 
-  useEffect(() => () => clearTimeout(toastTimerRef.current), []);
-
-  const showToast = (message, type = 'success') => {
-    clearTimeout(toastTimerRef.current);
-    setToast({ message, type });
-    toastTimerRef.current = setTimeout(() => setToast(null), 3000);
-  };
+  const showToast = useToast();
 
   // ── Map backend ClassRoom to frontend shape ───────────────────────────────
   const mapClass = (c) => ({
@@ -323,8 +316,6 @@ const Classes = () => {
 
   return (
     <Layout pageTitle="Classes">
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-
       <div className="page-header">
         <h1>Class Management</h1>
         <p>Overview of all classes and sections</p>
@@ -380,16 +371,16 @@ const Classes = () => {
           {/* Clear filters */}
           {(filterClass || filterSection || filterCategory || searchTerm) && (
             <button onClick={() => { setFilterClass(''); setFilterSection(''); setFilterCategory(''); setSearchTerm(''); }}
-              style={{ padding: '8px 12px', border: '1.5px solid #e2e8f0', borderRadius: '8px', background: '#fff', cursor: 'pointer', fontSize: '12px', color: '#718096', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
+              style={{ padding: '8px 12px', border: '1.5px solid var(--border-strong)', borderRadius: '8px', background: 'var(--surface)', cursor: 'pointer', fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
               <span className="material-icons" style={{ fontSize: '14px' }}>close</span>
               Clear
             </button>
           )}
 
-          <button className="btn-add" style={{ marginLeft: 'auto', whiteSpace: 'nowrap' }}
+          <Button variant="add" style={{ marginLeft: 'auto', whiteSpace: 'nowrap' }}
             onClick={() => { setEditClass(null); setFormData(initialForm); setShowModal(true); }}>
             <span className="material-icons">add</span> Add Class
-          </button>
+          </Button>
         </div>
 
         {/* Active filters summary */}
@@ -413,7 +404,7 @@ const Classes = () => {
                 <span className="material-icons" style={{ fontSize: '12px', cursor: 'pointer' }} onClick={() => setFilterCategory('')}>close</span>
               </span>
             )}
-            <span style={{ fontSize: '11px', color: '#a0aec0', lineHeight: '24px' }}>
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: '24px' }}>
               Showing {filtered.length} of {withEnrolled.length} classes
             </span>
           </div>
@@ -432,12 +423,12 @@ const Classes = () => {
             </thead>
             <tbody>
               {classLoading ? (
-                <tr><td colSpan={5}><div style={{ padding: 40, textAlign: 'center', color: '#a0aec0' }}>Loading classes...</div></td></tr>
+                <tr><td colSpan={5}><div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Loading classes...</div></td></tr>
               ) : filtered.length === 0 ? (
                 <tr><td colSpan={5}>
                   <div className="empty-state" style={{ padding: '40px' }}>
-                    <span className="material-icons" style={{ fontSize: 40, color: '#e2e8f0', display: 'block', marginBottom: 8 }}>class</span>
-                    <h3 style={{ color: '#a0aec0' }}>No classes found</h3>
+                    <span className="material-icons" style={{ fontSize: 40, color: 'var(--border-strong)', display: 'block', marginBottom: 8 }}>class</span>
+                    <h3 style={{ color: 'var(--text-muted)' }}>No classes found</h3>
                   </div>
                 </td></tr>
               ) : filtered.map(c => {
@@ -452,7 +443,7 @@ const Classes = () => {
                         </div>
                         <div>
                           <div style={{ fontWeight: 700, fontSize: '14px' }}>{c.name} – {c.section}</div>
-                          <div style={{ fontSize: '11px', color: '#a0aec0' }}>Section {c.section}</div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Section {c.section}</div>
                         </div>
                       </div>
                     </td>
@@ -474,21 +465,15 @@ const Classes = () => {
                           </div>
                           <span style={{ fontSize: '12px', fontWeight: 600, color, minWidth: 40 }}>{c.enrolled}/{c.capacity}</span>
                         </div>
-                        <div style={{ fontSize: '11px', color: '#a0aec0', marginTop: 2 }}>{pct}% full · <span style={{ color: '#0de1e8' }}>view</span></div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: 2 }}>{pct}% full · <span style={{ color: '#0de1e8' }}>view</span></div>
                       </div>
                     </td>
                     <td>
                       <div className="action-btns">
-                        <button className="action-btn action-btn-view" title="View Students" onClick={() => openView(c)}>
-                          <span className="material-icons">visibility</span>
-                        </button>
-                        <button className="action-btn action-btn-edit" onClick={() => openEdit(c)} title="Edit">
-                          <span className="material-icons">edit</span>
-                        </button>
-                        <button className="action-btn action-btn-delete" title="Delete Class"
-                          onClick={() => setDeleteClassTarget(c)}>
-                          <span className="material-icons">delete</span>
-                        </button>
+                        <Button variant="view" title="View Students" onClick={() => openView(c)} />
+                        <Button variant="edit" onClick={() => openEdit(c)} />
+                        <Button variant="delete" title="Delete Class"
+                          onClick={() => setDeleteClassTarget(c)} />
                       </div>
                     </td>
                   </tr>
@@ -510,7 +495,7 @@ const Classes = () => {
             <div className="modal-body">
               {/* Class Name */}
               <div style={{ marginBottom: 16 }}>
-                <label style={{ fontSize: 13, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 6 }}>
+                <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
                   Class Name <span style={{ color: '#e53e3e' }}>*</span>
                 </label>
                 <input
@@ -521,14 +506,14 @@ const Classes = () => {
                   onChange={e => setFormData({ ...formData, className: e.target.value })}
                   autoFocus
                 />
-                <div style={{ fontSize: 11, color: '#a0aec0', marginTop: 4 }}>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
                   Type any class name exactly as you want it stored
                 </div>
               </div>
 
               {/* Section */}
               <div style={{ marginBottom: 16 }}>
-                <label style={{ fontSize: 13, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 6 }}>
+                <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
                   Section <span style={{ color: '#e53e3e' }}>*</span>
                 </label>
                 <input
@@ -544,7 +529,7 @@ const Classes = () => {
               {/* Optional fields */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div>
-                  <label style={{ fontSize: 13, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>
+                  <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
                     Class Teacher (Optional)
                   </label>
                   <select
@@ -569,7 +554,7 @@ const Classes = () => {
                   </select>
                 </div>
                 <div>
-                  <label style={{ fontSize: 13, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>
+                  <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
                     Capacity (Optional)
                   </label>
                   <input
@@ -586,7 +571,7 @@ const Classes = () => {
             </div>
             <div className="modal-footer">
               <button onClick={() => { setShowModal(false); setEditClass(null); setFormData(initialForm); }}
-                style={{ padding: '10px 20px', border: '1.5px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: 'pointer', fontWeight: 600 }}>Cancel</button>
+                style={{ padding: '10px 20px', border: '1.5px solid var(--border-strong)', borderRadius: 8, background: 'var(--surface)', cursor: 'pointer', fontWeight: 600 }}>Cancel</button>
               <button onClick={handleSave}
                 style={{ padding: '10px 24px', background: '#0de1e8', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
                 {editClass ? 'Update' : 'Add Class'}
@@ -607,7 +592,7 @@ const Classes = () => {
                   <span className="material-icons" style={{ color: '#0de1e8', fontSize: 20 }}>groups</span>
                   Students List
                 </span>
-                <p style={{ fontSize: 12, color: '#a0aec0', margin: '2px 0 0' }}>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '2px 0 0' }}>
                   {viewClass.name} — Section {viewClass.section}
                 </p>
               </div>
@@ -615,9 +600,9 @@ const Classes = () => {
             </div>
 
             {/* Search only */}
-            <div style={{ padding: '14px 20px', background: '#f7fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <div style={{ padding: '14px 20px', background: 'var(--surface-alt)', borderBottom: '1px solid var(--border-strong)', display: 'flex', gap: '12px', alignItems: 'center' }}>
               <div style={{ position: 'relative', flex: 1 }}>
-                <span className="material-icons" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 16, color: '#a0aec0' }}>search</span>
+                <span className="material-icons" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 16, color: 'var(--text-muted)' }}>search</span>
                 <input
                   style={{ ...iStyle, width: '100%', boxSizing: 'border-box', paddingLeft: 32 }}
                   placeholder="Search by name, roll no, or parent name..."
@@ -626,7 +611,7 @@ const Classes = () => {
                   autoFocus
                 />
               </div>
-              <span style={{ fontSize: 13, color: '#718096', fontWeight: 600, whiteSpace: 'nowrap' }}>
+              <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 600, whiteSpace: 'nowrap' }}>
                 {studLoading ? 'Loading...' : `${viewStudents.length} student${viewStudents.length !== 1 ? 's' : ''}`}
               </span>
             </div>
@@ -634,15 +619,15 @@ const Classes = () => {
             {/* Student table */}
             <div className="modal-body" style={{ padding: 0, maxHeight: '50vh', overflowY: 'auto' }}>
               {studLoading ? (
-                <div style={{ padding: 40, textAlign: 'center', color: '#a0aec0' }}>
+                <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
                   <div className="spinner" style={{ margin: '0 auto 12px' }} />
                   Loading students...
                 </div>
               ) : viewStudents.length === 0 ? (
                 <div style={{ padding: 40, textAlign: 'center' }}>
-                  <span className="material-icons" style={{ fontSize: 48, color: '#e2e8f0', display: 'block', marginBottom: 8 }}>school</span>
-                  <p style={{ color: '#a0aec0', margin: 0, fontWeight: 600 }}>No students found</p>
-                  <p style={{ color: '#cbd5e0', fontSize: 12, margin: '4px 0 0' }}>
+                  <span className="material-icons" style={{ fontSize: 48, color: 'var(--border-strong)', display: 'block', marginBottom: 8 }}>school</span>
+                  <p style={{ color: 'var(--text-muted)', margin: 0, fontWeight: 600 }}>No students found</p>
+                  <p style={{ color: 'var(--text-muted)', fontSize: 12, margin: '4px 0 0' }}>
                     {viewSearch ? `No students match "${viewSearch}" in ${viewClass.name} – ${viewClass.section}` : `No students enrolled in ${viewClass.name} – Section ${viewClass.section}`}
                   </p>
                 </div>
@@ -663,7 +648,7 @@ const Classes = () => {
                   <tbody>
                     {viewStudents.map((s, idx) => (
                       <tr key={s.id}>
-                        <td style={{ paddingLeft: 20, color: '#a0aec0', fontSize: 12 }}>{idx + 1}</td>
+                        <td style={{ paddingLeft: 20, color: 'var(--text-muted)', fontSize: 12 }}>{idx + 1}</td>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#0de1e8,#0eb5da)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
@@ -672,7 +657,7 @@ const Classes = () => {
                             <span style={{ fontWeight: 600, fontSize: 13 }}>{s.name}</span>
                           </div>
                         </td>
-                        <td style={{ fontSize: 12, color: '#718096' }}>{s.rollNumber || s.rollNo || '—'}</td>
+                        <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{s.rollNumber || s.rollNo || '—'}</td>
                         <td>
                           <span style={{ padding: '2px 8px', background: '#0de1e820', color: '#276749', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>
                             {String(s.className || s.class || '—').replace(/^Class\s+/i, '')}
@@ -683,17 +668,15 @@ const Classes = () => {
                             {s.section || '—'}
                           </span>
                         </td>
-                        <td style={{ fontSize: 13, color: '#4a5568' }}>{s.parentName || s.parent || '—'}</td>
+                        <td style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{s.parentName || s.parent || '—'}</td>
                         <td>
                           <span style={{ padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: (s.isActive ?? s.status === 'Active') ? '#f0fff4' : '#fff5f5', color: (s.isActive ?? s.status === 'Active') ? '#0de1e8' : '#e53e3e' }}>
                             {(s.isActive ?? s.status === 'Active') ? 'Active' : 'Inactive'}
                           </span>
                         </td>
                         <td style={{ paddingRight: 20 }}>
-                          <button className="action-btn action-btn-delete" title="Remove student"
-                            onClick={() => setDeleteStudentTarget(s)}>
-                            <span className="material-icons">delete</span>
-                          </button>
+                          <Button variant="delete" title="Remove student"
+                            onClick={() => setDeleteStudentTarget(s)} />
                         </td>
                       </tr>
                     ))}
@@ -706,7 +689,7 @@ const Classes = () => {
               <button
                 onClick={handleExportCSV}
                 disabled={viewStudents.length === 0}
-                style={{ padding: '10px 20px', border: '1.5px solid #0de1e8', borderRadius: 8, background: '#fff', color: '#0de1e8', fontWeight: 700, cursor: viewStudents.length === 0 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: viewStudents.length === 0 ? 0.5 : 1 }}>
+                style={{ padding: '10px 20px', border: '1.5px solid #0de1e8', borderRadius: 8, background: 'var(--surface)', color: '#0de1e8', fontWeight: 700, cursor: viewStudents.length === 0 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: viewStudents.length === 0 ? 0.5 : 1 }}>
                 <span className="material-icons" style={{ fontSize: 18 }}>download</span>
                 Export CSV
               </button>
@@ -730,7 +713,7 @@ const Classes = () => {
               <button className="modal-close" onClick={() => setDeleteClassTarget(null)}><span className="material-icons">close</span></button>
             </div>
             <div className="modal-body">
-              <p style={{ fontSize: 14, color: '#2d3748', marginBottom: 8 }}>
+              <p style={{ fontSize: 14, color: 'var(--text-primary)', marginBottom: 8 }}>
                 Are you sure you want to delete <strong>{deleteClassTarget.name} – Section {deleteClassTarget.section}</strong>?
               </p>
               <div style={{ background: '#fff5f5', border: '1px solid #fed7d7', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#c53030' }}>
@@ -746,7 +729,7 @@ const Classes = () => {
             </div>
             <div className="modal-footer">
               <button onClick={() => setDeleteClassTarget(null)}
-                style={{ padding: '10px 20px', border: '1.5px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: 'pointer', fontWeight: 600 }}>
+                style={{ padding: '10px 20px', border: '1.5px solid var(--border-strong)', borderRadius: 8, background: 'var(--surface)', cursor: 'pointer', fontWeight: 600 }}>
                 Cancel
               </button>
               <button onClick={handleDeleteClass}
@@ -770,7 +753,7 @@ const Classes = () => {
               <button className="modal-close" onClick={() => setDeleteStudentTarget(null)}><span className="material-icons">close</span></button>
             </div>
             <div className="modal-body">
-              <p style={{ fontSize: 14, color: '#2d3748', marginBottom: 8 }}>
+              <p style={{ fontSize: 14, color: 'var(--text-primary)', marginBottom: 8 }}>
                 Are you sure you want to remove <strong>{deleteStudentTarget.name}</strong> from this class?
               </p>
               <div style={{ background: '#fff5f5', border: '1px solid #fed7d7', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#c53030' }}>
@@ -780,7 +763,7 @@ const Classes = () => {
             </div>
             <div className="modal-footer">
               <button onClick={() => setDeleteStudentTarget(null)}
-                style={{ padding: '10px 20px', border: '1.5px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: 'pointer', fontWeight: 600 }}>
+                style={{ padding: '10px 20px', border: '1.5px solid var(--border-strong)', borderRadius: 8, background: 'var(--surface)', cursor: 'pointer', fontWeight: 600 }}>
                 Cancel
               </button>
               <button onClick={handleDeleteStudent}

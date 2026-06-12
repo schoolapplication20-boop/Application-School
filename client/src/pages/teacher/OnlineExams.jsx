@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '../../components/Layout';
-import Toast from '../../components/Toast';
+import Button from '../../components/Button';
 import { onlineExamTeacherAPI } from '../../services/api';
+import { useToast } from '../../context/ToastContext';
 
 const STATUS_COLOR  = { DRAFT: '#718096', PUBLISHED: '#3182ce', CLOSED: '#a0aec0' };
 const STATUS_BG     = { DRAFT: '#edf2f7', PUBLISHED: '#ebf8ff', CLOSED: '#f7fafc' };
@@ -40,7 +41,6 @@ export default function OnlineExams() {
   const [tab,           setTab]           = useState('exams');  // 'exams' | 'questions' | 'results'
   const [exams,         setExams]         = useState([]);
   const [loading,       setLoading]       = useState(true);
-  const [toast,         setToast]         = useState(null);
 
   // Selected exam context
   const [selectedExam,  setSelectedExam]  = useState(null);  // full exam object with questions
@@ -72,10 +72,7 @@ export default function OnlineExams() {
   const [gradeEdits,    setGradeEdits]    = useState({});  // { questionId: marksAwarded }
   const [savingGrades,  setSavingGrades]  = useState(false);
 
-  const showToast = (message, type = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3500);
-  };
+  const showToast = useToast();
 
   // ── Load exams ─────────────────────────────────────────────────────────────
   const loadExams = useCallback(async () => {
@@ -345,15 +342,13 @@ export default function OnlineExams() {
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <Layout pageTitle="Online Exams">
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-
       <div className="page-header">
         <h1>Online Exams</h1>
         <p>Create and manage online exams for your classes</p>
       </div>
 
       {/* Tab bar */}
-      <div style={{ display: 'flex', gap: 0, marginBottom: 24, borderBottom: '2px solid #e2e8f0' }}>
+      <div style={{ display: 'flex', gap: 0, marginBottom: 24, borderBottom: '2px solid var(--border-strong)' }}>
         {[
           { key: 'exams',     label: 'My Exams',  icon: 'quiz' },
           { key: 'questions', label: selectedExam ? `Questions — ${selectedExam.title}` : 'Questions', icon: 'help_outline', disabled: !selectedExam },
@@ -365,7 +360,7 @@ export default function OnlineExams() {
             style={{
               border: 'none', background: 'none', padding: '10px 20px', cursor: t.disabled ? 'not-allowed' : 'pointer',
               fontSize: 13, fontWeight: tab === t.key ? 700 : 500,
-              color: tab === t.key ? '#0de1e8' : t.disabled ? '#cbd5e0' : '#718096',
+              color: tab === t.key ? '#0de1e8' : t.disabled ? 'var(--text-muted)' : 'var(--text-secondary)',
               borderBottom: tab === t.key ? '2.5px solid #0de1e8' : '2.5px solid transparent',
               display: 'flex', alignItems: 'center', gap: 6, transition: 'color 0.15s',
             }}>
@@ -380,48 +375,48 @@ export default function OnlineExams() {
         <div className="data-table-card">
           <div className="search-filter-bar">
             <div style={{ flex: 1 }} />
-            <button className="btn-add" onClick={() => { setExamForm(EMPTY_EXAM_FORM); setShowExamModal(true); }}>
+            <Button variant="add" onClick={() => { setExamForm(EMPTY_EXAM_FORM); setShowExamModal(true); }}>
               <span className="material-icons">add</span> New Exam
-            </button>
+            </Button>
           </div>
 
           {loading ? (
-            <div style={{ padding: 40, textAlign: 'center', color: '#a0aec0' }}>
+            <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
               <span className="material-icons" style={{ fontSize: 36, display: 'block', marginBottom: 8, animation: 'spin 1s linear infinite' }}>autorenew</span>
               Loading exams…
             </div>
           ) : exams.length === 0 ? (
             <div className="empty-state" style={{ padding: 48, textAlign: 'center' }}>
-              <span className="material-icons" style={{ fontSize: 48, color: '#e2e8f0', display: 'block', marginBottom: 12 }}>quiz</span>
-              <p style={{ color: '#a0aec0', marginBottom: 16 }}>No exams yet.</p>
-              <button className="btn-add" onClick={() => setShowExamModal(true)}>
+              <span className="material-icons" style={{ fontSize: 48, color: 'var(--border-strong)', display: 'block', marginBottom: 12 }}>quiz</span>
+              <p style={{ color: 'var(--text-muted)', marginBottom: 16 }}>No exams yet.</p>
+              <Button variant="add" onClick={() => setShowExamModal(true)}>
                 <span className="material-icons">add</span> Create First Exam
-              </button>
+              </Button>
             </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
-                  <tr style={{ background: '#f7fafc' }}>
+                  <tr style={{ background: 'var(--surface-alt)' }}>
                     {['Title', 'Subject', 'Class', 'Due Date', 'Status', 'Questions', 'Marks', 'Actions'].map(h => (
-                      <th key={h} style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700, color: '#4a5568', whiteSpace: 'nowrap' }}>{h}</th>
+                      <th key={h} style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {exams.map(exam => (
-                    <tr key={exam.id} style={{ borderBottom: '1px solid #edf2f7' }}>
-                      <td style={{ padding: '12px 12px', fontWeight: 600, color: '#2d3748', maxWidth: 200 }}>
+                    <tr key={exam.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <td style={{ padding: '12px 12px', fontWeight: 600, color: 'var(--text-primary)', maxWidth: 200 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <span className="material-icons" style={{ fontSize: 16, color: STATUS_COLOR[exam.status] || '#718096' }}>quiz</span>
                           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{exam.title}</span>
                         </div>
                       </td>
-                      <td style={{ padding: '12px 12px', color: '#718096' }}>{exam.subject || '—'}</td>
-                      <td style={{ padding: '12px 12px', color: '#718096', whiteSpace: 'nowrap' }}>
+                      <td style={{ padding: '12px 12px', color: 'var(--text-secondary)' }}>{exam.subject || '—'}</td>
+                      <td style={{ padding: '12px 12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
                         {exam.className}{exam.section ? ` – ${exam.section}` : ''}
                       </td>
-                      <td style={{ padding: '12px 12px', color: '#718096', whiteSpace: 'nowrap' }}>
+                      <td style={{ padding: '12px 12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
                         <div>{formatDue(exam.dueDateTime)}</div>
                         <DueCountdown dueDateTime={exam.dueDateTime} />
                       </td>
@@ -432,8 +427,8 @@ export default function OnlineExams() {
                           color: STATUS_COLOR[exam.status] || '#718096',
                         }}>{exam.status}</span>
                       </td>
-                      <td style={{ padding: '12px 12px', color: '#718096', textAlign: 'center' }}>{exam.questionCount ?? 0}</td>
-                      <td style={{ padding: '12px 12px', color: '#718096', textAlign: 'center' }}>{exam.totalMarks ?? 0}</td>
+                      <td style={{ padding: '12px 12px', color: 'var(--text-secondary)', textAlign: 'center' }}>{exam.questionCount ?? 0}</td>
+                      <td style={{ padding: '12px 12px', color: 'var(--text-secondary)', textAlign: 'center' }}>{exam.totalMarks ?? 0}</td>
                       <td style={{ padding: '12px 12px' }}>
                         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                           <button onClick={() => openQuestionsTab(exam)}
@@ -482,19 +477,19 @@ export default function OnlineExams() {
       {tab === 'questions' && selectedExam && (
         <div>
           {/* Breadcrumb */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20, fontSize: 13, color: '#718096' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20, fontSize: 13, color: 'var(--text-secondary)' }}>
             <button onClick={() => setTab('exams')}
               style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#0de1e8', fontWeight: 600, fontSize: 13, padding: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
               <span className="material-icons" style={{ fontSize: 15 }}>arrow_back</span> Back to Exams
             </button>
             <span>|</span>
-            <span style={{ fontWeight: 700, color: '#2d3748' }}>{selectedExam.title}</span>
+            <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{selectedExam.title}</span>
             <span style={{ padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 700,
               background: STATUS_BG[selectedExam.status], color: STATUS_COLOR[selectedExam.status] }}>
               {selectedExam.status}
             </span>
-            <span style={{ marginLeft: 'auto', fontSize: 12, color: '#718096' }}>
-              Total Marks: <strong style={{ color: '#2d3748' }}>{selectedExam.totalMarks}</strong>
+            <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-secondary)' }}>
+              Total Marks: <strong style={{ color: 'var(--text-primary)' }}>{selectedExam.totalMarks}</strong>
             </span>
             <button onClick={() => {
               setDueDateEdit(selectedExam.dueDateTime
@@ -502,7 +497,7 @@ export default function OnlineExams() {
                 : '');
               setShowDueModal(true);
             }}
-              style={{ border: '1.5px solid #e2e8f0', background: '#fff', borderRadius: 7, padding: '5px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'flex', alignItems: 'center', gap: 4 }}>
+              style={{ border: '1.5px solid var(--border-strong)', background: 'var(--surface)', borderRadius: 7, padding: '5px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4 }}>
               <span className="material-icons" style={{ fontSize: 14 }}>edit_calendar</span> Update Due Date
             </button>
           </div>
@@ -510,37 +505,37 @@ export default function OnlineExams() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 20, alignItems: 'start' }}>
             {/* Question list */}
             <div className="data-table-card">
-              <div style={{ padding: '14px 20px', borderBottom: '1px solid #edf2f7', fontWeight: 700, fontSize: 14, color: '#2d3748' }}>
+              <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>
                 Questions ({(selectedExam.questions || []).length})
               </div>
               {(selectedExam.questions || []).length === 0 ? (
-                <div style={{ padding: 32, textAlign: 'center', color: '#a0aec0', fontSize: 13 }}>
-                  <span className="material-icons" style={{ fontSize: 40, display: 'block', marginBottom: 8, color: '#e2e8f0' }}>help_outline</span>
+                <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+                  <span className="material-icons" style={{ fontSize: 40, display: 'block', marginBottom: 8, color: 'var(--border-strong)' }}>help_outline</span>
                   No questions yet. Add a question using the form.
                 </div>
               ) : (
                 <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {(selectedExam.questions || []).map((q, idx) => (
-                    <div key={q.id} style={{ border: '1px solid #edf2f7', borderRadius: 10, padding: 14 }}>
+                    <div key={q.id} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 14 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
                         <div style={{ flex: 1 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                            <span style={{ width: 22, height: 22, borderRadius: '50%', background: '#edf2f7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#4a5568', flexShrink: 0 }}>{idx + 1}</span>
+                            <span style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', flexShrink: 0 }}>{idx + 1}</span>
                             <span style={{ padding: '2px 8px', borderRadius: 10, fontSize: 10, fontWeight: 700,
                               background: q.questionType === 'MCQ' ? '#ebf8ff' : '#faf5ff',
                               color: q.questionType === 'MCQ' ? '#2b6cb0' : '#6b46c1' }}>
                               {q.questionType}
                             </span>
-                            <span style={{ fontSize: 11, color: '#a0aec0' }}>{q.marks} mark{q.marks !== 1 ? 's' : ''}</span>
+                            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{q.marks} mark{q.marks !== 1 ? 's' : ''}</span>
                           </div>
-                          <div style={{ fontSize: 13, color: '#2d3748', marginBottom: q.questionType === 'MCQ' ? 8 : 0, lineHeight: 1.5 }}>
+                          <div style={{ fontSize: 13, color: 'var(--text-primary)', marginBottom: q.questionType === 'MCQ' ? 8 : 0, lineHeight: 1.5 }}>
                             {q.questionText}
                           </div>
                           {q.questionType === 'MCQ' && (
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px', marginTop: 6 }}>
                               {[['A', q.optionA], ['B', q.optionB], ['C', q.optionC], ['D', q.optionD]].filter(([, v]) => v).map(([lbl, val]) => (
                                 <div key={lbl} style={{
-                                  fontSize: 12, color: q.correctAnswer === lbl ? '#276749' : '#4a5568',
+                                  fontSize: 12, color: q.correctAnswer === lbl ? '#276749' : 'var(--text-secondary)',
                                   background: q.correctAnswer === lbl ? '#f0fff4' : 'transparent',
                                   padding: '2px 6px', borderRadius: 4,
                                   display: 'flex', alignItems: 'center', gap: 4,
@@ -574,11 +569,11 @@ export default function OnlineExams() {
 
             {/* Add/Edit question form */}
             <div className="data-table-card" style={{ position: 'sticky', top: 80 }}>
-              <div style={{ padding: '14px 20px', borderBottom: '1px solid #edf2f7', fontWeight: 700, fontSize: 14, color: '#2d3748', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', fontWeight: 700, fontSize: 14, color: 'var(--text-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 {editingQ ? 'Edit Question' : 'Add Question'}
                 {editingQ && (
                   <button onClick={() => { setEditingQ(null); setQForm(EMPTY_Q_FORM); }}
-                    style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#718096', fontSize: 12 }}>
+                    style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 12 }}>
                     Cancel Edit
                   </button>
                 )}
@@ -657,31 +652,31 @@ export default function OnlineExams() {
       {/* ── RESULTS TAB ───────────────────────────────────────────────────────── */}
       {tab === 'results' && selectedExam && (
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20, fontSize: 13, color: '#718096' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20, fontSize: 13, color: 'var(--text-secondary)' }}>
             <button onClick={() => setTab('exams')}
               style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#0de1e8', fontWeight: 600, fontSize: 13, padding: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
               <span className="material-icons" style={{ fontSize: 15 }}>arrow_back</span> Back to Exams
             </button>
             <span>|</span>
-            <span style={{ fontWeight: 700, color: '#2d3748' }}>{selectedExam.title}</span>
-            <span style={{ marginLeft: 'auto', fontSize: 12, color: '#718096' }}>
+            <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{selectedExam.title}</span>
+            <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-secondary)' }}>
               Total Marks: <strong>{selectedExam.totalMarks}</strong>
             </span>
           </div>
 
           <div className="data-table-card">
-            <div style={{ padding: '14px 20px', borderBottom: '1px solid #edf2f7', fontWeight: 700, fontSize: 14, color: '#2d3748' }}>
+            <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>
               Student Results ({results.length})
             </div>
 
             {loadingRes ? (
-              <div style={{ padding: 40, textAlign: 'center', color: '#a0aec0' }}>
+              <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
                 <span className="material-icons" style={{ fontSize: 32, display: 'block', marginBottom: 8, animation: 'spin 1s linear infinite' }}>autorenew</span>
                 Loading results…
               </div>
             ) : results.length === 0 ? (
-              <div style={{ padding: 40, textAlign: 'center', color: '#a0aec0', fontSize: 13 }}>
-                <span className="material-icons" style={{ fontSize: 40, display: 'block', marginBottom: 8, color: '#e2e8f0' }}>bar_chart</span>
+              <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+                <span className="material-icons" style={{ fontSize: 40, display: 'block', marginBottom: 8, color: 'var(--border-strong)' }}>bar_chart</span>
                 No submissions yet.
               </div>
             ) : (
@@ -690,15 +685,15 @@ export default function OnlineExams() {
                   const statusClr = attempt.status === 'GRADED' ? '#276749' : attempt.status === 'SUBMITTED' ? '#2b6cb0' : '#a0aec0';
                   const isExpanded = expandedAttempt === attempt.attemptId;
                   return (
-                    <div key={attempt.attemptId} style={{ border: '1px solid #edf2f7', borderRadius: 10, overflow: 'hidden' }}>
+                    <div key={attempt.attemptId} style={{ border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
                       <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: attempt.status !== 'IN_PROGRESS' ? 'pointer' : 'default' }}
                         onClick={() => attempt.status !== 'IN_PROGRESS' && (isExpanded ? setExpandedAttempt(null) : openAttempt(attempt))}>
-                        <div style={{ width: 36, height: 36, borderRadius: 10, background: '#edf2f7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <span className="material-icons" style={{ fontSize: 18, color: '#718096' }}>person</span>
+                        <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <span className="material-icons" style={{ fontSize: 18, color: 'var(--text-secondary)' }}>person</span>
                         </div>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 700, fontSize: 14, color: '#2d3748' }}>{attempt.studentName}</div>
-                          <div style={{ fontSize: 12, color: '#718096' }}>
+                          <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>{attempt.studentName}</div>
+                          <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
                             {attempt.className}{attempt.section ? ` – ${attempt.section}` : ''}
                             {attempt.submittedAt && ` · Submitted ${new Date(attempt.submittedAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}`}
                           </div>
@@ -714,36 +709,36 @@ export default function OnlineExams() {
                           </span>
                         </div>
                         {attempt.status !== 'IN_PROGRESS' && (
-                          <span className="material-icons" style={{ fontSize: 18, color: '#a0aec0' }}>
+                          <span className="material-icons" style={{ fontSize: 18, color: 'var(--text-muted)' }}>
                             {isExpanded ? 'expand_less' : 'expand_more'}
                           </span>
                         )}
                       </div>
 
                       {isExpanded && (
-                        <div style={{ borderTop: '1px solid #edf2f7', padding: 16, background: '#fafcff' }}>
+                        <div style={{ borderTop: '1px solid var(--border)', padding: 16, background: '#fafcff' }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                             {(attempt.answers || []).map((ans, idx) => (
-                              <div key={ans.questionId} style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 12 }}>
+                              <div key={ans.questionId} style={{ border: '1px solid var(--border-strong)', borderRadius: 8, padding: 12 }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
                                   <div style={{ flex: 1 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                                      <span style={{ fontSize: 11, fontWeight: 700, color: '#4a5568' }}>Q{idx + 1}</span>
+                                      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>Q{idx + 1}</span>
                                       <span style={{ padding: '1px 6px', borderRadius: 8, fontSize: 10, fontWeight: 700,
                                         background: ans.questionType === 'MCQ' ? '#ebf8ff' : '#faf5ff',
                                         color: ans.questionType === 'MCQ' ? '#2b6cb0' : '#6b46c1' }}>
                                         {ans.questionType}
                                       </span>
-                                      <span style={{ fontSize: 11, color: '#a0aec0' }}>{ans.marks} mark{ans.marks !== 1 ? 's' : ''}</span>
+                                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{ans.marks} mark{ans.marks !== 1 ? 's' : ''}</span>
                                     </div>
-                                    <div style={{ fontSize: 13, color: '#2d3748', marginBottom: 6 }}>{ans.questionText}</div>
+                                    <div style={{ fontSize: 13, color: 'var(--text-primary)', marginBottom: 6 }}>{ans.questionText}</div>
                                     {ans.questionType === 'MCQ' && ans.correctAnswer && (
                                       <div style={{ fontSize: 11, color: '#276749', marginBottom: 4 }}>
                                         Correct: <strong>{ans.correctAnswer}</strong>
                                       </div>
                                     )}
-                                    <div style={{ fontSize: 12, padding: '6px 10px', background: '#f7fafc', borderRadius: 6, color: '#4a5568' }}>
-                                      Student: <strong>{ans.studentAnswer ?? <em style={{ color: '#a0aec0' }}>No answer</em>}</strong>
+                                    <div style={{ fontSize: 12, padding: '6px 10px', background: 'var(--surface-alt)', borderRadius: 6, color: 'var(--text-secondary)' }}>
+                                      Student: <strong>{ans.studentAnswer ?? <em style={{ color: 'var(--text-muted)' }}>No answer</em>}</strong>
                                     </div>
                                   </div>
                                   <div style={{ textAlign: 'right', flexShrink: 0, minWidth: 100 }}>
@@ -755,7 +750,7 @@ export default function OnlineExams() {
                                             color: ans.isCorrect ? '#276749' : '#c53030' }}>
                                             {ans.isCorrect ? `+${ans.marksAwarded}` : '0'}
                                           </span>
-                                        ) : <span style={{ color: '#a0aec0', fontSize: 12 }}>—</span>}
+                                        ) : <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>—</span>}
                                       </div>
                                     ) : (
                                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
@@ -763,8 +758,8 @@ export default function OnlineExams() {
                                           placeholder={`/${ans.marks}`}
                                           value={gradeEdits[ans.questionId] ?? (ans.marksAwarded ?? '')}
                                           onChange={e => setGradeEdits(prev => ({ ...prev, [ans.questionId]: e.target.value }))}
-                                          style={{ width: 70, padding: '4px 8px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12, textAlign: 'center' }} />
-                                        <span style={{ fontSize: 11, color: '#a0aec0' }}>of {ans.marks}</span>
+                                          style={{ width: 70, padding: '4px 8px', border: '1px solid var(--border-strong)', borderRadius: 6, fontSize: 12, textAlign: 'center' }} />
+                                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>of {ans.marks}</span>
                                       </div>
                                     )}
                                   </div>
@@ -800,7 +795,7 @@ export default function OnlineExams() {
             <div className="modal-header">
               <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Create New Exam</h3>
               <button onClick={() => setShowExamModal(false)} disabled={savingExam}
-                style={{ border: 'none', background: 'none', fontSize: 20, cursor: 'pointer', color: '#718096' }}>✕</button>
+                style={{ border: 'none', background: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--text-secondary)' }}>✕</button>
             </div>
             <form onSubmit={handleSaveExam}>
               <div className="modal-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -856,7 +851,7 @@ export default function OnlineExams() {
               </div>
               <div className="modal-footer">
                 <button type="button" onClick={() => setShowExamModal(false)} disabled={savingExam}
-                  style={{ padding: '9px 20px', border: '1.5px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: 'pointer', fontWeight: 600 }}>
+                  style={{ padding: '9px 20px', border: '1.5px solid var(--border-strong)', borderRadius: 8, background: 'var(--surface)', cursor: 'pointer', fontWeight: 600 }}>
                   Cancel
                 </button>
                 <button type="submit" disabled={savingExam}
@@ -878,7 +873,7 @@ export default function OnlineExams() {
             <div className="modal-header">
               <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Update Due Date</h3>
               <button onClick={() => setShowDueModal(false)} disabled={savingDue}
-                style={{ border: 'none', background: 'none', fontSize: 20, cursor: 'pointer', color: '#718096' }}>✕</button>
+                style={{ border: 'none', background: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--text-secondary)' }}>✕</button>
             </div>
             <form onSubmit={handleUpdateDue}>
               <div className="modal-body" style={{ padding: '20px 24px' }}>
@@ -886,13 +881,13 @@ export default function OnlineExams() {
                 <input type="datetime-local" className="form-control form-control-sm"
                   value={dueDateEdit}
                   onChange={e => setDueDateEdit(e.target.value)} />
-                <p style={{ fontSize: 12, color: '#718096', marginTop: 8 }}>
+                <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 8 }}>
                   Leave empty to remove the due date. This update applies even if the exam is published.
                 </p>
               </div>
               <div className="modal-footer">
                 <button type="button" onClick={() => setShowDueModal(false)} disabled={savingDue}
-                  style={{ padding: '9px 20px', border: '1.5px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: 'pointer', fontWeight: 600 }}>
+                  style={{ padding: '9px 20px', border: '1.5px solid var(--border-strong)', borderRadius: 8, background: 'var(--surface)', cursor: 'pointer', fontWeight: 600 }}>
                   Cancel
                 </button>
                 <button type="submit" disabled={savingDue}
@@ -912,16 +907,16 @@ export default function OnlineExams() {
             <div className="modal-header">
               <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Delete Exam</h3>
               <button onClick={() => setDeleteTarget(null)} disabled={deleting}
-                style={{ border: 'none', background: 'none', fontSize: 20, cursor: 'pointer', color: '#718096' }}>✕</button>
+                style={{ border: 'none', background: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--text-secondary)' }}>✕</button>
             </div>
             <div className="modal-body" style={{ padding: '20px 24px' }}>
-              <p style={{ color: '#4a5568', margin: 0 }}>
+              <p style={{ color: 'var(--text-secondary)', margin: 0 }}>
                 Are you sure you want to delete <strong>"{deleteTarget.title}"</strong>? This action cannot be undone.
               </p>
             </div>
             <div className="modal-footer">
               <button type="button" onClick={() => setDeleteTarget(null)} disabled={deleting}
-                style={{ padding: '9px 20px', border: '1.5px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: 'pointer', fontWeight: 600 }}>
+                style={{ padding: '9px 20px', border: '1.5px solid var(--border-strong)', borderRadius: 8, background: 'var(--surface)', cursor: 'pointer', fontWeight: 600 }}>
                 Cancel
               </button>
               <button onClick={handleDelete} disabled={deleting}

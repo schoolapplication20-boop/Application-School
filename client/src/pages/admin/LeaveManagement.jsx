@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import Layout from '../../components/Layout';
-import Toast from '../../components/Toast';
+import Button from '../../components/Button';
 import { useAuth } from '../../context/AuthContext';
 import { leaveAPI } from '../../services/api';
+import { useToast } from '../../context/ToastContext';
 
 const normalizeStatus = (s) => {
   if (!s) return 'Pending';
@@ -25,20 +26,12 @@ export default function LeaveManagement() {
   const [studentLeaves, setStudentLeaves]     = useState([]);
   const [loadingTeacher, setLoadingTeacher]   = useState(true);
   const [loadingStudent, setLoadingStudent]   = useState(true);
-  const [toast, setToast]                     = useState(null);
   const [filterStatus, setFilterStatus]       = useState('');
   const [selectedTeacherLeave, setSelectedTeacherLeave] = useState(null);
   const [comment, setComment]                 = useState('');
   const [actioning, setActioning]             = useState(false);
-  const toastTimerRef = useRef(null);
 
-  useEffect(() => () => clearTimeout(toastTimerRef.current), []);
-
-  const showToast = (message, type = 'success') => {
-    clearTimeout(toastTimerRef.current);
-    setToast({ message, type });
-    toastTimerRef.current = setTimeout(() => setToast(null), 3500);
-  };
+  const showToast = useToast();
 
   const loadTeacherLeaves = async () => {
     setLoadingTeacher(true);
@@ -120,8 +113,6 @@ export default function LeaveManagement() {
 
   return (
     <Layout pageTitle="Leave Management">
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-
       <div className="page-header">
         <h1>Leave Management</h1>
         <p>Review and manage student and teacher leave requests</p>
@@ -157,8 +148,8 @@ export default function LeaveManagement() {
             style={{
               padding: '10px 20px', borderRadius: '10px', border: 'none', cursor: 'pointer',
               fontWeight: 600, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px',
-              background: tab === t.key ? '#0de1e8' : '#f7fafc',
-              color:      tab === t.key ? '#fff'    : '#718096',
+              background: tab === t.key ? '#0de1e8' : 'var(--surface-alt)',
+              color:      tab === t.key ? '#fff'    : 'var(--text-secondary)',
               boxShadow:  tab === t.key ? '0 2px 8px rgba(118,196,66,0.3)' : 'none',
               transition: 'all 0.2s',
             }}>
@@ -195,12 +186,12 @@ export default function LeaveManagement() {
               </thead>
               <tbody>
                 {loadingTeacher ? (
-                  <tr><td colSpan={9} style={{ textAlign: 'center', padding: '30px', color: '#a0aec0' }}>Loading…</td></tr>
+                  <tr><td colSpan={9} style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)' }}>Loading…</td></tr>
                 ) : filteredTeacher.length === 0 ? (
                   <tr><td colSpan={9}>
                     <div className="empty-state" style={{ padding: '30px' }}>
-                      <span className="material-icons" style={{ fontSize: 40, color: '#e2e8f0' }}>event_busy</span>
-                      <h3 style={{ color: '#a0aec0' }}>No teacher leave requests</h3>
+                      <span className="material-icons" style={{ fontSize: 40, color: 'var(--border-strong)' }}>event_busy</span>
+                      <h3 style={{ color: 'var(--text-muted)' }}>No teacher leave requests</h3>
                     </div>
                   </td></tr>
                 ) : filteredTeacher.map(l => (
@@ -212,9 +203,9 @@ export default function LeaveManagement() {
                       fontWeight: 600, background: '#805ad515', color: '#805ad5' }}>{l.leaveType || '—'}</span></td>
                     <td style={{ fontSize: '13px' }}>{l.fromDate}</td>
                     <td style={{ fontSize: '13px' }}>{l.toDate}</td>
-                    <td style={{ fontSize: '12px', color: '#718096', maxWidth: '160px' }}>{l.reason}</td>
-                    <td style={{ fontSize: '12px', color: '#a0aec0' }}>{fmt(l.createdAt)}</td>
-                    <td style={{ fontSize: '12px', color: '#718096', maxWidth: '140px' }}>{l.adminComment || '—'}</td>
+                    <td style={{ fontSize: '12px', color: 'var(--text-secondary)', maxWidth: '160px' }}>{l.reason}</td>
+                    <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{fmt(l.createdAt)}</td>
+                    <td style={{ fontSize: '12px', color: 'var(--text-secondary)', maxWidth: '140px' }}>{l.adminComment || '—'}</td>
                     <td>{getStatusBadge(l.status)}</td>
                     <td>
                       <div className="action-btns">
@@ -224,10 +215,8 @@ export default function LeaveManagement() {
                             <span className="material-icons">how_to_reg</span>
                           </button>
                         )}
-                        <button className="action-btn action-btn-delete" title="Delete"
-                          onClick={() => handleDeleteTeacher(l.id)}>
-                          <span className="material-icons">delete</span>
-                        </button>
+                        <Button variant="delete"
+                          onClick={() => handleDeleteTeacher(l.id)} />
                       </div>
                     </td>
                   </tr>
@@ -259,30 +248,30 @@ export default function LeaveManagement() {
               </thead>
               <tbody>
                 {loadingStudent ? (
-                  <tr><td colSpan={8} style={{ textAlign: 'center', padding: '30px', color: '#a0aec0' }}>Loading…</td></tr>
+                  <tr><td colSpan={8} style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)' }}>Loading…</td></tr>
                 ) : filteredStudent.length === 0 ? (
                   <tr><td colSpan={8}>
                     <div className="empty-state" style={{ padding: '30px' }}>
-                      <span className="material-icons" style={{ fontSize: 40, color: '#e2e8f0' }}>event_busy</span>
-                      <h3 style={{ color: '#a0aec0' }}>No student leave requests</h3>
+                      <span className="material-icons" style={{ fontSize: 40, color: 'var(--border-strong)' }}>event_busy</span>
+                      <h3 style={{ color: 'var(--text-muted)' }}>No student leave requests</h3>
                     </div>
                   </td></tr>
                 ) : filteredStudent.map(l => (
                   <tr key={l.id}>
                     <td>
                       <div style={{ fontWeight: 700, fontSize: '13px' }}>{l.requesterName}</div>
-                      <div style={{ fontSize: '11px', color: '#a0aec0' }}>{l.classSection}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{l.classSection}</div>
                     </td>
                     <td><span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '11px',
                       fontWeight: 600, background: '#0de1e815', color: '#0eb5da' }}>{l.leaveType || '—'}</span></td>
-                    <td style={{ fontSize: '12px', color: '#718096' }}>{l.fromDate} → {l.toDate}</td>
-                    <td style={{ fontSize: '12px', color: '#718096', maxWidth: '140px' }}>{l.reason}</td>
-                    <td style={{ fontSize: '12px', color: '#a0aec0' }}>{fmt(l.createdAt)}</td>
-                    <td style={{ fontSize: '12px', color: '#718096', maxWidth: '140px' }}>{l.adminComment || '—'}</td>
+                    <td style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{l.fromDate} → {l.toDate}</td>
+                    <td style={{ fontSize: '12px', color: 'var(--text-secondary)', maxWidth: '140px' }}>{l.reason}</td>
+                    <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{fmt(l.createdAt)}</td>
+                    <td style={{ fontSize: '12px', color: 'var(--text-secondary)', maxWidth: '140px' }}>{l.adminComment || '—'}</td>
                     <td>{getStatusBadge(l.status)}</td>
                     <td>
                       <div className="action-btns">
-                        <span style={{ fontSize: '11px', color: '#a0aec0', fontStyle: 'italic' }}>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
                           Handled by teacher
                         </span>
                       </div>
@@ -305,7 +294,7 @@ export default function LeaveManagement() {
                 <button className="btn-close" onClick={() => setSelectedTeacherLeave(null)} />
               </div>
               <div className="modal-body">
-                <div style={{ background: '#f7fafc', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
+                <div style={{ background: 'var(--surface-alt)', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '13px' }}>
                     {[
                       ['Teacher',    selectedTeacherLeave.requesterName],
@@ -315,11 +304,11 @@ export default function LeaveManagement() {
                       ['Submitted',  fmt(selectedTeacherLeave.createdAt)],
                       ['Status',     normalizeStatus(selectedTeacherLeave.status)],
                     ].map(([k, v]) => (
-                      <div key={k}><span style={{ color: '#a0aec0' }}>{k}: </span><strong>{v}</strong></div>
+                      <div key={k}><span style={{ color: 'var(--text-muted)' }}>{k}: </span><strong>{v}</strong></div>
                     ))}
                   </div>
                   <div style={{ marginTop: '8px', fontSize: '13px' }}>
-                    <span style={{ color: '#a0aec0' }}>Reason: </span>{selectedTeacherLeave.reason}
+                    <span style={{ color: 'var(--text-muted)' }}>Reason: </span>{selectedTeacherLeave.reason}
                   </div>
                 </div>
                 <label className="form-label small fw-medium">Remark to Teacher (optional)</label>
@@ -327,20 +316,20 @@ export default function LeaveManagement() {
                   onChange={e => setComment(e.target.value)} placeholder="Add a remark for the teacher…" />
               </div>
               <div className="modal-footer">
-                <button className="btn btn-secondary"
+                <Button variant="secondary"
                   onClick={() => setSelectedTeacherLeave(null)} disabled={actioning}>
                   Cancel
-                </button>
-                <button className="btn btn-danger" disabled={actioning}
+                </Button>
+                <Button variant="danger" disabled={actioning}
                   onClick={() => handleTeacherAction(selectedTeacherLeave.id, 'Rejected')}>
                   <span className="material-icons" style={{ fontSize: 16, verticalAlign: 'middle', marginRight: 4 }}>cancel</span>
                   {actioning ? 'Saving…' : 'Reject'}
-                </button>
-                <button className="btn btn-success" disabled={actioning}
+                </Button>
+                <Button variant="success" disabled={actioning}
                   onClick={() => handleTeacherAction(selectedTeacherLeave.id, 'Approved')}>
                   <span className="material-icons" style={{ fontSize: 16, verticalAlign: 'middle', marginRight: 4 }}>check_circle</span>
                   {actioning ? 'Saving…' : 'Approve'}
-                </button>
+                </Button>
               </div>
             </div>
           </div>

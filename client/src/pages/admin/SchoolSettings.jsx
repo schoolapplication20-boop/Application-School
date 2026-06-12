@@ -237,26 +237,26 @@ const SchoolSettings = () => {
 
         {/* ── Page heading ── */}
         <div style={{ marginBottom: 32 }}>
-          <h1 style={{ fontSize: 24, fontWeight: 800, color: '#1e293b', margin: 0 }}>School Settings</h1>
-          <p style={{ color: '#64748b', marginTop: 6, fontSize: 14 }}>
+          <h1 style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>School Settings</h1>
+          <p style={{ color: 'var(--text-secondary)', marginTop: 6, fontSize: 14 }}>
             Manage your school's branding. The logo appears on the login page, sidebar, and all school portals.
           </p>
         </div>
 
         {/* ── Logo card ── */}
         <div style={{
-          background: '#fff',
+          background: 'var(--surface)',
           borderRadius: 16,
-          border: '1px solid #e2e8f0',
+          border: '1px solid var(--border-strong)',
           boxShadow: '0 1px 6px rgba(0,0,0,0.06)',
           overflow: 'hidden',
         }}>
           {/* Card header */}
-          <div style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9' }}>
-            <h2 style={{ fontSize: 16, fontWeight: 700, color: '#1e293b', margin: 0 }}>
+          <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
+            <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
               School Logo
             </h2>
-            <p style={{ fontSize: 13, color: '#64748b', margin: '4px 0 0' }}>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '4px 0 0' }}>
               Recommended: square image, at least 200×200 px, max 5 MB.
             </p>
           </div>
@@ -265,19 +265,19 @@ const SchoolSettings = () => {
 
             {/* Current / preview logo display */}
             <div style={{ flexShrink: 0 }}>
-              <p style={{ fontSize: 12, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
+              <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
                 {preview ? 'New Logo Preview' : 'Current Logo'}
               </p>
               <div style={{
                 width: 120,
                 height: 120,
                 borderRadius: 16,
-                border: '2px dashed #cbd5e1',
+                border: '2px dashed var(--border-strong)',
                 overflow: 'hidden',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                background: '#f8fafc',
+                background: 'var(--surface-alt)',
                 position: 'relative',
               }}>
                 {(preview || currentLogoSrc) ? (
@@ -288,8 +288,8 @@ const SchoolSettings = () => {
                   />
                 ) : (
                   <div style={{ textAlign: 'center', padding: 12 }}>
-                    <span className="material-icons" style={{ fontSize: 40, color: '#cbd5e1' }}>image</span>
-                    <p style={{ fontSize: 11, color: '#94a3b8', margin: '4px 0 0' }}>No logo set</p>
+                    <span className="material-icons" style={{ fontSize: 40, color: 'var(--border-strong)' }}>image</span>
+                    <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '4px 0 0' }}>No logo set</p>
                   </div>
                 )}
                 {preview && (
@@ -304,7 +304,7 @@ const SchoolSettings = () => {
               </div>
 
               {/* Sidebar preview chip */}
-              <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 8, textAlign: 'center' }}>
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8, textAlign: 'center' }}>
                 Sidebar preview
               </p>
               <div style={{
@@ -334,7 +334,7 @@ const SchoolSettings = () => {
                   <p style={{ fontSize: 11, fontWeight: 700, color: '#e2e8f0', margin: 0, lineHeight: 1.2 }}>
                     {school?.name || 'School Name'}
                   </p>
-                  <p style={{ fontSize: 10, color: '#64748b', margin: 0 }}>Management System</p>
+                  <p style={{ fontSize: 10, color: 'var(--text-secondary)', margin: 0 }}>Management System</p>
                 </div>
               </div>
             </div>
@@ -349,23 +349,23 @@ const SchoolSettings = () => {
                   onDragLeave={() => setDragging(false)}
                   onDrop={handleDrop}
                   style={{
-                    border: `2px dashed ${dragging ? '#2563EB' : '#cbd5e1'}`,
+                    border: `2px dashed ${dragging ? '#2563EB' : 'var(--border-strong)'}`,
                     borderRadius: 12,
                     padding: '28px 20px',
                     textAlign: 'center',
                     cursor: 'pointer',
-                    background: dragging ? '#EFF6FF' : '#f8fafc',
+                    background: dragging ? '#EFF6FF' : 'var(--surface-alt)',
                     transition: 'all 0.15s',
                     marginBottom: 16,
                   }}
                 >
-                  <span className="material-icons" style={{ fontSize: 36, color: dragging ? '#2563EB' : '#94a3b8' }}>
+                  <span className="material-icons" style={{ fontSize: 36, color: dragging ? '#2563EB' : 'var(--text-muted)' }}>
                     cloud_upload
                   </span>
-                  <p style={{ fontSize: 14, fontWeight: 600, color: dragging ? '#2563EB' : '#475569', margin: '8px 0 4px' }}>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: dragging ? '#2563EB' : 'var(--text-secondary)', margin: '8px 0 4px' }}>
                     {dragging ? 'Drop it here' : 'Drag & drop or click to browse'}
                   </p>
-                  <p style={{ fontSize: 12, color: '#94a3b8', margin: 0 }}>
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
                     JPEG · PNG · GIF · WebP · Max {MAX_SIZE_MB} MB
                   </p>
                 </div>
@@ -430,8 +430,8 @@ const SchoolSettings = () => {
                         onClick={resetPreview}
                         disabled={uploading}
                         style={{
-                          padding: '10px 16px', borderRadius: 10, border: '1.5px solid #e2e8f0',
-                          background: '#fff', color: '#475569', fontWeight: 600, fontSize: 14, cursor: 'pointer',
+                          padding: '10px 16px', borderRadius: 10, border: '1.5px solid var(--border-strong)',
+                          background: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 14, cursor: 'pointer',
                         }}
                       >
                         Cancel
@@ -444,7 +444,7 @@ const SchoolSettings = () => {
                       onClick={() => inputRef.current?.click()}
                       style={{
                         padding: '10px 18px', borderRadius: 10, border: '1.5px solid #2563EB',
-                        background: '#fff', color: '#2563EB', fontWeight: 600, fontSize: 14, cursor: 'pointer',
+                        background: 'var(--surface)', color: '#2563EB', fontWeight: 600, fontSize: 14, cursor: 'pointer',
                         display: 'flex', alignItems: 'center', gap: 6,
                       }}
                     >
@@ -458,7 +458,7 @@ const SchoolSettings = () => {
 
             {!canEdit && (
               <div style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
-                <p style={{ fontSize: 13, color: '#94a3b8' }}>Only SUPER_ADMIN and ADMIN can update the school logo.</p>
+                <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Only SUPER_ADMIN and ADMIN can update the school logo.</p>
               </div>
             )}
           </div>
@@ -466,12 +466,12 @@ const SchoolSettings = () => {
 
         {/* ── School info card (read-only summary) ── */}
         <div style={{
-          background: '#fff', borderRadius: 16, border: '1px solid #e2e8f0',
+          background: 'var(--surface)', borderRadius: 16, border: '1px solid var(--border-strong)',
           boxShadow: '0 1px 6px rgba(0,0,0,0.06)', marginTop: 20,
         }}>
-          <div style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9' }}>
-            <h2 style={{ fontSize: 16, fontWeight: 700, color: '#1e293b', margin: 0 }}>School Information</h2>
-            <p style={{ fontSize: 13, color: '#64748b', margin: '4px 0 0' }}>
+          <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
+            <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>School Information</h2>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '4px 0 0' }}>
               Contact your Application Owner to update school details.
             </p>
           </div>
@@ -487,10 +487,10 @@ const SchoolSettings = () => {
               { label: 'Email',          value: school?.email },
             ].map(({ label, value }) => (
               <div key={label}>
-                <p style={{ fontSize: 11, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 3px' }}>
+                <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 3px' }}>
                   {label}
                 </p>
-                <p style={{ fontSize: 14, color: value ? '#1e293b' : '#cbd5e1', margin: 0, fontWeight: 500 }}>
+                <p style={{ fontSize: 14, color: value ? 'var(--text-primary)' : 'var(--text-muted)', margin: 0, fontWeight: 500 }}>
                   {value || '—'}
                 </p>
               </div>
@@ -500,10 +500,10 @@ const SchoolSettings = () => {
 
         {/* ── Exam Types card ── */}
         {canEdit && (
-          <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #e2e8f0', boxShadow: '0 1px 6px rgba(0,0,0,0.06)', marginTop: 20 }}>
-            <div style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9' }}>
-              <h2 style={{ fontSize: 16, fontWeight: 700, color: '#1e293b', margin: 0 }}>Exam Types</h2>
-              <p style={{ fontSize: 13, color: '#64748b', margin: '4px 0 0' }}>
+          <div style={{ background: 'var(--surface)', borderRadius: 16, border: '1px solid var(--border-strong)', boxShadow: '0 1px 6px rgba(0,0,0,0.06)', marginTop: 20 }}>
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
+              <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Exam Types</h2>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '4px 0 0' }}>
                 Define the exam types your school uses (Unit Test 1, Quarterly, Annual Exam, etc.). Teachers pick from this list when entering marks.
               </p>
             </div>
@@ -515,10 +515,10 @@ const SchoolSettings = () => {
               <form onSubmit={handleAddExamType} style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
                 <input value={newEtName} onChange={e => setNewEtName(e.target.value)}
                   placeholder="Exam name, e.g. Unit Test 1" maxLength={100} required
-                  style={{ flex: 1, minWidth: 180, padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 9, fontSize: 13 }} />
+                  style={{ flex: 1, minWidth: 180, padding: '9px 12px', border: '1.5px solid var(--border-strong)', borderRadius: 9, fontSize: 13 }} />
                 <input value={newEtOrder} onChange={e => setNewEtOrder(e.target.value)}
                   type="number" placeholder="Order (0=first)" min="0"
-                  style={{ width: 130, padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 9, fontSize: 13 }} />
+                  style={{ width: 130, padding: '9px 12px', border: '1.5px solid var(--border-strong)', borderRadius: 9, fontSize: 13 }} />
                 <button type="submit" disabled={etSaving}
                   style={{ padding: '9px 18px', background: etSaving ? '#a0aec0' : '#2563EB', color: '#fff', border: 'none', borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: etSaving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
                   <span className="material-icons" style={{ fontSize: 16 }}>add</span>
@@ -528,15 +528,15 @@ const SchoolSettings = () => {
 
               {/* List */}
               {etLoading ? (
-                <div style={{ textAlign: 'center', padding: 30, color: '#94a3b8' }}>Loading…</div>
+                <div style={{ textAlign: 'center', padding: 30, color: 'var(--text-muted)' }}>Loading…</div>
               ) : examTypes.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: 30, color: '#94a3b8', fontSize: 13 }}>
+                <div style={{ textAlign: 'center', padding: 30, color: 'var(--text-muted)', fontSize: 13 }}>
                   No exam types yet. Add one above — teachers will see them in the Marks page.
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {examTypes.map(et => (
-                    <div key={et.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                    <div key={et.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'var(--surface-alt)', borderRadius: 10, border: '1px solid var(--border-strong)' }}>
                       {editingEt?.id === et.id ? (
                         <>
                           <input value={editingEt.name} onChange={e => setEditingEt(p => ({ ...p, name: e.target.value }))}
@@ -544,24 +544,24 @@ const SchoolSettings = () => {
                             style={{ flex: 1, padding: '6px 10px', border: '1.5px solid #2563EB', borderRadius: 7, fontSize: 13 }} />
                           <input value={editingEt.displayOrder} onChange={e => setEditingEt(p => ({ ...p, displayOrder: e.target.value }))}
                             type="number" min="0"
-                            style={{ width: 80, padding: '6px 10px', border: '1.5px solid #e2e8f0', borderRadius: 7, fontSize: 13 }} />
+                            style={{ width: 80, padding: '6px 10px', border: '1.5px solid var(--border-strong)', borderRadius: 7, fontSize: 13 }} />
                           <select value={String(editingEt.isActive)} onChange={e => setEditingEt(p => ({ ...p, isActive: e.target.value === 'true' }))}
-                            style={{ padding: '6px 10px', border: '1.5px solid #e2e8f0', borderRadius: 7, fontSize: 13 }}>
+                            style={{ padding: '6px 10px', border: '1.5px solid var(--border-strong)', borderRadius: 7, fontSize: 13 }}>
                             <option value="true">Active</option>
                             <option value="false">Inactive</option>
                           </select>
                           <button onClick={handleSaveEdit} disabled={etSaving}
                             style={{ padding: '6px 12px', background: '#16A34A', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Save</button>
                           <button onClick={() => setEditingEt(null)}
-                            style={{ padding: '6px 12px', background: '#edf2f7', color: '#4a5568', border: 'none', borderRadius: 7, fontSize: 12, cursor: 'pointer' }}>Cancel</button>
+                            style={{ padding: '6px 12px', background: 'var(--surface-alt)', color: 'var(--text-secondary)', border: 'none', borderRadius: 7, fontSize: 12, cursor: 'pointer' }}>Cancel</button>
                         </>
                       ) : (
                         <>
                           <div style={{ flex: 1 }}>
-                            <span style={{ fontWeight: 600, fontSize: 14, color: '#1e293b' }}>{et.name}</span>
-                            {!et.isActive && <span style={{ marginLeft: 8, fontSize: 11, color: '#94a3b8', fontStyle: 'italic' }}>inactive</span>}
+                            <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-primary)' }}>{et.name}</span>
+                            {!et.isActive && <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic' }}>inactive</span>}
                           </div>
-                          <span style={{ fontSize: 11, color: '#94a3b8' }}>Order: {et.displayOrder ?? 0}</span>
+                          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Order: {et.displayOrder ?? 0}</span>
                           <button onClick={() => setEditingEt({ id: et.id, name: et.name, displayOrder: et.displayOrder ?? 0, isActive: et.isActive !== false })}
                             style={{ padding: '5px 10px', background: '#EFF6FF', color: '#2563EB', border: 'none', borderRadius: 7, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>Edit</button>
                           <button onClick={() => handleDeleteExamType(et.id)}
@@ -578,12 +578,12 @@ const SchoolSettings = () => {
 
         {/* ── Grade Scale ─────────────────────────────────────────────────── */}
         {canEdit && (
-          <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: '24px 28px', marginTop: 24 }}>
+          <div style={{ background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--border-strong)', padding: '24px 28px', marginTop: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
               <span className="material-icons" style={{ color: '#d69e2e', fontSize: 22 }}>grade</span>
-              <h3 style={{ fontSize: 16, fontWeight: 700, color: '#1e293b', margin: 0 }}>Grade Scale</h3>
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Grade Scale</h3>
             </div>
-            <p style={{ fontSize: 13, color: '#718096', marginBottom: 20 }}>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20 }}>
               Define the percentage ranges for each grade. Teachers enter marks and grades are auto-calculated using this scale.
             </p>
 
@@ -591,14 +591,14 @@ const SchoolSettings = () => {
             {gsSuccess && <div style={{ background: '#f0fff4', color: '#276749', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: 13 }}>{gsSuccess}</div>}
 
             {gsLoading ? (
-              <div style={{ color: '#a0aec0', fontSize: 13, padding: '20px 0' }}>Loading…</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 13, padding: '20px 0' }}>Loading…</div>
             ) : (
               <>
                 {/* Column headers */}
                 <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr 1fr auto', gap: 8, marginBottom: 6 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Grade</div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Min % (≥)</div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Applies to</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Grade</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Min % (≥)</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Applies to</div>
                   <div />
                 </div>
 
@@ -616,7 +616,7 @@ const SchoolSettings = () => {
                         onChange={e => updateGsRow(idx, 'grade', e.target.value)}
                         placeholder="e.g. A+"
                         maxLength={5}
-                        style={{ padding: '7px 10px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, fontWeight: 700, textAlign: 'center', outline: 'none' }}
+                        style={{ padding: '7px 10px', border: '1.5px solid var(--border-strong)', borderRadius: 8, fontSize: 13, fontWeight: 700, textAlign: 'center', outline: 'none' }}
                       />
                       <input
                         type="number"
@@ -624,9 +624,9 @@ const SchoolSettings = () => {
                         value={row.minPercentage}
                         onChange={e => updateGsRow(idx, 'minPercentage', e.target.value)}
                         placeholder="0"
-                        style={{ padding: '7px 10px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none' }}
+                        style={{ padding: '7px 10px', border: '1.5px solid var(--border-strong)', borderRadius: 8, fontSize: 13, outline: 'none' }}
                       />
-                      <div style={{ fontSize: 12, color: '#718096', fontStyle: 'italic' }}>{rangeText}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontStyle: 'italic' }}>{rangeText}</div>
                       <button onClick={() => removeGsRow(idx)} style={{ padding: '6px 8px', background: '#fff5f5', color: '#e53e3e', border: '1px solid #fed7d7', borderRadius: 7, cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center' }}>
                         <span className="material-icons" style={{ fontSize: 15 }}>delete</span>
                       </button>
@@ -640,7 +640,7 @@ const SchoolSettings = () => {
                     + Add Grade
                   </button>
                   <button onClick={() => setGsRows(DEFAULT_SCALE)}
-                    style={{ padding: '8px 16px', background: '#f7fafc', color: '#718096', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, cursor: 'pointer' }}>
+                    style={{ padding: '8px 16px', background: 'var(--surface-alt)', color: 'var(--text-secondary)', border: '1.5px solid var(--border-strong)', borderRadius: 8, fontSize: 13, cursor: 'pointer' }}>
                     Reset to Default
                   </button>
                   <button onClick={handleSaveGradeScale} disabled={gsSaving}
@@ -655,11 +655,11 @@ const SchoolSettings = () => {
 
         {/* ── New Academic Year card ── */}
         {canEdit && (
-          <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #e2e8f0', boxShadow: '0 1px 6px rgba(0,0,0,0.06)', marginTop: 20 }}>
-            <div style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+          <div style={{ background: 'var(--surface)', borderRadius: 16, border: '1px solid var(--border-strong)', boxShadow: '0 1px 6px rgba(0,0,0,0.06)', marginTop: 20 }}>
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
               <div>
-                <h2 style={{ fontSize: 16, fontWeight: 700, color: '#1e293b', margin: 0 }}>New Academic Year</h2>
-                <p style={{ fontSize: 13, color: '#64748b', margin: '4px 0 0' }}>
+                <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>New Academic Year</h2>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '4px 0 0' }}>
                   Current year: <strong>{school?.academicYear || '—'}</strong> · Transition to a new academic year, carry over fee structures, then promote students class by class.
                 </p>
               </div>
@@ -685,9 +685,9 @@ const SchoolSettings = () => {
                       <div style={{ width: 28, height: 28, borderRadius: '50%', background: color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         <span className="material-icons" style={{ fontSize: 15, color }}>{icon}</span>
                       </div>
-                      <div style={{ fontSize: 12, fontWeight: 800, color: '#1e293b' }}>Step {step}: {title}</div>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-primary)' }}>Step {step}: {title}</div>
                     </div>
-                    <p style={{ margin: 0, fontSize: 12, color: '#64748b', lineHeight: 1.6 }}>{desc}</p>
+                    <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>{desc}</p>
                   </div>
                 ))}
               </div>
@@ -702,7 +702,7 @@ const SchoolSettings = () => {
     {showRollover && (
       <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
            onClick={e => e.target === e.currentTarget && setShowRollover(false)}>
-        <div style={{ background: '#fff', borderRadius: 18, width: '100%', maxWidth: 460, boxShadow: '0 28px 72px rgba(0,0,0,0.2)', overflow: 'hidden' }}>
+        <div style={{ background: 'var(--surface)', borderRadius: 18, width: '100%', maxWidth: 460, boxShadow: '0 28px 72px rgba(0,0,0,0.2)', overflow: 'hidden' }}>
 
           {/* Header */}
           <div style={{ background: 'linear-gradient(135deg,#1e1b4b,#4f46e5)', padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -723,8 +723,8 @@ const SchoolSettings = () => {
                   <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
                     <span className="material-icons" style={{ fontSize: 30, color: '#16a34a' }}>check_circle</span>
                   </div>
-                  <h3 style={{ margin: '0 0 6px', fontWeight: 800, fontSize: 17, color: '#1e293b' }}>Year Updated!</h3>
-                  <p style={{ margin: 0, color: '#64748b', fontSize: 13 }}>
+                  <h3 style={{ margin: '0 0 6px', fontWeight: 800, fontSize: 17, color: 'var(--text-primary)' }}>Year Updated!</h3>
+                  <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: 13 }}>
                     Academic year changed from <strong>{rolloverResult.previousYear}</strong> to <strong>{rolloverResult.newYear}</strong>
                   </p>
                   {rolloverResult.feeStructuresCopied > 0 && (
@@ -736,7 +736,7 @@ const SchoolSettings = () => {
 
                 {/* Remaining steps checklist */}
                 <div style={{ background: '#f8faff', borderRadius: 10, padding: 16, marginBottom: 18 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '.05em' }}>Remaining tasks</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '.05em' }}>Remaining tasks</div>
                   {[
                     'Go to Students → Promote Students to move each class to the next',
                     'Review copied fee structures in Fees & Payments → Class Fee Structures',
@@ -744,7 +744,7 @@ const SchoolSettings = () => {
                   ].map((task, i) => (
                     <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}>
                       <span className="material-icons" style={{ fontSize: 15, color: '#4f46e5', flexShrink: 0, marginTop: 1 }}>radio_button_unchecked</span>
-                      <span style={{ fontSize: 12, color: '#374151', lineHeight: 1.5 }}>{task}</span>
+                      <span style={{ fontSize: 12, color: 'var(--text-primary)', lineHeight: 1.5 }}>{task}</span>
                     </div>
                   ))}
                 </div>
@@ -762,23 +762,23 @@ const SchoolSettings = () => {
                 )}
 
                 <div style={{ marginBottom: 16 }}>
-                  <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 6 }}>New Academic Year *</label>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', display: 'block', marginBottom: 6 }}>New Academic Year *</label>
                   <input
                     type="text" placeholder="e.g. 2026-27"
                     value={rolloverYear} onChange={e => setRolloverYear(e.target.value)}
-                    style={{ width: '100%', padding: '10px 12px', fontSize: 14, fontWeight: 700, border: '2px solid #e2e8f0', borderRadius: 8, outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', padding: '10px 12px', fontSize: 14, fontWeight: 700, border: '2px solid var(--border-strong)', borderRadius: 8, outline: 'none', boxSizing: 'border-box' }}
                     onFocus={e => e.target.style.borderColor = '#4f46e5'}
-                    onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+                    onBlur={e => e.target.style.borderColor = 'var(--border-strong)'}
                   />
-                  <p style={{ margin: '5px 0 0', fontSize: 11, color: '#94a3b8' }}>Use the same format as your current year (e.g. 2026-27 or 2026-2027)</p>
+                  <p style={{ margin: '5px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>Use the same format as your current year (e.g. 2026-27 or 2026-2027)</p>
                 </div>
 
                 <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', marginBottom: 20 }}>
                   <input type="checkbox" checked={copyFees} onChange={e => setCopyFees(e.target.checked)}
                     style={{ width: 16, height: 16, marginTop: 2, flexShrink: 0, accentColor: '#4f46e5' }} />
                   <div>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: '#1e293b' }}>Copy fee structures to new year</span>
-                    <p style={{ margin: '2px 0 0', fontSize: 11, color: '#64748b', lineHeight: 1.5 }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Copy fee structures to new year</span>
+                    <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                       Duplicates each class's fee breakdown (tuition, transport, lab, etc.) for {rolloverYear || 'the new year'}. You can edit amounts afterwards in Fees &amp; Payments.
                     </p>
                   </div>
@@ -791,7 +791,7 @@ const SchoolSettings = () => {
 
                 <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
                   <button onClick={() => { setShowRollover(false); setRolloverYear(''); setRolloverError(''); setCopyFees(true); }}
-                    style={{ padding: '9px 20px', border: '1.5px solid #e2e8f0', borderRadius: 8, background: '#fff', color: '#64748b', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+                    style={{ padding: '9px 20px', border: '1.5px solid var(--border-strong)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
                   <button onClick={handleRollover} disabled={rollingOver || !rolloverYear.trim()} style={{ padding: '9px 22px', border: 'none', borderRadius: 8, background: (rollingOver || !rolloverYear.trim()) ? '#a5b4fc' : 'linear-gradient(135deg,#4f46e5,#7c3aed)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: (rollingOver || !rolloverYear.trim()) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 7 }}>
                     {rollingOver
                       ? <><span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} />Updating…</>

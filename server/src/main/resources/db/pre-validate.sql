@@ -1,5 +1,9 @@
 -- Pre-JPA migrations: columns required by entity mappings.
 -- Runs before Hibernate schema validation on every startup (idempotent).
+--
+-- LEGACY — frozen as of the Flyway introduction (db/migration/V1__baseline.sql).
+-- Do not add new statements here; add a new versioned migration under
+-- db/migration instead.
 ALTER TABLE fee_installments ADD COLUMN IF NOT EXISTS paid_amount DECIMAL(10,2) DEFAULT 0;
 ALTER TABLE fee_installments ADD COLUMN IF NOT EXISTS carry_over  DECIMAL(10,2) DEFAULT 0;
 

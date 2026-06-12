@@ -82,6 +82,12 @@
             <artifactId>spring-boot-starter-data-jpa</artifactId>
         </dependency>
 
+        <!-- Flyway: versioned DB migrations (PostgreSQL support included in flyway-core for 9.x) -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+
         <!-- Spring Boot Mail -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

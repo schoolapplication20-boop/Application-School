@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
-import api from '../../services/api';
+import useCachedFetch from '../../hooks/useCachedFetch';
+import OfflineBanner from '../../components/OfflineBanner';
 
 const tiles = [
   { label: 'Attendance', icon: '📋', screen: 'TeacherAttendance', color: '#3b82f6' },
@@ -19,24 +20,18 @@ const tiles = [
 export default function TeacherDashboard({ navigation }) {
   const { user, logout } = useAuth();
   const insets = useSafeAreaInsets();
-  const [profile, setProfile] = useState(null);
-  const [classInfo, setClassInfo] = useState(null);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    Promise.all([
-      api.get('/api/teacher/profile'),
-      api.get('/api/teacher/class-teacher-assignment'),
-    ]).then(([pRes, cRes]) => {
-      setProfile(pRes.data.data);
-      setClassInfo(cRes.data.data);
-    }).catch(() => {}).finally(() => setLoading(false));
-  }, []);
+  const { data: profile, loading: profileLoading, isOffline: profileOffline } = useCachedFetch('/api/teacher/profile');
+  const { data: classInfo, loading: classLoading, isOffline: classOffline } = useCachedFetch('/api/teacher/class-teacher-assignment');
+
+  const loading = profileLoading || classLoading;
+  const isOffline = profileOffline || classOffline;
 
   const today = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <OfflineBanner visible={isOffline} />
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <View style={styles.headerTop}>
           <View>

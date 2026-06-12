@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Modal, ScrollView } from 'react-native';
 import api from '../../services/api';
+import useCachedFetch from '../../hooks/useCachedFetch';
+import OfflineBanner from '../../components/OfflineBanner';
 
 const LEAVE_TYPES = ['Medical', 'Personal', 'Family Emergency', 'Other'];
 const STATUS_STYLE = {
@@ -10,20 +12,11 @@ const STATUS_STYLE = {
 };
 
 export default function StudentLeave() {
-  const [leaves, setLeaves] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data, loading, isOffline, reload } = useCachedFetch('/api/leave/student/my');
+  const leaves = data || [];
   const [modalVisible, setModalVisible] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ leaveType: 'Medical', fromDate: '', toDate: '', reason: '' });
-
-  const load = () => {
-    api.get('/api/leave/student/my')
-      .then(res => setLeaves(res.data.data || []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => { load(); }, []);
 
   const submit = async () => {
     if (!form.fromDate || !form.toDate || !form.reason.trim()) {
@@ -45,7 +38,7 @@ export default function StudentLeave() {
       Alert.alert('Success', 'Leave request submitted.');
       setModalVisible(false);
       setForm({ leaveType: 'Medical', fromDate: '', toDate: '', reason: '' });
-      load();
+      reload();
     } catch (err) { Alert.alert('Error', err?.response?.data?.message || 'Failed to submit leave.'); }
     finally { setSubmitting(false); }
   };
@@ -54,6 +47,7 @@ export default function StudentLeave() {
 
   return (
     <View style={styles.container}>
+      <OfflineBanner visible={isOffline} />
       <TouchableOpacity style={styles.applyBtn} onPress={() => setModalVisible(true)}>
         <Text style={styles.applyBtnText}>+ Apply for Leave</Text>
       </TouchableOpacity>

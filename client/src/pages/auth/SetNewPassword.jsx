@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { authAPI } from '../../services/api';
 import Logo from '../../components/Logo';
+import Button from '../../components/Button';
 import '../../styles/auth.css';
 
 const SetNewPassword = () => {
@@ -107,10 +108,10 @@ const SetNewPassword = () => {
 
       <div className="auth-right">
         <div className="auth-right-inner">
-          <button type="button" className="btn-back" onClick={() => navigate('/forgot-password')}>
+          <Button variant="back" onClick={() => navigate('/forgot-password')}>
             <span className="material-icons">arrow_back</span>
             Back
-          </button>
+          </Button>
 
           <div className="auth-icon-box">
             <span className="material-icons">lock</span>
@@ -158,7 +159,7 @@ const SetNewPassword = () => {
                     {[1, 2, 3, 4, 5].map(i => (
                       <div key={i} style={{
                         flex: 1, height: '4px', borderRadius: '2px',
-                        background: i <= strength.level ? strength.color : '#e2e8f0',
+                        background: i <= strength.level ? strength.color : 'var(--border-strong)',
                         transition: 'background 0.3s'
                       }} />
                     ))}

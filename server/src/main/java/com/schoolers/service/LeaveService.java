@@ -6,6 +6,8 @@ import com.schoolers.repository.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +24,10 @@ public class LeaveService {
 
     private static final Logger log = LoggerFactory.getLogger(LeaveService.class);
 
+    /** Cap on leave-request lists returned by these endpoints, to avoid unbounded growth over time. */
+    private static final int MAX_LEAVE_RESULTS = 200;
+    private static final Pageable LEAVE_RESULTS_PAGE = PageRequest.of(0, MAX_LEAVE_RESULTS);
+
     @Autowired private LeaveRequestRepository    leaveRepository;
     @Autowired private AppNotificationService    notificationService;
     @Autowired private UserRepository            userRepository;
@@ -34,18 +40,20 @@ public class LeaveService {
         if (schoolId != null) {
             return ApiResponse.success(leaveRepository
                     .findByRequesterTypeAndSchoolIdOrderByCreatedAtDesc(
-                            LeaveRequest.RequesterType.STUDENT, schoolId));
+                            LeaveRequest.RequesterType.STUDENT, schoolId, LEAVE_RESULTS_PAGE));
         }
-        return ApiResponse.success(leaveRepository.findByRequesterType(LeaveRequest.RequesterType.STUDENT));
+        return ApiResponse.success(leaveRepository
+                .findByRequesterTypeOrderByCreatedAtDesc(LeaveRequest.RequesterType.STUDENT, LEAVE_RESULTS_PAGE));
     }
 
     public ApiResponse<List<LeaveRequest>> getTeacherLeaves(Long schoolId) {
         if (schoolId != null) {
             return ApiResponse.success(leaveRepository
                     .findByRequesterTypeAndSchoolIdOrderByCreatedAtDesc(
-                            LeaveRequest.RequesterType.TEACHER, schoolId));
+                            LeaveRequest.RequesterType.TEACHER, schoolId, LEAVE_RESULTS_PAGE));
         }
-        return ApiResponse.success(leaveRepository.findByRequesterType(LeaveRequest.RequesterType.TEACHER));
+        return ApiResponse.success(leaveRepository
+                .findByRequesterTypeOrderByCreatedAtDesc(LeaveRequest.RequesterType.TEACHER, LEAVE_RESULTS_PAGE));
     }
 
     public ApiResponse<List<LeaveRequest>> getLeavesByRequester(Long requesterId, String type, Long schoolId) {
@@ -63,13 +71,13 @@ public class LeaveService {
             if (schoolId != null) {
                 return ApiResponse.success(
                         leaveRepository.findByRequesterIdAndRequesterTypeAndSchoolIdOrderByCreatedAtDesc(
-                                teacherEntityId, rt, schoolId));
+                                teacherEntityId, rt, schoolId, LEAVE_RESULTS_PAGE));
             }
             return ApiResponse.success(
-                    leaveRepository.findByRequesterIdAndRequesterTypeOrderByCreatedAtDesc(teacherEntityId, rt));
+                    leaveRepository.findByRequesterIdAndRequesterTypeOrderByCreatedAtDesc(teacherEntityId, rt, LEAVE_RESULTS_PAGE));
         }
 
-        return ApiResponse.success(leaveRepository.findByRequesterIdAndRequesterTypeOrderByCreatedAtDesc(requesterId, rt));
+        return ApiResponse.success(leaveRepository.findByRequesterIdAndRequesterTypeOrderByCreatedAtDesc(requesterId, rt, LEAVE_RESULTS_PAGE));
     }
 
     // ── Student: submit leave ───────────────────────────────────────────────
@@ -148,7 +156,7 @@ public class LeaveService {
 
         List<LeaveRequest> leaves = leaveRepository
                 .findByRequesterIdAndRequesterTypeOrderByCreatedAtDesc(
-                        studentOpt.get().getId(), LeaveRequest.RequesterType.STUDENT);
+                        studentOpt.get().getId(), LeaveRequest.RequesterType.STUDENT, LEAVE_RESULTS_PAGE);
         return ApiResponse.success(leaves);
     }
 
@@ -183,9 +191,9 @@ public class LeaveService {
         Long schoolId = teacher.getSchoolId();
         List<LeaveRequest> leaves = (schoolId != null)
                 ? leaveRepository.findByClassSectionAndRequesterTypeAndSchoolIdOrderByCreatedAtDesc(
-                        classSection, LeaveRequest.RequesterType.STUDENT, schoolId)
+                        classSection, LeaveRequest.RequesterType.STUDENT, schoolId, LEAVE_RESULTS_PAGE)
                 : leaveRepository.findByClassSectionAndRequesterTypeOrderByCreatedAtDesc(
-                        classSection, LeaveRequest.RequesterType.STUDENT);
+                        classSection, LeaveRequest.RequesterType.STUDENT, LEAVE_RESULTS_PAGE);
         return ApiResponse.success(leaves);
     }
 

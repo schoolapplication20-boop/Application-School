@@ -14,10 +14,12 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.myskoolz.app"
+      "bundleIdentifier": "com.myskoolz.app",
+      "buildNumber": "1"
     },
     "android": {
       "package": "com.myskoolz.app",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1e40af"
@@ -28,9 +30,13 @@
       "favicon": "./assets/favicon.png"
     },
     "extra": {
+      "apiUrl": "https://application-school.onrender.com",
       "eas": {
         "projectId": "bb15d621-76d5-4448-8e1f-65ab8bd50e91"
       }
-    }
+    },
+    "plugins": [
+      "expo-secure-store"
+    ]
   }
 }

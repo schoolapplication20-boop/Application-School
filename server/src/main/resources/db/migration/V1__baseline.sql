@@ -1,0 +1,10 @@
+-- Baseline marker (no-op).
+--
+-- The schema as of this version was built up incrementally by the legacy
+-- pre-validate.sql and DatabaseMigration.java scripts (see server/src/main/resources/db/pre-validate.sql
+-- and server/src/main/java/com/schoolers/config/DatabaseMigration.java), which remain in place
+-- as a frozen historical record and continue to run on startup for backward compatibility.
+--
+-- Starting from V2, all new schema changes should be added as new
+-- versioned files in this db/migration directory instead of being
+-- appended to the legacy scripts.

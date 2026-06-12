@@ -22,12 +22,13 @@ public class TransportService {
     @Autowired private TransportStudentAssignmentRepository assignmentRepository;
     @Autowired private TransportFeeRepository feeRepository;
     @Autowired private StudentTransportRepository studentTransportRepository;
+    @Autowired private StudentRepository studentRepository;
 
     // ── Buses ──────────────────────────────────────────────────────────────────
 
     public ApiResponse<List<TransportBus>> getBuses(Long schoolId) {
         if (schoolId != null) return ApiResponse.success(busRepository.findBySchoolIdOrderByBusNoAsc(schoolId));
-        return ApiResponse.success(busRepository.findAll());
+        return ApiResponse.success(List.of());
     }
 
     public ApiResponse<TransportBus> createBus(Map<String, Object> body, Long schoolId) {
@@ -85,7 +86,7 @@ public class TransportService {
 
     public ApiResponse<List<TransportRoute>> getRoutes(Long schoolId) {
         if (schoolId != null) return ApiResponse.success(routeRepository.findBySchoolIdOrderByNameAsc(schoolId));
-        return ApiResponse.success(routeRepository.findAll());
+        return ApiResponse.success(List.of());
     }
 
     public ApiResponse<TransportRoute> createRoute(Map<String, Object> body, Long schoolId) {
@@ -152,7 +153,7 @@ public class TransportService {
 
     public ApiResponse<List<TransportDriver>> getDrivers(Long schoolId) {
         if (schoolId != null) return ApiResponse.success(driverRepository.findBySchoolIdOrderByNameAsc(schoolId));
-        return ApiResponse.success(driverRepository.findAll());
+        return ApiResponse.success(List.of());
     }
 
     public ApiResponse<TransportDriver> createDriver(Map<String, Object> body, Long schoolId) {
@@ -198,7 +199,7 @@ public class TransportService {
 
     public ApiResponse<List<TransportStop>> getStops(Long schoolId) {
         if (schoolId != null) return ApiResponse.success(stopRepository.findBySchoolIdOrderByStopOrderAsc(schoolId));
-        return ApiResponse.success(stopRepository.findAll());
+        return ApiResponse.success(List.of());
     }
 
     public ApiResponse<TransportStop> createStop(Map<String, Object> body, Long schoolId) {
@@ -242,13 +243,15 @@ public class TransportService {
 
     public ApiResponse<List<TransportStudentAssignment>> getStudentAssignments(Long schoolId) {
         if (schoolId != null) return ApiResponse.success(assignmentRepository.findBySchoolIdOrderByStudentNameAsc(schoolId));
-        return ApiResponse.success(assignmentRepository.findAll());
+        return ApiResponse.success(List.of());
     }
 
     @Transactional
     public ApiResponse<TransportStudentAssignment> assignStudent(Map<String, Object> body, Long schoolId) {
         Long studentId = longVal(body, "studentId", null);
         if (studentId == null) return ApiResponse.error("Student ID is required");
+        String studentError = validateStudentInSchool(studentId, schoolId);
+        if (studentError != null) return ApiResponse.error(studentError);
 
         boolean isNew = (schoolId != null)
                 ? !assignmentRepository.findByStudentIdAndSchoolId(studentId, schoolId).isPresent()
@@ -377,12 +380,14 @@ public class TransportService {
 
     public ApiResponse<List<TransportFee>> getTransportFees(Long schoolId) {
         if (schoolId != null) return ApiResponse.success(feeRepository.findBySchoolIdOrderByCreatedAtDesc(schoolId));
-        return ApiResponse.success(feeRepository.findAll());
+        return ApiResponse.success(List.of());
     }
 
     public ApiResponse<TransportFee> createTransportFee(Map<String, Object> body, Long schoolId) {
         Long studentId = longVal(body, "studentId", null);
         if (studentId == null) return ApiResponse.error("Student ID is required");
+        String studentError = validateStudentInSchool(studentId, schoolId);
+        if (studentError != null) return ApiResponse.error(studentError);
 
         java.math.BigDecimal amount = null;
         if (body.get("amount") != null) {
@@ -449,7 +454,7 @@ public class TransportService {
 
     public ApiResponse<List<StudentTransport>> getStudentTransports(Long schoolId) {
         if (schoolId != null) return ApiResponse.success(studentTransportRepository.findBySchoolIdOrderByCreatedAtDesc(schoolId));
-        return ApiResponse.success(studentTransportRepository.findAll());
+        return ApiResponse.success(List.of());
     }
 
     public ApiResponse<StudentTransport> getStudentTransportById(Long id, Long schoolId) {
@@ -463,6 +468,8 @@ public class TransportService {
     public ApiResponse<StudentTransport> createStudentTransport(Map<String, Object> body, Long schoolId) {
         Long studentId = longVal(body, "studentId", null);
         if (studentId == null) return ApiResponse.error("Student ID is required");
+        String studentError = validateStudentInSchool(studentId, schoolId);
+        if (studentError != null) return ApiResponse.error(studentError);
 
         StudentTransport st = StudentTransport.builder()
                 .studentId(studentId)
@@ -519,6 +526,18 @@ public class TransportService {
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────────
+
+    /**
+     * Validates that studentId refers to an existing Student belonging to the acting
+     * school. SUPER_ADMINs (schoolId == null) bypass the school check.
+     * Returns an error message if invalid, or null if the student is valid.
+     */
+    private String validateStudentInSchool(Long studentId, Long schoolId) {
+        Student student = studentRepository.findById(studentId).orElse(null);
+        if (student == null) return "Student not found";
+        if (schoolId != null && !schoolId.equals(student.getSchoolId())) return "Student not found";
+        return null;
+    }
 
     private String str(Map<String, Object> map, String key, String fallback) {
         Object v = map.get(key);

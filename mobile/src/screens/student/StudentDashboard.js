@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import React, { useMemo } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import useCachedFetch from '../../hooks/useCachedFetch';
+import OfflineBanner from '../../components/OfflineBanner';
 
 const TILES = [
   { label: 'Attendance', icon: '📋', screen: 'StudentAttendance', color: '#eff6ff', accent: '#2563eb' },
@@ -19,28 +20,25 @@ const TILES = [
 export default function StudentDashboard({ navigation }) {
   const { user, logout } = useAuth();
   const insets = useSafeAreaInsets();
-  const [profile, setProfile] = useState(null);
-  const [stats, setStats] = useState({ attendance: null, pendingFees: 0 });
 
-  useEffect(() => {
-    api.get('/api/student/me')
-      .then(res => setProfile(res.data.data || res.data))
-      .catch(() => {});
+  const { data: profile, isOffline: profileOffline } = useCachedFetch('/api/student/me');
 
-    const today = new Date().toISOString().split('T')[0];
-    const start = `${new Date().getFullYear()}-01-01`;
-    api.get('/api/student/attendance', { params: { startDate: start, endDate: today } })
-      .then(res => {
-        const records = res.data.data || [];
-        const present = records.filter(r => r.status === 'PRESENT').length;
-        const pct = records.length > 0 ? Math.round((present / records.length) * 100) : 0;
-        setStats(s => ({ ...s, attendance: pct }));
-      })
-      .catch(() => {});
-  }, []);
+  const today = new Date().toISOString().split('T')[0];
+  const start = `${new Date().getFullYear()}-01-01`;
+  const { data: attendanceRecords, isOffline: attendanceOffline } = useCachedFetch('/api/student/attendance', { startDate: start, endDate: today });
+
+  const attendancePct = useMemo(() => {
+    const records = attendanceRecords || [];
+    if (records.length === 0) return null;
+    const present = records.filter(r => r.status === 'PRESENT').length;
+    return Math.round((present / records.length) * 100);
+  }, [attendanceRecords]);
+
+  const isOffline = profileOffline || attendanceOffline;
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <OfflineBanner visible={isOffline} />
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <View style={{ flex: 1 }}>
           <Text style={styles.greeting}>Hello, 👋</Text>
@@ -54,10 +52,10 @@ export default function StudentDashboard({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      {stats.attendance !== null && (
+      {attendancePct !== null && (
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>{stats.attendance}%</Text>
+            <Text style={styles.statValue}>{attendancePct}%</Text>
             <Text style={styles.statLabel}>Attendance</Text>
           </View>
           {profile?.rollNumber && (

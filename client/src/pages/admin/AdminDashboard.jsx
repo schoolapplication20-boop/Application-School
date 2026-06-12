@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import StatCard from '../../components/StatCard';
 import BarChartComponent from '../../components/Charts/BarChartComponent';
 import LineChartComponent from '../../components/Charts/LineChartComponent';
-import Toast from '../../components/Toast';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
 import { adminAPI, superAdminAPI, applicationAPI } from '../../services/api';
 import { getLogs } from '../../services/activityLog';
 import SEOMeta from '../../components/SEOMeta';
@@ -50,9 +50,7 @@ export default function AdminDashboard() {
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
 
   const [chartPeriod, setChartPeriod] = useState('12M');
-  const [toast, setToast] = useState(null);
   const [attendanceChartData, setAttendanceChartData] = useState(null);
-  const toastTimerRef = useRef(null);
   const [dbStats,      setDbStats]      = useState(null);
   const [statsLoading, setStatsLoading] = useState(true);
   const [statsError,   setStatsError]   = useState(null);
@@ -99,13 +97,7 @@ export default function AdminDashboard() {
     return () => window.removeEventListener('focus', refresh);
   }, [isSuperAdmin]);
 
-  const showToast = (message, type = 'success') => {
-    clearTimeout(toastTimerRef.current);
-    setToast({ message, type });
-    toastTimerRef.current = setTimeout(() => setToast(null), 3000);
-  };
-
-  useEffect(() => () => clearTimeout(toastTimerRef.current), []);
+  const showToast = useToast();
 
   const handleApprove = async (id) => {
     try {
@@ -153,7 +145,6 @@ export default function AdminDashboard() {
   return (
     <Layout pageTitle="Dashboard">
       <SEOMeta title="Admin Dashboard" description="School administration overview — students, teachers, fees and attendance at a glance." />
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
       {/* ── Welcome Banner ─────────────────────────────────────────────────────── */}
       <div style={{
@@ -199,9 +190,9 @@ export default function AdminDashboard() {
 
       {/* API Error Banner */}
       {statsError && (
-        <div style={{ background: '#fff5f5', border: '1px solid #feb2b2', borderRadius: 12, padding: '12px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span className="material-icons" style={{ color: '#c53030', fontSize: 20 }}>error_outline</span>
-          <span style={{ color: '#c53030', fontSize: 13, fontWeight: 600, flex: 1 }}>{statsError}</span>
+        <div style={{ background: 'var(--alert-danger-bg)', border: '1px solid var(--alert-danger-border)', borderRadius: 12, padding: '12px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span className="material-icons" style={{ color: 'var(--alert-danger-text)', fontSize: 20 }}>error_outline</span>
+          <span style={{ color: 'var(--alert-danger-text)', fontSize: 13, fontWeight: 600, flex: 1 }}>{statsError}</span>
           <button onClick={() => fetchDashboardStats()} style={{ padding: '5px 14px', borderRadius: 8, border: 'none', background: '#c53030', color: '#fff', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>Retry</button>
         </div>
       )}
@@ -215,19 +206,19 @@ export default function AdminDashboard() {
       <div style={{ marginBottom: 28 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
           <div style={{ width: 4, height: 20, borderRadius: 4, background: 'linear-gradient(180deg,#0de1e8,#0369a1)' }} />
-          <span style={{ fontSize: 15, fontWeight: 700, color: '#1a202c' }}>Quick Actions</span>
+          <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>Quick Actions</span>
         </div>
         <div className="quick-actions-grid">
           {QUICK_ACTIONS.map(action => (
             <div key={action.label} onClick={() => navigate(action.path)}
-              style={{ background: '#fff', borderRadius: 16, padding: '18px 12px', textAlign: 'center', cursor: 'pointer', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', border: '1px solid #f0f4f8', transition: 'all 0.2s' }}
+              style={{ background: 'var(--surface)', borderRadius: 16, padding: '18px 12px', textAlign: 'center', cursor: 'pointer', boxShadow: 'var(--shadow-card)', border: '1px solid var(--border)', transition: 'all 0.2s' }}
               onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 12px 28px rgba(0,0,0,0.12)'; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 10px rgba(0,0,0,0.06)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'var(--shadow-card)'; }}
             >
               <div style={{ width: 48, height: 48, borderRadius: 14, background: action.grad, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
                 <span className="material-icons" style={{ color: '#fff', fontSize: 24 }}>{action.icon}</span>
               </div>
-              <div style={{ fontSize: 12.5, fontWeight: 700, color: '#2d3748', lineHeight: 1.3 }}>{action.label}</div>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.3 }}>{action.label}</div>
             </div>
           ))}
         </div>
@@ -236,14 +227,14 @@ export default function AdminDashboard() {
       {/* ── Super Admin: Admin Overview + Activity Log ────────────────────────── */}
       {isSuperAdmin && (
         <div className="grid-3-2">
-          <div style={{ background: '#fff', borderRadius: 18, boxShadow: '0 2px 14px rgba(0,0,0,0.07)', overflow: 'hidden' }}>
-            <div style={{ padding: '18px 22px', borderBottom: '1px solid #f0f4f8', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ background: 'var(--surface)', borderRadius: 18, boxShadow: 'var(--shadow-card)', overflow: 'hidden' }}>
+            <div style={{ padding: '18px 22px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{ width: 4, height: 20, borderRadius: 4, background: 'linear-gradient(180deg,#0de1e8,#0369a1)' }} />
-              <span style={{ fontSize: 15, fontWeight: 700, color: '#1a202c', flex: 1 }}>Admin Overview</span>
+              <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', flex: 1 }}>Admin Overview</span>
               <span style={{ background: '#0de1e820', color: '#0369a1', padding: '3px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>{admins.length} admins</span>
             </div>
             {admins.length === 0 ? (
-              <div style={{ padding: '40px', textAlign: 'center', color: '#a0aec0' }}>
+              <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
                 <span className="material-icons" style={{ fontSize: 40, display: 'block', marginBottom: 8, opacity: 0.4 }}>manage_accounts</span>
                 No admins yet.
               </div>
@@ -261,7 +252,7 @@ export default function AdminDashboard() {
                             </div>
                             <div>
                               <div style={{ fontWeight: 700, fontSize: 13 }}>{a.name}</div>
-                              <div style={{ fontSize: 11, color: '#a0aec0' }}>{a.email}</div>
+                              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{a.email}</div>
                             </div>
                           </div>
                         </td>
@@ -270,7 +261,7 @@ export default function AdminDashboard() {
                             {(a.isActive ?? true) ? 'Active' : 'Inactive'}
                           </span>
                         </td>
-                        <td style={{ fontSize: 12, color: '#718096' }}>
+                        <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
                           {a.permissions ? `${Object.values(a.permissions).filter(Boolean).length} modules` : 'Full Access'}
                         </td>
                       </tr>
@@ -281,27 +272,27 @@ export default function AdminDashboard() {
             )}
           </div>
 
-          <div style={{ background: '#fff', borderRadius: 18, boxShadow: '0 2px 14px rgba(0,0,0,0.07)', overflow: 'hidden' }}>
-            <div style={{ padding: '18px 22px', borderBottom: '1px solid #f0f4f8', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ background: 'var(--surface)', borderRadius: 18, boxShadow: 'var(--shadow-card)', overflow: 'hidden' }}>
+            <div style={{ padding: '18px 22px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{ width: 4, height: 20, borderRadius: 4, background: 'linear-gradient(180deg,#667eea,#764ba2)' }} />
-              <span style={{ fontSize: 15, fontWeight: 700, color: '#1a202c' }}>Recent Activity</span>
+              <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>Recent Activity</span>
             </div>
             {logs.length === 0 ? (
-              <div style={{ padding: '40px', textAlign: 'center', color: '#a0aec0' }}>
+              <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
                 <span className="material-icons" style={{ fontSize: 40, display: 'block', marginBottom: 8, opacity: 0.4 }}>timeline</span>
                 No recent activity
               </div>
             ) : (
               <div style={{ padding: '8px 0' }}>
                 {logs.map((log, i) => (
-                  <div key={log.id} style={{ display: 'flex', gap: 12, padding: '10px 22px', borderBottom: i < logs.length - 1 ? '1px solid #f7fafc' : 'none' }}>
+                  <div key={log.id} style={{ display: 'flex', gap: 12, padding: '10px 22px', borderBottom: i < logs.length - 1 ? '1px solid var(--border)' : 'none' }}>
                     <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#667eea18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       <span className="material-icons" style={{ fontSize: 14, color: '#667eea' }}>history</span>
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 12, color: '#2d3748', fontWeight: 500, lineHeight: 1.4 }}>{log.action}</div>
-                      <div style={{ fontSize: 10, color: '#a0aec0', marginTop: 2, display: 'flex', gap: 6 }}>
-                        <span style={{ background: '#f7fafc', padding: '1px 6px', borderRadius: 8 }}>{log.module}</span>
+                      <div style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 500, lineHeight: 1.4 }}>{log.action}</div>
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2, display: 'flex', gap: 6 }}>
+                        <span style={{ background: 'var(--surface-alt)', padding: '1px 6px', borderRadius: 8 }}>{log.module}</span>
                         <span>{log.timestamp}</span>
                       </div>
                     </div>
@@ -315,19 +306,19 @@ export default function AdminDashboard() {
 
       {/* ── Charts Section ─────────────────────────────────────────────────────── */}
       <div className="charts-inline-grid">
-        <div style={{ background: '#fff', borderRadius: 18, boxShadow: '0 2px 14px rgba(0,0,0,0.07)', overflow: 'hidden' }}>
-          <div style={{ padding: '18px 22px', borderBottom: '1px solid #f0f4f8', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ background: 'var(--surface)', borderRadius: 18, boxShadow: 'var(--shadow-card)', overflow: 'hidden' }}>
+          <div style={{ padding: '18px 22px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
                 <div style={{ width: 4, height: 18, borderRadius: 4, background: 'linear-gradient(180deg,#38a169,#0de1e8)' }} />
-                <span style={{ fontSize: 15, fontWeight: 700, color: '#1a202c' }}>Revenue vs Expenses</span>
+                <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>Revenue vs Expenses</span>
               </div>
-              <div style={{ fontSize: 12, color: '#a0aec0', marginLeft: 12 }}>Monthly financial overview</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 12 }}>Monthly financial overview</div>
             </div>
             <div style={{ display: 'flex', gap: 6 }}>
               {['3M','6M','12M'].map(p => (
                 <button key={p} onClick={() => setChartPeriod(p)}
-                  style={{ padding: '4px 12px', borderRadius: 8, border: `1.5px solid ${chartPeriod === p ? '#0de1e8' : '#e2e8f0'}`, background: chartPeriod === p ? '#0de1e8' : '#fff', color: chartPeriod === p ? '#fff' : '#718096', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>
+                  style={{ padding: '4px 12px', borderRadius: 8, border: `1.5px solid ${chartPeriod === p ? '#0de1e8' : 'var(--border-strong)'}`, background: chartPeriod === p ? '#0de1e8' : 'var(--surface)', color: chartPeriod === p ? '#fff' : 'var(--text-secondary)', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>
                   {p}
                 </button>
               ))}
@@ -357,15 +348,15 @@ export default function AdminDashboard() {
             { title: 'Pending Apps',      value: statsLoading ? '…' : (dbStats?.pendingApplications ?? 0), icon: 'pending_actions',    grad: 'linear-gradient(135deg,#f6ad55,#e53e3e)',  light: '#fff5f5' },
             { title: 'Hall Tickets',      value: statsLoading ? '…' : (dbStats?.totalHallTickets ?? 0),    icon: 'confirmation_number',grad: 'linear-gradient(135deg,#805ad5,#553c9a)',  light: '#faf5ff' },
           ].map(item => (
-            <div key={item.title} style={{ background: '#fff', borderRadius: 16, padding: '16px 18px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 14, border: '1px solid #f0f4f8' }}>
+            <div key={item.title} style={{ background: 'var(--surface)', borderRadius: 16, padding: '16px 18px', boxShadow: 'var(--shadow-card)', display: 'flex', alignItems: 'center', gap: 14, border: '1px solid var(--border)' }}>
               <div style={{ width: 46, height: 46, borderRadius: 13, background: item.grad, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 10px rgba(0,0,0,0.12)' }}>
                 <span className="material-icons" style={{ color: '#fff', fontSize: 22 }}>{item.icon}</span>
               </div>
               <div>
-                <div style={{ fontSize: 24, fontWeight: 800, color: '#1a202c', lineHeight: 1 }}>
+                <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>
                   {typeof item.value === 'number' ? item.value.toLocaleString('en-IN') : item.value}
                 </div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: '#718096', marginTop: 3 }}>{item.title}</div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginTop: 3 }}>{item.title}</div>
               </div>
             </div>
           ))}
@@ -373,19 +364,19 @@ export default function AdminDashboard() {
       </div>
 
       {/* ── Attendance Chart ──────────────────────────────────────────────────── */}
-      <div style={{ background: '#fff', borderRadius: 18, boxShadow: '0 2px 14px rgba(0,0,0,0.07)', overflow: 'hidden', marginBottom: 28 }}>
-        <div style={{ padding: '18px 22px', borderBottom: '1px solid #f0f4f8', display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div style={{ background: 'var(--surface)', borderRadius: 18, boxShadow: 'var(--shadow-card)', overflow: 'hidden', marginBottom: 28 }}>
+        <div style={{ padding: '18px 22px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{ width: 4, height: 20, borderRadius: 4, background: 'linear-gradient(180deg,#38b2ac,#0de1e8)' }} />
           <div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: '#1a202c' }}>Student Attendance Trend</div>
-            <div style={{ fontSize: 12, color: '#a0aec0' }}>Monthly attendance percentage</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>Student Attendance Trend</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Monthly attendance percentage</div>
           </div>
         </div>
         <div style={{ padding: '16px 8px 8px' }}>
           {attendanceChartData ? (
             <LineChartComponent data={attendanceChartData} lines={[{ key: 'attendance', name: 'Attendance %', color: '#0de1e8' }]} height={220} />
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 200, color: '#a0aec0', fontSize: 13 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 200, color: 'var(--text-muted)', fontSize: 13 }}>
               Attendance trend coming soon
             </div>
           )}
@@ -394,23 +385,23 @@ export default function AdminDashboard() {
 
       {/* ── Bottom Tables ────────────────────────────────────────────────────── */}
       <div className="tables-section">
-        <div style={{ background: '#fff', borderRadius: 18, boxShadow: '0 2px 14px rgba(0,0,0,0.07)', overflow: 'hidden' }}>
-          <div style={{ padding: '18px 22px', borderBottom: '1px solid #f0f4f8', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ background: 'var(--surface)', borderRadius: 18, boxShadow: 'var(--shadow-card)', overflow: 'hidden' }}>
+          <div style={{ padding: '18px 22px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{ width: 4, height: 20, borderRadius: 4, background: 'linear-gradient(180deg,#805ad5,#553c9a)' }} />
-              <span style={{ fontSize: 15, fontWeight: 700, color: '#1a202c' }}>Recent Applications</span>
+              <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>Recent Applications</span>
             </div>
             <button onClick={() => navigate('/admin/applications')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#805ad5', fontWeight: 700, fontSize: 13 }}>View All →</button>
           </div>
           <div style={{ overflowX: 'auto' }}>
             {appsLoading ? (
-              <div style={{ textAlign: 'center', padding: '40px 0', color: '#a0aec0', fontSize: 13 }}>
+              <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)', fontSize: 13 }}>
                 <span className="material-icons" style={{ fontSize: 28, display: 'block', marginBottom: 6, opacity: 0.4 }}>hourglass_top</span>
                 Loading…
               </div>
             ) : applications.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px 0', color: '#a0aec0', fontSize: 13 }}>
-                <span className="material-icons" style={{ fontSize: 32, display: 'block', marginBottom: 6, color: '#e2e8f0' }}>assignment_ind</span>
+              <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)', fontSize: 13 }}>
+                <span className="material-icons" style={{ fontSize: 32, display: 'block', marginBottom: 6, color: 'var(--border-strong)' }}>assignment_ind</span>
                 No applications yet
               </div>
             ) : (
@@ -429,7 +420,7 @@ export default function AdminDashboard() {
                         </div>
                       </td>
                       <td style={{ fontSize: 13, fontWeight: 600 }}>Class {a.classApplied}</td>
-                      <td style={{ fontSize: 13, color: '#718096' }}>{a.fatherName || a.guardianName || '—'}</td>
+                      <td style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{a.fatherName || a.guardianName || '—'}</td>
                       <td>{statusBadge(a.status)}</td>
                       <td>
                         {String(a.status || '').toUpperCase() === 'PENDING' && (
@@ -447,23 +438,23 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        <div style={{ background: '#fff', borderRadius: 18, boxShadow: '0 2px 14px rgba(0,0,0,0.07)', overflow: 'hidden' }}>
-          <div style={{ padding: '18px 22px', borderBottom: '1px solid #f0f4f8', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ background: 'var(--surface)', borderRadius: 18, boxShadow: 'var(--shadow-card)', overflow: 'hidden' }}>
+          <div style={{ padding: '18px 22px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{ width: 4, height: 20, borderRadius: 4, background: 'linear-gradient(180deg,#38a169,#0de1e8)' }} />
-              <span style={{ fontSize: 15, fontWeight: 700, color: '#1a202c' }}>Recent Fee Collections</span>
+              <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>Recent Fee Collections</span>
             </div>
             <button onClick={() => navigate('/admin/collect-fee')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#38a169', fontWeight: 700, fontSize: 13 }}>Collect Fee →</button>
           </div>
           <div style={{ overflowX: 'auto' }}>
             {feesLoading ? (
-              <div style={{ textAlign: 'center', padding: '40px 0', color: '#a0aec0', fontSize: 13 }}>
+              <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)', fontSize: 13 }}>
                 <span className="material-icons" style={{ fontSize: 28, display: 'block', marginBottom: 6, opacity: 0.4 }}>hourglass_top</span>
                 Loading…
               </div>
             ) : recentFees.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px 0', color: '#a0aec0', fontSize: 13 }}>
-                <span className="material-icons" style={{ fontSize: 32, display: 'block', marginBottom: 6, color: '#e2e8f0' }}>payments</span>
+              <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)', fontSize: 13 }}>
+                <span className="material-icons" style={{ fontSize: 32, display: 'block', marginBottom: 6, color: 'var(--border-strong)' }}>payments</span>
                 No fee collections yet
               </div>
             ) : (
@@ -483,7 +474,7 @@ export default function AdminDashboard() {
                       </td>
                       <td style={{ fontWeight: 700, color: '#276749', fontSize: 14 }}>₹{Number(f.amountPaid || 0).toLocaleString('en-IN')}</td>
                       <td><span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: '#e8f4fd', color: '#2c5282' }}>{f.paymentMode || '—'}</span></td>
-                      <td style={{ fontSize: 13, color: '#718096' }}>{f.feeType || '—'}</td>
+                      <td style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{f.feeType || '—'}</td>
                     </tr>
                   ))}
                 </tbody>

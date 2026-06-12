@@ -111,7 +111,7 @@ const OwnerLogin = () => {
           <div className="auth-form-header">
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
               <Logo size={36} />
-              <span style={{ fontSize: '22px', fontWeight: 800, color: '#1e293b', fontFamily: 'Poppins, sans-serif' }}>
+              <span style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'Poppins, sans-serif' }}>
                 My-Skoolz
               </span>
             </div>
@@ -136,7 +136,7 @@ const OwnerLogin = () => {
               <div className="form-group" style={{ marginBottom: 20 }}>
                 <label className="form-label" style={{ fontWeight: 600, fontSize: 13 }}>Verification OTP</label>
                 <div style={{ position: 'relative' }}>
-                  <span className="material-icons" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 18, color: '#94a3b8' }}>pin</span>
+                  <span className="material-icons" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 18, color: 'var(--text-muted)' }}>pin</span>
                   <input
                     type="text"
                     inputMode="numeric"
@@ -156,7 +156,7 @@ const OwnerLogin = () => {
                 {otpLoading ? 'Verifying…' : 'Verify OTP'}
               </button>
               <button type="button" onClick={() => { setOtpStep(false); setOtp(''); setError(''); }}
-                style={{ width: '100%', marginTop: 10, background: 'none', border: '1px solid #e2e8f0', borderRadius: 10, padding: '10px 0', fontSize: 13, color: '#64748b', cursor: 'pointer' }}>
+                style={{ width: '100%', marginTop: 10, background: 'none', border: '1px solid var(--border-strong)', borderRadius: 10, padding: '10px 0', fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>
                 ← Back to login
               </button>
             </form>
@@ -167,7 +167,7 @@ const OwnerLogin = () => {
               <div style={{ position: 'relative' }}>
                 <span className="material-icons" style={{
                   position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
-                  fontSize: 18, color: '#94a3b8',
+                  fontSize: 18, color: 'var(--text-muted)',
                 }}>email</span>
                 <input
                   type="email"
@@ -184,14 +184,14 @@ const OwnerLogin = () => {
             <div className="form-group" style={{ marginBottom: 24 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                 <label className="form-label" style={{ fontWeight: 600, fontSize: 13, margin: 0 }}>Password</label>
-                <Link to="/forgot-password" style={{ fontSize: 12, color: '#1e293b', fontWeight: 600, textDecoration: 'none' }}>
+                <Link to="/forgot-password" style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 600, textDecoration: 'none' }}>
                   Forgot Password?
                 </Link>
               </div>
               <div style={{ position: 'relative' }}>
                 <span className="material-icons" style={{
                   position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
-                  fontSize: 18, color: '#94a3b8',
+                  fontSize: 18, color: 'var(--text-muted)',
                 }}>lock</span>
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -211,7 +211,7 @@ const OwnerLogin = () => {
                     display: 'flex', alignItems: 'center',
                   }}
                 >
-                  <span className="material-icons" style={{ fontSize: 18, color: '#94a3b8' }}>
+                  <span className="material-icons" style={{ fontSize: 18, color: 'var(--text-muted)' }}>
                     {showPassword ? 'visibility_off' : 'visibility'}
                   </span>
                 </button>
@@ -235,7 +235,7 @@ const OwnerLogin = () => {
           )}
 
           <div style={{ textAlign: 'center', marginTop: 20 }}>
-            <a href="/login" style={{ fontSize: 12, color: '#94a3b8', textDecoration: 'none' }}>
+            <a href="/login" style={{ fontSize: 12, color: 'var(--text-muted)', textDecoration: 'none' }}>
               ← Back to School Login
             </a>
           </div>

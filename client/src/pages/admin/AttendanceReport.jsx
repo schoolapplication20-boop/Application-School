@@ -1,31 +1,27 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   AreaChart, Area,
 } from 'recharts';
 import { sortClasses } from '../../utils/classOrder';
 import Layout from '../../components/Layout';
-import Toast from '../../components/Toast';
 import { adminAPI } from '../../services/api';
-import { exportCSV, exportPrintReport } from '../../services/attendanceStore';
+import { exportCSV, exportPrintReport } from '../../utils/exportUtils';
+import { formatAttendanceDate, pctAccentColor, pctBgColor } from '../../utils/attendanceFormat';
+import { useToast } from '../../context/ToastContext';
 
 const TODAY = new Date().toISOString().split('T')[0];
-
-const fmtDate  = (d) => { if (!d) return '—'; const s = typeof d === 'string' ? d : String(d); return new Date(s + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }); };
-const pctColor = (p) => p >= 90 ? '#0de1e8' : p >= 75 ? '#ed8936' : '#e53e3e';
-const pctBg    = (p) => p >= 90 ? '#f0fff4' : p >= 75 ? '#fffaf0' : '#fff5f5';
-const pctText  = (p) => p >= 90 ? '#276749' : p >= 75 ? '#c05621' : '#c53030';
 
 const ChartTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{ background: '#fff', border: '1px solid #f0f4f8', borderRadius: 10, padding: '12px 16px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: 13 }}>
-      <p style={{ fontWeight: 700, color: '#2d3748', marginBottom: 8 }}>{label}</p>
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 16px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: 13 }}>
+      <p style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>{label}</p>
       {payload.map(e => (
         <div key={e.name} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
           <div style={{ width: 10, height: 10, borderRadius: '50%', background: e.color }} />
-          <span style={{ color: '#718096' }}>{e.name}:</span>
-          <span style={{ fontWeight: 600, color: '#2d3748' }}>{e.name.includes('%') ? `${e.value}%` : e.value}</span>
+          <span style={{ color: 'var(--text-secondary)' }}>{e.name}:</span>
+          <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{e.name.includes('%') ? `${e.value}%` : e.value}</span>
         </div>
       ))}
     </div>
@@ -51,8 +47,8 @@ const AlertCard = ({ icon, title, body, color, bg }) => (
       <span className="material-icons" style={{ color, fontSize: 20 }}>{icon}</span>
     </div>
     <div>
-      <div style={{ fontWeight: 700, fontSize: 14, color: '#2d3748', marginBottom: 2 }}>{title}</div>
-      <div style={{ fontSize: 12, color: '#718096' }}>{body}</div>
+      <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)', marginBottom: 2 }}>{title}</div>
+      <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{body}</div>
     </div>
   </div>
 );
@@ -60,7 +56,6 @@ const AlertCard = ({ icon, title, body, color, bg }) => (
 export default function AttendanceReport() {
   const [activeTab, setActiveTab]     = useState('overview');
   const [loading, setLoading]         = useState(false);
-  const [toast, setToast]             = useState(null);
 
   // Real API data
   const [summaries, setSummaries]     = useState([]);   // class-wise summary for selected date
@@ -80,15 +75,8 @@ export default function AttendanceReport() {
   const [detailClass, setDetailClass]   = useState(null);
   const [detailRecords, setDetailRecords] = useState([]);
   const [detailLoading, setDetailLoading] = useState(false);
-  const toastTimerRef = useRef(null);
 
-  useEffect(() => () => clearTimeout(toastTimerRef.current), []);
-
-  const showToast = (msg, type = 'success') => {
-    clearTimeout(toastTimerRef.current);
-    setToast({ message: msg, type });
-    toastTimerRef.current = setTimeout(() => setToast(null), 3500);
-  };
+  const showToast = useToast();
 
   // ── Load all classes once ─────────────────────────────────────────────────
   useEffect(() => {
@@ -163,9 +151,9 @@ export default function AttendanceReport() {
       const pct = s.total ? Math.round(((s.present || 0) / s.total) * 100) : 100;
       const label = `${s.className}${s.section ? '-' + s.section : ''}`;
       if (s.total > 0 && pct < 60) {
-        notifs.push({ id: `crit-${s.classId}`, severity: 'critical', icon: 'warning', color: '#e53e3e', bg: '#fff5f5', title: `Critical: ${label} attendance at ${pct}%`, body: `${s.absent} absent out of ${s.total} students on ${fmtDate(filterDate)}` });
+        notifs.push({ id: `crit-${s.classId}`, severity: 'critical', icon: 'warning', color: '#e53e3e', bg: '#fff5f5', title: `Critical: ${label} attendance at ${pct}%`, body: `${s.absent} absent out of ${s.total} students on ${formatAttendanceDate(filterDate)}` });
       } else if (s.total > 0 && pct < 75) {
-        notifs.push({ id: `warn-${s.classId}`, severity: 'warning', icon: 'error_outline', color: '#ed8936', bg: '#fffaf0', title: `Low attendance: ${label} at ${pct}%`, body: `${s.absent} absent out of ${s.total} students on ${fmtDate(filterDate)}` });
+        notifs.push({ id: `warn-${s.classId}`, severity: 'warning', icon: 'error_outline', color: '#ed8936', bg: '#fffaf0', title: `Low attendance: ${label} at ${pct}%`, body: `${s.absent} absent out of ${s.total} students on ${formatAttendanceDate(filterDate)}` });
       }
     });
     return notifs;
@@ -190,7 +178,7 @@ export default function AttendanceReport() {
     const rows = filteredSummaries.map(s => {
       const pct = s.total ? Math.round(((s.present || 0) / s.total) * 100) : 0;
       return {
-        Date: fmtDate(filterDate),
+        Date: formatAttendanceDate(filterDate),
         Class: `${s.className}${s.section ? '-' + s.section : ''}`,
         Teacher: s.teacherName || '—',
         Present: s.present || 0,
@@ -214,7 +202,7 @@ export default function AttendanceReport() {
     }).join('');
     const html = `
       <h1>Attendance Report</h1>
-      <p class="sub">Date: ${fmtDate(filterDate)} | Class: ${filterClass ? classes.find(c => String(c.id) === filterClass)?.name || 'Selected' : 'All'}</p>
+      <p class="sub">Date: ${formatAttendanceDate(filterDate)} | Class: ${filterClass ? classes.find(c => String(c.id) === filterClass)?.name || 'Selected' : 'All'}</p>
       <table><thead><tr><th>Class</th><th>Teacher</th><th>Present</th><th>Absent</th><th>Leave</th><th>Total</th><th>%</th></tr></thead><tbody>${tableRows}</tbody></table>`;
     exportPrintReport('Attendance Report – My-Skoolz', html);
     showToast('PDF report opened for printing');
@@ -242,7 +230,7 @@ export default function AttendanceReport() {
         sums.forEach(s => {
           const pct = s.total ? Math.round(((s.present || 0) / s.total) * 100) : 0;
           rows.push({
-            Date:           fmtDate(date),
+            Date:           formatAttendanceDate(date),
             Class:          `${s.className}${s.section ? '-' + s.section : ''}`,
             Teacher:        s.teacherName || '—',
             Present:        s.present || 0,
@@ -277,8 +265,6 @@ export default function AttendanceReport() {
 
   return (
     <Layout pageTitle="Attendance Report">
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1>Attendance Dashboard</h1>
@@ -298,24 +284,24 @@ export default function AttendanceReport() {
       </div>
 
       {/* Date-range export panel */}
-      <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '14px 18px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border-strong)', borderRadius: 12, padding: '14px 18px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <span className="material-icons" style={{ color: '#276749', fontSize: 20 }}>date_range</span>
-        <span style={{ fontSize: 13, fontWeight: 700, color: '#2d3748' }}>Range Export</span>
+        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Range Export</span>
         <input type="date" value={rangeFrom} max={TODAY} onChange={e => setRangeFrom(e.target.value)}
-          style={{ padding: '7px 10px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none' }} />
-        <span style={{ color: '#a0aec0', fontSize: 13 }}>to</span>
+          style={{ padding: '7px 10px', border: '1.5px solid var(--border-strong)', borderRadius: 8, fontSize: 13, outline: 'none' }} />
+        <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>to</span>
         <input type="date" value={rangeTo} min={rangeFrom} max={TODAY} onChange={e => setRangeTo(e.target.value)}
-          style={{ padding: '7px 10px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none' }} />
+          style={{ padding: '7px 10px', border: '1.5px solid var(--border-strong)', borderRadius: 8, fontSize: 13, outline: 'none' }} />
         <button onClick={handleRangeExport} disabled={exporting || !rangeFrom || !rangeTo}
           style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 16px', background: exporting ? '#a0aec0' : '#276749', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: exporting ? 'not-allowed' : 'pointer' }}>
           <span className="material-icons" style={{ fontSize: 15 }}>{exporting ? 'hourglass_empty' : 'download'}</span>
           {exporting ? 'Exporting…' : 'Export CSV'}
         </button>
-        <span style={{ fontSize: 11, color: '#a0aec0' }}>Max 60 days</span>
+        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Max 60 days</span>
       </div>
 
       {/* Filters */}
-      <div style={{ background: '#fff', borderRadius: 12, padding: '14px 20px', marginBottom: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '1px solid #f0f4f8', display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+      <div style={{ background: 'var(--surface)', borderRadius: 12, padding: '14px 20px', marginBottom: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '1px solid var(--border)', display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'flex-end' }}>
         <div>
           <label className="form-label fw-medium small mb-1">Date</label>
           <input type="date" className="filter-select" value={filterDate} max={TODAY}
@@ -339,7 +325,7 @@ export default function AttendanceReport() {
           </select>
         </div>
         <button onClick={() => { setFilterDate(TODAY); setFilterClass(''); setAbsenteeThreshold(3); }}
-          style={{ padding: '9px 14px', border: '1.5px solid #e2e8f0', borderRadius: 9, background: '#f7fafc', color: '#718096', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+          style={{ padding: '9px 14px', border: '1.5px solid var(--border-strong)', borderRadius: 9, background: 'var(--surface-alt)', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
           Reset
         </button>
       </div>
@@ -347,7 +333,7 @@ export default function AttendanceReport() {
       {/* Stats Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 24 }}>
         {[
-          { label: 'Overall Attendance', value: `${stats.overallPct}%`,           icon: 'percent',       color: pctColor(stats.overallPct) },
+          { label: 'Overall Attendance', value: `${stats.overallPct}%`,           icon: 'percent',       color: pctAccentColor(stats.overallPct) },
           { label: 'Present Today',      value: stats.todayPresent,               icon: 'check_circle',  color: '#0de1e8'                  },
           { label: 'Absent Today',       value: stats.todayAbsent,                icon: 'cancel',        color: '#e53e3e'                  },
           { label: 'Low Attendance Classes', value: stats.lowAttendanceClasses,   icon: 'person_off',    color: '#805ad5'                  },
@@ -363,13 +349,13 @@ export default function AttendanceReport() {
       </div>
 
       {/* Tab Bar */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: '#fff', borderRadius: 12, padding: 6, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '1px solid #f0f4f8', overflowX: 'auto' }}>
+      <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: 'var(--surface)', borderRadius: 12, padding: 6, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '1px solid var(--border)', overflowX: 'auto' }}>
         {TABS.map(t => (
           <button key={t.key} onClick={() => setActiveTab(t.key)} style={{
             display: 'flex', alignItems: 'center', gap: 6, padding: '9px 20px', position: 'relative',
             border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap',
             background: activeTab === t.key ? '#0de1e8' : 'transparent',
-            color:      activeTab === t.key ? '#fff'    : '#718096',
+            color:      activeTab === t.key ? '#fff'    : 'var(--text-secondary)',
             transition: 'all 0.2s',
           }}>
             <span className="material-icons" style={{ fontSize: 17 }}>{t.icon}</span>
@@ -382,7 +368,7 @@ export default function AttendanceReport() {
       </div>
 
       {loading && (
-        <div style={{ textAlign: 'center', padding: '40px 0', color: '#a0aec0' }}>
+        <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
           <span className="material-icons" style={{ fontSize: 36, display: 'block', marginBottom: 8, animation: 'spin 1s linear infinite' }}>refresh</span>
           Loading attendance data…
         </div>
@@ -393,13 +379,13 @@ export default function AttendanceReport() {
           {/* ══════════════ OVERVIEW ══════════════ */}
           {activeTab === 'overview' && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-              <ChartCard title="Class-wise Attendance" subtitle={`${fmtDate(filterDate)} — Present / Absent / Leave breakdown`}>
+              <ChartCard title="Class-wise Attendance" subtitle={`${formatAttendanceDate(filterDate)} — Present / Absent / Leave breakdown`}>
                 {classChartData.length === 0 ? (
                   <div className="empty-state"><span className="material-icons">bar_chart</span><h3>No data for this date</h3><p>Teachers haven't marked attendance yet</p></div>
                 ) : (
                   <ResponsiveContainer width="100%" height={280}>
                     <BarChart data={classChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f4f8" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                       <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                       <YAxis tick={{ fontSize: 11 }} />
                       <Tooltip content={<ChartTooltip />} />
@@ -418,7 +404,7 @@ export default function AttendanceReport() {
                 ) : (
                   <ResponsiveContainer width="100%" height={280}>
                     <BarChart data={classChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f4f8" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                       <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                       <YAxis domain={[0,100]} tick={{ fontSize: 11 }} unit="%" />
                       <Tooltip content={<ChartTooltip />} />
@@ -434,16 +420,16 @@ export default function AttendanceReport() {
           {activeTab === 'classreport' && (
             <div className="data-table-card">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#2d3748' }}>
-                  Class-wise Attendance — {fmtDate(filterDate)}
+                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
+                  Class-wise Attendance — {formatAttendanceDate(filterDate)}
                 </h3>
-                <span style={{ fontSize: 13, color: '#a0aec0' }}>{filteredSummaries.length} classes</span>
+                <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{filteredSummaries.length} classes</span>
               </div>
 
               {filteredSummaries.length === 0 ? (
                 <div className="empty-state">
                   <span className="material-icons">event_busy</span>
-                  <h3>No attendance marked for {fmtDate(filterDate)}</h3>
+                  <h3>No attendance marked for {formatAttendanceDate(filterDate)}</h3>
                   <p>Teachers need to submit attendance from their dashboard</p>
                 </div>
               ) : (
@@ -469,7 +455,7 @@ export default function AttendanceReport() {
                         return (
                           <tr key={s.classId}>
                             <td style={{ fontWeight: 700 }}>{label}</td>
-                            <td style={{ color: '#718096', fontSize: 12 }}>{s.teacherName || '—'}</td>
+                            <td style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{s.teacherName || '—'}</td>
                             <td><span style={{ fontWeight: 700, color: '#0de1e8' }}>{s.present || 0}</span></td>
                             <td><span style={{ fontWeight: 700, color: '#e53e3e' }}>{s.absent  || 0}</span></td>
                             <td><span style={{ fontWeight: 700, color: '#ed8936' }}>{s.leave   || 0}</span></td>
@@ -478,12 +464,12 @@ export default function AttendanceReport() {
                             <td>
                               {s.total > 0 ? (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                  <div style={{ width: 60, height: 7, background: '#e2e8f0', borderRadius: 4, overflow: 'hidden' }}>
-                                    <div style={{ width: `${pct}%`, height: '100%', background: pctColor(pct), borderRadius: 4 }} />
+                                  <div style={{ width: 60, height: 7, background: 'var(--border-strong)', borderRadius: 4, overflow: 'hidden' }}>
+                                    <div style={{ width: `${pct}%`, height: '100%', background: pctAccentColor(pct), borderRadius: 4 }} />
                                   </div>
-                                  <span style={{ fontWeight: 700, fontSize: 13, color: pctColor(pct), background: pctBg(pct), padding: '2px 8px', borderRadius: 10 }}>{pct}%</span>
+                                  <span style={{ fontWeight: 700, fontSize: 13, color: pctAccentColor(pct), background: pctBgColor(pct), padding: '2px 8px', borderRadius: 10 }}>{pct}%</span>
                                 </div>
-                              ) : <span style={{ color: '#a0aec0', fontSize: 12 }}>Not marked</span>}
+                              ) : <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>Not marked</span>}
                             </td>
                             <td>
                               {s.total > 0 && (
@@ -504,19 +490,19 @@ export default function AttendanceReport() {
 
               {/* Class Detail Panel */}
               {detailClass && (
-                <div style={{ marginTop: 24, background: '#f7fafc', borderRadius: 12, padding: 20, border: '1.5px solid #e2e8f0' }}>
+                <div style={{ marginTop: 24, background: 'var(--surface-alt)', borderRadius: 12, padding: 20, border: '1.5px solid var(--border-strong)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                    <h4 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#2d3748' }}>
-                      {detailClass.className}{detailClass.section ? `-${detailClass.section}` : ''} — Student Details ({fmtDate(filterDate)})
+                    <h4 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+                      {detailClass.className}{detailClass.section ? `-${detailClass.section}` : ''} — Student Details ({formatAttendanceDate(filterDate)})
                     </h4>
-                    <button onClick={() => setDetailClass(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#a0aec0' }}>
+                    <button onClick={() => setDetailClass(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
                       <span className="material-icons">close</span>
                     </button>
                   </div>
                   {detailLoading ? (
-                    <div style={{ textAlign: 'center', padding: 20, color: '#a0aec0' }}>Loading…</div>
+                    <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-muted)' }}>Loading…</div>
                   ) : detailRecords.length === 0 ? (
-                    <p style={{ color: '#a0aec0', fontSize: 13, textAlign: 'center' }}>No records found</p>
+                    <p style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center' }}>No records found</p>
                   ) : (
                     <table className="data-table" style={{ fontSize: 12 }}>
                       <thead>
@@ -531,7 +517,7 @@ export default function AttendanceReport() {
                           const color = STATUS_COLORS[r.status] || '#718096';
                           return (
                             <tr key={r.id || r.studentId}>
-                              <td style={{ fontFamily: 'monospace', color: '#718096' }}>{r.rollNumber || '—'}</td>
+                              <td style={{ fontFamily: 'monospace', color: 'var(--text-secondary)' }}>{r.rollNumber || '—'}</td>
                               <td style={{ fontWeight: 600 }}>{r.studentName || `Student #${r.studentId}`}</td>
                               <td>
                                 <span style={{ background: color + '18', color, border: `1.5px solid ${color}40`, borderRadius: 12, padding: '3px 10px', fontSize: 11, fontWeight: 700 }}>
@@ -552,14 +538,14 @@ export default function AttendanceReport() {
           {/* ══════════════ LOW ATTENDANCE ══════════════ */}
           {activeTab === 'absentees' && (
             <div className="data-table-card">
-              <h3 style={{ fontSize: 15, fontWeight: 700, color: '#2d3748', marginBottom: 16 }}>
-                Classes with Low Attendance — {fmtDate(filterDate)}
+              <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 16 }}>
+                Classes with Low Attendance — {formatAttendanceDate(filterDate)}
               </h3>
               {longAbsentClasses.length === 0 ? (
                 <div className="empty-state">
                   <span className="material-icons" style={{ color: '#0de1e8' }}>check_circle</span>
                   <h3>All classes have good attendance!</h3>
-                  <p>No classes below the threshold for {fmtDate(filterDate)}</p>
+                  <p>No classes below the threshold for {formatAttendanceDate(filterDate)}</p>
                 </div>
               ) : (
                 <div style={{ overflowX: 'auto' }}>
@@ -582,12 +568,12 @@ export default function AttendanceReport() {
                         return (
                           <tr key={s.classId}>
                             <td style={{ fontWeight: 700 }}>{label}</td>
-                            <td style={{ color: '#718096', fontSize: 12 }}>{s.teacherName || '—'}</td>
+                            <td style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{s.teacherName || '—'}</td>
                             <td><span style={{ fontWeight: 700, color: '#0de1e8' }}>{s.present || 0}</span></td>
                             <td><span style={{ fontWeight: 700, color: '#e53e3e' }}>{s.absent  || 0}</span></td>
                             <td>{s.total}</td>
                             <td>
-                              <span style={{ fontWeight: 700, color: pctColor(s.pct), background: pctBg(s.pct), padding: '3px 10px', borderRadius: 10, fontSize: 13 }}>{s.pct}%</span>
+                              <span style={{ fontWeight: 700, color: pctAccentColor(s.pct), background: pctBgColor(s.pct), padding: '3px 10px', borderRadius: 10, fontSize: 13 }}>{s.pct}%</span>
                             </td>
                             <td>
                               <span style={{ background: isCritical ? '#fff5f5' : '#fffaf0', color: isCritical ? '#e53e3e' : '#ed8936', border: `1.5px solid ${isCritical ? '#e53e3e' : '#ed8936'}40`, borderRadius: 10, padding: '3px 10px', fontSize: 11, fontWeight: 700 }}>
@@ -607,13 +593,13 @@ export default function AttendanceReport() {
           {/* ══════════════ NOTIFICATIONS ══════════════ */}
           {activeTab === 'notifs' && (
             <div className="data-table-card">
-              <h3 style={{ fontSize: 15, fontWeight: 700, color: '#2d3748', marginBottom: 16 }}>
-                Attendance Alerts — {fmtDate(filterDate)}
+              <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 16 }}>
+                Attendance Alerts — {formatAttendanceDate(filterDate)}
               </h3>
               {notifications.length === 0 ? (
                 <div className="empty-state">
                   <span className="material-icons" style={{ color: '#0de1e8' }}>notifications_active</span>
-                  <h3>No alerts for {fmtDate(filterDate)}</h3>
+                  <h3>No alerts for {formatAttendanceDate(filterDate)}</h3>
                   <p>All classes have acceptable attendance</p>
                 </div>
               ) : (

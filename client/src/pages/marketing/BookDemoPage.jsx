@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import SEOMeta from '../../components/SEOMeta';
+import { BASE_URL as BACKEND_URL } from '../../services/api';
 import './marketing.css';
-
-const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 const BookDemoPage = () => {
   const [formData, setFormData] = useState({

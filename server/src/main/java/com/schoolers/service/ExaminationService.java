@@ -16,6 +16,7 @@ import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class ExaminationService {
@@ -195,12 +196,17 @@ public class ExaminationService {
             students = studentRepository.findByClassName(className);
         }
 
+        List<Long> studentIds = students.stream().map(Student::getId).collect(Collectors.toList());
+        Set<Long> studentsWithTicket = studentIds.isEmpty()
+                ? Set.of()
+                : ((schoolId != null)
+                        ? hallTicketRepository.findByStudentIdInAndExamNameAndSchoolId(studentIds, examName, schoolId)
+                        : hallTicketRepository.findByStudentIdInAndExamName(studentIds, examName))
+                    .stream().map(HallTicket::getStudentId).collect(Collectors.toSet());
+
         List<HallTicket> tickets = new ArrayList<>();
         for (Student student : students) {
-            List<HallTicket> existing = (schoolId != null)
-                    ? hallTicketRepository.findByStudentIdAndSchoolIdOrderByCreatedAtDesc(student.getId(), schoolId)
-                    : hallTicketRepository.findByStudentIdOrderByCreatedAtDesc(student.getId());
-            if (existing.stream().anyMatch(t -> t.getExamName().equals(examName))) {
+            if (studentsWithTicket.contains(student.getId())) {
                 continue; // Skip if already generated
             }
             String dobStr = student.getDateOfBirth() != null ? student.getDateOfBirth().toString() : "";

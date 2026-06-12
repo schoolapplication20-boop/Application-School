@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Layout from '../../components/Layout';
-import Toast from '../../components/Toast';
+import Button from '../../components/Button';
 import { useAuth } from '../../context/AuthContext';
 import { teacherAPI, examTypeAPI, gradeScaleAPI, reportCardAPI } from '../../services/api';
 import { sortClasses } from '../../utils/classOrder';
+import { useToast } from '../../context/ToastContext';
 
 const FALLBACK_EXAM_TYPES = ['Unit Test 1', 'Unit Test 2', 'Mid Term', 'Final Exam', 'Annual Exam'];
 const SUBJECTS = [
@@ -56,8 +57,8 @@ const fmt = (dateStr) => {
 };
 const getInitials = (name = '') => name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 const sel = (extra = {}) => ({
-  padding: '8px 10px', fontSize: 12, border: '1.5px solid #e2e8f0',
-  borderRadius: 7, outline: 'none', background: '#fff', boxSizing: 'border-box', ...extra,
+  padding: '8px 10px', fontSize: 12, border: '1.5px solid var(--border-strong)',
+  borderRadius: 7, outline: 'none', background: 'var(--surface)', boxSizing: 'border-box', ...extra,
 });
 
 export default function Marks() {
@@ -77,9 +78,7 @@ export default function Marks() {
   const [filterClassId, setFilterClassId] = useState('');
   const [filterExam, setFilterExam]       = useState('');
 
-  // ── Toast ─────────────────────────────────────────────────────────────────────
-  const [toast, setToast] = useState(null);
-  const showToast = (message, type = 'success') => setToast({ message, type });
+  const showToast = useToast();
 
   // ── Exam types (school-defined or fallback) ────────────────────────────────────
   const [examTypes, setExamTypes] = useState(FALLBACK_EXAM_TYPES);
@@ -535,7 +534,7 @@ ADM002,Mathematics,92,100`;
   // ── Loading / empty states ────────────────────────────────────────────────────
   if (loading) return (
     <Layout pageTitle="Marks">
-      <div style={{ textAlign: 'center', padding: 80, color: '#a0aec0' }}>
+      <div style={{ textAlign: 'center', padding: 80, color: 'var(--text-muted)' }}>
         <span className="material-icons" style={{ fontSize: 48 }}>hourglass_empty</span>
         <p style={{ marginTop: 8 }}>Loading your classes...</p>
       </div>
@@ -546,17 +545,15 @@ ADM002,Mathematics,92,100`;
     <Layout pageTitle="Marks">
       <div className="page-header"><h1>Marks &amp; Grades</h1></div>
       <div style={{ textAlign: 'center', padding: 80 }}>
-        <span className="material-icons" style={{ fontSize: 56, color: '#e2e8f0' }}>school</span>
-        <div style={{ fontSize: 16, fontWeight: 600, color: '#4a5568', marginTop: 12 }}>No classes assigned</div>
-        <div style={{ fontSize: 13, color: '#a0aec0', marginTop: 4 }}>Contact admin to get assigned to a class.</div>
+        <span className="material-icons" style={{ fontSize: 56, color: 'var(--border-strong)' }}>school</span>
+        <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-secondary)', marginTop: 12 }}>No classes assigned</div>
+        <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>Contact admin to get assigned to a class.</div>
       </div>
     </Layout>
   );
 
   return (
     <Layout pageTitle="Marks">
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-
       {gradeScaleWarning && (
         <div style={{ background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 8, padding: '10px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#92400e' }}>
           <span className="material-icons" style={{ fontSize: 18, color: '#d97706' }}>warning</span>
@@ -617,21 +614,21 @@ ADM002,Mathematics,92,100`;
               </button>
             </>
           )}
-          <button className="btn-add" onClick={openModal}>
+          <Button variant="add" onClick={openModal}>
             <span className="material-icons">add</span> Add Marks
-          </button>
+          </Button>
         </div>
 
         {loadingMarks ? (
-          <div style={{ textAlign: 'center', padding: 60, color: '#a0aec0' }}>
+          <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-muted)' }}>
             <span className="material-icons" style={{ fontSize: 40 }}>hourglass_empty</span>
             <p style={{ marginTop: 8 }}>Loading marks...</p>
           </div>
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 60 }}>
-            <span className="material-icons" style={{ fontSize: 48, color: '#e2e8f0' }}>grade</span>
-            <div style={{ fontSize: 15, fontWeight: 600, color: '#4a5568', marginTop: 12 }}>No marks records yet</div>
-            <div style={{ fontSize: 13, color: '#a0aec0', marginTop: 4 }}>Click "Add Marks" to record student performance.</div>
+            <span className="material-icons" style={{ fontSize: 48, color: 'var(--border-strong)' }}>grade</span>
+            <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-secondary)', marginTop: 12 }}>No marks records yet</div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>Click "Add Marks" to record student performance.</div>
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
@@ -658,7 +655,7 @@ ADM002,Mathematics,92,100`;
                     <React.Fragment key={group.studentId}>
                       {/* ── Summary row ── */}
                       <tr style={{ background: isExpanded ? '#f0fdf4' : undefined }}>
-                        <td style={{ color: '#a0aec0', fontSize: 12 }}>{idx + 1}</td>
+                        <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>{idx + 1}</td>
                         <td>
                           <div className="student-cell">
                             <div className="student-avatar-sm">{getInitials(group.studentName)}</div>
@@ -711,14 +708,14 @@ ADM002,Mathematics,92,100`;
                         const pct = Math.round((m.marks / m.maxMarks) * 100);
                         return (
                           <tr key={m.id} style={{ background: rIdx % 2 === 0 ? '#fafffe' : '#f0fdf4' }}>
-                            <td style={{ color: '#a0aec0', fontSize: 11, paddingLeft: 32 }}>{rIdx + 1}</td>
+                            <td style={{ color: 'var(--text-muted)', fontSize: 11, paddingLeft: 32 }}>{rIdx + 1}</td>
                             <td style={{ paddingLeft: 32 }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <span className="material-icons" style={{ fontSize: 14, color: '#a0aec0' }}>subdirectory_arrow_right</span>
-                                <span style={{ fontSize: 12, color: '#4a5568', fontWeight: 600 }}>{m.subject}</span>
+                                <span className="material-icons" style={{ fontSize: 14, color: 'var(--text-muted)' }}>subdirectory_arrow_right</span>
+                                <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>{m.subject}</span>
                               </div>
                             </td>
-                            <td style={{ fontSize: 12, color: '#718096' }}>{m.examType}</td>
+                            <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{m.examType}</td>
                             <td style={{ fontWeight: 700, fontSize: 13 }}>{m.marks}/{m.maxMarks}</td>
                             <td>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -737,9 +734,7 @@ ADM002,Mathematics,92,100`;
                             </td>
                             <td>
                               <div className="action-btns">
-                                <button className="action-btn action-btn-delete" title="Delete" onClick={() => handleDelete(m.id)}>
-                                  <span className="material-icons">delete</span>
-                                </button>
+                                <Button variant="delete" onClick={() => handleDelete(m.id)} />
                               </div>
                             </td>
                           </tr>
@@ -763,27 +758,27 @@ ADM002,Mathematics,92,100`;
           onClick={() => !saving && setShowModal(false)}
         >
           <div
-            className="modal-card" style={{ background: '#fff', borderRadius: 16, width: '96vw', maxWidth: 1200, maxHeight: '94vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.20)', overflow: 'hidden' }}
+            className="modal-card" style={{ background: 'var(--surface)', borderRadius: 16, width: '96vw', maxWidth: 1200, maxHeight: '94vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.20)', overflow: 'hidden' }}
             onClick={e => e.stopPropagation()}
           >
 
             {/* ── Modal header ── */}
-            <div style={{ padding: '18px 28px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, background: '#fff' }}>
+            <div style={{ padding: '18px 28px', borderBottom: '1px solid var(--border-strong)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, background: 'var(--surface)' }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#1a202c' }}>Add Marks — Bulk Entry</h3>
-                <p style={{ margin: '3px 0 0', fontSize: 12, color: '#718096' }}>
+                <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: 'var(--text-primary)' }}>Add Marks — Bulk Entry</h3>
+                <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--text-secondary)' }}>
                   Select class, subjects &amp; enter marks for multiple students at once
                 </p>
               </div>
-              <button onClick={() => setShowModal(false)} style={{ border: 'none', background: '#f7fafc', borderRadius: 8, cursor: 'pointer', padding: '6px 8px', display: 'flex' }}>
-                <span className="material-icons" style={{ fontSize: 20, color: '#718096' }}>close</span>
+              <button onClick={() => setShowModal(false)} style={{ border: 'none', background: 'var(--surface-alt)', borderRadius: 8, cursor: 'pointer', padding: '6px 8px', display: 'flex' }}>
+                <span className="material-icons" style={{ fontSize: 20, color: 'var(--text-secondary)' }}>close</span>
               </button>
             </div>
 
             {/* ── Config row ── */}
-            <div style={{ padding: '14px 28px', borderBottom: '1px solid #e2e8f0', background: '#fafbfc', display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end', flexShrink: 0 }}>
+            <div style={{ padding: '14px 28px', borderBottom: '1px solid var(--border-strong)', background: 'var(--surface-alt)', display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end', flexShrink: 0 }}>
               <div>
-                <label style={{ fontSize: 11, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Class *</label>
+                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Class *</label>
                 <select value={bulkClassId} onChange={e => setBulkClassId(e.target.value)} style={sel({ width: 150 })}>
                   <option value="">Select</option>
                   {classes.map(cls => (
@@ -794,27 +789,27 @@ ADM002,Mathematics,92,100`;
                 </select>
               </div>
               <div>
-                <label style={{ fontSize: 11, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Exam Type *</label>
+                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Exam Type *</label>
                 <select value={bulkExamType} onChange={e => setBulkExamType(e.target.value)} style={sel({ width: 150 })}>
                   <option value="">Select exam…</option>
                   {examTypes.map(et => <option key={et} value={et}>{et}</option>)}
                 </select>
               </div>
               <div>
-                <label style={{ fontSize: 11, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Exam Date</label>
+                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Exam Date</label>
                 <input type="date" value={bulkDate} onChange={e => setBulkDate(e.target.value)} style={sel({ width: 155 })} />
               </div>
               <div>
-                <label style={{ fontSize: 11, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Max Marks (per subject)</label>
+                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Max Marks (per subject)</label>
                 <input type="number" min="1" placeholder="100" value={bulkMaxMarks} onChange={e => setBulkMaxMarks(e.target.value)} style={sel({ width: 110 })} />
               </div>
             </div>
 
             {/* ── Subject selector ── */}
-            <div style={{ padding: '12px 28px', borderBottom: '1px solid #e2e8f0', background: '#fafbfc', flexShrink: 0 }}>
-              <label style={{ fontSize: 11, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 8 }}>
+            <div style={{ padding: '12px 28px', borderBottom: '1px solid var(--border-strong)', background: 'var(--surface-alt)', flexShrink: 0 }}>
+              <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 8 }}>
                 Select Subjects * &nbsp;
-                <span style={{ fontWeight: 400, color: '#a0aec0' }}>({bulkSubjects.length} selected)</span>
+                <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>({bulkSubjects.length} selected)</span>
                 &nbsp;
                 <button type="button" onClick={() => setBulkSubjects([...SUBJECTS])} style={{ fontSize: 10, color: '#4361ee', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 600, padding: 0 }}>Select All</button>
                 &nbsp;·&nbsp;
@@ -824,7 +819,7 @@ ADM002,Mathematics,92,100`;
                 {SUBJECTS.map(sub => {
                   const checked = bulkSubjects.includes(sub);
                   return (
-                    <label key={sub} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 20, border: `1.5px solid ${checked ? '#0de1e8' : '#e2e8f0'}`, background: checked ? '#f0fff4' : '#fff', cursor: 'pointer', fontSize: 12, fontWeight: checked ? 700 : 400, color: checked ? '#276749' : '#718096', userSelect: 'none', transition: 'all 0.15s' }}>
+                    <label key={sub} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 20, border: `1.5px solid ${checked ? '#0de1e8' : 'var(--border-strong)'}`, background: checked ? '#f0fff4' : 'var(--surface)', cursor: 'pointer', fontSize: 12, fontWeight: checked ? 700 : 400, color: checked ? '#276749' : 'var(--text-secondary)', userSelect: 'none', transition: 'all 0.15s' }}>
                       <input type="checkbox" checked={checked} onChange={() => toggleSubject(sub)} style={{ accentColor: '#0de1e8', cursor: 'pointer', width: 13, height: 13 }} />
                       {sub}
                     </label>
@@ -836,22 +831,22 @@ ADM002,Mathematics,92,100`;
             {/* ── Entry grid ── */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '0 28px 16px' }}>
               {!bulkClassId ? (
-                <div style={{ textAlign: 'center', padding: '40px 0', color: '#a0aec0' }}>
+                <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
                   <span className="material-icons" style={{ fontSize: 44 }}>class</span>
                   <p style={{ marginTop: 8 }}>Select a class above to see students</p>
                 </div>
               ) : loadingBulkStudents ? (
-                <div style={{ textAlign: 'center', padding: '40px 0', color: '#a0aec0' }}>
+                <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
                   <span className="material-icons" style={{ fontSize: 44 }}>hourglass_empty</span>
                   <p style={{ marginTop: 8 }}>Loading students...</p>
                 </div>
               ) : bulkStudents.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px 0', color: '#a0aec0' }}>
+                <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
                   <span className="material-icons" style={{ fontSize: 44 }}>person_off</span>
                   <p style={{ marginTop: 8 }}>No students in this class</p>
                 </div>
               ) : bulkSubjects.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px 0', color: '#a0aec0' }}>
+                <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
                   <span className="material-icons" style={{ fontSize: 44 }}>subject</span>
                   <p style={{ marginTop: 8 }}>Select at least one subject above</p>
                 </div>
@@ -859,14 +854,14 @@ ADM002,Mathematics,92,100`;
                 <div style={{ overflowX: 'auto', marginTop: 14 }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                     <thead>
-                      <tr style={{ background: '#f7fafc', position: 'sticky', top: 0, zIndex: 1 }}>
-                        <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '2px solid #e2e8f0', whiteSpace: 'nowrap', minWidth: 200, position: 'sticky', left: 0, background: '#f7fafc', zIndex: 2 }}>
+                      <tr style={{ background: 'var(--surface-alt)', position: 'sticky', top: 0, zIndex: 1 }}>
+                        <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '2px solid var(--border-strong)', whiteSpace: 'nowrap', minWidth: 200, position: 'sticky', left: 0, background: 'var(--surface-alt)', zIndex: 2 }}>
                           Student
                         </th>
                         {bulkSubjects.map(sub => (
-                          <th key={sub} style={{ padding: '10px 10px', textAlign: 'center', fontSize: 11, fontWeight: 700, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '2px solid #e2e8f0', whiteSpace: 'nowrap', minWidth: 115 }}>
+                          <th key={sub} style={{ padding: '10px 10px', textAlign: 'center', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '2px solid var(--border-strong)', whiteSpace: 'nowrap', minWidth: 115 }}>
                             {sub}
-                            <div style={{ fontSize: 10, color: '#a0aec0', fontWeight: 400, marginTop: 2, textTransform: 'none', letterSpacing: 0 }}>
+                            <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 400, marginTop: 2, textTransform: 'none', letterSpacing: 0 }}>
                               out of {bulkMaxMarks}
                             </div>
                           </th>
@@ -875,16 +870,16 @@ ADM002,Mathematics,92,100`;
                     </thead>
                     <tbody>
                       {bulkStudents.map((student, idx) => (
-                        <tr key={student.id} style={{ background: idx % 2 === 0 ? '#fff' : '#fafbfc' }}>
+                        <tr key={student.id} style={{ background: idx % 2 === 0 ? 'var(--surface)' : 'var(--surface-alt)' }}>
                           {/* Student name (sticky left) */}
-                          <td style={{ padding: '9px 14px', borderBottom: '1px solid #f0f4f8', position: 'sticky', left: 0, background: idx % 2 === 0 ? '#fff' : '#fafbfc', zIndex: 1 }}>
+                          <td style={{ padding: '9px 14px', borderBottom: '1px solid var(--border)', position: 'sticky', left: 0, background: idx % 2 === 0 ? 'var(--surface)' : 'var(--surface-alt)', zIndex: 1 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                               <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#0de1e820', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, color: '#0de1e8', flexShrink: 0 }}>
                                 {getInitials(student.name)}
                               </div>
                               <div>
-                                <div style={{ fontWeight: 600, fontSize: 13, color: '#2d3748', whiteSpace: 'nowrap' }}>{student.name}</div>
-                                <div style={{ fontSize: 11, color: '#a0aec0' }}>{student.rollNumber || student.admissionNumber || '—'}</div>
+                                <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>{student.name}</div>
+                                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{student.rollNumber || student.admissionNumber || '—'}</div>
                               </div>
                             </div>
                           </td>
@@ -897,7 +892,7 @@ ADM002,Mathematics,92,100`;
                             const isOver = val !== '' && !isNaN(numVal) && numVal > maxNum;
                             const grade  = val !== '' && !isNaN(numVal) && !isOver ? getGrade(numVal, maxNum) : '';
                             return (
-                              <td key={sub} style={{ padding: '8px 10px', borderBottom: '1px solid #f0f4f8', textAlign: 'center', verticalAlign: 'middle' }}>
+                              <td key={sub} style={{ padding: '8px 10px', borderBottom: '1px solid var(--border)', textAlign: 'center', verticalAlign: 'middle' }}>
                                 <input
                                   type="number"
                                   min="0"
@@ -908,10 +903,10 @@ ADM002,Mathematics,92,100`;
                                   style={{
                                     width: 78, padding: '6px 8px', fontSize: 13, fontWeight: 600,
                                     textAlign: 'center',
-                                    border: `1.5px solid ${isOver ? '#e53e3e' : val ? '#0de1e8' : '#e2e8f0'}`,
+                                    border: `1.5px solid ${isOver ? '#e53e3e' : val ? '#0de1e8' : 'var(--border-strong)'}`,
                                     borderRadius: 8, outline: 'none',
-                                    background: isOver ? '#fff5f5' : val ? '#f0fff4' : '#fff',
-                                    color: isOver ? '#e53e3e' : '#2d3748',
+                                    background: isOver ? '#fff5f5' : val ? '#f0fff4' : 'var(--surface)',
+                                    color: isOver ? '#e53e3e' : 'var(--text-primary)',
                                     transition: 'border-color 0.15s, background 0.15s',
                                   }}
                                 />
@@ -935,8 +930,8 @@ ADM002,Mathematics,92,100`;
             </div>
 
             {/* ── Modal footer ── */}
-            <div style={{ padding: '14px 28px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, background: '#fff' }}>
-              <div style={{ fontSize: 12, color: '#718096' }}>
+            <div style={{ padding: '14px 28px', borderTop: '1px solid var(--border-strong)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, background: 'var(--surface)' }}>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
                 {bulkStudents.length > 0 && bulkSubjects.length > 0 ? (
                   <span>
                     <strong style={{ color: '#4361ee' }}>{filledCount}</strong> of {bulkStudents.length * bulkSubjects.length} cells filled
@@ -948,7 +943,7 @@ ADM002,Mathematics,92,100`;
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  style={{ padding: '9px 22px', border: '1.5px solid #e2e8f0', borderRadius: 9, background: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
+                  style={{ padding: '9px 22px', border: '1.5px solid var(--border-strong)', borderRadius: 9, background: 'var(--surface)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
                 >
                   Cancel
                 </button>
@@ -986,14 +981,14 @@ ADM002,Mathematics,92,100`;
               </button>
             </div>
             <div className="modal-body">
-              <p style={{ fontSize: 13, color: '#64748b', marginBottom: 14, lineHeight: 1.6 }}>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 14, lineHeight: 1.6 }}>
                 The CSV will have <strong>one row per student per subject</strong>. Select the subjects taught in this class.
               </p>
 
               {/* Subject checkboxes */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 8, marginBottom: 16 }}>
                 {SUBJECTS.map(sub => (
-                  <label key={sub} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '6px 10px', borderRadius: 8, border: `1.5px solid ${draftSubjects.includes(sub) ? '#4f46e5' : '#e2e8f0'}`, background: draftSubjects.includes(sub) ? '#eef2ff' : '#fff', fontSize: 13 }}>
+                  <label key={sub} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '6px 10px', borderRadius: 8, border: `1.5px solid ${draftSubjects.includes(sub) ? '#4f46e5' : 'var(--border-strong)'}`, background: draftSubjects.includes(sub) ? '#eef2ff' : 'var(--surface)', fontSize: 13 }}>
                     <input type="checkbox" checked={draftSubjects.includes(sub)}
                       onChange={e => setDraftSubjects(prev => e.target.checked ? [...prev, sub] : prev.filter(s => s !== sub))}
                       style={{ accentColor: '#4f46e5' }} />
@@ -1007,9 +1002,9 @@ ADM002,Mathematics,92,100`;
                 <input value={customSubject} onChange={e => setCustomSubject(e.target.value)}
                   placeholder="Add custom subject (e.g. Sanskrit)"
                   onKeyDown={e => { if (e.key === 'Enter' && customSubject.trim()) { setDraftSubjects(p => [...new Set([...p, customSubject.trim()])]); setCustomSubject(''); }}}
-                  style={{ flex: 1, padding: '7px 10px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none' }} />
+                  style={{ flex: 1, padding: '7px 10px', border: '1.5px solid var(--border-strong)', borderRadius: 8, fontSize: 13, outline: 'none' }} />
                 <button onClick={() => { if (customSubject.trim()) { setDraftSubjects(p => [...new Set([...p, customSubject.trim()])]); setCustomSubject(''); }}}
-                  style={{ padding: '7px 14px', background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Add</button>
+                  style={{ padding: '7px 14px', background: 'var(--surface-alt)', border: '1px solid var(--border-strong)', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Add</button>
               </div>
 
               {/* Selected summary */}
@@ -1029,8 +1024,8 @@ ADM002,Mathematics,92,100`;
             </div>
             <div className="modal-footer">
               <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={() => setDraftSubjects([...SUBJECTS])} style={{ padding: '8px 14px', border: '1px solid #e2e8f0', borderRadius: 8, background: '#f8fafc', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Select All</button>
-                <button onClick={() => setDraftSubjects([])} style={{ padding: '8px 14px', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', fontSize: 12, color: '#64748b', cursor: 'pointer' }}>Clear</button>
+                <button onClick={() => setDraftSubjects([...SUBJECTS])} style={{ padding: '8px 14px', border: '1px solid var(--border-strong)', borderRadius: 8, background: 'var(--surface-alt)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Select All</button>
+                <button onClick={() => setDraftSubjects([])} style={{ padding: '8px 14px', border: '1px solid var(--border-strong)', borderRadius: 8, background: 'var(--surface)', fontSize: 12, color: 'var(--text-muted)', cursor: 'pointer' }}>Clear</button>
               </div>
               <button onClick={downloadClassDraftCsv} disabled={!draftSubjects.length}
                 style={{ padding: '9px 22px', background: draftSubjects.length ? '#2563eb' : '#a0aec0', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, fontSize: 13, cursor: draftSubjects.length ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 7 }}>
@@ -1054,14 +1049,14 @@ ADM002,Mathematics,92,100`;
               {/* Config */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
                 <div>
-                  <label style={{ fontSize: 12, fontWeight: 700, color: '#4a5568', display: 'block', marginBottom: 4 }}>Exam Type *</label>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Exam Type *</label>
                   <input value={csvExamType} onChange={e => setCsvExamType(e.target.value)} placeholder="e.g. Unit Test 1"
-                    style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #e2e8f0', borderRadius: 7, fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
+                    style={{ width: '100%', padding: '8px 12px', border: '1.5px solid var(--border-strong)', borderRadius: 7, fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
                 </div>
                 <div>
-                  <label style={{ fontSize: 12, fontWeight: 700, color: '#4a5568', display: 'block', marginBottom: 4 }}>Exam Date</label>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Exam Date</label>
                   <input type="date" value={csvDate} onChange={e => setCsvDate(e.target.value)}
-                    style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #e2e8f0', borderRadius: 7, fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
+                    style={{ width: '100%', padding: '8px 12px', border: '1.5px solid var(--border-strong)', borderRadius: 7, fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
                 </div>
               </div>
 
@@ -1073,7 +1068,7 @@ ADM002,Mathematics,92,100`;
                   ADM001,Alice Johnson,100,85,78,90<br/>
                   ADM002,Bob Smith,100,72,80,88
                 </code>
-                <div style={{ fontSize: 11, color: '#64748b', marginBottom: 8 }}>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8 }}>
                   One row per student · Subject names are column headers · MaxMarks applies to all subjects in that row
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
@@ -1112,7 +1107,7 @@ ADM002,Mathematics,92,100`;
                   <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                     <thead><tr style={{ background: '#f8faff' }}>
-                      {['Admission No.','Subject','Marks','Max Marks'].map(h => <th key={h} style={{ padding: '6px 10px', textAlign: 'left', fontWeight: 700, color: '#64748b', fontSize: 11, textTransform: 'uppercase', borderBottom: '1px solid #e2e8f0', whiteSpace: 'nowrap' }}>{h}</th>)}
+                      {['Admission No.','Subject','Marks','Max Marks'].map(h => <th key={h} style={{ padding: '6px 10px', textAlign: 'left', fontWeight: 700, color: 'var(--text-muted)', fontSize: 11, textTransform: 'uppercase', borderBottom: '1px solid var(--border-strong)', whiteSpace: 'nowrap' }}>{h}</th>)}
                     </tr></thead>
                     <tbody>
                       {csvRows.slice(0, 10).map((r, i) => (
@@ -1141,7 +1136,7 @@ ADM002,Mathematics,92,100`;
               )}
             </div>
             <div className="modal-footer">
-              <button onClick={() => setShowCsvModal(false)} style={{ padding: '9px 20px', border: '1.5px solid #e2e8f0', borderRadius: 8, background: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Close</button>
+              <button onClick={() => setShowCsvModal(false)} style={{ padding: '9px 20px', border: '1.5px solid var(--border-strong)', borderRadius: 8, background: 'var(--surface)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Close</button>
               {csvRows.length > 0 && !csvResults && (
                 <button onClick={handleCsvImport} disabled={csvImporting || !csvExamType.trim()}
                   style={{ padding: '9px 24px', background: (csvImporting || !csvExamType.trim()) ? '#a0aec0' : '#4f46e5', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>

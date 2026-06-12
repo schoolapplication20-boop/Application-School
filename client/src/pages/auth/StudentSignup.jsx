@@ -67,7 +67,7 @@ export default function StudentSignup() {
             <div style={{ textAlign: 'center', padding: '8px 0' }}>
               <span className="material-icons" style={{ fontSize: 56, color: '#10b981' }}>mark_email_read</span>
               <h2 style={{ marginTop: 12, fontSize: 20, fontWeight: 700 }}>Check Your Email</h2>
-              <p style={{ color: '#6b7280', margin: '8px 0 20px' }}>
+              <p style={{ color: 'var(--text-secondary)', margin: '8px 0 20px' }}>
                 We sent a 6-digit verification code to <strong>{form.email}</strong>.<br />
                 Enter the code on the next page to activate your account.
               </p>
@@ -86,7 +86,7 @@ export default function StudentSignup() {
               <h2 style={{ textAlign: 'center', marginBottom: 4, fontSize: 20, fontWeight: 700 }}>
                 Student Sign Up
               </h2>
-              <p style={{ textAlign: 'center', color: '#6b7280', marginBottom: 20, fontSize: 14 }}>
+              <p style={{ textAlign: 'center', color: 'var(--text-secondary)', marginBottom: 20, fontSize: 14 }}>
                 Create your account using your admission number
               </p>
 
@@ -170,7 +170,7 @@ export default function StudentSignup() {
                 </button>
               </form>
 
-              <p style={{ textAlign: 'center', marginTop: 16, fontSize: 14, color: '#6b7280' }}>
+              <p style={{ textAlign: 'center', marginTop: 16, fontSize: 14, color: 'var(--text-secondary)' }}>
                 Already have an account?{' '}
                 <Link to="/login?role=STUDENT" className="auth-link">Sign in</Link>
               </p>

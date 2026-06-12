@@ -106,10 +106,10 @@ export default function Schedule() {
           </div>
         </div>
 
-        <div style={{ background: '#fff', borderRadius: 16, boxShadow: '0 2px 12px rgba(0,0,0,0.07)', padding: '80px 20px', textAlign: 'center' }}>
-          <span className="material-icons" style={{ fontSize: 72, color: '#e2e8f0', display: 'block', marginBottom: 16 }}>calendar_month</span>
-          <h5 style={{ fontWeight: 700, color: '#4a5568', marginBottom: 8 }}>No schedule assigned yet</h5>
-          <p style={{ color: '#a0aec0', fontSize: 14, maxWidth: 360, margin: '0 auto' }}>
+        <div style={{ background: 'var(--surface)', borderRadius: 16, boxShadow: '0 2px 12px rgba(0,0,0,0.07)', padding: '80px 20px', textAlign: 'center' }}>
+          <span className="material-icons" style={{ fontSize: 72, color: 'var(--border-strong)', display: 'block', marginBottom: 16 }}>calendar_month</span>
+          <h5 style={{ fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 8 }}>No schedule assigned yet</h5>
+          <p style={{ color: 'var(--text-muted)', fontSize: 14, maxWidth: 360, margin: '0 auto' }}>
             Your timetable hasn't been set up. Please contact your administrator to have your class schedule assigned.
           </p>
         </div>
@@ -173,20 +173,20 @@ export default function Schedule() {
 
       {/* ── Weekly Grid View — Days as rows, Time slots as columns ────────── */}
       {view === 'timetable' && (
-        <div style={{ background: '#fff', borderRadius: 14, boxShadow: '0 2px 8px rgba(0,0,0,0.07)', display: 'flex', flexDirection: 'column', maxHeight: '60vh' }}>
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f4f8', flexShrink: 0 }}>
+        <div style={{ background: 'var(--surface)', borderRadius: 14, boxShadow: '0 2px 8px rgba(0,0,0,0.07)', display: 'flex', flexDirection: 'column', maxHeight: '60vh' }}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
             <h6 style={{ margin: 0, fontWeight: 700 }}>Weekly Timetable</h6>
           </div>
           <div style={{ overflow: 'auto', flex: 1 }}>
             <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, minWidth: 600 }}>
               <thead>
-                <tr style={{ background: '#f7fafc' }}>
+                <tr style={{ background: 'var(--surface-alt)' }}>
                   {/* DAY column header */}
                   <th style={{
                     padding: '14px 16px', textAlign: 'left', fontWeight: 700, fontSize: 12,
-                    color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.05em',
-                    borderBottom: '2px solid #e2e8f0', borderRight: '1px solid #e2e8f0',
-                    minWidth: 130, position: 'sticky', left: 0, background: '#f7fafc', zIndex: 2,
+                    color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em',
+                    borderBottom: '2px solid var(--border-strong)', borderRight: '1px solid var(--border-strong)',
+                    minWidth: 130, position: 'sticky', left: 0, background: 'var(--surface-alt)', zIndex: 2,
                   }}>
                     Day
                   </th>
@@ -194,11 +194,11 @@ export default function Schedule() {
                   {timeSlots.map(slot => (
                     <th key={slot.key} style={{
                       padding: '12px 14px', textAlign: 'center', fontWeight: 700, fontSize: 12,
-                      color: '#4a5568', borderBottom: '2px solid #e2e8f0',
-                      borderRight: '1px solid #edf2f7', minWidth: 160,
+                      color: 'var(--text-secondary)', borderBottom: '2px solid var(--border-strong)',
+                      borderRight: '1px solid var(--border)', minWidth: 160,
                     }}>
-                      <div style={{ color: '#2d3748' }}>{formatTime(slot.startTime)} – {formatTime(slot.endTime)}</div>
-                      <div style={{ fontSize: 10, color: '#a0aec0', fontWeight: 400, marginTop: 2 }}>Time Slot</div>
+                      <div style={{ color: 'var(--text-primary)' }}>{formatTime(slot.startTime)} – {formatTime(slot.endTime)}</div>
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 400, marginTop: 2 }}>Time Slot</div>
                     </th>
                   ))}
                 </tr>
@@ -209,20 +209,20 @@ export default function Schedule() {
                   const color   = DAY_BG[d];
                   const count   = byDay[d].length;
                   return (
-                    <tr key={d} style={{ background: rowIdx % 2 === 0 ? '#fff' : '#fcfdff' }}>
+                    <tr key={d} style={{ background: rowIdx % 2 === 0 ? 'var(--surface)' : 'var(--surface-alt)' }}>
                       {/* Day label cell */}
                       <td style={{
-                        padding: '14px 16px', borderBottom: '1px solid #edf2f7',
-                        borderRight: '1px solid #e2e8f0', verticalAlign: 'middle',
+                        padding: '14px 16px', borderBottom: '1px solid var(--border)',
+                        borderRight: '1px solid var(--border-strong)', verticalAlign: 'middle',
                         position: 'sticky', left: 0,
-                        background: isToday ? color + '10' : (rowIdx % 2 === 0 ? '#fff' : '#fcfdff'),
+                        background: isToday ? color + '10' : (rowIdx % 2 === 0 ? 'var(--surface)' : 'var(--surface-alt)'),
                         zIndex: 1,
                       }}>
-                        <div style={{ fontWeight: 700, fontSize: 13, color: isToday ? color : '#2d3748' }}>{d}</div>
+                        <div style={{ fontWeight: 700, fontSize: 13, color: isToday ? color : 'var(--text-primary)' }}>{d}</div>
                         {isToday && (
                           <span style={{ fontSize: 10, background: color, color: '#fff', borderRadius: 10, padding: '1px 7px', marginTop: 3, display: 'inline-block' }}>Today</span>
                         )}
-                        <div style={{ fontSize: 11, color: '#a0aec0', marginTop: 3 }}>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>
                           {count} {count === 1 ? 'period' : 'periods'}
                         </div>
                       </td>
@@ -232,9 +232,9 @@ export default function Schedule() {
                         const c = entry ? getColor(entry.subject) : null;
                         return (
                           <td key={slot.key} style={{
-                            padding: '8px 10px', borderBottom: '1px solid #edf2f7',
-                            borderRight: '1px solid #f1f5f9', verticalAlign: 'middle',
-                            background: entry ? '#fff' : '#fafcff',
+                            padding: '8px 10px', borderBottom: '1px solid var(--border)',
+                            borderRight: '1px solid var(--border)', verticalAlign: 'middle',
+                            background: entry ? 'var(--surface)' : 'var(--surface-alt)',
                           }}>
                             {entry ? (
                               <div style={{
@@ -242,13 +242,13 @@ export default function Schedule() {
                                 borderRadius: 8, padding: '9px 11px',
                               }}>
                                 <div style={{ fontSize: 12, fontWeight: 700, color: c.text }}>{entry.subject}</div>
-                                <div style={{ fontSize: 11, color: '#718096', marginTop: 3 }}>{entry.classSection}</div>
+                                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 3 }}>{entry.classSection}</div>
                               </div>
                             ) : (
                               <div style={{
-                                minHeight: 56, borderRadius: 8, border: '1px dashed #e2e8f0',
+                                minHeight: 56, borderRadius: 8, border: '1px dashed var(--border-strong)',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                fontSize: 11, color: '#cbd5e0',
+                                fontSize: 11, color: 'var(--text-muted)',
                               }}>
                                 Free
                               </div>
@@ -280,9 +280,9 @@ export default function Schedule() {
                   onClick={() => setSelectedDay(d)}
                   style={{
                     padding: '7px 16px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                    border: `1.5px solid ${active ? color : '#e2e8f0'}`,
-                    background: active ? color : '#fff',
-                    color: active ? '#fff' : '#4a5568',
+                    border: `1.5px solid ${active ? color : 'var(--border-strong)'}`,
+                    background: active ? color : 'var(--surface)',
+                    color: active ? '#fff' : 'var(--text-secondary)',
                     transition: 'all 0.15s',
                     position: 'relative',
                   }}
@@ -307,16 +307,16 @@ export default function Schedule() {
                 <span style={{ marginLeft: 8, fontSize: 11, background: '#0de1e820', color: '#276749', padding: '2px 8px', borderRadius: 10 }}>Today</span>
               )}
             </h6>
-            <span style={{ fontSize: 12, color: '#a0aec0' }}>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
               {selectedEntries.length} {selectedEntries.length === 1 ? 'period' : 'periods'}
             </span>
           </div>
 
           {selectedEntries.length === 0 ? (
-            <div style={{ background: '#fff', borderRadius: 14, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', padding: '60px 20px', textAlign: 'center' }}>
-              <span className="material-icons" style={{ fontSize: 52, color: '#e2e8f0', display: 'block', marginBottom: 12 }}>event_available</span>
-              <div style={{ fontSize: 14, fontWeight: 600, color: '#4a5568' }}>No classes on {selectedDay}</div>
-              <div style={{ fontSize: 12, color: '#a0aec0', marginTop: 4 }}>Enjoy your free day!</div>
+            <div style={{ background: 'var(--surface)', borderRadius: 14, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', padding: '60px 20px', textAlign: 'center' }}>
+              <span className="material-icons" style={{ fontSize: 52, color: 'var(--border-strong)', display: 'block', marginBottom: 12 }}>event_available</span>
+              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)' }}>No classes on {selectedDay}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>Enjoy your free day!</div>
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16 }}>
@@ -324,7 +324,7 @@ export default function Schedule() {
                 const c = getColor(entry.subject);
                 return (
                   <div key={entry.id} style={{
-                    background: '#fff', borderRadius: 14,
+                    background: 'var(--surface)', borderRadius: 14,
                     boxShadow: '0 2px 8px rgba(0,0,0,0.07)',
                     borderLeft: `5px solid ${c.border}`,
                     overflow: 'hidden',
@@ -337,7 +337,7 @@ export default function Schedule() {
                         }}>
                           Period {idx + 1}
                         </span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#a0aec0', fontSize: 12 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--text-muted)', fontSize: 12 }}>
                           <span className="material-icons" style={{ fontSize: 14 }}>schedule</span>
                           {formatTime(entry.startTime)}
                         </div>
@@ -347,23 +347,23 @@ export default function Schedule() {
 
                       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                         <span style={{
-                          padding: '4px 10px', borderRadius: 8, fontSize: 12, background: '#f7fafc',
-                          color: '#4a5568', display: 'flex', alignItems: 'center', gap: 4,
+                          padding: '4px 10px', borderRadius: 8, fontSize: 12, background: 'var(--surface-alt)',
+                          color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4,
                         }}>
                           <span className="material-icons" style={{ fontSize: 13 }}>groups</span>
                           Class {entry.classSection}
                         </span>
                         <span style={{
-                          padding: '4px 10px', borderRadius: 8, fontSize: 12, background: '#f7fafc',
-                          color: '#4a5568', display: 'flex', alignItems: 'center', gap: 4,
+                          padding: '4px 10px', borderRadius: 8, fontSize: 12, background: 'var(--surface-alt)',
+                          color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4,
                         }}>
                           <span className="material-icons" style={{ fontSize: 13 }}>schedule</span>
                           {formatTime(entry.startTime)} – {formatTime(entry.endTime)}
                         </span>
                         {entry.room && (
                           <span style={{
-                            padding: '4px 10px', borderRadius: 8, fontSize: 12, background: '#f7fafc',
-                            color: '#4a5568', display: 'flex', alignItems: 'center', gap: 4,
+                            padding: '4px 10px', borderRadius: 8, fontSize: 12, background: 'var(--surface-alt)',
+                            color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4,
                           }}>
                             <span className="material-icons" style={{ fontSize: 13 }}>door_front</span>
                             {entry.room}

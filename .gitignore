@@ -26,3 +26,6 @@ Thumbs.db
 
 # Nested project copy — do not commit
 Application-School/
+
+# Claude Code local config / agent worktrees
+.claude/

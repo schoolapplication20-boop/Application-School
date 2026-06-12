@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Layout from '../../components/Layout';
-import Toast from '../../components/Toast';
 import { useAuth } from '../../context/AuthContext';
 import { teacherAPI, diaryAPI, adminAPI } from '../../services/api';
+import { useToast } from '../../context/ToastContext';
 
 const TODAY = new Date().toISOString().split('T')[0];
 
@@ -17,16 +17,8 @@ export default function Homework() {
   const { user } = useAuth();
 
   const [activeTab, setActiveTab] = useState('new');
-  const [toast, setToast]       = useState(null);
-  const toastTimerRef = useRef(null);
 
-  useEffect(() => () => clearTimeout(toastTimerRef.current), []);
-
-  const showToast = (message, type = 'success') => {
-    clearTimeout(toastTimerRef.current);
-    setToast({ message, type });
-    toastTimerRef.current = setTimeout(() => setToast(null), 3500);
-  };
+  const showToast = useToast();
 
   const [myClasses, setMyClasses]       = useState([]);
   const [teacherProfile, setTeacherProfile] = useState(null);
@@ -235,15 +227,13 @@ export default function Homework() {
 
   return (
     <Layout pageTitle="Diary">
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-
       <div className="page-header">
         <h1>Diary</h1>
         <p>Create daily diary entries with topic, homework, and optional notes</p>
       </div>
 
       {/* Tab Switcher */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', borderBottom: '2px solid #f0f4f8' }}>
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', borderBottom: '2px solid var(--border)' }}>
         {[
           { key: 'new',     label: 'New Entry',   icon: 'add_circle' },
           { key: 'entries', label: 'My Entries',  icon: 'list_alt' },
@@ -252,7 +242,7 @@ export default function Homework() {
             display: 'flex', alignItems: 'center', gap: '6px',
             padding: '10px 20px', border: 'none', background: 'none', cursor: 'pointer',
             fontSize: '14px', fontWeight: 600,
-            color: activeTab === tab.key ? '#0de1e8' : '#718096',
+            color: activeTab === tab.key ? '#0de1e8' : 'var(--text-secondary)',
             borderBottom: activeTab === tab.key ? '2px solid #0de1e8' : '2px solid transparent',
             marginBottom: '-2px', transition: 'all 0.2s',
           }}>
@@ -270,7 +260,7 @@ export default function Homework() {
 
               {/* Class selector — single combined dropdown */}
               {classesLoading ? (
-                <div style={{ padding: '10px 0 16px', fontSize: 13, color: '#a0aec0' }}>
+                <div style={{ padding: '10px 0 16px', fontSize: 13, color: 'var(--text-muted)' }}>
                   <span className="material-icons" style={{ fontSize: 16, verticalAlign: 'middle', marginRight: 4 }}>hourglass_empty</span>
                   Loading your assigned classes…
                 </div>
@@ -306,7 +296,7 @@ export default function Homework() {
                 <div className="col-6">
                   <label className="form-label small fw-medium">
                     Subject *
-                    <span style={{ marginLeft: 6, fontSize: 10, color: '#a0aec0', fontWeight: 400 }}>
+                    <span style={{ marginLeft: 6, fontSize: 10, color: 'var(--text-muted)', fontWeight: 400 }}>
                       ↵ or , to add multiple
                     </span>
                   </label>
@@ -316,8 +306,8 @@ export default function Homework() {
                     onClick={() => subjectInputRef.current?.focus()}
                     style={{
                       minHeight: 34, padding: '4px 8px',
-                      border: `1px solid ${!form.subject.trim() ? '#e2e8f0' : '#0de1e8'}`,
-                      borderRadius: 6, background: '#fff', cursor: 'text',
+                      border: `1px solid ${!form.subject.trim() ? 'var(--border-strong)' : '#0de1e8'}`,
+                      borderRadius: 6, background: 'var(--surface)', cursor: 'text',
                       display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center',
                       transition: 'border-color 0.15s',
                     }}
@@ -344,7 +334,7 @@ export default function Homework() {
                       onKeyDown={handleSubjectKeyDown}
                       onBlur={() => { if (subjectInput.trim()) addSubjectTag(subjectInput); }}
                       placeholder={subjectTags.length === 0 ? 'e.g. English, Maths' : '+ add'}
-                      style={{ border: 'none', outline: 'none', fontSize: 13, padding: '2px 2px', flex: 1, minWidth: 80, background: 'transparent', color: '#2d3748' }}
+                      style={{ border: 'none', outline: 'none', fontSize: 13, padding: '2px 2px', flex: 1, minWidth: 80, background: 'transparent', color: 'var(--text-primary)' }}
                     />
                   </div>
 
@@ -381,7 +371,7 @@ export default function Homework() {
               {/* Description (optional) */}
               <div className="mb-3">
                 <label className="form-label small fw-medium">
-                  Description <span style={{ color: '#a0aec0', fontWeight: 400 }}>(optional)</span>
+                  Description <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(optional)</span>
                 </label>
                 <textarea className="form-control form-control-sm" rows={2}
                   placeholder="Additional notes, classwork summary..."
@@ -393,7 +383,7 @@ export default function Homework() {
               {/* Remarks (optional) */}
               <div className="mb-3">
                 <label className="form-label small fw-medium">
-                  Remarks <span style={{ color: '#a0aec0', fontWeight: 400 }}>(optional)</span>
+                  Remarks <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(optional)</span>
                 </label>
                 <input type="text" className="form-control form-control-sm"
                   placeholder="e.g. Students should revise Chapter 3 before next class"
@@ -404,14 +394,14 @@ export default function Homework() {
               {/* Image upload (optional) */}
               <div className="mb-4">
                 <label className="form-label small fw-medium">
-                  Diary Photo <span style={{ color: '#a0aec0', fontWeight: 400 }}>(optional, max 5 MB)</span>
+                  Diary Photo <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(optional, max 5 MB)</span>
                 </label>
                 <div
                   onClick={() => fileInputRef.current?.click()}
                   style={{
-                    border: '2px dashed #e2e8f0', borderRadius: '12px', padding: '16px',
+                    border: '2px dashed var(--border-strong)', borderRadius: '12px', padding: '16px',
                     textAlign: 'center', cursor: 'pointer',
-                    background: imagePreview ? '#f0fff4' : '#fafafa',
+                    background: imagePreview ? '#f0fff4' : 'var(--surface-alt)',
                   }}
                 >
                   {imagePreview ? (
@@ -424,8 +414,8 @@ export default function Homework() {
                     </div>
                   ) : (
                     <>
-                      <span className="material-icons" style={{ fontSize: '36px', color: '#cbd5e0' }}>add_photo_alternate</span>
-                      <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#a0aec0' }}>Click to upload (optional)</p>
+                      <span className="material-icons" style={{ fontSize: '36px', color: 'var(--text-muted)' }}>add_photo_alternate</span>
+                      <p style={{ margin: '6px 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>Click to upload (optional)</p>
                     </>
                   )}
                 </div>
@@ -462,10 +452,10 @@ export default function Homework() {
               <input type="date" className="filter-select" value={filterDate}
                 max={TODAY}
                 onChange={e => setFilterDate(e.target.value)}
-                style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '13px' }} />
+                style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-strong)', fontSize: '13px' }} />
               {filterDate && (
                 <button onClick={() => setFilterDate('')}
-                  style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#fff5f5', color: '#e53e3e', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>
+                  style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-strong)', background: '#fff5f5', color: '#e53e3e', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>
                   Clear Date
                 </button>
               )}
@@ -477,14 +467,14 @@ export default function Homework() {
           </div>
 
           {loadingEntries ? (
-            <div style={{ textAlign: 'center', padding: '60px', color: '#a0aec0' }}>
+            <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)' }}>
               <span className="material-icons" style={{ fontSize: 48, display: 'block', marginBottom: 12 }}>hourglass_empty</span>
               Loading…
             </div>
           ) : filteredEntries.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '60px', color: '#a0aec0' }}>
-              <span className="material-icons" style={{ fontSize: 56, color: '#e2e8f0', display: 'block', marginBottom: 12 }}>menu_book</span>
-              <h3 style={{ color: '#a0aec0', margin: '0 0 8px' }}>No diary entries found</h3>
+            <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)' }}>
+              <span className="material-icons" style={{ fontSize: 56, color: 'var(--border-strong)', display: 'block', marginBottom: 12 }}>menu_book</span>
+              <h3 style={{ color: 'var(--text-muted)', margin: '0 0 8px' }}>No diary entries found</h3>
               <p style={{ margin: 0, fontSize: 13 }}>
                 {entries.length === 0 ? 'Create your first entry using the New Entry tab' : 'Try clearing the filters'}
               </p>
@@ -511,27 +501,27 @@ export default function Homework() {
                     {/* Middle: content */}
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
-                        <span style={{ fontWeight: 700, color: '#2d3748', fontSize: 15 }}>
+                        <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: 15 }}>
                           {entry.subject || 'General'}
                         </span>
-                        <span style={{ fontSize: 12, color: '#a0aec0' }}>
+                        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                           Class {entry.className}{entry.section ? ` - ${entry.section}` : ''}
                         </span>
-                        <span style={{ fontSize: 12, color: '#a0aec0', marginLeft: 'auto' }}>
+                        <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 'auto' }}>
                           {fmtDate(entry.diaryDate)}
                         </span>
                       </div>
 
                       <div style={{ marginBottom: 6 }}>
-                        <span style={{ fontSize: 12, fontWeight: 600, color: '#4a5568' }}>Topic: </span>
-                        <span style={{ fontSize: 13, color: '#2d3748' }}>{entry.topic}</span>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>Topic: </span>
+                        <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{entry.topic}</span>
                       </div>
                       <div style={{ marginBottom: entry.description || entry.remarks ? 6 : 0 }}>
-                        <span style={{ fontSize: 12, fontWeight: 600, color: '#4a5568' }}>Homework: </span>
-                        <span style={{ fontSize: 13, color: '#2d3748' }}>{entry.homework}</span>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>Homework: </span>
+                        <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{entry.homework}</span>
                       </div>
                       {entry.description && (
-                        <div style={{ fontSize: 12, color: '#718096', marginBottom: 4 }}>
+                        <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 }}>
                           {entry.description.length > 100 ? entry.description.slice(0, 100) + '…' : entry.description}
                         </div>
                       )}
@@ -558,11 +548,11 @@ export default function Homework() {
       {/* ── Edit Modal ── */}
       {editEntry && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-          <div onClick={e => e.stopPropagation()} className="modal-card" style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 520, boxShadow: '0 20px 60px rgba(0,0,0,0.15)', maxHeight: '90vh', overflowY: 'auto' }}>
-            <div style={{ padding: '20px 24px', borderBottom: '1px solid #f0f4f8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div onClick={e => e.stopPropagation()} className="modal-card" style={{ background: 'var(--surface)', borderRadius: 16, width: '100%', maxWidth: 520, boxShadow: '0 20px 60px rgba(0,0,0,0.15)', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <div style={{ fontWeight: 700, fontSize: 16, color: '#2d3748' }}>Edit Diary Entry</div>
-                <div style={{ fontSize: 12, color: '#a0aec0' }}>
+                <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text-primary)' }}>Edit Diary Entry</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                   {editEntry.subject || 'General'} — {fmtDate(editEntry.diaryDate)} — Class {editEntry.className}{editEntry.section ? ` - ${editEntry.section}` : ''}
                 </div>
               </div>
@@ -587,20 +577,20 @@ export default function Homework() {
                   required />
               </div>
               <div className="mb-3">
-                <label className="form-label small fw-medium">Description <span style={{ color: '#a0aec0', fontWeight: 400 }}>(optional)</span></label>
+                <label className="form-label small fw-medium">Description <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(optional)</span></label>
                 <textarea className="form-control form-control-sm" rows={2}
                   value={editForm.description}
                   onChange={e => setEditForm(prev => ({ ...prev, description: e.target.value }))} />
               </div>
               <div className="mb-4">
-                <label className="form-label small fw-medium">Remarks <span style={{ color: '#a0aec0', fontWeight: 400 }}>(optional)</span></label>
+                <label className="form-label small fw-medium">Remarks <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(optional)</span></label>
                 <input type="text" className="form-control form-control-sm"
                   value={editForm.remarks}
                   onChange={e => setEditForm(prev => ({ ...prev, remarks: e.target.value }))} />
               </div>
               <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
                 <button type="button" onClick={() => setEditEntry(null)}
-                  style={{ padding: '9px 20px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
+                  style={{ padding: '9px 20px', borderRadius: 8, border: '1px solid var(--border-strong)', background: 'var(--surface)', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
                   Cancel
                 </button>
                 <button type="submit" disabled={saving}
@@ -618,9 +608,9 @@ export default function Homework() {
         <div onClick={() => setPreviewEntry(null)}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
           <div onClick={e => e.stopPropagation()}
-            style={{ background: '#fff', borderRadius: 16, overflow: 'hidden', maxWidth: 700, width: '100%' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid #f0f4f8' }}>
-              <div style={{ fontWeight: 700, color: '#2d3748' }}>
+            style={{ background: 'var(--surface)', borderRadius: 16, overflow: 'hidden', maxWidth: 700, width: '100%' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
                 {previewEntry.subject || 'General'} — {fmtDate(previewEntry.diaryDate)}
               </div>
               <button onClick={() => setPreviewEntry(null)}
@@ -629,7 +619,7 @@ export default function Homework() {
               </button>
             </div>
             <img src={previewEntry.imageUrl} alt="Diary full"
-              style={{ width: '100%', maxHeight: 500, objectFit: 'contain', background: '#f7fafc' }} />
+              style={{ width: '100%', maxHeight: 500, objectFit: 'contain', background: 'var(--surface-alt)' }} />
           </div>
         </div>
       )}

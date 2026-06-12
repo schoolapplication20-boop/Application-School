@@ -1,108 +1,112 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { SchoolProvider } from './context/SchoolContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { ToastProvider } from './context/ToastContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import MarketingLayout from './components/MarketingLayout';
 import InstallPrompt from './components/InstallPrompt';
 import SessionTimeoutWarning from './components/SessionTimeoutWarning';
 import ErrorBoundary from './components/ErrorBoundary';
+import PageLoader from './components/PageLoader';
+
 // Marketing Pages
-import HomePage from './pages/marketing/HomePage';
-import SolutionsPage from './pages/marketing/SolutionsPage';
-import AboutUsPage from './pages/marketing/AboutUsPage';
-import ContactUsPage from './pages/marketing/ContactUsPage';
-import CareersPage from './pages/marketing/CareersPage';
-import BookDemoPage from './pages/marketing/BookDemoPage';
+const HomePage = lazy(() => import('./pages/marketing/HomePage'));
+const SolutionsPage = lazy(() => import('./pages/marketing/SolutionsPage'));
+const AboutUsPage = lazy(() => import('./pages/marketing/AboutUsPage'));
+const ContactUsPage = lazy(() => import('./pages/marketing/ContactUsPage'));
+const CareersPage = lazy(() => import('./pages/marketing/CareersPage'));
+const BookDemoPage = lazy(() => import('./pages/marketing/BookDemoPage'));
 
 // Auth Pages
-import Login from './pages/auth/Login';
-import OwnerLogin from './pages/auth/OwnerLogin';
-import ForgotPassword from './pages/auth/ForgotPassword';
-import VerifyIdentity from './pages/auth/VerifyIdentity';
-import EnterOTP from './pages/auth/EnterOTP';
-import SetNewPassword from './pages/auth/SetNewPassword';
-import ResetPassword from './pages/auth/ResetPassword';
-import StudentSignup from './pages/auth/StudentSignup';
-import VerifyEmail from './pages/auth/VerifyEmail';
+const Login = lazy(() => import('./pages/auth/Login'));
+const OwnerLogin = lazy(() => import('./pages/auth/OwnerLogin'));
+const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'));
+const VerifyIdentity = lazy(() => import('./pages/auth/VerifyIdentity'));
+const EnterOTP = lazy(() => import('./pages/auth/EnterOTP'));
+const SetNewPassword = lazy(() => import('./pages/auth/SetNewPassword'));
+const ResetPassword = lazy(() => import('./pages/auth/ResetPassword'));
+const StudentSignup = lazy(() => import('./pages/auth/StudentSignup'));
+const VerifyEmail = lazy(() => import('./pages/auth/VerifyEmail'));
 
 // Admin Pages
-import AdminDashboard from './pages/admin/AdminDashboard';
-import Students from './pages/admin/Students';
-import Teachers from './pages/admin/Teachers';
-import Classes from './pages/admin/Classes';
-import Fees from './pages/admin/Fees';
-import Expenses from './pages/admin/Expenses';
-import Applications from './pages/admin/Applications';
-import CollectFee from './pages/admin/CollectFee';
-import Salaries from './pages/admin/Salaries';
-import LeaveManagement from './pages/admin/LeaveManagement';
-import Transport from './pages/admin/Transport';
-import AttendanceReport from './pages/admin/AttendanceReport';
-import TeacherAttendanceView from './pages/admin/TeacherAttendanceView';
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
+const Students = lazy(() => import('./pages/admin/Students'));
+const Teachers = lazy(() => import('./pages/admin/Teachers'));
+const Classes = lazy(() => import('./pages/admin/Classes'));
+const Fees = lazy(() => import('./pages/admin/Fees'));
+const Expenses = lazy(() => import('./pages/admin/Expenses'));
+const Applications = lazy(() => import('./pages/admin/Applications'));
+const CollectFee = lazy(() => import('./pages/admin/CollectFee'));
+const Salaries = lazy(() => import('./pages/admin/Salaries'));
+const LeaveManagement = lazy(() => import('./pages/admin/LeaveManagement'));
+const Transport = lazy(() => import('./pages/admin/Transport'));
+const AttendanceReport = lazy(() => import('./pages/admin/AttendanceReport'));
+const TeacherAttendanceView = lazy(() => import('./pages/admin/TeacherAttendanceView'));
+
 // Teacher Pages
-import TeacherDashboard from './pages/teacher/TeacherDashboard';
-import MyStudents from './pages/teacher/MyStudents';
-import Schedule from './pages/teacher/Schedule';
-import Attendance from './pages/teacher/Attendance';
-import Marks from './pages/teacher/Marks';
-import Homework from './pages/teacher/Homework';
-import LeaveApproval from './pages/teacher/LeaveApproval';
-import TeacherMessages from './pages/teacher/TeacherMessages';
-import TeacherLeaveRequest from './pages/teacher/TeacherLeaveRequest';
-import TeacherSelfAttendance from './pages/teacher/TeacherSelfAttendance';
-import Assignments from './pages/teacher/Assignments';
-import TeacherAppointments from './pages/teacher/TeacherAppointments';
-import TeacherMeetingSlots from './pages/teacher/TeacherMeetingSlots';
+const TeacherDashboard = lazy(() => import('./pages/teacher/TeacherDashboard'));
+const MyStudents = lazy(() => import('./pages/teacher/MyStudents'));
+const Schedule = lazy(() => import('./pages/teacher/Schedule'));
+const Attendance = lazy(() => import('./pages/teacher/Attendance'));
+const Marks = lazy(() => import('./pages/teacher/Marks'));
+const Homework = lazy(() => import('./pages/teacher/Homework'));
+const LeaveApproval = lazy(() => import('./pages/teacher/LeaveApproval'));
+const TeacherMessages = lazy(() => import('./pages/teacher/TeacherMessages'));
+const TeacherLeaveRequest = lazy(() => import('./pages/teacher/TeacherLeaveRequest'));
+const TeacherSelfAttendance = lazy(() => import('./pages/teacher/TeacherSelfAttendance'));
+const Assignments = lazy(() => import('./pages/teacher/Assignments'));
+const TeacherAppointments = lazy(() => import('./pages/teacher/TeacherAppointments'));
+const TeacherMeetingSlots = lazy(() => import('./pages/teacher/TeacherMeetingSlots'));
 
 // Super Admin Pages
-import SuperAdminDashboard from './pages/superadmin/SuperAdminDashboard';
-import AdminManagement from './pages/superadmin/AdminManagement';
-import ExamSchedulePage from './pages/superadmin/ExamSchedulePage';
-import SetupSchool from './pages/superadmin/SetupSchool';
-import DiaryMonitoring from './pages/superadmin/DiaryMonitoring';
-import StudentTransportPage from './pages/superadmin/StudentTransportPage';
-import TransportDashboard from './pages/superadmin/transport/TransportDashboard';
-import BusManagement from './pages/superadmin/transport/BusManagement';
-import DriverManagement from './pages/superadmin/transport/DriverManagement';
-import Timetable from './pages/admin/Timetable';
+const SuperAdminDashboard = lazy(() => import('./pages/superadmin/SuperAdminDashboard'));
+const AdminManagement = lazy(() => import('./pages/superadmin/AdminManagement'));
+const ExamSchedulePage = lazy(() => import('./pages/superadmin/ExamSchedulePage'));
+const SetupSchool = lazy(() => import('./pages/superadmin/SetupSchool'));
+const DiaryMonitoring = lazy(() => import('./pages/superadmin/DiaryMonitoring'));
+const StudentTransportPage = lazy(() => import('./pages/superadmin/StudentTransportPage'));
+const TransportDashboard = lazy(() => import('./pages/superadmin/transport/TransportDashboard'));
+const BusManagement = lazy(() => import('./pages/superadmin/transport/BusManagement'));
+const DriverManagement = lazy(() => import('./pages/superadmin/transport/DriverManagement'));
+const Timetable = lazy(() => import('./pages/admin/Timetable'));
 
 // Examination & Certificates Pages
-import Examination from './pages/admin/Examination';
-import ExaminationView from './pages/teacher/ExaminationView';
+const Examination = lazy(() => import('./pages/admin/Examination'));
+const ExaminationView = lazy(() => import('./pages/teacher/ExaminationView'));
 
 // Online Exam Pages
-import OnlineExams from './pages/teacher/OnlineExams';
-import OnlineExamTake from './pages/student/OnlineExamTake';
-import OnlineExamsAdmin from './pages/admin/OnlineExamsAdmin';
+const OnlineExams = lazy(() => import('./pages/teacher/OnlineExams'));
+const OnlineExamTake = lazy(() => import('./pages/student/OnlineExamTake'));
+const OnlineExamsAdmin = lazy(() => import('./pages/admin/OnlineExamsAdmin'));
 
 // Student Pages
-import StudentDashboard      from './pages/student/StudentDashboard';
-import StudentAttendance     from './pages/student/StudentAttendance';
-import StudentDiary          from './pages/student/StudentDiary';
-import StudentFees           from './pages/student/StudentFees';
-import StudentLeaveRequest   from './pages/student/StudentLeaveRequest';
-import StudentMessages       from './pages/student/StudentMessages';
-import StudentExams          from './pages/student/StudentExams';
-import StudentMarks          from './pages/student/StudentMarks';
-import ReportCard            from './pages/student/ReportCard';
-import StudentAppointments   from './pages/student/StudentAppointments';
-import MeetingBookings       from './pages/student/MeetingBookings';
+const StudentDashboard = lazy(() => import('./pages/student/StudentDashboard'));
+const StudentAttendance = lazy(() => import('./pages/student/StudentAttendance'));
+const StudentDiary = lazy(() => import('./pages/student/StudentDiary'));
+const StudentFees = lazy(() => import('./pages/student/StudentFees'));
+const StudentLeaveRequest = lazy(() => import('./pages/student/StudentLeaveRequest'));
+const StudentMessages = lazy(() => import('./pages/student/StudentMessages'));
+const StudentExams = lazy(() => import('./pages/student/StudentExams'));
+const StudentMarks = lazy(() => import('./pages/student/StudentMarks'));
+const ReportCard = lazy(() => import('./pages/student/ReportCard'));
+const StudentAppointments = lazy(() => import('./pages/student/StudentAppointments'));
+const MeetingBookings = lazy(() => import('./pages/student/MeetingBookings'));
 
 // Shared pages
-import SchoolCalendar        from './pages/shared/SchoolCalendar';
-import ReportCardHub         from './pages/shared/ReportCardHub';
+const SchoolCalendar = lazy(() => import('./pages/shared/SchoolCalendar'));
+const ReportCardHub = lazy(() => import('./pages/shared/ReportCardHub'));
 
 // Admin Messages
-import AdminMessages         from './pages/admin/AdminMessages';
+const AdminMessages = lazy(() => import('./pages/admin/AdminMessages'));
 
 // School Settings
-import SchoolSettings        from './pages/admin/SchoolSettings';
+const SchoolSettings = lazy(() => import('./pages/admin/SchoolSettings'));
 
 // 404
-import NotFound              from './pages/NotFound';
+const NotFound = lazy(() => import('./pages/NotFound'));
 
 
 function App() {
@@ -111,10 +115,12 @@ function App() {
     <AuthProvider>
       <SchoolProvider>
       <NotificationProvider>
+      <ToastProvider>
         <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <InstallPrompt />
           <SessionTimeoutWarning />
           <ErrorBoundary>
+          <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* Marketing Routes - Public */}
             <Route path="/marketing/home" element={
@@ -147,7 +153,7 @@ function App() {
                 <BookDemoPage />
               </MarketingLayout>
             } />
-            
+
             {/* Root: redirect to login when running as installed PWA (standalone),
                 otherwise show the marketing home page for browser visitors */}
             <Route path="/" element={
@@ -262,8 +268,10 @@ function App() {
             {/* 404 */}
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </Suspense>
           </ErrorBoundary>
         </Router>
+      </ToastProvider>
       </NotificationProvider>
       </SchoolProvider>
     </AuthProvider>

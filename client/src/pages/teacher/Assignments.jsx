@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '../../components/Layout';
-import Toast from '../../components/Toast';
+import Button from '../../components/Button';
 import { teacherAPI } from '../../services/api';
+import { useToast } from '../../context/ToastContext';
 
 const getGrade = (marks, max) => {
   if (!marks || !max) return '';
@@ -31,7 +32,6 @@ export default function Assignments() {
   const [saving,         setSaving]         = useState(false);
   const [deleteTarget,   setDeleteTarget]   = useState(null);
   const [deleting,       setDeleting]       = useState(false);
-  const [toast,          setToast]          = useState(null);
   // Submissions panel
   const [viewSubmissions,  setViewSubmissions]  = useState(null); // assignment object
   const [submissions,      setSubmissions]      = useState([]);
@@ -40,10 +40,7 @@ export default function Assignments() {
   const [gradeForm,        setGradeForm]        = useState({ grade: '', feedback: '' });
   const [savingGrade,      setSavingGrade]      = useState(false);
 
-  const showToast = (message, type = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3500);
-  };
+  const showToast = useToast();
 
   // ── Load assignments from backend ─────────────────────────────────────────
   const load = useCallback(async () => {
@@ -154,8 +151,6 @@ export default function Assignments() {
 
   return (
     <Layout pageTitle="Assignments">
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-
       <div className="page-header">
         <h1>Assignments</h1>
         <p>Create and manage assignments for your classes</p>
@@ -184,26 +179,26 @@ export default function Assignments() {
             <option>Completed</option>
             <option>Overdue</option>
           </select>
-          <button className="btn-add" onClick={() => { setFormData(EMPTY_FORM); setShowModal(true); }}>
+          <Button variant="add" onClick={() => { setFormData(EMPTY_FORM); setShowModal(true); }}>
             <span className="material-icons">add</span> New Assignment
-          </button>
+          </Button>
         </div>
 
         {loading ? (
-          <div style={{ padding: 40, textAlign: 'center', color: '#a0aec0' }}>
+          <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
             <span className="material-icons" style={{ fontSize: 36, display: 'block', marginBottom: 8, animation: 'spin 1s linear infinite' }}>autorenew</span>
             Loading assignments…
           </div>
         ) : filtered.length === 0 ? (
           <div className="empty-state" style={{ padding: 48, textAlign: 'center' }}>
-            <span className="material-icons" style={{ fontSize: 48, color: '#e2e8f0', display: 'block', marginBottom: 12 }}>assignment</span>
-            <p style={{ color: '#a0aec0', marginBottom: 16 }}>
+            <span className="material-icons" style={{ fontSize: 48, color: 'var(--border-strong)', display: 'block', marginBottom: 12 }}>assignment</span>
+            <p style={{ color: 'var(--text-muted)', marginBottom: 16 }}>
               {filterStatus ? `No ${filterStatus.toLowerCase()} assignments.` : 'No assignments yet.'}
             </p>
             {!filterStatus && (
-              <button className="btn-add" onClick={() => setShowModal(true)}>
+              <Button variant="add" onClick={() => setShowModal(true)}>
                 <span className="material-icons">add</span> Create First Assignment
-              </button>
+              </Button>
             )}
           </div>
         ) : (
@@ -214,35 +209,35 @@ export default function Assignments() {
               const total     = a.totalStudents  ?? a.total     ?? 0;
               const pct       = total > 0 ? Math.round((submitted / total) * 100) : 0;
               return (
-                <div key={a.id} style={{ border: '1px solid #f0f4f8', borderRadius: 12, padding: 20 }}>
+                <div key={a.id} style={{ border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
                         <div style={{ width: 36, height: 36, borderRadius: 10, background: color + '15', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                           <span className="material-icons" style={{ color, fontSize: 18 }}>assignment</span>
                         </div>
-                        <h3 style={{ fontSize: 15, fontWeight: 700, color: '#2d3748', margin: 0 }}>{a.title}</h3>
+                        <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{a.title}</h3>
                       </div>
                       {a.description && (
-                        <p style={{ fontSize: 13, color: '#718096', margin: '0 0 10px', lineHeight: 1.5 }}>{a.description}</p>
+                        <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 10px', lineHeight: 1.5 }}>{a.description}</p>
                       )}
                       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
                         {a.classSection && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <span className="material-icons" style={{ fontSize: 14, color: '#a0aec0' }}>class</span>
-                            <span style={{ fontSize: 12, color: '#718096' }}>Class {a.classSection}</span>
+                            <span className="material-icons" style={{ fontSize: 14, color: 'var(--text-muted)' }}>class</span>
+                            <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Class {a.classSection}</span>
                           </div>
                         )}
                         {a.dueDate && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <span className="material-icons" style={{ fontSize: 14, color: '#a0aec0' }}>calendar_today</span>
-                            <span style={{ fontSize: 12, color: '#718096' }}>Due: {a.dueDate}</span>
+                            <span className="material-icons" style={{ fontSize: 14, color: 'var(--text-muted)' }}>calendar_today</span>
+                            <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Due: {a.dueDate}</span>
                           </div>
                         )}
                         {total > 0 && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <span className="material-icons" style={{ fontSize: 14, color: '#a0aec0' }}>assignment_turned_in</span>
-                            <span style={{ fontSize: 12, color: '#718096' }}>{submitted}/{total} submitted</span>
+                            <span className="material-icons" style={{ fontSize: 14, color: 'var(--text-muted)' }}>assignment_turned_in</span>
+                            <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{submitted}/{total} submitted</span>
                           </div>
                         )}
                       </div>
@@ -257,13 +252,11 @@ export default function Assignments() {
                           <span className="material-icons" style={{ fontSize: 15 }}>assignment_turned_in</span>
                           Submissions
                         </button>
-                        <button
-                          className="action-btn action-btn-delete"
+                        <Button
+                          variant="delete"
                           title="Delete Assignment"
                           onClick={() => setDeleteTarget(a)}
-                        >
-                          <span className="material-icons">delete</span>
-                        </button>
+                        />
                       </div>
                     </div>
                   </div>
@@ -291,7 +284,7 @@ export default function Assignments() {
             <div className="modal-header">
               <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Create New Assignment</h3>
               <button onClick={() => setShowModal(false)} disabled={saving}
-                style={{ border: 'none', background: 'none', fontSize: 20, cursor: 'pointer', color: '#718096' }}>✕</button>
+                style={{ border: 'none', background: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--text-secondary)' }}>✕</button>
             </div>
             <form onSubmit={handleSave}>
               <div className="modal-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -351,7 +344,7 @@ export default function Assignments() {
               </div>
               <div className="modal-footer">
                 <button type="button" onClick={() => setShowModal(false)} disabled={saving}
-                  style={{ padding: '9px 20px', border: '1.5px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: 'pointer', fontWeight: 600 }}>
+                  style={{ padding: '9px 20px', border: '1.5px solid var(--border-strong)', borderRadius: 8, background: 'var(--surface)', cursor: 'pointer', fontWeight: 600 }}>
                   Cancel
                 </button>
                 <button type="submit" disabled={saving}
@@ -373,31 +366,31 @@ export default function Assignments() {
             <div className="modal-header">
               <div>
                 <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Submissions</h3>
-                <div style={{ fontSize: 12, color: '#718096', marginTop: 2 }}>{viewSubmissions.title} — Class {viewSubmissions.className}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{viewSubmissions.title} — Class {viewSubmissions.className}</div>
               </div>
               <button onClick={() => setViewSubmissions(null)}
-                style={{ border: 'none', background: 'none', fontSize: 20, cursor: 'pointer', color: '#718096' }}>✕</button>
+                style={{ border: 'none', background: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--text-secondary)' }}>✕</button>
             </div>
             <div style={{ padding: '16px 24px', maxHeight: '60vh', overflowY: 'auto' }}>
               {loadingSubs ? (
-                <div style={{ textAlign: 'center', padding: 32, color: '#a0aec0' }}>Loading…</div>
+                <div style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)' }}>Loading…</div>
               ) : submissions.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: 32 }}>
-                  <span className="material-icons" style={{ fontSize: 40, color: '#e2e8f0', display: 'block', marginBottom: 8 }}>inbox</span>
-                  <div style={{ color: '#a0aec0', fontSize: 13 }}>No submissions yet</div>
+                  <span className="material-icons" style={{ fontSize: 40, color: 'var(--border-strong)', display: 'block', marginBottom: 8 }}>inbox</span>
+                  <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No submissions yet</div>
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {submissions.map(sub => (
-                    <div key={sub.id} style={{ border: '1px solid #f0f4f8', borderRadius: 10, padding: 14 }}>
+                    <div key={sub.id} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 14 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 700, fontSize: 14, color: '#2d3748' }}>{sub.studentName}</div>
-                          <div style={{ fontSize: 12, color: '#718096', marginTop: 2 }}>
+                          <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>{sub.studentName}</div>
+                          <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
                             {sub.classSection} · {sub.submittedAt ? new Date(sub.submittedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
                           </div>
                           {sub.notes && (
-                            <div style={{ fontSize: 13, color: '#4a5568', marginTop: 6, padding: '6px 10px', background: '#f7fafc', borderRadius: 6 }}>{sub.notes}</div>
+                            <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 6, padding: '6px 10px', background: 'var(--surface-alt)', borderRadius: 6 }}>{sub.notes}</div>
                           )}
                           {sub.grade && (
                             <span style={{ display: 'inline-block', marginTop: 6, padding: '2px 10px', borderRadius: 12, fontSize: 12, fontWeight: 700, background: '#ebf8ff', color: '#2b6cb0' }}>Grade: {sub.grade}</span>
@@ -413,7 +406,7 @@ export default function Assignments() {
                               maxLength={50}
                               value={gradeForm.grade}
                               onChange={e => setGradeForm(f => ({ ...f, grade: e.target.value }))}
-                              style={{ width: '100%', padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12, marginBottom: 6, boxSizing: 'border-box' }}
+                              style={{ width: '100%', padding: '6px 10px', border: '1px solid var(--border-strong)', borderRadius: 6, fontSize: 12, marginBottom: 6, boxSizing: 'border-box' }}
                             />
                             <textarea
                               placeholder="Feedback (optional)"
@@ -421,7 +414,7 @@ export default function Assignments() {
                               maxLength={2000}
                               value={gradeForm.feedback}
                               onChange={e => setGradeForm(f => ({ ...f, feedback: e.target.value }))}
-                              style={{ width: '100%', padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 12, resize: 'none', marginBottom: 6, boxSizing: 'border-box' }}
+                              style={{ width: '100%', padding: '6px 10px', border: '1px solid var(--border-strong)', borderRadius: 6, fontSize: 12, resize: 'none', marginBottom: 6, boxSizing: 'border-box' }}
                             />
                             <div style={{ display: 'flex', gap: 6 }}>
                               <button onClick={() => handleGrade(sub)} disabled={savingGrade}
@@ -429,7 +422,7 @@ export default function Assignments() {
                                 {savingGrade ? 'Saving…' : 'Save'}
                               </button>
                               <button onClick={() => setGradingId(null)}
-                                style={{ padding: '6px 10px', background: '#edf2f7', color: '#4a5568', border: 'none', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>
+                                style={{ padding: '6px 10px', background: 'var(--surface-alt)', color: 'var(--text-secondary)', border: 'none', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>
                                 Cancel
                               </button>
                             </div>
@@ -449,9 +442,9 @@ export default function Assignments() {
               )}
             </div>
             <div className="modal-footer" style={{ justifyContent: 'flex-end' }}>
-              <span style={{ fontSize: 13, color: '#718096', marginRight: 'auto' }}>{submissions.length} submission{submissions.length !== 1 ? 's' : ''}</span>
+              <span style={{ fontSize: 13, color: 'var(--text-secondary)', marginRight: 'auto' }}>{submissions.length} submission{submissions.length !== 1 ? 's' : ''}</span>
               <button onClick={() => setViewSubmissions(null)}
-                style={{ padding: '8px 20px', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
+                style={{ padding: '8px 20px', border: '1px solid var(--border-strong)', borderRadius: 8, background: 'var(--surface)', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
                 Close
               </button>
             </div>
@@ -468,13 +461,13 @@ export default function Assignments() {
                 <span className="material-icons" style={{ fontSize: 32, color: '#e53e3e' }}>delete_outline</span>
               </div>
               <h3 style={{ fontSize: 17, fontWeight: 700, margin: '0 0 8px' }}>Delete Assignment?</h3>
-              <p style={{ fontSize: 13, color: '#718096', margin: '0 0 4px' }}>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 4px' }}>
                 <strong>{deleteTarget.title}</strong>
               </p>
-              <p style={{ fontSize: 12, color: '#a0aec0', margin: '0 0 24px' }}>This action cannot be undone.</p>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 24px' }}>This action cannot be undone.</p>
               <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
                 <button onClick={() => setDeleteTarget(null)} disabled={deleting}
-                  style={{ padding: '9px 22px', border: '1.5px solid #e2e8f0', borderRadius: 9, background: '#fff', fontWeight: 600, fontSize: 13, cursor: deleting ? 'not-allowed' : 'pointer' }}>
+                  style={{ padding: '9px 22px', border: '1.5px solid var(--border-strong)', borderRadius: 9, background: 'var(--surface)', fontWeight: 600, fontSize: 13, cursor: deleting ? 'not-allowed' : 'pointer' }}>
                   Cancel
                 </button>
                 <button onClick={handleDelete} disabled={deleting}

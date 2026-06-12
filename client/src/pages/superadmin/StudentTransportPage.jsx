@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '../../components/Layout';
-import Toast from '../../components/Toast';
 import { transportAPI } from '../../services/api';
+import { useToast } from '../../context/ToastContext';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const ITEMS_PER_PAGE = 8;
@@ -33,7 +33,7 @@ const STATUS_COLORS = {
 // ─── Helper components ────────────────────────────────────────────────────────
 function FieldLabel({ children, required }) {
   return (
-    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#4a5568', marginBottom: '6px' }}>
+    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
       {children} {required && <span style={{ color: '#e53e3e' }}>*</span>}
     </label>
   );
@@ -45,9 +45,9 @@ function FormInput({ label, required, error, style, ...props }) {
       {label && <FieldLabel required={required}>{label}</FieldLabel>}
       <input
         style={{
-          width: '100%', padding: '9px 12px', border: `1px solid ${error ? '#fc8181' : '#e2e8f0'}`,
-          borderRadius: '8px', fontSize: '13px', outline: 'none', background: props.disabled ? '#f7fafc' : '#fff',
-          boxSizing: 'border-box', color: '#2d3748', transition: 'border-color 0.15s',
+          width: '100%', padding: '9px 12px', border: `1px solid ${error ? '#fc8181' : 'var(--border-strong)'}`,
+          borderRadius: '8px', fontSize: '13px', outline: 'none', background: props.disabled ? 'var(--surface-alt)' : 'var(--surface)',
+          boxSizing: 'border-box', color: 'var(--text-primary)', transition: 'border-color 0.15s',
         }}
         {...props}
       />
@@ -62,9 +62,9 @@ function FormSelect({ label, required, error, children, style, ...props }) {
       {label && <FieldLabel required={required}>{label}</FieldLabel>}
       <select
         style={{
-          width: '100%', padding: '9px 12px', border: `1px solid ${error ? '#fc8181' : '#e2e8f0'}`,
-          borderRadius: '8px', fontSize: '13px', outline: 'none', background: props.disabled ? '#f7fafc' : '#fff',
-          boxSizing: 'border-box', color: '#2d3748', cursor: props.disabled ? 'not-allowed' : 'pointer',
+          width: '100%', padding: '9px 12px', border: `1px solid ${error ? '#fc8181' : 'var(--border-strong)'}`,
+          borderRadius: '8px', fontSize: '13px', outline: 'none', background: props.disabled ? 'var(--surface-alt)' : 'var(--surface)',
+          boxSizing: 'border-box', color: 'var(--text-primary)', cursor: props.disabled ? 'not-allowed' : 'pointer',
         }}
         {...props}
       >
@@ -82,9 +82,9 @@ function FormTextarea({ label, required, error, style, ...props }) {
       <textarea
         rows={3}
         style={{
-          width: '100%', padding: '9px 12px', border: `1px solid ${error ? '#fc8181' : '#e2e8f0'}`,
+          width: '100%', padding: '9px 12px', border: `1px solid ${error ? '#fc8181' : 'var(--border-strong)'}`,
           borderRadius: '8px', fontSize: '13px', outline: 'none', resize: 'vertical',
-          boxSizing: 'border-box', color: '#2d3748', fontFamily: 'inherit',
+          boxSizing: 'border-box', color: 'var(--text-primary)', fontFamily: 'inherit',
         }}
         {...props}
       />
@@ -96,9 +96,9 @@ function FormTextarea({ label, required, error, style, ...props }) {
 // ─── Section Divider ──────────────────────────────────────────────────────────
 function SectionTitle({ icon, children }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '20px 0 12px', borderBottom: '2px solid #edf2f7', paddingBottom: '8px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '20px 0 12px', borderBottom: '2px solid var(--border)', paddingBottom: '8px' }}>
       <span className="material-icons" style={{ fontSize: '18px', color: '#0de1e8' }}>{icon}</span>
-      <span style={{ fontWeight: 700, fontSize: '13px', color: '#2d3748', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{children}</span>
+      <span style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{children}</span>
     </div>
   );
 }
@@ -109,8 +109,6 @@ export default function StudentTransportPage() {
   const [routes, setRoutes] = useState([]);
   const [stops, setStops] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState(null);
-  const toastTimerRef = useRef(null);
 
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -130,13 +128,7 @@ export default function StudentTransportPage() {
   const [filterStatus, setFilterStatus] = useState('All');
   const [page, setPage] = useState(1);
 
-  useEffect(() => () => clearTimeout(toastTimerRef.current), []);
-
-  const showToast = useCallback((message, type = 'success') => {
-    clearTimeout(toastTimerRef.current);
-    setToast({ message, type });
-    toastTimerRef.current = setTimeout(() => setToast(null), 3500);
-  }, []);
+  const showToast = useToast();
 
   // ── Data loading ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -298,8 +290,6 @@ export default function StudentTransportPage() {
   // ─── Render ──────────────────────────────────────────────────────────────────
   return (
     <Layout pageTitle="Student Transport">
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-
       {/* Header */}
       <div className="page-header">
         <h1>Student Transport Management</h1>
@@ -322,18 +312,18 @@ export default function StudentTransportPage() {
       {/* Toolbar */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
         <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
-          <span className="material-icons" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#a0aec0', fontSize: '18px' }}>search</span>
+          <span className="material-icons" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: '18px' }}>search</span>
           <input
             value={search}
             onChange={e => { setSearch(e.target.value); setPage(1); }}
             placeholder="Search by student, route or stop..."
-            style={{ width: '100%', padding: '9px 12px 9px 36px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+            style={{ width: '100%', padding: '9px 12px 9px 36px', border: '1px solid var(--border-strong)', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
           />
         </div>
         <select
           value={filterStatus}
           onChange={e => { setFilterStatus(e.target.value); setPage(1); }}
-          style={{ padding: '9px 14px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', outline: 'none', cursor: 'pointer' }}
+          style={{ padding: '9px 14px', border: '1px solid var(--border-strong)', borderRadius: '8px', fontSize: '13px', outline: 'none', cursor: 'pointer' }}
         >
           <option value="All">All Status</option>
           <option value="Active">Active</option>
@@ -349,35 +339,35 @@ export default function StudentTransportPage() {
       </div>
 
       {/* Table */}
-      <div style={{ background: '#fff', borderRadius: '14px', boxShadow: '0 1px 4px rgba(0,0,0,0.07)', border: '1px solid #f0f4f8', overflow: 'hidden' }}>
+      <div style={{ background: 'var(--surface)', borderRadius: '14px', boxShadow: '0 1px 4px rgba(0,0,0,0.07)', border: '1px solid var(--border)', overflow: 'hidden' }}>
         {loading ? (
-          <div style={{ padding: '60px', textAlign: 'center', color: '#a0aec0' }}>
+          <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>
             <span className="material-icons" style={{ fontSize: '40px', display: 'block', marginBottom: '12px' }}>hourglass_empty</span>
             Loading...
           </div>
         ) : paginated.length === 0 ? (
-          <div style={{ padding: '60px', textAlign: 'center', color: '#a0aec0' }}>
-            <span className="material-icons" style={{ fontSize: '48px', display: 'block', marginBottom: '12px', color: '#e2e8f0' }}>directions_bus</span>
-            <p style={{ fontWeight: 600, color: '#718096' }}>No transport records found</p>
+          <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>
+            <span className="material-icons" style={{ fontSize: '48px', display: 'block', marginBottom: '12px', color: 'var(--border-strong)' }}>directions_bus</span>
+            <p style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>No transport records found</p>
             <p style={{ fontSize: '13px' }}>Click "Add Record" to create the first entry.</p>
           </div>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
             <thead>
-              <tr style={{ background: '#f7fafc', borderBottom: '1px solid #edf2f7' }}>
+              <tr style={{ background: 'var(--surface-alt)', borderBottom: '1px solid var(--border)' }}>
                 {['Student', 'Class', 'Transport', 'Route / Stop', 'Pickup', 'Drop', 'Fee (₹)', 'Status', 'Actions'].map(h => (
-                  <th key={h} style={{ padding: '12px 14px', textAlign: 'left', fontWeight: 700, color: '#4a5568', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>{h}</th>
+                  <th key={h} style={{ padding: '12px 14px', textAlign: 'left', fontWeight: 700, color: 'var(--text-secondary)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {paginated.map((rec, i) => (
-                <tr key={rec.id} style={{ borderBottom: '1px solid #f0f4f8', background: i % 2 === 0 ? '#fff' : '#fafbfc' }}>
+                <tr key={rec.id} style={{ borderBottom: '1px solid var(--border)', background: i % 2 === 0 ? 'var(--surface)' : 'var(--surface-alt)' }}>
                   <td style={{ padding: '13px 14px' }}>
-                    <div style={{ fontWeight: 600, color: '#2d3748' }}>{rec.studentName}</div>
-                    <div style={{ fontSize: '11px', color: '#a0aec0' }}>ID: {rec.studentId}</div>
+                    <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{rec.studentName}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>ID: {rec.studentId}</div>
                   </td>
-                  <td style={{ padding: '13px 14px', color: '#4a5568' }}>{rec.studentClass || '—'}</td>
+                  <td style={{ padding: '13px 14px', color: 'var(--text-secondary)' }}>{rec.studentClass || '—'}</td>
                   <td style={{ padding: '13px 14px' }}>
                     <span style={{
                       padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 600,
@@ -390,14 +380,14 @@ export default function StudentTransportPage() {
                   <td style={{ padding: '13px 14px' }}>
                     {rec.transportNeeded ? (
                       <>
-                        <div style={{ fontWeight: 600, color: '#2d3748' }}>{rec.routeName || '—'}</div>
-                        <div style={{ fontSize: '11px', color: '#a0aec0' }}>{rec.stopName || '—'}</div>
+                        <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{rec.routeName || '—'}</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{rec.stopName || '—'}</div>
                       </>
-                    ) : <span style={{ color: '#a0aec0' }}>N/A</span>}
+                    ) : <span style={{ color: 'var(--text-muted)' }}>N/A</span>}
                   </td>
-                  <td style={{ padding: '13px 14px', color: '#4a5568', whiteSpace: 'nowrap' }}>{rec.pickupTime || '—'}</td>
-                  <td style={{ padding: '13px 14px', color: '#4a5568', whiteSpace: 'nowrap' }}>{rec.dropTime || '—'}</td>
-                  <td style={{ padding: '13px 14px', color: '#2d3748', fontWeight: 600 }}>
+                  <td style={{ padding: '13px 14px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{rec.pickupTime || '—'}</td>
+                  <td style={{ padding: '13px 14px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{rec.dropTime || '—'}</td>
+                  <td style={{ padding: '13px 14px', color: 'var(--text-primary)', fontWeight: 600 }}>
                     {rec.fee != null ? Number(rec.fee).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '—'}
                   </td>
                   <td style={{ padding: '13px 14px' }}>
@@ -430,23 +420,23 @@ export default function StudentTransportPage() {
 
         {/* Pagination */}
         {!loading && filteredRecords.length > ITEMS_PER_PAGE && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderTop: '1px solid #edf2f7' }}>
-            <span style={{ fontSize: '12px', color: '#718096' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderTop: '1px solid var(--border)' }}>
+            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
               Showing {(page - 1) * ITEMS_PER_PAGE + 1}–{Math.min(page * ITEMS_PER_PAGE, filteredRecords.length)} of {filteredRecords.length}
             </span>
             <div style={{ display: 'flex', gap: '6px' }}>
               <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-                style={{ padding: '5px 12px', border: '1px solid #e2e8f0', borderRadius: '6px', background: page === 1 ? '#f7fafc' : '#fff', cursor: page === 1 ? 'not-allowed' : 'pointer', fontSize: '13px' }}>
+                style={{ padding: '5px 12px', border: '1px solid var(--border-strong)', borderRadius: '6px', background: page === 1 ? 'var(--surface-alt)' : 'var(--surface)', cursor: page === 1 ? 'not-allowed' : 'pointer', fontSize: '13px' }}>
                 ‹ Prev
               </button>
               {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
                 <button key={p} onClick={() => setPage(p)}
-                  style={{ padding: '5px 12px', border: '1px solid', borderColor: page === p ? '#0de1e8' : '#e2e8f0', borderRadius: '6px', background: page === p ? '#0de1e8' : '#fff', color: page === p ? '#fff' : '#4a5568', cursor: 'pointer', fontSize: '13px', fontWeight: page === p ? 700 : 400 }}>
+                  style={{ padding: '5px 12px', border: '1px solid', borderColor: page === p ? '#0de1e8' : 'var(--border-strong)', borderRadius: '6px', background: page === p ? '#0de1e8' : 'var(--surface)', color: page === p ? '#fff' : 'var(--text-secondary)', cursor: 'pointer', fontSize: '13px', fontWeight: page === p ? 700 : 400 }}>
                   {p}
                 </button>
               ))}
               <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-                style={{ padding: '5px 12px', border: '1px solid #e2e8f0', borderRadius: '6px', background: page === totalPages ? '#f7fafc' : '#fff', cursor: page === totalPages ? 'not-allowed' : 'pointer', fontSize: '13px' }}>
+                style={{ padding: '5px 12px', border: '1px solid var(--border-strong)', borderRadius: '6px', background: page === totalPages ? 'var(--surface-alt)' : 'var(--surface)', cursor: page === totalPages ? 'not-allowed' : 'pointer', fontSize: '13px' }}>
                 Next ›
               </button>
             </div>
@@ -457,19 +447,19 @@ export default function StudentTransportPage() {
       {/* ── Add / Edit Modal ── */}
       {modalOpen && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-          <div className="modal-card" style={{ background: '#fff', borderRadius: '16px', width: '100%', maxWidth: '760px', maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+          <div className="modal-card" style={{ background: 'var(--surface)', borderRadius: '16px', width: '100%', maxWidth: '760px', maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
             {/* Modal header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px', borderBottom: '1px solid #edf2f7' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <span className="material-icons" style={{ color: '#0de1e8', fontSize: '22px' }}>directions_bus</span>
                 <div>
-                  <h2 style={{ margin: 0, fontSize: '17px', fontWeight: 700, color: '#2d3748' }}>
+                  <h2 style={{ margin: 0, fontSize: '17px', fontWeight: 700, color: 'var(--text-primary)' }}>
                     {editId ? 'Edit Transport Record' : 'New Transport Record'}
                   </h2>
-                  <p style={{ margin: 0, fontSize: '12px', color: '#a0aec0' }}>Fill in the student transportation details below</p>
+                  <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-muted)' }}>Fill in the student transportation details below</p>
                 </div>
               </div>
-              <button onClick={() => setModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#a0aec0' }}>
+              <button onClick={() => setModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
                 <span className="material-icons">close</span>
               </button>
             </div>
@@ -515,10 +505,10 @@ export default function StudentTransportPage() {
                       type="button"
                       onClick={() => handleChange('transportNeeded', isYes)}
                       style={{
-                        flex: 1, padding: '12px', border: `2px solid ${active ? '#0de1e8' : '#e2e8f0'}`,
-                        borderRadius: '10px', background: active ? '#f0faf0' : '#fafafa',
+                        flex: 1, padding: '12px', border: `2px solid ${active ? '#0de1e8' : 'var(--border-strong)'}`,
+                        borderRadius: '10px', background: active ? '#f0faf0' : 'var(--surface-alt)',
                         cursor: 'pointer', fontWeight: 700, fontSize: '14px',
-                        color: active ? '#276749' : '#a0aec0', transition: 'all 0.15s',
+                        color: active ? '#276749' : 'var(--text-muted)', transition: 'all 0.15s',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                       }}
                     >
@@ -615,7 +605,7 @@ export default function StudentTransportPage() {
                       {form.routeId && (() => {
                         const route = routes.find(r => String(r.id) === String(form.routeId));
                         return route?.distance ? (
-                          <p style={{ fontSize: '11px', color: '#718096', marginTop: '4px' }}>
+                          <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>
                             Route distance: <strong>{route.distance}</strong>
                           </p>
                         ) : null;
@@ -675,8 +665,8 @@ export default function StudentTransportPage() {
             </div>
 
             {/* Modal footer */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', padding: '16px 24px', borderTop: '1px solid #edf2f7', background: '#f7fafc' }}>
-              <button onClick={() => setModalOpen(false)} style={{ padding: '9px 22px', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#fff', fontWeight: 600, fontSize: '13px', cursor: 'pointer', color: '#4a5568' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', padding: '16px 24px', borderTop: '1px solid var(--border)', background: 'var(--surface-alt)' }}>
+              <button onClick={() => setModalOpen(false)} style={{ padding: '9px 22px', border: '1px solid var(--border-strong)', borderRadius: '8px', background: 'var(--surface)', fontWeight: 600, fontSize: '13px', cursor: 'pointer', color: 'var(--text-secondary)' }}>
                 Cancel
               </button>
               <button
@@ -695,7 +685,7 @@ export default function StudentTransportPage() {
       {/* ── View Detail Modal ── */}
       {viewRecord && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-          <div className="modal-card" style={{ background: '#fff', borderRadius: '16px', width: '100%', maxWidth: '600px', maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+          <div className="modal-card" style={{ background: 'var(--surface)', borderRadius: '16px', width: '100%', maxWidth: '600px', maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px', borderBottom: '1px solid #edf2f7', background: 'linear-gradient(135deg,#0de1e8 0%,#5ba832 100%)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -727,14 +717,14 @@ export default function StudentTransportPage() {
               )}
               <DetailRow icon="verified" label="Status" value={viewRecord.status} />
             </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', padding: '14px 24px', borderTop: '1px solid #edf2f7' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', padding: '14px 24px', borderTop: '1px solid var(--border)' }}>
               <button onClick={() => { setViewRecord(null); openEdit(viewRecord); }}
                 style={{ padding: '8px 18px', border: 'none', borderRadius: '8px', background: '#0de1e8', color: '#fff', fontWeight: 600, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span className="material-icons" style={{ fontSize: '15px' }}>edit</span>
                 Edit Record
               </button>
               <button onClick={() => setViewRecord(null)}
-                style={{ padding: '8px 18px', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#fff', fontWeight: 600, fontSize: '13px', cursor: 'pointer', color: '#4a5568' }}>
+                style={{ padding: '8px 18px', border: '1px solid var(--border-strong)', borderRadius: '8px', background: 'var(--surface)', fontWeight: 600, fontSize: '13px', cursor: 'pointer', color: 'var(--text-secondary)' }}>
                 Close
               </button>
             </div>
@@ -745,17 +735,17 @@ export default function StudentTransportPage() {
       {/* ── Delete Confirmation ── */}
       {deleteId && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ background: '#fff', borderRadius: '14px', padding: '32px', maxWidth: '420px', width: '90%', textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+          <div style={{ background: 'var(--surface)', borderRadius: '14px', padding: '32px', maxWidth: '420px', width: '90%', textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
             <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#fff5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
               <span className="material-icons" style={{ fontSize: '28px', color: '#e53e3e' }}>delete_forever</span>
             </div>
-            <h3 style={{ margin: '0 0 8px', color: '#2d3748' }}>Delete Record</h3>
-            <p style={{ margin: '0 0 24px', color: '#718096', fontSize: '14px' }}>
+            <h3 style={{ margin: '0 0 8px', color: 'var(--text-primary)' }}>Delete Record</h3>
+            <p style={{ margin: '0 0 24px', color: 'var(--text-secondary)', fontSize: '14px' }}>
               This transport record will be permanently deleted. This action cannot be undone.
             </p>
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
               <button onClick={() => setDeleteId(null)}
-                style={{ padding: '9px 22px', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#fff', fontWeight: 600, fontSize: '13px', cursor: 'pointer', color: '#4a5568' }}>
+                style={{ padding: '9px 22px', border: '1px solid var(--border-strong)', borderRadius: '8px', background: 'var(--surface)', fontWeight: 600, fontSize: '13px', cursor: 'pointer', color: 'var(--text-secondary)' }}>
                 Cancel
               </button>
               <button onClick={handleDelete}
@@ -777,13 +767,13 @@ export default function StudentTransportPage() {
 // ─── Detail row helper ────────────────────────────────────────────────────────
 function DetailRow({ icon, label, value, highlight }) {
   return (
-    <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', padding: '10px 0', borderBottom: '1px solid #f0f4f8' }}>
+    <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
       <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#f0faf0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
         <span className="material-icons" style={{ fontSize: '16px', color: '#0de1e8' }}>{icon}</span>
       </div>
       <div>
-        <div style={{ fontSize: '11px', color: '#a0aec0', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</div>
-        <div style={{ fontSize: '14px', color: highlight ? '#276749' : '#2d3748', fontWeight: highlight ? 700 : 500, marginTop: '2px' }}>
+        <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</div>
+        <div style={{ fontSize: '14px', color: highlight ? '#276749' : 'var(--text-primary)', fontWeight: highlight ? 700 : 500, marginTop: '2px' }}>
           {value || '—'}
         </div>
       </div>

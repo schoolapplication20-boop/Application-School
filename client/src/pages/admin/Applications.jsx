@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
-import Toast from '../../components/Toast';
+import Button from '../../components/Button';
 import { applicationAPI, adminAPI } from '../../services/api';
+import { useToast } from '../../context/ToastContext';
 import { sortClasses } from '../../utils/classOrder';
 
 // Normalize API response: convert PENDING→Pending, format dateApplied from createdAt
@@ -40,7 +41,7 @@ const StatusBadge = ({ status }) => {
 // Reusable doc upload box
 const DocUpload = ({ label, required, fileRef, fileName, onFileChange, onRemove }) => (
   <div>
-    <label style={{ fontSize: '13px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '6px' }}>
+    <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
       {label}{required ? ' *' : ' (optional)'}
     </label>
     {fileName ? (
@@ -53,11 +54,11 @@ const DocUpload = ({ label, required, fileRef, fileName, onFileChange, onRemove 
       </div>
     ) : (
       <div onClick={() => fileRef.current?.click()}
-        style={{ border: '2px dashed #e2e8f0', borderRadius: '8px', padding: '14px 12px', textAlign: 'center', cursor: 'pointer', transition: 'border-color 0.2s' }}
+        style={{ border: '2px dashed var(--border-strong)', borderRadius: '8px', padding: '14px 12px', textAlign: 'center', cursor: 'pointer', transition: 'border-color 0.2s' }}
         onMouseEnter={e => e.currentTarget.style.borderColor = '#0de1e8'}
-        onMouseLeave={e => e.currentTarget.style.borderColor = '#e2e8f0'}>
-        <span className="material-icons" style={{ color: '#a0aec0', fontSize: '22px', display: 'block', marginBottom: '4px' }}>upload_file</span>
-        <span style={{ fontSize: '12px', color: '#a0aec0' }}>Click to upload</span>
+        onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border-strong)'}>
+        <span className="material-icons" style={{ color: 'var(--text-muted)', fontSize: '22px', display: 'block', marginBottom: '4px' }}>upload_file</span>
+        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Click to upload</span>
         <input ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png" style={{ display: 'none' }} onChange={onFileChange} />
       </div>
     )}
@@ -65,9 +66,9 @@ const DocUpload = ({ label, required, fileRef, fileName, onFileChange, onRemove 
 );
 
 const SectionLabel = ({ icon, label }) => (
-  <div style={{ gridColumn: '1/-1', display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 0 4px', borderBottom: '1.5px solid #e2e8f0', marginBottom: '2px' }}>
+  <div style={{ gridColumn: '1/-1', display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 0 4px', borderBottom: '1.5px solid var(--border-strong)', marginBottom: '2px' }}>
     <span className="material-icons" style={{ color: '#0de1e8', fontSize: '18px' }}>{icon}</span>
-    <span style={{ fontSize: '12px', fontWeight: 700, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</span>
+    <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</span>
   </div>
 );
 
@@ -83,7 +84,6 @@ const Applications = () => {
   const [rejectReason, setRejectReason] = useState('');
   const [formData, setFormData]         = useState(emptyForm);
   const [formErrors, setFormErrors]     = useState({});
-  const [toast, setToast]               = useState(null);
   const [saving, setSaving]             = useState(false);
   const [classList, setClassList]       = useState([]);
 
@@ -93,7 +93,7 @@ const Applications = () => {
 
   const navigate = useNavigate();
 
-  const showToast = (message, type = 'success') => setToast({ message, type });
+  const showToast = useToast();
 
   // Load all applications from the API
   const loadApplications = useCallback(async () => {
@@ -247,7 +247,7 @@ const Applications = () => {
   };
 
   const iStyle = (err) => ({
-    padding: '10px 12px', border: `1.5px solid ${err ? '#e53e3e' : '#e2e8f0'}`,
+    padding: '10px 12px', border: `1.5px solid ${err ? '#e53e3e' : 'var(--border-strong)'}`,
     borderRadius: '8px', fontSize: '13px', width: '100%', outline: 'none',
     fontFamily: 'Poppins, sans-serif', boxSizing: 'border-box',
   });
@@ -255,16 +255,14 @@ const Applications = () => {
 
   return (
     <Layout pageTitle="Student Applications">
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
         <div className="page-header" style={{ marginBottom: 0 }}>
           <h1>Student Applications</h1>
           <p>Review and manage new student admission applications</p>
         </div>
-        <button className="btn-add" onClick={() => { setFormData(emptyForm); setFormErrors({}); setShowAddModal(true); }}>
+        <Button variant="add" onClick={() => { setFormData(emptyForm); setFormErrors({}); setShowAddModal(true); }}>
           <span className="material-icons">add</span> New Application
-        </button>
+        </Button>
       </div>
 
       {/* Stats */}
@@ -291,8 +289,8 @@ const Applications = () => {
           {['All', 'Pending', 'Approved', 'Rejected'].map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)} style={{
               padding: '8px 18px', border: 'none', borderRadius: '8px', cursor: 'pointer',
-              background: activeTab === tab ? '#0de1e8' : '#f7fafc',
-              color: activeTab === tab ? '#fff' : '#718096',
+              background: activeTab === tab ? '#0de1e8' : 'var(--surface-alt)',
+              color: activeTab === tab ? '#fff' : 'var(--text-secondary)',
               fontWeight: 600, fontSize: '13px',
             }}>
               {tab} {tab === 'All' ? `(${stats.total})` : tab === 'Pending' ? `(${stats.pending})` : tab === 'Approved' ? `(${stats.approved})` : `(${stats.rejected})`}
@@ -320,12 +318,12 @@ const Applications = () => {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={8} style={{ textAlign: 'center', padding: '40px', color: '#a0aec0' }}>Loading applications...</td></tr>
+                <tr><td colSpan={8} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>Loading applications...</td></tr>
               ) : filtered.length === 0 ? (
                 <tr><td colSpan={8}><div className="empty-state"><span className="material-icons">search_off</span><h3>No applications found</h3></div></td></tr>
               ) : filtered.map((app, i) => (
                 <tr key={app.id}>
-                  <td style={{ color: '#a0aec0', fontSize: '12px' }}>{i + 1}</td>
+                  <td style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{i + 1}</td>
                   <td>
                     <div className="student-cell">
                       <div className="student-avatar-sm">{app.studentName.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase()}</div>
@@ -337,14 +335,12 @@ const Applications = () => {
                   </td>
                   <td style={{ fontWeight: 600, fontSize: '13px' }}>{app.classApplied}</td>
                   <td style={{ fontSize: '13px' }}>{app.fatherName || app.parentName}</td>
-                  <td style={{ fontSize: '12px', color: '#718096' }}>{app.fatherPhone || app.mobile}</td>
-                  <td style={{ fontSize: '12px', color: '#718096' }}>{app.dateApplied}</td>
+                  <td style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{app.fatherPhone || app.mobile}</td>
+                  <td style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{app.dateApplied}</td>
                   <td><StatusBadge status={app.status} /></td>
                   <td>
                     <div className="action-btns">
-                      <button className="action-btn action-btn-view" title="View" onClick={() => { setSelectedApp(app); setShowViewModal(true); }}>
-                        <span className="material-icons">visibility</span>
-                      </button>
+                      <Button variant="view" onClick={() => { setSelectedApp(app); setShowViewModal(true); }} />
                       {app.status === 'Pending' && (
                         <>
                           <button title="Approve" onClick={() => handleApprove(app.id)} style={{ padding: '4px 10px', background: '#0de1e815', border: 'none', borderRadius: '6px', color: '#0de1e8', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
@@ -355,9 +351,7 @@ const Applications = () => {
                           </button>
                         </>
                       )}
-                      <button className="action-btn action-btn-delete" title="Delete" onClick={() => handleDelete(app.id)}>
-                        <span className="material-icons">delete</span>
-                      </button>
+                      <Button variant="delete" onClick={() => handleDelete(app.id)} />
                     </div>
                   </td>
                 </tr>
@@ -383,14 +377,14 @@ const Applications = () => {
                   <SectionLabel icon="person" label="Student Information" />
 
                   <div>
-                    <label style={{ fontSize: '13px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '4px' }}>Student Name *</label>
+                    <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Student Name *</label>
                     <input style={iStyle(formErrors.studentName)} placeholder="Full name" value={formData.studentName}
                       onChange={e => setFormData({ ...formData, studentName: e.target.value })} />
                     {formErrors.studentName && <p style={errStyle}>{formErrors.studentName}</p>}
                   </div>
 
                   <div>
-                    <label style={{ fontSize: '13px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '4px' }}>Date of Birth *</label>
+                    <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Date of Birth *</label>
                     <input type="date" style={iStyle(formErrors.dob)} value={formData.dob}
                       max={new Date().toISOString().slice(0, 10)}
                       onChange={e => setFormData({ ...formData, dob: e.target.value })} />
@@ -398,14 +392,14 @@ const Applications = () => {
                   </div>
 
                   <div>
-                    <label style={{ fontSize: '13px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '4px' }}>Gender</label>
+                    <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Gender</label>
                     <select style={iStyle()} value={formData.gender} onChange={e => setFormData({ ...formData, gender: e.target.value })}>
                       <option>Male</option><option>Female</option><option>Other</option>
                     </select>
                   </div>
 
                   <div>
-                    <label style={{ fontSize: '13px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '4px' }}>Class Applied</label>
+                    <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Class Applied</label>
                     <select style={iStyle()} value={formData.classApplied} onChange={e => setFormData({ ...formData, classApplied: e.target.value })}>
                       <option value="">Select a class</option>
                       {[...new Set(classList.map(c => c.name))].map(name => (
@@ -415,13 +409,13 @@ const Applications = () => {
                   </div>
 
                   <div>
-                    <label style={{ fontSize: '13px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '4px' }}>Previous School</label>
+                    <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Previous School</label>
                     <input style={iStyle()} placeholder="Previous school name" value={formData.prevSchool}
                       onChange={e => setFormData({ ...formData, prevSchool: e.target.value })} />
                   </div>
 
                   <div>
-                    <label style={{ fontSize: '13px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '4px' }}>Email</label>
+                    <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Email</label>
                     <input type="email" style={iStyle()} placeholder="Parent email" value={formData.email}
                       onChange={e => setFormData({ ...formData, email: e.target.value })} />
                   </div>
@@ -431,14 +425,14 @@ const Applications = () => {
 
                   {/* Father */}
                   <div>
-                    <label style={{ fontSize: '13px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '4px' }}>Father's Name *</label>
+                    <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Father's Name *</label>
                     <input style={iStyle(formErrors.fatherName)} placeholder="Father's full name" value={formData.fatherName}
                       onChange={e => setFormData({ ...formData, fatherName: e.target.value })} />
                     {formErrors.fatherName && <p style={errStyle}>{formErrors.fatherName}</p>}
                   </div>
 
                   <div>
-                    <label style={{ fontSize: '13px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '4px' }}>Father's Phone *</label>
+                    <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Father's Phone *</label>
                     <input type="tel" style={iStyle(formErrors.fatherPhone)} placeholder="10-digit number" maxLength={10}
                       value={formData.fatherPhone}
                       onChange={e => setFormData({ ...formData, fatherPhone: e.target.value.replace(/\D/g, '').slice(0, 10) })} />
@@ -447,14 +441,14 @@ const Applications = () => {
 
                   {/* Mother */}
                   <div>
-                    <label style={{ fontSize: '13px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '4px' }}>Mother's Name *</label>
+                    <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Mother's Name *</label>
                     <input style={iStyle(formErrors.motherName)} placeholder="Mother's full name" value={formData.motherName}
                       onChange={e => setFormData({ ...formData, motherName: e.target.value })} />
                     {formErrors.motherName && <p style={errStyle}>{formErrors.motherName}</p>}
                   </div>
 
                   <div>
-                    <label style={{ fontSize: '13px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '4px' }}>Mother's Phone *</label>
+                    <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Mother's Phone *</label>
                     <input type="tel" style={iStyle(formErrors.motherPhone)} placeholder="10-digit number" maxLength={10}
                       value={formData.motherPhone}
                       onChange={e => setFormData({ ...formData, motherPhone: e.target.value.replace(/\D/g, '').slice(0, 10) })} />
@@ -463,13 +457,13 @@ const Applications = () => {
 
                   {/* Guardian (optional) */}
                   <div>
-                    <label style={{ fontSize: '13px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '4px' }}>Guardian Name <span style={{ color: '#a0aec0', fontWeight: 400 }}>(optional)</span></label>
+                    <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Guardian Name <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(optional)</span></label>
                     <input style={iStyle()} placeholder="Guardian's full name" value={formData.guardianName}
                       onChange={e => setFormData({ ...formData, guardianName: e.target.value })} />
                   </div>
 
                   <div>
-                    <label style={{ fontSize: '13px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '4px' }}>Guardian Phone <span style={{ color: '#a0aec0', fontWeight: 400 }}>(optional)</span></label>
+                    <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Guardian Phone <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(optional)</span></label>
                     <input type="tel" style={iStyle(formErrors.guardianPhone)} placeholder="10-digit number" maxLength={10}
                       value={formData.guardianPhone}
                       onChange={e => setFormData({ ...formData, guardianPhone: e.target.value.replace(/\D/g, '').slice(0, 10) })} />
@@ -480,7 +474,7 @@ const Applications = () => {
                   <SectionLabel icon="location_on" label="Address" />
 
                   <div style={{ gridColumn: '1/-1' }}>
-                    <label style={{ fontSize: '13px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '4px' }}>Permanent Address *</label>
+                    <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Permanent Address *</label>
                     <textarea style={{ ...iStyle(formErrors.permanentAddress), minHeight: '64px', resize: 'vertical' }}
                       placeholder="Enter permanent address" maxLength={500} value={formData.permanentAddress}
                       onChange={e => setFormData({ ...formData, permanentAddress: e.target.value })} />
@@ -488,7 +482,7 @@ const Applications = () => {
                   </div>
 
                   <div style={{ gridColumn: '1/-1' }}>
-                    <label style={{ fontSize: '13px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '4px' }}>Alternate Address <span style={{ color: '#a0aec0', fontWeight: 400 }}>(optional)</span></label>
+                    <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Alternate Address <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(optional)</span></label>
                     <textarea style={{ ...iStyle(), minHeight: '64px', resize: 'vertical' }}
                       placeholder="Enter alternate address" maxLength={500} value={formData.alternateAddress}
                       onChange={e => setFormData({ ...formData, alternateAddress: e.target.value })} />
@@ -527,7 +521,7 @@ const Applications = () => {
                 </div>
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowAddModal(false)}>Cancel</button>
+                <Button variant="secondary" onClick={() => setShowAddModal(false)}>Cancel</Button>
                 <button type="submit" disabled={saving} className="btn" style={{ background: saving ? '#a0aec0' : '#0de1e8', color: '#fff', fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer' }}>
                   {saving ? 'Submitting...' : 'Submit Application'}
                 </button>
@@ -547,32 +541,32 @@ const Applications = () => {
             </div>
             <div className="modal-body" style={{ maxHeight: '72vh', overflowY: 'auto', padding: '20px 24px' }}>
               {/* Avatar + name */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px', padding: '16px', background: '#f7fafc', borderRadius: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px', padding: '16px', background: 'var(--surface-alt)', borderRadius: '12px' }}>
                 <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'linear-gradient(135deg,#0de1e8,#0eb5da)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '20px', fontWeight: 700 }}>
                   {selectedApp.studentName.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase()}
                 </div>
                 <div>
-                  <div style={{ fontSize: '17px', fontWeight: 700, color: '#2d3748' }}>{selectedApp.studentName}</div>
-                  <div style={{ fontSize: '13px', color: '#718096' }}>{selectedApp.classApplied} • Applied {selectedApp.dateApplied}</div>
+                  <div style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text-primary)' }}>{selectedApp.studentName}</div>
+                  <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{selectedApp.classApplied} • Applied {selectedApp.dateApplied}</div>
                   <StatusBadge status={selectedApp.status} />
                 </div>
               </div>
 
               {/* Student Info */}
-              <div style={{ fontSize: '12px', fontWeight: 700, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span className="material-icons" style={{ color: '#0de1e8', fontSize: '16px' }}>person</span> Student Information
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
                 {[['Gender', selectedApp.gender], ['Date of Birth', selectedApp.dob], ['Previous School', selectedApp.prevSchool], ['Email', selectedApp.email]].map(([l, v]) => v ? (
-                  <div key={l} style={{ padding: '10px 12px', background: '#f7fafc', borderRadius: '8px' }}>
-                    <div style={{ fontSize: '11px', color: '#a0aec0', fontWeight: 600, textTransform: 'uppercase' }}>{l}</div>
-                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#2d3748', marginTop: '3px' }}>{v}</div>
+                  <div key={l} style={{ padding: '10px 12px', background: 'var(--surface-alt)', borderRadius: '8px' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>{l}</div>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginTop: '3px' }}>{v}</div>
                   </div>
                 ) : null)}
               </div>
 
               {/* Parent & Guardian */}
-              <div style={{ fontSize: '12px', fontWeight: 700, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span className="material-icons" style={{ color: '#0de1e8', fontSize: '16px' }}>family_restroom</span> Parent & Guardian
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
@@ -584,22 +578,22 @@ const Applications = () => {
                   ['Guardian Name', selectedApp.guardianName],
                   ['Guardian Phone', selectedApp.guardianPhone],
                 ].map(([l, v]) => v ? (
-                  <div key={l} style={{ padding: '10px 12px', background: '#f7fafc', borderRadius: '8px' }}>
-                    <div style={{ fontSize: '11px', color: '#a0aec0', fontWeight: 600, textTransform: 'uppercase' }}>{l}</div>
-                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#2d3748', marginTop: '3px' }}>{v}</div>
+                  <div key={l} style={{ padding: '10px 12px', background: 'var(--surface-alt)', borderRadius: '8px' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>{l}</div>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginTop: '3px' }}>{v}</div>
                   </div>
                 ) : null)}
               </div>
 
               {/* Address */}
-              <div style={{ fontSize: '12px', fontWeight: 700, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span className="material-icons" style={{ color: '#0de1e8', fontSize: '16px' }}>location_on</span> Address
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
                 {[['Permanent Address', selectedApp.permanentAddress || selectedApp.address], ['Alternate Address', selectedApp.alternateAddress]].map(([l, v]) => v ? (
-                  <div key={l} style={{ padding: '10px 12px', background: '#f7fafc', borderRadius: '8px' }}>
-                    <div style={{ fontSize: '11px', color: '#a0aec0', fontWeight: 600, textTransform: 'uppercase' }}>{l}</div>
-                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#2d3748', marginTop: '3px' }}>{v}</div>
+                  <div key={l} style={{ padding: '10px 12px', background: 'var(--surface-alt)', borderRadius: '8px' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>{l}</div>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginTop: '3px' }}>{v}</div>
                   </div>
                 ) : null)}
               </div>
@@ -607,7 +601,7 @@ const Applications = () => {
               {/* Documents */}
               {(selectedApp.idProofName || selectedApp.tcDocName || selectedApp.bonafideDocName) && (
                 <>
-                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <span className="material-icons" style={{ color: '#0de1e8', fontSize: '16px' }}>folder</span> Documents
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -615,7 +609,7 @@ const Applications = () => {
                       <div key={l} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', background: '#f0fff4', border: '1px solid #c6f6d5', borderRadius: '8px' }}>
                         <span className="material-icons" style={{ color: '#0de1e8', fontSize: '20px' }}>description</span>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: '11px', color: '#a0aec0', fontWeight: 600 }}>{l}</div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>{l}</div>
                           <div style={{ fontSize: '13px', fontWeight: 600, color: '#276749' }}>{name}</div>
                         </div>
                         {data && (
@@ -628,7 +622,7 @@ const Applications = () => {
               )}
             </div>
             <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setShowViewModal(false)}>Close</button>
+              <Button variant="secondary" onClick={() => setShowViewModal(false)}>Close</Button>
               {selectedApp.status === 'Pending' && (
                 <>
                   <button className="btn" style={{ background: '#0de1e8', color: '#fff', fontWeight: 600 }}
@@ -651,11 +645,11 @@ const Applications = () => {
               <button className="modal-close" onClick={() => setShowRejectModal(false)}><span className="material-icons">close</span></button>
             </div>
             <div className="modal-body" style={{ padding: '16px 24px' }}>
-              <p style={{ fontSize: '14px', color: '#718096', marginBottom: '12px' }}>
+              <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
                 Rejecting application for <strong>{selectedApp?.studentName}</strong>. Please provide a reason:
               </p>
               <textarea
-                style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', minHeight: '100px', resize: 'vertical', fontFamily: 'Poppins, sans-serif', outline: 'none', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '10px 12px', border: '1.5px solid var(--border-strong)', borderRadius: '8px', fontSize: '13px', minHeight: '100px', resize: 'vertical', fontFamily: 'Poppins, sans-serif', outline: 'none', boxSizing: 'border-box' }}
                 placeholder="Enter rejection reason..."
                 maxLength={1000}
                 value={rejectReason}
@@ -664,7 +658,7 @@ const Applications = () => {
               {formErrors.reason && <p style={{ fontSize: '11px', color: '#e53e3e', marginTop: '4px' }}>{formErrors.reason}</p>}
             </div>
             <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setShowRejectModal(false)}>Cancel</button>
+              <Button variant="secondary" onClick={() => setShowRejectModal(false)}>Cancel</Button>
               <button className="btn" style={{ background: '#e53e3e', color: '#fff', fontWeight: 600 }} onClick={handleReject}>Confirm Rejection</button>
             </div>
           </div>

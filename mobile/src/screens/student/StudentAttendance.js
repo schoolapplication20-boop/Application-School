@@ -1,6 +1,7 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
-import api from '../../services/api';
+import useCachedFetch from '../../hooks/useCachedFetch';
+import OfflineBanner from '../../components/OfflineBanner';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const STATUS_COLORS = {
@@ -13,18 +14,12 @@ const STATUS_COLORS = {
 };
 
 export default function StudentAttendance() {
-  const [records, setRecords] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
 
-  useEffect(() => {
-    const today = new Date().toISOString().split('T')[0];
-    const start = `${new Date().getFullYear()}-01-01`;
-    api.get('/api/student/attendance', { params: { startDate: start, endDate: today } })
-      .then(res => setRecords(res.data.data || []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+  const today = new Date().toISOString().split('T')[0];
+  const start = `${new Date().getFullYear()}-01-01`;
+  const { data, loading, isOffline } = useCachedFetch('/api/student/attendance', { startDate: start, endDate: today });
+  const records = data || [];
 
   const filtered = useMemo(() =>
     records.filter(r => r.date && new Date(r.date + 'T00:00:00').getMonth() === selectedMonth),
@@ -43,6 +38,7 @@ export default function StudentAttendance() {
 
   return (
     <View style={styles.container}>
+      <OfflineBanner visible={isOffline} />
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.monthRow}>
         {MONTHS.map((m, i) => (
           <TouchableOpacity

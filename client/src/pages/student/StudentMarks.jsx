@@ -68,7 +68,7 @@ const pct = (marks, max) => {
 const ProgressBar = ({ value }) => {
   const color = value >= 90 ? '#276749' : value >= 75 ? '#2b6cb0' : value >= 50 ? '#c05621' : '#c53030';
   return (
-    <div style={{ background: '#e2e8f0', borderRadius: 8, height: 8, overflow: 'hidden', minWidth: 80 }}>
+    <div style={{ background: 'var(--border-strong)', borderRadius: 8, height: 8, overflow: 'hidden', minWidth: 80 }}>
       <div style={{ width: `${Math.min(value, 100)}%`, background: color, height: '100%', borderRadius: 8, transition: 'width 0.6s ease' }} />
     </div>
   );
@@ -126,13 +126,13 @@ export default function StudentMarks() {
 
         {/* Header */}
         <div style={{ marginBottom: 20 }}>
-          <h1 style={{ fontSize: 26, fontWeight: 700, color: '#1a202c', margin: 0 }}>My Marks</h1>
-          <p style={{ color: '#718096', marginTop: 4, fontSize: 14 }}>View your marks by subject and exam</p>
+          <h1 style={{ fontSize: 26, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>My Marks</h1>
+          <p style={{ color: 'var(--text-secondary)', marginTop: 4, fontSize: 14 }}>View your marks by subject and exam</p>
         </div>
 
         {/* Grade Scale Legend — uses school's configured scale */}
-        <div style={{ background: '#f8fafc', borderRadius: 10, padding: '10px 16px', marginBottom: 20, display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: '#718096', marginRight: 4 }}>GRADE SCALE:</span>
+        <div style={{ background: 'var(--surface-alt)', borderRadius: 10, padding: '10px 16px', marginBottom: 20, display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', marginRight: 4 }}>GRADE SCALE:</span>
           {[...scale].sort((a, b) => b.minPercentage - a.minPercentage).map((s, i, arr) => {
             const upper = i === 0 ? 100 : (arr[i - 1].minPercentage - 1);
             const label = `${s.minPercentage}%–${upper}%`;
@@ -146,7 +146,7 @@ export default function StudentMarks() {
         </div>
 
         {loading && (
-          <div style={{ textAlign: 'center', padding: 60, color: '#718096' }}>
+          <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-secondary)' }}>
             <span className="material-icons" style={{ fontSize: 48, marginBottom: 12, display: 'block' }}>hourglass_top</span>
             Loading your marks...
           </div>
@@ -160,9 +160,9 @@ export default function StudentMarks() {
         )}
 
         {!loading && !error && marks.length === 0 && (
-          <div style={{ textAlign: 'center', padding: 60, color: '#718096' }}>
-            <span className="material-icons" style={{ fontSize: 56, marginBottom: 12, display: 'block', color: '#cbd5e0' }}>grade</span>
-            <p style={{ fontSize: 18, fontWeight: 600, color: '#4a5568' }}>No marks available yet</p>
+          <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-secondary)' }}>
+            <span className="material-icons" style={{ fontSize: 56, marginBottom: 12, display: 'block', color: 'var(--text-muted)' }}>grade</span>
+            <p style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-secondary)' }}>No marks available yet</p>
             <p style={{ fontSize: 14 }}>Your teacher hasn't entered any marks yet. Check back after your exams.</p>
           </div>
         )}
@@ -171,21 +171,21 @@ export default function StudentMarks() {
           <>
             {/* Summary cards */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 24 }}>
-              <div style={{ background: '#fff', borderRadius: 12, padding: '20px 24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: '4px solid #4299e1' }}>
-                <div style={{ fontSize: 13, color: '#718096', marginBottom: 4 }}>Total Marks</div>
-                <div style={{ fontSize: 28, fontWeight: 700, color: '#2d3748' }}>{totalObtained}<span style={{ fontSize: 15, color: '#718096' }}>/{totalMax}</span></div>
+              <div style={{ background: 'var(--surface)', borderRadius: 12, padding: '20px 24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: '4px solid #4299e1' }}>
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 4 }}>Total Marks</div>
+                <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--text-primary)' }}>{totalObtained}<span style={{ fontSize: 15, color: 'var(--text-secondary)' }}>/{totalMax}</span></div>
               </div>
-              <div style={{ background: '#fff', borderRadius: 12, padding: '20px 24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: '4px solid #48bb78' }}>
-                <div style={{ fontSize: 13, color: '#718096', marginBottom: 4 }}>Overall %</div>
-                <div style={{ fontSize: 28, fontWeight: 700, color: '#2d3748' }}>{overallPct}%</div>
+              <div style={{ background: 'var(--surface)', borderRadius: 12, padding: '20px 24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: '4px solid #48bb78' }}>
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 4 }}>Overall %</div>
+                <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--text-primary)' }}>{overallPct}%</div>
               </div>
-              <div style={{ background: '#fff', borderRadius: 12, padding: '20px 24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: '4px solid #9f7aea' }}>
-                <div style={{ fontSize: 13, color: '#718096', marginBottom: 4 }}>Overall Grade</div>
-                <div style={{ fontSize: 28, fontWeight: 700, color: GRADE_COLOR[overallGrade]?.color || '#2d3748' }}>{overallGrade}</div>
+              <div style={{ background: 'var(--surface)', borderRadius: 12, padding: '20px 24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: '4px solid #9f7aea' }}>
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 4 }}>Overall Grade</div>
+                <div style={{ fontSize: 28, fontWeight: 700, color: GRADE_COLOR[overallGrade]?.color || 'var(--text-primary)' }}>{overallGrade}</div>
               </div>
-              <div style={{ background: '#fff', borderRadius: 12, padding: '20px 24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: '4px solid #ed8936' }}>
-                <div style={{ fontSize: 13, color: '#718096', marginBottom: 4 }}>Subjects</div>
-                <div style={{ fontSize: 28, fontWeight: 700, color: '#2d3748' }}>{Object.keys(bySubject).length}</div>
+              <div style={{ background: 'var(--surface)', borderRadius: 12, padding: '20px 24px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: '4px solid #ed8936' }}>
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 4 }}>Subjects</div>
+                <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--text-primary)' }}>{Object.keys(bySubject).length}</div>
               </div>
             </div>
 
@@ -196,8 +196,8 @@ export default function StudentMarks() {
                   <button key={et} onClick={() => setFilterExam(et)}
                     style={{
                       padding: '6px 14px', borderRadius: 20, fontSize: 13, fontWeight: 500, cursor: 'pointer', border: 'none',
-                      background: filterExam === et ? '#4299e1' : '#edf2f7',
-                      color: filterExam === et ? '#fff' : '#4a5568',
+                      background: filterExam === et ? '#4299e1' : 'var(--surface-alt)',
+                      color: filterExam === et ? '#fff' : 'var(--text-secondary)',
                     }}>
                     {et === 'ALL' ? 'All Exams' : (EXAM_TYPE_LABEL[et] || et)}
                   </button>
@@ -211,8 +211,8 @@ export default function StudentMarks() {
                 ].map(v => (
                   <button key={v.key} onClick={() => setView(v.key)}
                     style={{ padding: '6px 14px', borderRadius: 8, fontSize: 13, cursor: 'pointer', border: 'none',
-                      background: view === v.key ? '#2d3748' : '#edf2f7',
-                      color: view === v.key ? '#fff' : '#4a5568' }}>
+                      background: view === v.key ? '#2d3748' : 'var(--surface-alt)',
+                      color: view === v.key ? '#fff' : 'var(--text-secondary)' }}>
                     <span className="material-icons" style={{ fontSize: 16, verticalAlign: 'middle', marginRight: 4 }}>{v.icon}</span>
                     {v.label}
                   </button>
@@ -233,22 +233,22 @@ export default function StudentMarks() {
                   }, 'F');
 
                   return (
-                    <div key={subject} style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+                    <div key={subject} style={{ background: 'var(--surface)', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
                       {/* Subject header */}
-                      <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                      <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
                         <span className="material-icons" style={{ color: '#4299e1', fontSize: 22 }}>menu_book</span>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 700, fontSize: 16, color: '#2d3748' }}>{subject}</div>
-                          <div style={{ fontSize: 12, color: '#718096' }}>{entries.length} exam{entries.length > 1 ? 's' : ''}</div>
+                          <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text-primary)' }}>{subject}</div>
+                          <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{entries.length} exam{entries.length > 1 ? 's' : ''}</div>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
                           <div style={{ textAlign: 'right' }}>
-                            <div style={{ fontSize: 13, color: '#718096' }}>Total</div>
-                            <div style={{ fontWeight: 700, fontSize: 18, color: '#2d3748' }}>{subTotal}/{subMax}</div>
+                            <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Total</div>
+                            <div style={{ fontWeight: 700, fontSize: 18, color: 'var(--text-primary)' }}>{subTotal}/{subMax}</div>
                           </div>
                           <div style={{ textAlign: 'right' }}>
-                            <div style={{ fontSize: 13, color: '#718096' }}>Percentage</div>
-                            <div style={{ fontWeight: 700, fontSize: 18, color: '#2d3748' }}>{subPct}%</div>
+                            <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Percentage</div>
+                            <div style={{ fontWeight: 700, fontSize: 18, color: 'var(--text-primary)' }}>{subPct}%</div>
                           </div>
                           <div style={{ background: GRADE_COLOR[bestGrade]?.bg || '#f7fafc', color: GRADE_COLOR[bestGrade]?.color || '#2d3748',
                             padding: '6px 14px', borderRadius: 20, fontWeight: 700, fontSize: 18 }}>
@@ -258,7 +258,7 @@ export default function StudentMarks() {
                       </div>
 
                       {/* Progress bar */}
-                      <div style={{ padding: '8px 20px', background: '#f8fafc' }}>
+                      <div style={{ padding: '8px 20px', background: 'var(--surface-alt)' }}>
                         <ProgressBar value={subPct} />
                       </div>
 
@@ -266,9 +266,9 @@ export default function StudentMarks() {
                       <div style={{ overflowX: 'auto' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                           <thead>
-                            <tr style={{ background: '#f8fafc' }}>
+                            <tr style={{ background: 'var(--surface-alt)' }}>
                               {['Exam Type', 'Date', 'Marks', 'Max Marks', '%', 'Grade'].map(h => (
-                                <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontSize: 12, fontWeight: 600, color: '#718096', borderBottom: '1px solid #edf2f7' }}>{h}</th>
+                                <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)' }}>{h}</th>
                               ))}
                             </tr>
                           </thead>
@@ -278,16 +278,16 @@ export default function StudentMarks() {
                               const gc = GRADE_COLOR[e.grade] || {};
                               const ec = EXAM_TYPE_COLOR[e.examType] || { bg: '#f7fafc', color: '#4a5568' };
                               return (
-                                <tr key={i} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                                <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
                                   <td style={{ padding: '12px 16px' }}>
                                     <span style={{ background: ec.bg, color: ec.color, padding: '3px 10px', borderRadius: 12, fontSize: 12, fontWeight: 600 }}>
                                       {EXAM_TYPE_LABEL[e.examType] || e.examType}
                                     </span>
                                   </td>
-                                  <td style={{ padding: '12px 16px', fontSize: 13, color: '#4a5568' }}>{fmt(e.examDate)}</td>
-                                  <td style={{ padding: '12px 16px', fontWeight: 700, fontSize: 15, color: '#2d3748' }}>{e.marks ?? '—'}</td>
-                                  <td style={{ padding: '12px 16px', fontSize: 13, color: '#718096' }}>{e.maxMarks ?? '—'}</td>
-                                  <td style={{ padding: '12px 16px', fontSize: 13, color: '#2d3748' }}>{e.maxMarks ? `${p}%` : '—'}</td>
+                                  <td style={{ padding: '12px 16px', fontSize: 13, color: 'var(--text-secondary)' }}>{fmt(e.examDate)}</td>
+                                  <td style={{ padding: '12px 16px', fontWeight: 700, fontSize: 15, color: 'var(--text-primary)' }}>{e.marks ?? '—'}</td>
+                                  <td style={{ padding: '12px 16px', fontSize: 13, color: 'var(--text-secondary)' }}>{e.maxMarks ?? '—'}</td>
+                                  <td style={{ padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)' }}>{e.maxMarks ? `${p}%` : '—'}</td>
                                   <td style={{ padding: '12px 16px' }}>
                                     <span style={{ background: gc.bg || '#f7fafc', color: gc.color || '#2d3748', padding: '3px 12px', borderRadius: 12, fontWeight: 700, fontSize: 13 }}>
                                       {e.grade || '—'}
@@ -315,37 +315,37 @@ export default function StudentMarks() {
                   const ec        = EXAM_TYPE_COLOR[examType] || { bg: '#f7fafc', color: '#4a5568' };
 
                   return (
-                    <div key={examType} style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+                    <div key={examType} style={{ background: 'var(--surface)', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
                       {/* Exam header */}
-                      <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
+                      <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
                         background: ec.bg }}>
                         <span className="material-icons" style={{ color: ec.color, fontSize: 22 }}>event</span>
                         <div style={{ flex: 1 }}>
                           <div style={{ fontWeight: 700, fontSize: 16, color: ec.color }}>{EXAM_TYPE_LABEL[examType] || examType}</div>
-                          <div style={{ fontSize: 12, color: '#718096' }}>{entries.length} subject{entries.length > 1 ? 's' : ''}</div>
+                          <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{entries.length} subject{entries.length > 1 ? 's' : ''}</div>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
                           <div style={{ textAlign: 'right' }}>
-                            <div style={{ fontSize: 13, color: '#718096' }}>Total</div>
-                            <div style={{ fontWeight: 700, fontSize: 18, color: '#2d3748' }}>{examTotal}/{examMax}</div>
+                            <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Total</div>
+                            <div style={{ fontWeight: 700, fontSize: 18, color: 'var(--text-primary)' }}>{examTotal}/{examMax}</div>
                           </div>
                           <div style={{ textAlign: 'right' }}>
-                            <div style={{ fontSize: 13, color: '#718096' }}>Percentage</div>
-                            <div style={{ fontWeight: 700, fontSize: 18, color: '#2d3748' }}>{examPct}%</div>
+                            <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Percentage</div>
+                            <div style={{ fontWeight: 700, fontSize: 18, color: 'var(--text-primary)' }}>{examPct}%</div>
                           </div>
                         </div>
                       </div>
 
-                      <div style={{ padding: '8px 20px', background: '#f8fafc' }}>
+                      <div style={{ padding: '8px 20px', background: 'var(--surface-alt)' }}>
                         <ProgressBar value={examPct} />
                       </div>
 
                       <div style={{ overflowX: 'auto' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                           <thead>
-                            <tr style={{ background: '#f8fafc' }}>
+                            <tr style={{ background: 'var(--surface-alt)' }}>
                               {['Subject', 'Date', 'Marks', 'Max Marks', '%', 'Grade'].map(h => (
-                                <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontSize: 12, fontWeight: 600, color: '#718096', borderBottom: '1px solid #edf2f7' }}>{h}</th>
+                                <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)' }}>{h}</th>
                               ))}
                             </tr>
                           </thead>
@@ -354,12 +354,12 @@ export default function StudentMarks() {
                               const p  = pct(e.marks, e.maxMarks);
                               const gc = GRADE_COLOR[e.grade] || {};
                               return (
-                                <tr key={i} style={{ borderBottom: '1px solid #f0f0f0' }}>
-                                  <td style={{ padding: '12px 16px', fontWeight: 600, color: '#2d3748' }}>{e.subject || '—'}</td>
-                                  <td style={{ padding: '12px 16px', fontSize: 13, color: '#4a5568' }}>{fmt(e.examDate)}</td>
-                                  <td style={{ padding: '12px 16px', fontWeight: 700, fontSize: 15, color: '#2d3748' }}>{e.marks ?? '—'}</td>
-                                  <td style={{ padding: '12px 16px', fontSize: 13, color: '#718096' }}>{e.maxMarks ?? '—'}</td>
-                                  <td style={{ padding: '12px 16px', fontSize: 13, color: '#2d3748' }}>{e.maxMarks ? `${p}%` : '—'}</td>
+                                <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
+                                  <td style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text-primary)' }}>{e.subject || '—'}</td>
+                                  <td style={{ padding: '12px 16px', fontSize: 13, color: 'var(--text-secondary)' }}>{fmt(e.examDate)}</td>
+                                  <td style={{ padding: '12px 16px', fontWeight: 700, fontSize: 15, color: 'var(--text-primary)' }}>{e.marks ?? '—'}</td>
+                                  <td style={{ padding: '12px 16px', fontSize: 13, color: 'var(--text-secondary)' }}>{e.maxMarks ?? '—'}</td>
+                                  <td style={{ padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)' }}>{e.maxMarks ? `${p}%` : '—'}</td>
                                   <td style={{ padding: '12px 16px' }}>
                                     <span style={{ background: gc.bg || '#f7fafc', color: gc.color || '#2d3748', padding: '3px 12px', borderRadius: 12, fontWeight: 700, fontSize: 13 }}>
                                       {e.grade || '—'}
@@ -369,12 +369,12 @@ export default function StudentMarks() {
                               );
                             })}
                             {/* Total row */}
-                            <tr style={{ background: '#f8fafc', fontWeight: 700 }}>
-                              <td style={{ padding: '12px 16px', color: '#2d3748' }}>Total</td>
+                            <tr style={{ background: 'var(--surface-alt)', fontWeight: 700 }}>
+                              <td style={{ padding: '12px 16px', color: 'var(--text-primary)' }}>Total</td>
                               <td style={{ padding: '12px 16px' }} />
-                              <td style={{ padding: '12px 16px', fontSize: 15, color: '#2d3748' }}>{examTotal}</td>
-                              <td style={{ padding: '12px 16px', color: '#718096' }}>{examMax}</td>
-                              <td style={{ padding: '12px 16px', color: '#2d3748' }}>{examPct}%</td>
+                              <td style={{ padding: '12px 16px', fontSize: 15, color: 'var(--text-primary)' }}>{examTotal}</td>
+                              <td style={{ padding: '12px 16px', color: 'var(--text-secondary)' }}>{examMax}</td>
+                              <td style={{ padding: '12px 16px', color: 'var(--text-primary)' }}>{examPct}%</td>
                               <td style={{ padding: '12px 16px' }}>
                                 <span style={{ background: GRADE_COLOR[overallGrade]?.bg, color: GRADE_COLOR[overallGrade]?.color, padding: '3px 12px', borderRadius: 12, fontWeight: 700, fontSize: 13 }}>
                                   {overallGrade}
@@ -407,12 +407,12 @@ export default function StudentMarks() {
               });
 
               return (
-                <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
-                  <div style={{ fontWeight: 700, fontSize: 16, color: '#2d3748', marginBottom: 20 }}>
+                <div style={{ background: 'var(--surface)', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', padding: 24 }}>
+                  <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text-primary)', marginBottom: 20 }}>
                     Academic Performance Trend
                   </div>
                   {chartData.length < 2 ? (
-                    <div style={{ textAlign: 'center', color: '#718096', padding: 40 }}>
+                    <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: 40 }}>
                       Not enough exam data to show a trend. You need marks from at least 2 different exam types.
                     </div>
                   ) : (

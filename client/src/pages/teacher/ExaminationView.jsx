@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Layout from '../../components/Layout';
-import Toast from '../../components/Toast';
+import Button from '../../components/Button';
 import { examinationAPI } from '../../services/api';
+import { useToast } from '../../context/ToastContext';
 import '../../styles/examination.css';
 
 const MOCK_SCHEDULES = [
@@ -27,13 +28,12 @@ export default function ExaminationView() {
   const [schedules,    setSchedules]    = useState([]);
   const [certificates, setCertificates] = useState([]);
   const [loading,      setLoading]      = useState(true);
-  const [toast,        setToast]        = useState(null);
   const [search,       setSearch]       = useState('');
   const [verifyCertId, setVerifyCertId] = useState('');
   const [verifyResult, setVerifyResult] = useState(null);
   const [verifying,    setVerifying]    = useState(false);
 
-  const showToast = (msg, type = 'success') => setToast({ message: msg, type });
+  const showToast = useToast();
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -97,8 +97,6 @@ export default function ExaminationView() {
 
   return (
     <Layout>
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-
       <div className="exam-page-header">
         <div>
           <h1 className="exam-page-title">
@@ -229,9 +227,7 @@ export default function ExaminationView() {
                         </td>
                         <td>
                           {!c.verifiedBy && (
-                            <button className="exam-action-btn success" title="Verify Certificate" onClick={() => handleVerify(c.id)}>
-                              <span className="material-icons">verified</span>
-                            </button>
+                            <Button variant="exam-action" className="success" icon="verified" title="Verify Certificate" onClick={() => handleVerify(c.id)} />
                           )}
                         </td>
                       </tr>
@@ -247,17 +243,17 @@ export default function ExaminationView() {
       {/* ── VERIFY CERT ID TAB ── */}
       {activeTab === 'verify' && (
         <div style={{ maxWidth: '520px' }}>
-          <div style={{ background: '#fff', border: '1px solid #f0f4f8', borderRadius: '14px', padding: '28px', boxShadow: '0 1px 6px rgba(0,0,0,0.06)' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1a202c', margin: '0 0 6px' }}>Verify Certificate by ID</h3>
-            <p style={{ fontSize: '13px', color: '#718096', margin: '0 0 20px' }}>Enter the certificate ID printed on the document to verify its authenticity.</p>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '14px', padding: '28px', boxShadow: '0 1px 6px rgba(0,0,0,0.06)' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 6px' }}>Verify Certificate by ID</h3>
+            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '0 0 20px' }}>Enter the certificate ID printed on the document to verify its authenticity.</p>
             <div style={{ display: 'flex', gap: '10px' }}>
               <div className="exam-search-box" style={{ flex: 1 }}>
                 <span className="material-icons">badge</span>
                 <input placeholder="e.g. BON24001" value={verifyCertId} onChange={e => { setVerifyCertId(e.target.value); setVerifyResult(null); }} onKeyDown={e => e.key === 'Enter' && handleCertLookup()} />
               </div>
-              <button className="btn-exam-primary" onClick={handleCertLookup} disabled={verifying || !verifyCertId.trim()}>
+              <Button variant="exam-primary" onClick={handleCertLookup} disabled={verifying || !verifyCertId.trim()}>
                 {verifying ? 'Checking…' : 'Verify'}
-              </button>
+              </Button>
             </div>
 
             {verifyResult && verifyResult !== 'NOT_FOUND' && (
@@ -276,16 +272,16 @@ export default function ExaminationView() {
                     ['Issue Date', fmtDate(verifyResult.issueDate)],
                   ].map(([label, value]) => (
                     <div key={label}>
-                      <div style={{ fontSize: '10px', color: '#718096', textTransform: 'uppercase', fontWeight: 700, marginBottom: '2px' }}>{label}</div>
-                      <div style={{ fontWeight: 600, color: '#1a202c' }}>{value}</div>
+                      <div style={{ fontSize: '10px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700, marginBottom: '2px' }}>{label}</div>
+                      <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{value}</div>
                     </div>
                   ))}
                 </div>
                 {!verifyResult.verifiedBy && (
-                  <button className="btn-exam-primary" style={{ marginTop: '14px', width: '100%', justifyContent: 'center' }} onClick={() => handleVerify(verifyResult.id)}>
+                  <Button variant="exam-primary" style={{ marginTop: '14px', width: '100%', justifyContent: 'center' }} onClick={() => handleVerify(verifyResult.id)}>
                     <span className="material-icons" style={{ fontSize: '16px' }}>verified</span>
                     Mark as Verified
-                  </button>
+                  </Button>
                 )}
                 {verifyResult.verifiedBy && (
                   <div style={{ marginTop: '10px', fontSize: '12px', color: '#276749', fontWeight: 600 }}>
@@ -300,7 +296,7 @@ export default function ExaminationView() {
                 <span className="material-icons" style={{ color: '#c53030', fontSize: '20px' }}>cancel</span>
                 <div>
                   <strong style={{ color: '#c53030', fontSize: '14px' }}>Certificate NOT Found</strong>
-                  <p style={{ margin: '3px 0 0', fontSize: '12px', color: '#718096' }}>No certificate found with ID "{verifyCertId}". It may be invalid or revoked.</p>
+                  <p style={{ margin: '3px 0 0', fontSize: '12px', color: 'var(--text-secondary)' }}>No certificate found with ID "{verifyCertId}". It may be invalid or revoked.</p>
                 </div>
               </div>
             )}

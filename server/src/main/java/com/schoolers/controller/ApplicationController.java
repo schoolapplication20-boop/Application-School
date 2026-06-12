@@ -2,7 +2,7 @@ package com.schoolers.controller;
 
 import com.schoolers.dto.ApiResponse;
 import com.schoolers.model.AdmissionApplication;
-import com.schoolers.repository.UserRepository;
+import com.schoolers.security.CurrentUserUtil;
 import com.schoolers.service.ApplicationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -21,20 +21,13 @@ public class ApplicationController {
     private ApplicationService applicationService;
 
     @Autowired
-    private UserRepository userRepository;
-
-    private Long getCurrentSchoolId(Authentication auth) {
-        if (auth == null) return null;
-        return userRepository.findByEmailIgnoreCase(auth.getName())
-                .map(com.schoolers.model.User::getSchoolId)
-                .orElse(null);
-    }
+    private CurrentUserUtil currentUserUtil;
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<List<AdmissionApplication>>> getAll(
             @RequestParam(required = false) String status, Authentication auth) {
-        Long schoolId = getCurrentSchoolId(auth);
+        Long schoolId = currentUserUtil.getCurrentSchoolId(auth);
         if (status != null) return ResponseEntity.ok(applicationService.getByStatus(status, schoolId));
         return ResponseEntity.ok(applicationService.getAll(schoolId));
     }
@@ -43,7 +36,7 @@ public class ApplicationController {
     public ResponseEntity<?> create(@RequestBody Map<String, Object> body, Authentication auth) {
         // Public endpoint — applications come from external users (no school in JWT).
         // schoolId is resolved from the request body if provided, or null for platform-level.
-        Long schoolId = getCurrentSchoolId(auth);
+        Long schoolId = currentUserUtil.getCurrentSchoolId(auth);
         var response = applicationService.create(body, schoolId);
         return response.isSuccess() ? ResponseEntity.status(201).body(response) : ResponseEntity.badRequest().body(response);
     }
@@ -51,14 +44,14 @@ public class ApplicationController {
     @PutMapping("/{id}/status")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<?> updateStatus(@PathVariable Long id, @RequestBody Map<String, Object> body, Authentication auth) {
-        var response = applicationService.updateStatus(id, body, getCurrentSchoolId(auth));
+        var response = applicationService.updateStatus(id, body, currentUserUtil.getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<?> delete(@PathVariable Long id, Authentication auth) {
-        var response = applicationService.delete(id, getCurrentSchoolId(auth));
+        var response = applicationService.delete(id, currentUserUtil.getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
     }
 }

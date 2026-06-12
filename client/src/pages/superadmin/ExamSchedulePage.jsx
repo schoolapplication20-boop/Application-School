@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '../../components/Layout';
+import { useToast } from '../../context/ToastContext';
 import { examinationAPI, adminAPI } from '../../services/api';
 import { sortClassNames } from '../../utils/classOrder';
 import { formatClassName } from '../../utils/format';
@@ -29,43 +30,18 @@ const newSubjectRow = () => ({
   subject: '', examDate: today(), startTime: '09:00', endTime: '12:00', hallNumber: '', maxMarks: 100,
 });
 
-// ─── Toast ────────────────────────────────────────────────────────────────────
-function Toast({ toast, onClose }) {
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(onClose, 4000);
-    return () => clearTimeout(t);
-  }, [toast, onClose]);
-  if (!toast) return null;
-  const isErr = toast.type === 'error';
-  return (
-    <div style={{
-      position: 'fixed', bottom: 28, right: 28, zIndex: 9999,
-      display: 'flex', alignItems: 'center', gap: 10,
-      background: isErr ? '#fff5f5' : '#f0fff4',
-      border: `1px solid ${isErr ? '#feb2b2' : '#9ae6b4'}`,
-      color: isErr ? '#c53030' : '#276749',
-      borderRadius: 12, padding: '12px 20px',
-      boxShadow: '0 4px 24px rgba(0,0,0,0.12)', fontSize: 14, fontWeight: 600,
-    }}>
-      <span className="material-icons" style={{ fontSize: 20 }}>{isErr ? 'error' : 'check_circle'}</span>
-      {toast.message}
-    </div>
-  );
-}
-
 // ─── Confirm Dialog ───────────────────────────────────────────────────────────
 function ConfirmDialog({ message, onConfirm, onCancel }) {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div className="modal-card" style={{ background: '#fff', borderRadius: 16, padding: 28, width: 360, boxShadow: '0 8px 40px rgba(0,0,0,0.18)' }}>
+      <div className="modal-card" style={{ background: 'var(--surface)', borderRadius: 16, padding: 28, width: 360, boxShadow: '0 8px 40px rgba(0,0,0,0.18)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
           <span className="material-icons" style={{ color: '#c53030', fontSize: 28 }}>warning</span>
-          <h4 style={{ margin: 0, fontSize: 16, color: '#1a202c' }}>Confirm Delete</h4>
+          <h4 style={{ margin: 0, fontSize: 16, color: 'var(--text-primary)' }}>Confirm Delete</h4>
         </div>
-        <p style={{ color: '#718096', fontSize: 14, margin: '0 0 20px' }}>{message}</p>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 14, margin: '0 0 20px' }}>{message}</p>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-          <button onClick={onCancel} style={{ padding: '8px 20px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', color: '#4a5568', cursor: 'pointer', fontWeight: 600 }}>Cancel</button>
+          <button onClick={onCancel} style={{ padding: '8px 20px', borderRadius: 8, border: '1px solid var(--border-strong)', background: 'var(--surface)', color: 'var(--text-secondary)', cursor: 'pointer', fontWeight: 600 }}>Cancel</button>
           <button onClick={onConfirm} style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: '#c53030', color: '#fff', cursor: 'pointer', fontWeight: 600 }}>Delete</button>
         </div>
       </div>
@@ -76,8 +52,8 @@ function ConfirmDialog({ message, onConfirm, onCancel }) {
 // ─── Input helpers ────────────────────────────────────────────────────────────
 const cellStyle = (err) => ({
   width: '100%', padding: '7px 10px', borderRadius: 7,
-  border: `1px solid ${err ? '#fc8181' : '#e2e8f0'}`,
-  fontSize: 12, outline: 'none', boxSizing: 'border-box', background: '#fff',
+  border: `1px solid ${err ? '#fc8181' : 'var(--border-strong)'}`,
+  fontSize: 12, outline: 'none', boxSizing: 'border-box', background: 'var(--surface)',
 });
 
 // ─── Bulk Schedule Modal ──────────────────────────────────────────────────────
@@ -203,29 +179,29 @@ function ScheduleModal({ initial, onClose, onSaved, dbClasses = [], dbSections =
   };
 
   // ─── Render ──────────────────────────────────────────────────────────────────
-  const labelStyle = { display: 'block', fontSize: 11, fontWeight: 700, color: '#718096', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' };
-  const inputStyle = (err) => ({ width: '100%', padding: '9px 12px', borderRadius: 8, border: `1px solid ${err ? '#fc8181' : '#e2e8f0'}`, fontSize: 13, outline: 'none', background: '#fff', boxSizing: 'border-box' });
+  const labelStyle = { display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' };
+  const inputStyle = (err) => ({ width: '100%', padding: '9px 12px', borderRadius: 8, border: `1px solid ${err ? '#fc8181' : 'var(--border-strong)'}`, fontSize: 13, outline: 'none', background: 'var(--surface)', boxSizing: 'border-box' });
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', zIndex: 8000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div className="modal-card" style={{ background: '#fff', borderRadius: 18, width: '100%', maxWidth: 860, maxHeight: '93vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
+      <div className="modal-card" style={{ background: 'var(--surface)', borderRadius: 18, width: '100%', maxWidth: 860, maxHeight: '93vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
 
         {/* ── Modal Header ── */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 24px', borderBottom: '1px solid #f0f4f8', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 24px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ width: 40, height: 40, borderRadius: 10, background: '#ebf8ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <span className="material-icons" style={{ color: '#3182ce', fontSize: 22 }}>{isEdit ? 'edit_calendar' : 'calendar_month'}</span>
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#1a202c' }}>
+              <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: 'var(--text-primary)' }}>
                 {isEdit ? 'Edit Exam Schedule' : 'Create Exam Schedule'}
               </h3>
-              <p style={{ margin: 0, fontSize: 12, color: '#a0aec0' }}>
+              <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)' }}>
                 {isEdit ? 'Update the schedule details below' : 'Fill common details, then add subjects with individual dates & halls'}
               </p>
             </div>
           </div>
-          <button onClick={onClose} style={{ background: '#f7fafc', border: '1px solid #e2e8f0', borderRadius: 8, width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#718096' }}>
+          <button onClick={onClose} style={{ background: 'var(--surface-alt)', border: '1px solid var(--border-strong)', borderRadius: 8, width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-secondary)' }}>
             <span className="material-icons" style={{ fontSize: 18 }}>close</span>
           </button>
         </div>
@@ -308,10 +284,10 @@ function ScheduleModal({ initial, onClose, onSaved, dbClasses = [], dbSections =
                 <div style={{ display: 'flex', gap: 8 }}>
                   {/* Apply-to-all helpers */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontSize: 11, color: '#a0aec0', fontWeight: 600 }}>Apply date to all:</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>Apply date to all:</span>
                     <input type="date" defaultValue={today()}
                       onChange={e => applyToAll('examDate', e.target.value)}
-                      style={{ padding: '5px 8px', borderRadius: 7, border: '1px solid #e2e8f0', fontSize: 12 }} />
+                      style={{ padding: '5px 8px', borderRadius: 7, border: '1px solid var(--border-strong)', fontSize: 12 }} />
                   </div>
                   <button type="button" onClick={addRow}
                     style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '7px 14px', borderRadius: 8, border: 'none', background: '#276749', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
@@ -322,8 +298,8 @@ function ScheduleModal({ initial, onClose, onSaved, dbClasses = [], dbSections =
             </div>
 
             {/* Table header */}
-            <div style={{ background: '#f0f4f8', borderRadius: '10px 10px 0 0', border: '1px solid #e2e8f0', borderBottom: 'none' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1.2fr 100px 100px 1.1fr 80px 36px', gap: 0, padding: '9px 12px', fontSize: 11, fontWeight: 700, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <div style={{ background: 'var(--surface-alt)', borderRadius: '10px 10px 0 0', border: '1px solid var(--border-strong)', borderBottom: 'none' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1.2fr 100px 100px 1.1fr 80px 36px', gap: 0, padding: '9px 12px', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 <div>Subject</div>
                 <div>Exam Date</div>
                 <div>Start Time</div>
@@ -335,12 +311,12 @@ function ScheduleModal({ initial, onClose, onSaved, dbClasses = [], dbSections =
             </div>
 
             {/* Rows */}
-            <div style={{ border: '1px solid #e2e8f0', borderRadius: '0 0 10px 10px', overflow: 'hidden' }}>
+            <div style={{ border: '1px solid var(--border-strong)', borderRadius: '0 0 10px 10px', overflow: 'hidden' }}>
               {rows.map((row, idx) => {
                 const re = rowErrors[row._id] || {};
-                const rowBg = idx % 2 === 0 ? '#fff' : '#fafbff';
+                const rowBg = idx % 2 === 0 ? 'var(--surface)' : 'var(--surface-alt)';
                 return (
-                  <div key={row._id} style={{ display: 'grid', gridTemplateColumns: '1.8fr 1.2fr 100px 100px 1.1fr 80px 36px', gap: 0, padding: '8px 12px', borderBottom: idx < rows.length - 1 ? '1px solid #f0f4f8' : 'none', background: rowBg, alignItems: 'start' }}>
+                  <div key={row._id} style={{ display: 'grid', gridTemplateColumns: '1.8fr 1.2fr 100px 100px 1.1fr 80px 36px', gap: 0, padding: '8px 12px', borderBottom: idx < rows.length - 1 ? '1px solid var(--border)' : 'none', background: rowBg, alignItems: 'start' }}>
 
                     {/* Subject */}
                     <div style={{ paddingRight: 8 }}>
@@ -425,13 +401,13 @@ function ScheduleModal({ initial, onClose, onSaved, dbClasses = [], dbSections =
         </form>
 
         {/* ── Footer ── */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderTop: '1px solid #f0f4f8', flexShrink: 0, background: '#fafbff', borderRadius: '0 0 18px 18px' }}>
-          <div style={{ fontSize: 12, color: '#a0aec0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderTop: '1px solid var(--border)', flexShrink: 0, background: 'var(--surface-alt)', borderRadius: '0 0 18px 18px' }}>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
             {!isEdit && <><span className="material-icons" style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 4 }}>info</span>{rows.length} subject{rows.length !== 1 ? 's' : ''} will be saved as separate schedule entries</>}
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
             <button type="button" onClick={onClose}
-              style={{ padding: '9px 22px', borderRadius: 9, border: '1px solid #e2e8f0', background: '#fff', color: '#4a5568', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
+              style={{ padding: '9px 22px', borderRadius: 9, border: '1px solid var(--border-strong)', background: 'var(--surface)', color: 'var(--text-secondary)', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
               Cancel
             </button>
             <button type="submit" form="" disabled={saving} onClick={handleSubmit}
@@ -452,7 +428,6 @@ function ScheduleModal({ initial, onClose, onSaved, dbClasses = [], dbSections =
 export default function ExamSchedulePage() {
   const [schedules,   setSchedules]    = useState([]);
   const [loading,     setLoading]      = useState(true);
-  const [toast,       setToast]        = useState(null);
   const [showModal,   setShowModal]    = useState(false);
   const [editItem,    setEditItem]     = useState(null);
   const [deleteTarget,setDeleteTarget] = useState(null);
@@ -467,7 +442,7 @@ export default function ExamSchedulePage() {
   const [filterType,   setFilterType]   = useState('');
   const [filterStatus, setFilterStatus] = useState('');
 
-  const showToast = (msg, type = 'success') => setToast({ message: msg, type });
+  const showToast = useToast();
 
   const loadSchedules = useCallback(async () => {
     setLoading(true);
@@ -539,20 +514,20 @@ export default function ExamSchedulePage() {
         @keyframes spin { to { transform: rotate(360deg); } }
         .es-row:hover { background: #f0f7ff !important; }
         .es-action-btn { background: none; border: none; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.15s; }
-        .es-action-btn:hover { background: #e2e8f0; }
+        .es-action-btn:hover { background: var(--border-strong); }
         .es-action-btn .material-icons { font-size: 18px; }
-        .es-input { padding: 8px 12px; border-radius: 9px; border: 1px solid #e2e8f0; font-size: 13px; outline: none; background: #fff; }
+        .es-input { padding: 8px 12px; border-radius: 9px; border: 1px solid var(--border-strong); font-size: 13px; outline: none; background: var(--surface); }
         .es-input:focus { border-color: #3182ce; }
       `}</style>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#1a202c', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 10 }}>
             <span className="material-icons" style={{ color: '#0de1e8', fontSize: 28 }}>event_note</span>
             Exam Schedule
           </h1>
-          <p style={{ margin: '4px 0 0', fontSize: 13, color: '#718096' }}>Create timetables for all subjects at once — manage, edit and delete exam schedules</p>
+          <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-secondary)' }}>Create timetables for all subjects at once — manage, edit and delete exam schedules</p>
         </div>
         <button onClick={openAdd}
           style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 20px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#3182ce,#2b6cb0)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', boxShadow: '0 2px 8px rgba(49,130,206,0.3)' }}>
@@ -569,23 +544,23 @@ export default function ExamSchedulePage() {
           { label: 'Ongoing',      value: stats.ongoing,    color: '#c05621', icon: 'hourglass_top'  },
           { label: 'Completed',    value: stats.completed,  color: '#276749', icon: 'task_alt'      },
         ].map(c => (
-          <div key={c.label} style={{ background: '#fff', borderRadius: 12, padding: '18px 20px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '1px solid #f0f4f8', display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div key={c.label} style={{ background: 'var(--surface)', borderRadius: 12, padding: '18px 20px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 14 }}>
             <div style={{ width: 44, height: 44, borderRadius: 10, background: c.color + '15', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <span className="material-icons" style={{ color: c.color, fontSize: 22 }}>{c.icon}</span>
             </div>
             <div>
-              <div style={{ fontSize: 26, fontWeight: 800, color: '#2d3748', lineHeight: 1 }}>{c.value}</div>
-              <div style={{ fontSize: 12, color: '#a0aec0', marginTop: 2 }}>{c.label}</div>
+              <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>{c.value}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{c.label}</div>
             </div>
           </div>
         ))}
       </div>
 
       {/* Filters */}
-      <div style={{ background: '#fff', borderRadius: 12, padding: '14px 18px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '1px solid #f0f4f8', marginBottom: 20 }}>
+      <div style={{ background: 'var(--surface)', borderRadius: 12, padding: '14px 18px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '1px solid var(--border)', marginBottom: 20 }}>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
           <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
-            <span className="material-icons" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#a0aec0', fontSize: 18 }}>search</span>
+            <span className="material-icons" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: 18 }}>search</span>
             <input className="es-input" style={{ width: '100%', paddingLeft: 36, boxSizing: 'border-box' }}
               placeholder="Search exam name, subject or class…"
               value={search} onChange={e => setSearch(e.target.value)} />
@@ -604,7 +579,7 @@ export default function ExamSchedulePage() {
           </select>
           {(search || filterClass || filterType || filterStatus) && (
             <button onClick={() => { setSearch(''); setFilterClass(''); setFilterType(''); setFilterStatus(''); }}
-              style={{ padding: '8px 14px', borderRadius: 9, border: '1px solid #e2e8f0', background: '#fff', color: '#718096', cursor: 'pointer', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+              style={{ padding: '8px 14px', borderRadius: 9, border: '1px solid var(--border-strong)', background: 'var(--surface)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
               <span className="material-icons" style={{ fontSize: 14 }}>clear</span>Clear
             </button>
           )}
@@ -612,17 +587,17 @@ export default function ExamSchedulePage() {
       </div>
 
       {/* Table */}
-      <div style={{ background: '#fff', borderRadius: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '1px solid #f0f4f8', overflow: 'hidden' }}>
+      <div style={{ background: 'var(--surface)', borderRadius: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '1px solid var(--border)', overflow: 'hidden' }}>
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '60px 0', color: '#a0aec0' }}>
+          <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>
             <span className="material-icons" style={{ fontSize: 40, animation: 'spin 1s linear infinite', display: 'block', marginBottom: 12 }}>refresh</span>
             Loading exam schedules…
           </div>
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 0' }}>
-            <span className="material-icons" style={{ fontSize: 52, color: '#e2e8f0', display: 'block', marginBottom: 12 }}>event_note</span>
-            <h3 style={{ margin: '0 0 6px', color: '#4a5568', fontSize: 16 }}>{schedules.length === 0 ? 'No exam schedules yet' : 'No results found'}</h3>
-            <p style={{ margin: 0, color: '#a0aec0', fontSize: 13 }}>{schedules.length === 0 ? 'Click "Create Exam Schedule" to get started.' : 'Try adjusting your search or filters.'}</p>
+            <span className="material-icons" style={{ fontSize: 52, color: 'var(--border-strong)', display: 'block', marginBottom: 12 }}>event_note</span>
+            <h3 style={{ margin: '0 0 6px', color: 'var(--text-secondary)', fontSize: 16 }}>{schedules.length === 0 ? 'No exam schedules yet' : 'No results found'}</h3>
+            <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: 13 }}>{schedules.length === 0 ? 'Click "Create Exam Schedule" to get started.' : 'Try adjusting your search or filters.'}</p>
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
@@ -630,7 +605,7 @@ export default function ExamSchedulePage() {
               <thead>
                 <tr style={{ background: '#f8faff', borderBottom: '2px solid #e8f0fe' }}>
                   {['Exam Name','Class','Subject','Exam Date','Timing','Hall / Room','Max Marks','Type','Status','Actions'].map(h => (
-                    <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{h}</th>
+                    <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -638,29 +613,29 @@ export default function ExamSchedulePage() {
                 {filtered.map((s, i) => {
                   const st = STATUS_STYLE[s.status] || STATUS_STYLE.SCHEDULED;
                   return (
-                    <tr key={s.id} className="es-row" style={{ borderBottom: '1px solid #f0f4f8', background: i % 2 === 0 ? '#fff' : '#fafbff' }}>
+                    <tr key={s.id} className="es-row" style={{ borderBottom: '1px solid var(--border)', background: i % 2 === 0 ? 'var(--surface)' : 'var(--surface-alt)' }}>
                       <td style={{ padding: '13px 16px' }}>
-                        <div style={{ fontWeight: 700, color: '#2d3748' }}>{s.examName}</div>
-                        {s.instructions && <div style={{ fontSize: 11, color: '#a0aec0', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.instructions}</div>}
+                        <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{s.examName}</div>
+                        {s.instructions && <div style={{ fontSize: 11, color: 'var(--text-muted)', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.instructions}</div>}
                       </td>
                       <td style={{ padding: '13px 16px' }}>
                         <div style={{ fontWeight: 600, color: '#3182ce' }}>{formatClassName(s.className)}</div>
-                        {s.section && <div style={{ fontSize: 11, color: '#a0aec0' }}>Section {s.section}</div>}
+                        {s.section && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Section {s.section}</div>}
                       </td>
-                      <td style={{ padding: '13px 16px', fontWeight: 600, color: '#2d3748' }}>{s.subject}</td>
+                      <td style={{ padding: '13px 16px', fontWeight: 600, color: 'var(--text-primary)' }}>{s.subject}</td>
                       <td style={{ padding: '13px 16px', whiteSpace: 'nowrap' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                          <span className="material-icons" style={{ fontSize: 14, color: '#a0aec0' }}>calendar_today</span>
-                          <span style={{ fontWeight: 600, color: '#2d3748' }}>{fmtDate(s.examDate)}</span>
+                          <span className="material-icons" style={{ fontSize: 14, color: 'var(--text-muted)' }}>calendar_today</span>
+                          <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{fmtDate(s.examDate)}</span>
                         </div>
                       </td>
-                      <td style={{ padding: '13px 16px', whiteSpace: 'nowrap', color: '#4a5568' }}>
+                      <td style={{ padding: '13px 16px', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>
                         {fmtTime(s.startTime)} – {fmtTime(s.endTime)}
                       </td>
                       <td style={{ padding: '13px 16px' }}>
                         <span style={{ background: '#faf5ff', color: '#6b46c1', padding: '3px 10px', borderRadius: 10, fontWeight: 600, fontSize: 12 }}>{s.hallNumber || '—'}</span>
                       </td>
-                      <td style={{ padding: '13px 16px', fontWeight: 700, color: '#2d3748', textAlign: 'center' }}>{s.maxMarks}</td>
+                      <td style={{ padding: '13px 16px', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'center' }}>{s.maxMarks}</td>
                       <td style={{ padding: '13px 16px' }}>
                         <span style={{ background: '#ebf8ff', color: '#2b6cb0', padding: '3px 10px', borderRadius: 10, fontWeight: 600, fontSize: 11 }}>{EXAM_TYPE_LABEL[s.examType] || s.examType}</span>
                       </td>
@@ -685,7 +660,7 @@ export default function ExamSchedulePage() {
           </div>
         )}
         {!loading && filtered.length > 0 && (
-          <div style={{ padding: '12px 20px', borderTop: '1px solid #f0f4f8', color: '#a0aec0', fontSize: 12, display: 'flex', justifyContent: 'space-between' }}>
+          <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: 12, display: 'flex', justifyContent: 'space-between' }}>
             <span>Showing {filtered.length} of {schedules.length} schedules</span>
           </div>
         )}
@@ -699,7 +674,6 @@ export default function ExamSchedulePage() {
           onCancel={() => setDeleteTarget(null)}
         />
       )}
-      <Toast toast={toast} onClose={() => setToast(null)} />
     </Layout>
   );
 }

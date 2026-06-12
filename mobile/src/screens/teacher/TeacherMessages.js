@@ -1,25 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Modal, ScrollView } from 'react-native';
 import api from '../../services/api';
+import useCachedFetch from '../../hooks/useCachedFetch';
+import OfflineBanner from '../../components/OfflineBanner';
 
 const CATEGORIES = ['GENERAL', 'ACADEMIC', 'ANNOUNCEMENT', 'EXAM', 'FEE', 'URGENT'];
 const CAT_COLORS = { GENERAL: '#64748b', ACADEMIC: '#2563eb', ANNOUNCEMENT: '#7c3aed', EXAM: '#d97706', FEE: '#059669', URGENT: '#dc2626' };
 
 export default function TeacherMessages() {
-  const [messages, setMessages] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data, loading, isOffline, reload } = useCachedFetch('/api/messages/broadcasts');
+  const messages = data || [];
   const [modalVisible, setModalVisible] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ title: '', content: '', category: 'GENERAL', classSection: '', isImportant: false });
-
-  const load = () => {
-    api.get('/api/messages/broadcasts')
-      .then(res => setMessages(res.data.data || []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => { load(); }, []);
 
   const send = async () => {
     if (!form.title.trim()) { Alert.alert('Error', 'Title is required.'); return; }
@@ -37,7 +30,7 @@ export default function TeacherMessages() {
       Alert.alert('Success', 'Message sent.');
       setModalVisible(false);
       setForm({ title: '', content: '', category: 'GENERAL', classSection: '', isImportant: false });
-      load();
+      reload();
     } catch (err) { Alert.alert('Error', err?.response?.data?.message || 'Failed to send message.'); }
     finally { setSubmitting(false); }
   };
@@ -46,6 +39,7 @@ export default function TeacherMessages() {
 
   return (
     <View style={styles.container}>
+      <OfflineBanner visible={isOffline} />
       <TouchableOpacity style={styles.sendBtn} onPress={() => setModalVisible(true)}>
         <Text style={styles.sendBtnText}>+ Send Message</Text>
       </TouchableOpacity>

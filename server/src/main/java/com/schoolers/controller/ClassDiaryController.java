@@ -7,6 +7,7 @@ import com.schoolers.model.Teacher;
 import com.schoolers.repository.ClassDiaryRepository;
 import com.schoolers.repository.TeacherRepository;
 import com.schoolers.repository.UserRepository;
+import com.schoolers.security.CurrentUserUtil;
 import com.schoolers.service.ClassDiaryService;
 import com.schoolers.service.TeacherService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,13 +39,8 @@ public class ClassDiaryController {
     @Autowired
     private TeacherRepository teacherRepository;
 
-    /** Returns the school_id of the currently authenticated user (null for platform-level SUPER_ADMIN). */
-    private Long getCurrentSchoolId(Authentication auth) {
-        if (auth == null) return null;
-        return userRepository.findByEmailIgnoreCase(auth.getName())
-                .map(com.schoolers.model.User::getSchoolId)
-                .orElse(null);
-    }
+    @Autowired
+    private CurrentUserUtil currentUserUtil;
 
     /** Resolve the Teacher entity from the JWT principal. */
     private Optional<Teacher> resolveTeacher(Authentication auth) {
@@ -62,21 +58,21 @@ public class ClassDiaryController {
             @RequestParam(required = false) Long teacherId,
             @RequestParam(required = false) String date,
             Authentication auth) {
-        return ResponseEntity.ok(diaryService.getAll(className, teacherId, date, getCurrentSchoolId(auth)));
+        return ResponseEntity.ok(diaryService.getAll(className, teacherId, date, currentUserUtil.getCurrentSchoolId(auth)));
     }
 
     @PatchMapping("/{id}/review")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<?> updateReview(@PathVariable Long id, @RequestBody Map<String, Object> body,
             Authentication auth) {
-        var response = diaryService.updateReview(id, body, getCurrentSchoolId(auth));
+        var response = diaryService.updateReview(id, body, currentUserUtil.getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<?> delete(@PathVariable Long id, Authentication auth) {
-        var response = diaryService.delete(id, getCurrentSchoolId(auth));
+        var response = diaryService.delete(id, currentUserUtil.getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
     }
 
@@ -88,7 +84,7 @@ public class ClassDiaryController {
     public ResponseEntity<?> getForTeacher(Authentication auth) {
         Optional<Teacher> teacherOpt = resolveTeacher(auth);
         if (teacherOpt.isEmpty()) return ResponseEntity.status(403).body(ApiResponse.error("Teacher profile not found"));
-        return ResponseEntity.ok(diaryService.getForTeacher(teacherOpt.get().getId(), getCurrentSchoolId(auth)));
+        return ResponseEntity.ok(diaryService.getForTeacher(teacherOpt.get().getId(), currentUserUtil.getCurrentSchoolId(auth)));
     }
 
     /** Teacher / Admin: create a diary entry */
@@ -96,7 +92,7 @@ public class ClassDiaryController {
     @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<?> create(@RequestBody Map<String, Object> body, Authentication auth) {
         // Always inject schoolId from JWT — never trust the client-supplied value
-        Long schoolId = getCurrentSchoolId(auth);
+        Long schoolId = currentUserUtil.getCurrentSchoolId(auth);
         if (schoolId != null) body.put("schoolId", schoolId);
 
         // Inject teacherId / teacherName from JWT so frontend cannot spoof them
@@ -163,6 +159,6 @@ public class ClassDiaryController {
     @GetMapping("/class/{className}")
     @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<List<ClassDiary>>> getByClass(@PathVariable String className, Authentication auth) {
-        return ResponseEntity.ok(diaryService.getByClass(className, getCurrentSchoolId(auth)));
+        return ResponseEntity.ok(diaryService.getByClass(className, currentUserUtil.getCurrentSchoolId(auth)));
     }
 }

@@ -262,6 +262,23 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("Email verified successfully", null));
     }
 
+    /** Registers/updates the caller's Expo push token for mobile push notifications. Pass a blank token to unregister. */
+    @PostMapping("/push-token")
+    public ResponseEntity<ApiResponse<String>> registerPushToken(@RequestBody Map<String, String> body) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            return ResponseEntity.status(401).body(ApiResponse.error("Not authenticated."));
+        }
+        String token = body.get("token");
+        var user = userRepository.findByEmailIgnoreCase(auth.getName()).orElse(null);
+        if (user == null) {
+            return ResponseEntity.status(404).body(ApiResponse.error("User not found"));
+        }
+        user.setPushToken((token == null || token.isBlank()) ? null : token.trim());
+        userRepository.save(user);
+        return ResponseEntity.ok(ApiResponse.success("Push token saved", null));
+    }
+
     /** First-login password set — requires the temporary password for verification */
     @PostMapping("/set-first-password")
     public ResponseEntity<ApiResponse<String>> setFirstPassword(@RequestBody Map<String, String> body) {

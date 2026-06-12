@@ -1,27 +1,20 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Modal, ScrollView } from 'react-native';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import useCachedFetch from '../../hooks/useCachedFetch';
+import OfflineBanner from '../../components/OfflineBanner';
 
 const LEAVE_TYPES = ['Medical', 'Personal', 'Family Emergency', 'Other'];
 const STATUS_STYLE = { PENDING: { bg: '#fef9c3', text: '#854d0e' }, APPROVED: { bg: '#dcfce7', text: '#166534' }, REJECTED: { bg: '#fee2e2', text: '#991b1b' } };
 
 export default function TeacherLeave() {
   const { user } = useAuth();
-  const [leaves, setLeaves] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data, loading, isOffline, reload } = useCachedFetch('/api/leave/my/' + user?.id + '?type=TEACHER');
+  const leaves = data || [];
   const [modalVisible, setModalVisible] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ leaveType: 'Medical', fromDate: '', toDate: '', reason: '' });
-
-  const load = () => {
-    api.get('/api/leave/my/' + user?.id + '?type=TEACHER')
-      .then(res => setLeaves(res.data.data || []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => { if (user?.id) load(); else setLoading(false); }, [user]);
 
   const submit = async () => {
     if (!form.fromDate || !form.toDate || !form.reason.trim()) {
@@ -46,7 +39,7 @@ export default function TeacherLeave() {
       Alert.alert('Success', 'Leave request submitted.');
       setModalVisible(false);
       setForm({ leaveType: 'Medical', fromDate: '', toDate: '', reason: '' });
-      load();
+      reload();
     } catch (err) { Alert.alert('Error', err?.response?.data?.message || 'Failed to submit leave.'); }
     finally { setSubmitting(false); }
   };
@@ -55,6 +48,7 @@ export default function TeacherLeave() {
 
   return (
     <View style={styles.container}>
+      <OfflineBanner visible={isOffline} />
       <TouchableOpacity style={styles.applyBtn} onPress={() => setModalVisible(true)}>
         <Text style={styles.applyBtnText}>+ Apply for Leave</Text>
       </TouchableOpacity>

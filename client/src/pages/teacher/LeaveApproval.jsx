@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Layout from '../../components/Layout';
+import { useToast } from '../../context/ToastContext';
 import { leaveAPI, teacherAPI } from '../../services/api';
 
 const STATUS_COLORS = {
@@ -13,7 +14,6 @@ export default function LeaveApproval() {
   const [leaves,     setLeaves]     = useState([]);
   const [loading,    setLoading]    = useState(true);
   const [error,      setError]      = useState('');
-  const [toast,      setToast]      = useState(null);
 
   // Modal state
   const [selected,   setSelected]   = useState(null); // leave object
@@ -31,15 +31,7 @@ export default function LeaveApproval() {
       .catch(() => setTeacherType('SUBJECT_TEACHER'));
   }, []);
 
-  const toastTimerRef = useRef(null);
-
-  useEffect(() => () => clearTimeout(toastTimerRef.current), []);
-
-  const showToast = (msg, type = 'success') => {
-    clearTimeout(toastTimerRef.current);
-    setToast({ msg, type });
-    toastTimerRef.current = setTimeout(() => setToast(null), 3500);
-  };
+  const showToast = useToast();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -115,7 +107,7 @@ export default function LeaveApproval() {
     return (
       <Layout pageTitle="Leave Approval">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 300 }}>
-          <div style={{ textAlign: 'center', color: '#a0aec0' }}>
+          <div style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
             <span className="material-icons" style={{ fontSize: 48, display: 'block', marginBottom: 12 }}>hourglass_empty</span>
             Loading…
           </div>
@@ -138,13 +130,13 @@ export default function LeaveApproval() {
           }}>
             <span className="material-icons" style={{ fontSize: 36, color: '#e53e3e' }}>lock</span>
           </div>
-          <h2 style={{ margin: '0 0 8px', fontSize: 20, color: '#2d3748', fontWeight: 700 }}>
+          <h2 style={{ margin: '0 0 8px', fontSize: 20, color: 'var(--text-primary)', fontWeight: 700 }}>
             Access Restricted
           </h2>
-          <p style={{ margin: '0 0 6px', fontSize: 14, color: '#718096', maxWidth: 360 }}>
+          <p style={{ margin: '0 0 6px', fontSize: 14, color: 'var(--text-secondary)', maxWidth: 360 }}>
             The Leave Approval module is only available to <strong>Class Teachers</strong>.
           </p>
-          <p style={{ margin: 0, fontSize: 13, color: '#a0aec0' }}>
+          <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>
             As a Subject Teacher, you are not assigned as the primary class teacher for any class.
           </p>
         </div>
@@ -154,23 +146,6 @@ export default function LeaveApproval() {
 
   return (
     <Layout pageTitle="Leave Approval">
-      {/* Toast */}
-      {toast && (
-        <div style={{
-          position: 'fixed', top: 20, right: 20, zIndex: 9999,
-          padding: '12px 20px', borderRadius: 10, fontSize: 13, fontWeight: 600,
-          background: toast.type === 'error' ? '#fff5f5' : '#f0fff4',
-          color:      toast.type === 'error' ? '#c53030' : '#276749',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-          display: 'flex', alignItems: 'center', gap: 8,
-        }}>
-          <span className="material-icons" style={{ fontSize: 18 }}>
-            {toast.type === 'error' ? 'error' : 'check_circle'}
-          </span>
-          {toast.msg}
-        </div>
-      )}
-
       {/* Stats */}
       <div className="stats-grid" style={{ marginBottom: 24 }}>
         {[
@@ -205,7 +180,7 @@ export default function LeaveApproval() {
           <button
             onClick={load}
             disabled={loading}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#718096', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}
           >
             <span className="material-icons" style={{ fontSize: 16, animation: loading ? 'spin 1s linear infinite' : 'none' }}>refresh</span>
             Refresh
@@ -213,12 +188,12 @@ export default function LeaveApproval() {
         </div>
 
         {loading ? (
-          <div style={{ padding: '40px 0', textAlign: 'center', color: '#a0aec0', fontSize: 13 }}>
+          <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
             <span className="material-icons" style={{ fontSize: 32, display: 'block', marginBottom: 8 }}>hourglass_empty</span>
             Loading…
           </div>
         ) : pending.length === 0 ? (
-          <div style={{ padding: '40px 0', textAlign: 'center', color: '#a0aec0', fontSize: 13 }}>
+          <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
             <span className="material-icons" style={{ fontSize: 40, display: 'block', marginBottom: 8, opacity: 0.4 }}>event_available</span>
             No pending leave requests
           </div>
@@ -233,7 +208,7 @@ export default function LeaveApproval() {
               {pending.map(l => (
                 <tr key={l.id}>
                   <td style={{ fontWeight: 700, fontSize: 13 }}>{l.requesterName}</td>
-                  <td style={{ fontSize: 12, color: '#718096' }}>{l.classSection || '—'}</td>
+                  <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{l.classSection || '—'}</td>
                   <td>
                     <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: '#ed893615', color: '#c05621' }}>
                       {l.leaveType || 'Other'}
@@ -241,8 +216,8 @@ export default function LeaveApproval() {
                   </td>
                   <td style={{ fontSize: 12 }}>{l.fromDate}</td>
                   <td style={{ fontSize: 12 }}>{l.toDate}</td>
-                  <td style={{ fontSize: 12, color: '#718096', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={l.reason}>{l.reason || '—'}</td>
-                  <td style={{ fontSize: 11, color: '#a0aec0' }}>
+                  <td style={{ fontSize: 12, color: 'var(--text-secondary)', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={l.reason}>{l.reason || '—'}</td>
+                  <td style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                     {l.createdAt ? new Date(l.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : '—'}
                   </td>
                   <td>
@@ -289,15 +264,15 @@ export default function LeaveApproval() {
               {decided.map(l => (
                 <tr key={l.id}>
                   <td style={{ fontWeight: 700, fontSize: 13 }}>{l.requesterName}</td>
-                  <td style={{ fontSize: 12, color: '#718096' }}>{l.classSection || '—'}</td>
+                  <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{l.classSection || '—'}</td>
                   <td style={{ fontSize: 12 }}>{l.leaveType || 'Other'}</td>
                   <td style={{ fontSize: 12 }}>{l.fromDate}</td>
                   <td style={{ fontSize: 12 }}>{l.toDate}</td>
                   <td><StatusBadge status={l.status} /></td>
-                  <td style={{ fontSize: 12, color: '#718096', fontStyle: l.teacherRemark ? 'normal' : 'italic' }}>
+                  <td style={{ fontSize: 12, color: 'var(--text-secondary)', fontStyle: l.teacherRemark ? 'normal' : 'italic' }}>
                     {l.teacherRemark || '—'}
                   </td>
-                  <td style={{ fontSize: 12, color: '#718096' }}>{l.reviewedBy || '—'}</td>
+                  <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{l.reviewedBy || '—'}</td>
                 </tr>
               ))}
             </tbody>
@@ -312,7 +287,7 @@ export default function LeaveApproval() {
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
         }}>
           <div className="modal-card" style={{
-            background: '#fff', borderRadius: 16, padding: 28, width: '100%', maxWidth: 460,
+            background: 'var(--surface)', borderRadius: 16, padding: 28, width: '100%', maxWidth: 460,
             boxShadow: '0 20px 60px rgba(0,0,0,0.15)', maxHeight: '90vh', overflowY: 'auto',
           }}>
             {/* Header */}
@@ -326,15 +301,15 @@ export default function LeaveApproval() {
                 </span>
               </div>
               <div>
-                <div style={{ fontWeight: 700, fontSize: 15, color: '#2d3748' }}>
+                <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-primary)' }}>
                   {actionType === 'APPROVED' ? 'Approve' : 'Reject'} Leave Request
                 </div>
-                <div style={{ fontSize: 12, color: '#718096' }}>for {selected.requesterName}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>for {selected.requesterName}</div>
               </div>
             </div>
 
             {/* Leave summary */}
-            <div style={{ background: '#f7fafc', borderRadius: 10, padding: '14px 16px', marginBottom: 16 }}>
+            <div style={{ background: 'var(--surface-alt)', borderRadius: 10, padding: '14px 16px', marginBottom: 16 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px', fontSize: 13 }}>
                 {[
                   ['Type',   selected.leaveType || 'Other'],
@@ -343,14 +318,14 @@ export default function LeaveApproval() {
                   ['To',     selected.toDate],
                 ].map(([k, v]) => (
                   <div key={k}>
-                    <span style={{ color: '#a0aec0', fontSize: 11 }}>{k}</span>
-                    <div style={{ fontWeight: 600, color: '#2d3748' }}>{v}</div>
+                    <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>{k}</span>
+                    <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{v}</div>
                   </div>
                 ))}
               </div>
               {selected.reason && (
-                <div style={{ marginTop: 10, fontSize: 12, color: '#4a5568' }}>
-                  <span style={{ color: '#a0aec0', fontSize: 11 }}>Reason</span>
+                <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-secondary)' }}>
+                  <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>Reason</span>
                   <div>{selected.reason}</div>
                 </div>
               )}
@@ -358,11 +333,11 @@ export default function LeaveApproval() {
 
             {/* Remark */}
             <div style={{ marginBottom: 20 }}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#4a5568', marginBottom: 6 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
                 Remark{' '}
                 {actionType === 'REJECTED'
                   ? <span style={{ fontWeight: 700, color: '#c53030' }}>* required</span>
-                  : <span style={{ fontWeight: 400, color: '#a0aec0' }}>(optional)</span>
+                  : <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(optional)</span>
                 }
               </label>
               <textarea
@@ -371,7 +346,7 @@ export default function LeaveApproval() {
                 onChange={e => setRemark(e.target.value)}
                 placeholder={actionType === 'REJECTED' ? 'Reason for rejection (required)…' : 'Add a note for the student…'}
                 maxLength={500}
-                style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: `1px solid ${actionType === 'REJECTED' && !remark.trim() ? '#fc8181' : '#e2e8f0'}`, fontSize: 13, resize: 'vertical', boxSizing: 'border-box', outline: 'none' }}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: `1px solid ${actionType === 'REJECTED' && !remark.trim() ? '#fc8181' : 'var(--border-strong)'}`, fontSize: 13, resize: 'vertical', boxSizing: 'border-box', outline: 'none' }}
               />
             </div>
 
@@ -380,7 +355,7 @@ export default function LeaveApproval() {
               <button
                 onClick={closeModal}
                 disabled={acting}
-                style={{ padding: '9px 20px', background: '#edf2f7', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, color: '#4a5568', cursor: 'pointer' }}
+                style={{ padding: '9px 20px', background: 'var(--surface-alt)', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', cursor: 'pointer' }}
               >
                 Cancel
               </button>

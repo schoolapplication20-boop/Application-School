@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import Layout from '../../components/Layout';
-import Toast from '../../components/Toast';
 import { teacherAPI } from '../../services/api';
 import { sortClasses } from '../../utils/classOrder';
-import { exportCSV } from '../../services/attendanceStore';
+import { exportCSV } from '../../utils/exportUtils';
+import { formatAttendanceDate, pctTextColor } from '../../utils/attendanceFormat';
+import { useToast } from '../../context/ToastContext';
 
 const TODAY = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }); // YYYY-MM-DD in IST
 
@@ -15,8 +16,6 @@ const STATUS_CONFIG = {
 };
 
 const getInitials = (name) => (name || 'U').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-const fmtDate    = (d) => { if (!d) return '—'; return new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }); };
-const pctColor   = (p) => p >= 90 ? '#276749' : p >= 75 ? '#c05621' : '#c53030';
 const classLabel = (cls) => cls ? `${cls.name}${cls.section ? '-' + cls.section : ''}` : '';
 
 export default function Attendance() {
@@ -33,7 +32,6 @@ export default function Attendance() {
   const [primaryClass, setPrimaryClass]     = useState(null);   // teacher's designated class
   const [noClassAssigned, setNoClassAssigned] = useState(false);
   const [teacherType, setTeacherType]       = useState('SUBJECT_TEACHER');
-  const [toast, setToast]                   = useState(null);
 
   // History state
   const [historyDates, setHistoryDates]     = useState([]);
@@ -41,15 +39,7 @@ export default function Attendance() {
   const [expandedDate, setExpandedDate]     = useState(null);
   const [expandedStudents, setExpandedStudents] = useState([]);
 
-  const toastTimerRef = useRef(null);
-
-  useEffect(() => () => clearTimeout(toastTimerRef.current), []);
-
-  const showToast = (msg, type = 'success') => {
-    clearTimeout(toastTimerRef.current);
-    setToast({ message: msg, type });
-    toastTimerRef.current = setTimeout(() => setToast(null), 3500);
-  };
+  const showToast = useToast();
 
   // ── Load teacher profile + assigned classes on mount ──────────────────────
   useEffect(() => {
@@ -149,7 +139,7 @@ export default function Attendance() {
     try {
       await teacherAPI.markAttendance(payload);
       setAlreadyMarked(true);
-      showToast(`Attendance ${wasAlreadyMarked ? 'updated' : 'saved'} for ${classLabel(selectedClass)} — ${fmtDate(selectedDate)}`);
+      showToast(`Attendance ${wasAlreadyMarked ? 'updated' : 'saved'} for ${classLabel(selectedClass)} — ${formatAttendanceDate(selectedDate)}`);
     } catch {
       showToast('Failed to save attendance. Please try again.', 'error');
     } finally {
@@ -181,7 +171,7 @@ export default function Attendance() {
         const l = list.filter(a => a.status === 'LEAVE').length;
         const o = list.filter(a => a.status === 'OTHERS').length;
         const t = list.length;
-        rows.push({ Date: fmtDate(date), Class: classLabel(selectedClass), Present: p, Absent: a, Leave: l, Others: o, Total: t, 'Attendance%': t ? `${Math.round((p / t) * 100)}%` : '0%' });
+        rows.push({ Date: formatAttendanceDate(date), Class: classLabel(selectedClass), Present: p, Absent: a, Leave: l, Others: o, Total: t, 'Attendance%': t ? `${Math.round((p / t) * 100)}%` : '0%' });
       } catch { /* skip */ }
     }
     exportCSV(rows, `attendance_${selectedClass.name}_${TODAY}.csv`);
@@ -201,9 +191,9 @@ export default function Attendance() {
           <p>Mark and track student attendance for your assigned classes</p>
         </div>
         <div className="data-table-card" style={{ padding: '60px 24px', textAlign: 'center' }}>
-          <span className="material-icons" style={{ fontSize: 52, color: '#e2e8f0', display: 'block', marginBottom: 12 }}>class</span>
-          <h3 style={{ color: '#4a5568', marginBottom: 8 }}>No Class Assigned</h3>
-          <p style={{ color: '#718096', fontSize: 14, maxWidth: 400, margin: '0 auto' }}>
+          <span className="material-icons" style={{ fontSize: 52, color: 'var(--border-strong)', display: 'block', marginBottom: 12 }}>class</span>
+          <h3 style={{ color: 'var(--text-secondary)', marginBottom: 8 }}>No Class Assigned</h3>
+          <p style={{ color: 'var(--text-secondary)', fontSize: 14, maxWidth: 400, margin: '0 auto' }}>
             No classes have been assigned to you yet. Please contact the administrator to assign classes to your profile.
           </p>
         </div>
@@ -213,8 +203,6 @@ export default function Attendance() {
 
   return (
     <Layout pageTitle="Attendance">
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-
       {/* Page Header */}
       <div className="page-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <div>
@@ -234,7 +222,7 @@ export default function Attendance() {
                 <span className="material-icons" style={{ color: '#fff', fontSize: 18 }}>assignment_ind</span>
               </div>
               <div>
-                <div style={{ fontSize: 11, fontWeight: 600, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                   {teacherType === 'BOTH' ? 'Class Teacher + Subject Teacher' : 'Class Teacher'}
                 </div>
                 <div style={{ fontSize: 15, fontWeight: 800, color: '#276749' }}>{classLabel(primaryClass)}</div>
@@ -251,7 +239,7 @@ export default function Attendance() {
                 <span className="material-icons" style={{ color: '#fff', fontSize: 18 }}>menu_book</span>
               </div>
               <div>
-                <div style={{ fontSize: 11, fontWeight: 600, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Subject Teacher</div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Subject Teacher</div>
                 <div style={{ fontSize: 15, fontWeight: 800, color: '#553c9a' }}>{classLabel(selectedClass)}</div>
               </div>
             </div>
@@ -260,13 +248,13 @@ export default function Attendance() {
       </div>
 
       {/* Tab Bar */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 24, background: '#fff', borderRadius: 12, padding: 6, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '1px solid #f0f4f8', width: 'fit-content' }}>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 24, background: 'var(--surface)', borderRadius: 12, padding: 6, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '1px solid var(--border)', width: 'fit-content' }}>
         {TABS.map(t => (
           <button key={t.key} onClick={() => setActiveTab(t.key)} style={{
             display: 'flex', alignItems: 'center', gap: 6, padding: '9px 20px',
             border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13,
             background: activeTab === t.key ? '#0de1e8' : 'transparent',
-            color:      activeTab === t.key ? '#fff'    : '#718096',
+            color:      activeTab === t.key ? '#fff'    : 'var(--text-secondary)',
             transition: 'all 0.2s',
           }}>
             <span className="material-icons" style={{ fontSize: 17 }}>{t.icon}</span>
@@ -312,7 +300,7 @@ export default function Attendance() {
             </div>
 
             {/* Summary Strip */}
-            <div style={{ display: 'flex', gap: 10, marginTop: 16, padding: '12px 14px', background: '#f7fafc', borderRadius: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: 10, marginTop: 16, padding: '12px 14px', background: 'var(--surface-alt)', borderRadius: 10, flexWrap: 'wrap', alignItems: 'center' }}>
               {Object.entries(STATUS_CONFIG).map(([st, cfg]) => (
                 <div key={st} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '5px 12px', background: cfg.light, borderRadius: 20, border: `1.5px solid ${cfg.bg}30` }}>
                   <span className="material-icons" style={{ color: cfg.bg, fontSize: 15 }}>{cfg.icon}</span>
@@ -336,7 +324,7 @@ export default function Attendance() {
           {/* Student List */}
           <div className="data-table-card">
             {loadingStudents ? (
-              <div style={{ padding: 40, textAlign: 'center', color: '#a0aec0' }}>
+              <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
                 <span className="material-icons" style={{ fontSize: 36, display: 'block', marginBottom: 8, animation: 'spin 1s linear infinite' }}>refresh</span>
                 Loading students…
               </div>
@@ -372,7 +360,7 @@ export default function Attendance() {
 
                         return (
                           <tr key={s.id} style={{ background: rowBg, transition: 'background 0.2s' }}>
-                            <td style={{ color: '#a0aec0', fontSize: 12 }}>{idx + 1}</td>
+                            <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>{idx + 1}</td>
                             <td>
                               <div className="student-cell">
                                 <div className="student-avatar-sm" style={{ background: cfg.bg, color: '#fff' }}>
@@ -383,15 +371,15 @@ export default function Attendance() {
                                 </div>
                               </div>
                             </td>
-                            <td style={{ fontFamily: 'monospace', fontSize: 12, color: '#718096', fontWeight: 600 }}>{s.rollNumber}</td>
+                            <td style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>{s.rollNumber}</td>
                             <td>
                               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                                 {Object.entries(STATUS_CONFIG).map(([st, c]) => (
                                   <button key={st} onClick={() => setStatus(s.id, st)} style={{
-                                    padding: '6px 12px', border: `2px solid ${status === st ? c.bg : '#e2e8f0'}`,
+                                    padding: '6px 12px', border: `2px solid ${status === st ? c.bg : 'var(--border-strong)'}`,
                                     borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 700,
-                                    background:  status === st ? c.bg    : '#f7fafc',
-                                    color:       status === st ? '#fff'  : '#a0aec0',
+                                    background:  status === st ? c.bg    : 'var(--surface-alt)',
+                                    color:       status === st ? '#fff'  : 'var(--text-muted)',
                                     transition: 'all 0.15s',
                                     display: 'flex', alignItems: 'center', gap: 4,
                                   }}>
@@ -412,7 +400,7 @@ export default function Attendance() {
                                   style={{ border: `1.5px solid ${cfg.bg}60`, background: cfg.light }}
                                 />
                               ) : (
-                                <span style={{ fontSize: 12, color: '#cbd5e0' }}>—</span>
+                                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>—</span>
                               )}
                             </td>
                           </tr>
@@ -422,7 +410,7 @@ export default function Attendance() {
                   </table>
                 </div>
 
-                <div style={{ padding: '16px 0 0', display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #f0f4f8', marginTop: 12, gap: 10 }}>
+                <div style={{ padding: '16px 0 0', display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--border)', marginTop: 12, gap: 10 }}>
                   <button onClick={handleSave} disabled={saving} style={{
                     padding: '12px 32px', background: saving ? '#a0aec0' : '#0de1e8', border: 'none', borderRadius: 10,
                     color: '#fff', fontWeight: 700, fontSize: 15, cursor: saving ? 'not-allowed' : 'pointer',
@@ -452,7 +440,7 @@ export default function Attendance() {
                   <option key={c.id} value={c.id}>{classLabel(c)}</option>
                 ))}
               </select>
-              <span style={{ fontSize: 13, color: '#a0aec0' }}>{historyDates.length} recorded days</span>
+              <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{historyDates.length} recorded days</span>
             </div>
             <button onClick={handleExportCSV} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: '#276749', border: 'none', borderRadius: 9, color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
               <span className="material-icons" style={{ fontSize: 16 }}>download</span> Export CSV
@@ -460,7 +448,7 @@ export default function Attendance() {
           </div>
 
           {loadingHistory ? (
-            <div style={{ padding: 40, textAlign: 'center', color: '#a0aec0' }}>Loading history…</div>
+            <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Loading history…</div>
           ) : historyDates.length === 0 ? (
             <div className="empty-state">
               <span className="material-icons">history</span>
@@ -509,12 +497,12 @@ function HistoryRow({ date, classId, expanded, expandedStudents, onToggle, clsLa
     : null;
 
   return (
-    <div style={{ borderBottom: '1px solid #f0f4f8' }}>
+    <div style={{ borderBottom: '1px solid var(--border)' }}>
       <div onClick={onToggle} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 4px', cursor: 'pointer', userSelect: 'none' }}>
-        <span className="material-icons" style={{ fontSize: 16, color: '#a0aec0', transition: 'transform 0.2s', transform: expanded ? 'rotate(90deg)' : 'none' }}>chevron_right</span>
+        <span className="material-icons" style={{ fontSize: 16, color: 'var(--text-muted)', transition: 'transform 0.2s', transform: expanded ? 'rotate(90deg)' : 'none' }}>chevron_right</span>
 
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: '#2d3748', minWidth: 110 }}>{new Date(date + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', minWidth: 110 }}>{new Date(date + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
           <span style={{ background: '#0de1e815', color: '#276749', padding: '2px 10px', borderRadius: 12, fontWeight: 700, fontSize: 12 }}>{clsLabel}</span>
 
           {summary ? (
@@ -527,15 +515,15 @@ function HistoryRow({ date, classId, expanded, expandedStudents, onToggle, clsLa
               ))}
               {pct !== null && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
-                  <div style={{ width: 50, height: 6, background: '#e2e8f0', borderRadius: 4, overflow: 'hidden' }}>
+                  <div style={{ width: 50, height: 6, background: 'var(--border-strong)', borderRadius: 4, overflow: 'hidden' }}>
                     <div style={{ width: `${pct}%`, height: '100%', background: pct >= 90 ? '#0de1e8' : pct >= 75 ? '#ed8936' : '#e53e3e', borderRadius: 4 }} />
                   </div>
-                  <span style={{ fontWeight: 700, fontSize: 13, color: pctColor(pct) }}>{pct}%</span>
+                  <span style={{ fontWeight: 700, fontSize: 13, color: pctTextColor(pct) }}>{pct}%</span>
                 </div>
               )}
             </>
           ) : (
-            <span style={{ fontSize: 12, color: '#a0aec0' }}>Loading…</span>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Loading…</span>
           )}
         </div>
       </div>
@@ -543,7 +531,7 @@ function HistoryRow({ date, classId, expanded, expandedStudents, onToggle, clsLa
       {expanded && (
         <div style={{ padding: '0 16px 16px 36px' }}>
           {expandedStudents.length === 0 ? (
-            <p style={{ color: '#a0aec0', fontSize: 13 }}>No records found for this date.</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>No records found for this date.</p>
           ) : (
             <table className="data-table" style={{ fontSize: 12 }}>
               <thead>
@@ -555,9 +543,9 @@ function HistoryRow({ date, classId, expanded, expandedStudents, onToggle, clsLa
                   const student = students.find(s => s.id === a.studentId);
                   return (
                     <tr key={a.id}>
-                      <td style={{ color: '#a0aec0' }}>{idx + 1}</td>
-                      <td style={{ fontWeight: 600, color: '#2d3748' }}>{student?.name || `Student #${a.studentId}`}</td>
-                      <td style={{ fontFamily: 'monospace', color: '#718096' }}>{student?.rollNumber || '—'}</td>
+                      <td style={{ color: 'var(--text-muted)' }}>{idx + 1}</td>
+                      <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{student?.name || `Student #${a.studentId}`}</td>
+                      <td style={{ fontFamily: 'monospace', color: 'var(--text-secondary)' }}>{student?.rollNumber || '—'}</td>
                       <td>
                         <span style={{ background: cfg.light, color: cfg.bg, border: `1.5px solid ${cfg.bg}40`, borderRadius: 12, padding: '2px 10px', fontSize: 11, fontWeight: 700 }}>
                           {cfg.label}

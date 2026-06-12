@@ -1,19 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, ActivityIndicator, Alert } from 'react-native';
-import api from '../../services/api';
+import React from 'react';
+import { View, Text, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
+import useCachedFetch from '../../hooks/useCachedFetch';
+import OfflineBanner from '../../components/OfflineBanner';
 
 const STATUS_STYLE = { SCHEDULED: { bg: '#dbeafe', text: '#1d4ed8' }, ONGOING: { bg: '#dcfce7', text: '#166534' }, COMPLETED: { bg: '#f1f5f9', text: '#64748b' } };
 
 export default function TeacherExams() {
-  const [exams, setExams] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    api.get('/api/examination/schedules')
-      .then(res => setExams(res.data.data || []))
-      .catch(() => Alert.alert('Error', 'Failed to load exams.'))
-      .finally(() => setLoading(false));
-  }, []);
+  const { data, loading, isOffline } = useCachedFetch('/api/examination/schedules');
+  const exams = data || [];
 
   if (loading) return <ActivityIndicator style={{ flex: 1 }} size="large" color="#14b8a6" />;
 
@@ -23,6 +17,7 @@ export default function TeacherExams() {
       data={exams}
       keyExtractor={(_, i) => i.toString()}
       contentContainerStyle={{ padding: 12 }}
+      ListHeaderComponent={<OfflineBanner visible={isOffline} />}
       renderItem={({ item }) => {
         const s = STATUS_STYLE[item.status] || STATUS_STYLE.SCHEDULED;
         return (

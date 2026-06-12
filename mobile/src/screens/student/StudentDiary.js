@@ -1,17 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
-import api from '../../services/api';
+import useCachedFetch from '../../hooks/useCachedFetch';
+import OfflineBanner from '../../components/OfflineBanner';
 
 export default function StudentDiary() {
-  const [entries, setEntries] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    api.get('/api/student/diary')
-      .then(res => setEntries(res.data.data || []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+  const { data, loading, isOffline } = useCachedFetch('/api/student/diary');
+  const entries = data || [];
 
   if (loading) return <ActivityIndicator style={{ flex: 1 }} size="large" color="#ea580c" />;
 
@@ -21,6 +15,7 @@ export default function StudentDiary() {
       data={entries}
       keyExtractor={(_, i) => i.toString()}
       contentContainerStyle={{ padding: 12 }}
+      ListHeaderComponent={<OfflineBanner visible={isOffline} />}
       renderItem={({ item }) => (
         <View style={styles.card}>
           <View style={styles.cardTop}>

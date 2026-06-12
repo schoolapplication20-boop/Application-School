@@ -4,7 +4,7 @@ import com.schoolers.dto.ApiResponse;
 import com.schoolers.model.Certificate;
 import com.schoolers.model.ExamSchedule;
 import com.schoolers.model.HallTicket;
-import com.schoolers.repository.UserRepository;
+import com.schoolers.security.CurrentUserUtil;
 import com.schoolers.service.ExaminationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -24,18 +24,11 @@ public class ExaminationController {
     private ExaminationService examinationService;
 
     @Autowired
-    private UserRepository userRepository;
+    private CurrentUserUtil currentUserUtil;
 
     private String currentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         return auth != null ? auth.getName() : "system";
-    }
-
-    private Long getCurrentSchoolId(Authentication auth) {
-        if (auth == null) return null;
-        return userRepository.findByEmailIgnoreCase(auth.getName())
-                .map(com.schoolers.model.User::getSchoolId)
-                .orElse(null);
     }
 
     // ============================================================
@@ -48,27 +41,27 @@ public class ExaminationController {
             @RequestParam(required = false) String className,
             @RequestParam(required = false) String examType,
             Authentication auth) {
-        return ResponseEntity.ok(examinationService.getAllSchedules(className, examType, getCurrentSchoolId(auth)));
+        return ResponseEntity.ok(examinationService.getAllSchedules(className, examType, currentUserUtil.getCurrentSchoolId(auth)));
     }
 
     @PostMapping("/schedules")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<ExamSchedule>> createSchedule(
             @RequestBody Map<String, Object> body, Authentication auth) {
-        return ResponseEntity.ok(examinationService.createSchedule(body, getCurrentSchoolId(auth)));
+        return ResponseEntity.ok(examinationService.createSchedule(body, currentUserUtil.getCurrentSchoolId(auth)));
     }
 
     @PutMapping("/schedules/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<ExamSchedule>> updateSchedule(
             @PathVariable Long id, @RequestBody Map<String, Object> body, Authentication auth) {
-        return ResponseEntity.ok(examinationService.updateSchedule(id, body, getCurrentSchoolId(auth)));
+        return ResponseEntity.ok(examinationService.updateSchedule(id, body, currentUserUtil.getCurrentSchoolId(auth)));
     }
 
     @DeleteMapping("/schedules/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<Void>> deleteSchedule(@PathVariable Long id, Authentication auth) {
-        return ResponseEntity.ok(examinationService.deleteSchedule(id, getCurrentSchoolId(auth)));
+        return ResponseEntity.ok(examinationService.deleteSchedule(id, currentUserUtil.getCurrentSchoolId(auth)));
     }
 
     // ============================================================
@@ -81,34 +74,34 @@ public class ExaminationController {
             @RequestParam(required = false) String className,
             @RequestParam(required = false) String examType,
             Authentication auth) {
-        return ResponseEntity.ok(examinationService.getAllHallTickets(className, examType, getCurrentSchoolId(auth)));
+        return ResponseEntity.ok(examinationService.getAllHallTickets(className, examType, currentUserUtil.getCurrentSchoolId(auth)));
     }
 
     @GetMapping("/hall-tickets/student/{studentId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER')")
     public ResponseEntity<ApiResponse<List<HallTicket>>> getHallTicketsByStudent(
             @PathVariable Long studentId, Authentication auth) {
-        return ResponseEntity.ok(examinationService.getHallTicketsByStudent(studentId, getCurrentSchoolId(auth)));
+        return ResponseEntity.ok(examinationService.getHallTicketsByStudent(studentId, currentUserUtil.getCurrentSchoolId(auth)));
     }
 
     @PostMapping("/hall-tickets")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<HallTicket>> createHallTicket(
             @RequestBody Map<String, Object> body, Authentication auth) {
-        return ResponseEntity.ok(examinationService.createHallTicket(body, currentUser(), getCurrentSchoolId(auth)));
+        return ResponseEntity.ok(examinationService.createHallTicket(body, currentUser(), currentUserUtil.getCurrentSchoolId(auth)));
     }
 
     @PostMapping("/hall-tickets/bulk")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<HallTicket>> generateBulk(
             @RequestBody Map<String, Object> body, Authentication auth) {
-        return ResponseEntity.ok(examinationService.generateBulkHallTickets(body, currentUser(), getCurrentSchoolId(auth)));
+        return ResponseEntity.ok(examinationService.generateBulkHallTickets(body, currentUser(), currentUserUtil.getCurrentSchoolId(auth)));
     }
 
     @DeleteMapping("/hall-tickets/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<Void>> deleteHallTicket(@PathVariable Long id, Authentication auth) {
-        return ResponseEntity.ok(examinationService.deleteHallTicket(id, getCurrentSchoolId(auth)));
+        return ResponseEntity.ok(examinationService.deleteHallTicket(id, currentUserUtil.getCurrentSchoolId(auth)));
     }
 
     // ============================================================
@@ -119,14 +112,14 @@ public class ExaminationController {
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER')")
     public ResponseEntity<ApiResponse<List<Certificate>>> getCertificates(
             @RequestParam(required = false) String type, Authentication auth) {
-        return ResponseEntity.ok(examinationService.getAllCertificates(type, getCurrentSchoolId(auth)));
+        return ResponseEntity.ok(examinationService.getAllCertificates(type, currentUserUtil.getCurrentSchoolId(auth)));
     }
 
     @GetMapping("/certificates/student/{studentId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER')")
     public ResponseEntity<ApiResponse<List<Certificate>>> getCertificatesByStudent(
             @PathVariable Long studentId, Authentication auth) {
-        return ResponseEntity.ok(examinationService.getCertificatesByStudent(studentId, getCurrentSchoolId(auth)));
+        return ResponseEntity.ok(examinationService.getCertificatesByStudent(studentId, currentUserUtil.getCurrentSchoolId(auth)));
     }
 
     @GetMapping("/certificates/verify/{certId}")
@@ -139,18 +132,18 @@ public class ExaminationController {
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<Certificate>> createCertificate(
             @RequestBody Map<String, Object> body, Authentication auth) {
-        return ResponseEntity.ok(examinationService.createCertificate(body, currentUser(), getCurrentSchoolId(auth)));
+        return ResponseEntity.ok(examinationService.createCertificate(body, currentUser(), currentUserUtil.getCurrentSchoolId(auth)));
     }
 
     @PatchMapping("/certificates/{id}/verify")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER')")
     public ResponseEntity<ApiResponse<Certificate>> verifyCertificate(@PathVariable Long id, Authentication auth) {
-        return ResponseEntity.ok(examinationService.verifyCertificate(id, currentUser(), getCurrentSchoolId(auth)));
+        return ResponseEntity.ok(examinationService.verifyCertificate(id, currentUser(), currentUserUtil.getCurrentSchoolId(auth)));
     }
 
     @DeleteMapping("/certificates/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<Void>> deleteCertificate(@PathVariable Long id, Authentication auth) {
-        return ResponseEntity.ok(examinationService.deleteCertificate(id, getCurrentSchoolId(auth)));
+        return ResponseEntity.ok(examinationService.deleteCertificate(id, currentUserUtil.getCurrentSchoolId(auth)));
     }
 }

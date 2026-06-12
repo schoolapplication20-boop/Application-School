@@ -175,8 +175,8 @@ export default function StudentExams() {
           <button key={t.key} onClick={() => setTab(t.key)} style={{
             padding: '10px 20px', borderRadius: 10, border: 'none', cursor: 'pointer',
             fontWeight: 600, fontSize: 14, display: 'flex', alignItems: 'center', gap: 8,
-            background: tab === t.key ? '#0de1e8' : '#f7fafc',
-            color:      tab === t.key ? '#fff'    : '#718096',
+            background: tab === t.key ? '#0de1e8' : 'var(--surface-alt)',
+            color:      tab === t.key ? '#fff'    : 'var(--text-secondary)',
             boxShadow:  tab === t.key ? '0 2px 8px rgba(118,196,66,0.3)' : 'none',
             transition: 'all 0.2s',
           }}>
@@ -190,40 +190,40 @@ export default function StudentExams() {
       {tab === 'timetable' && (
         <div className="data-table-card" style={{ padding: 0, overflow: 'hidden' }}>
           {loading ? (
-            <div style={{ padding: 40, textAlign: 'center', color: '#a0aec0' }}>
+            <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
               <span className="material-icons" style={{ fontSize: 36, display: 'block', marginBottom: 8, animation: 'spin 1s linear infinite' }}>autorenew</span>
               Loading timetable…
             </div>
           ) : activeDays.length === 0 ? (
             <div className="empty-state" style={{ padding: 48 }}>
-              <span className="material-icons" style={{ fontSize: 52, color: '#e2e8f0' }}>calendar_view_week</span>
-              <h3 style={{ color: '#a0aec0', marginTop: 14 }}>No timetable assigned for your class yet</h3>
-              <p style={{ color: '#cbd5e0' }}>Your admin will schedule the class timetable soon.</p>
+              <span className="material-icons" style={{ fontSize: 52, color: 'var(--border-strong)' }}>calendar_view_week</span>
+              <h3 style={{ color: 'var(--text-muted)', marginTop: 14 }}>No timetable assigned for your class yet</h3>
+              <p style={{ color: 'var(--text-muted)' }}>Your admin will schedule the class timetable soon.</p>
             </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 600 }}>
                 {/* Header row: DAY col + one col per time slot */}
                 <thead>
-                  <tr style={{ background: '#f8fafc' }}>
+                  <tr style={{ background: 'var(--surface-alt)' }}>
                     <th style={{
                       width: 180, minWidth: 160, padding: '14px 20px',
                       textAlign: 'left', fontSize: 12, fontWeight: 700,
-                      color: '#718096', letterSpacing: '0.5px', textTransform: 'uppercase',
-                      borderBottom: '2px solid #e2e8f0', borderRight: '1px solid #e2e8f0',
+                      color: 'var(--text-secondary)', letterSpacing: '0.5px', textTransform: 'uppercase',
+                      borderBottom: '2px solid var(--border-strong)', borderRight: '1px solid var(--border-strong)',
                     }}>
                       DAY
                     </th>
                     {allSlots.map(slot => (
                       <th key={`${slot.startTime}-${slot.endTime}`} style={{
                         padding: '12px 16px', textAlign: 'center',
-                        borderBottom: '2px solid #e2e8f0', borderRight: '1px solid #e2e8f0',
+                        borderBottom: '2px solid var(--border-strong)', borderRight: '1px solid var(--border-strong)',
                         minWidth: 160,
                       }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: '#2d3748' }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
                           {fmtTime(slot.startTime)} – {fmtTime(slot.endTime)}
                         </div>
-                        <div style={{ fontSize: 11, color: '#a0aec0', marginTop: 2 }}>Time Slot</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Time Slot</div>
                       </th>
                     ))}
                   </tr>
@@ -236,15 +236,15 @@ export default function StudentExams() {
                     const periodCount = timetableByDay[day].length;
                     return (
                       <tr key={day} style={{
-                        background: isToday ? '#f0f4ff' : dayIdx % 2 === 0 ? '#fff' : '#fafbfc',
+                        background: isToday ? '#f0f4ff' : dayIdx % 2 === 0 ? 'var(--surface)' : 'var(--surface-alt)',
                       }}>
                         {/* Day label cell */}
                         <td style={{
                           padding: '16px 20px', verticalAlign: 'middle',
-                          borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0',
+                          borderBottom: '1px solid var(--border-strong)', borderRight: '1px solid var(--border-strong)',
                         }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ fontWeight: 700, fontSize: 15, color: isToday ? '#4361ee' : '#2d3748' }}>
+                            <span style={{ fontWeight: 700, fontSize: 15, color: isToday ? '#4361ee' : 'var(--text-primary)' }}>
                               {day}
                             </span>
                             {isToday && (
@@ -266,7 +266,7 @@ export default function StudentExams() {
                           return (
                             <td key={`${day}-${slot.startTime}`} style={{
                               padding: 10, verticalAlign: 'middle', textAlign: 'center',
-                              borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0',
+                              borderBottom: '1px solid var(--border-strong)', borderRight: '1px solid var(--border-strong)',
                             }}>
                               {entry ? (
                                 <div style={{
@@ -277,24 +277,24 @@ export default function StudentExams() {
                                 }}>
                                   <div style={{ height: 4, background: color }} />
                                   <div style={{ padding: '10px 12px' }}>
-                                    <div style={{ fontWeight: 700, fontSize: 13, color: '#2d3748', marginBottom: 3 }}>
+                                    <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)', marginBottom: 3 }}>
                                       {entry.subject}
                                     </div>
-                                    <div style={{ fontSize: 11, color: '#718096' }}>
+                                    <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
                                       {entry.classSection}
                                     </div>
                                     {entry.teacherName && (
-                                      <div style={{ fontSize: 10, color: '#a0aec0', marginTop: 3 }}>
+                                      <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 3 }}>
                                         {entry.teacherName}
                                       </div>
                                     )}
                                     {entry.room && (
-                                      <div style={{ fontSize: 10, color: '#a0aec0' }}>Room {entry.room}</div>
+                                      <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>Room {entry.room}</div>
                                     )}
                                   </div>
                                 </div>
                               ) : (
-                                <span style={{ fontSize: 11, color: '#e2e8f0' }}>—</span>
+                                <span style={{ fontSize: 11, color: 'var(--border-strong)' }}>—</span>
                               )}
                             </td>
                           );
@@ -328,24 +328,24 @@ export default function StudentExams() {
           </div>
 
           {loading ? (
-            <div style={{ padding: 40, textAlign: 'center', color: '#a0aec0' }}>
+            <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
               <span className="material-icons" style={{ fontSize: 36, display: 'block', marginBottom: 8, animation: 'spin 1s linear infinite' }}>autorenew</span>
               Loading exam schedule…
             </div>
           ) : filteredExams.length === 0 ? (
             <div className="empty-state" style={{ padding: 48 }}>
-              <span className="material-icons" style={{ fontSize: 52, color: '#e2e8f0' }}>event_note</span>
-              <h3 style={{ color: '#a0aec0', marginTop: 14 }}>
+              <span className="material-icons" style={{ fontSize: 52, color: 'var(--border-strong)' }}>event_note</span>
+              <h3 style={{ color: 'var(--text-muted)', marginTop: 14 }}>
                 {exams.length === 0 ? 'No exams scheduled for your class yet' : 'No exams match your filter'}
               </h3>
-              <p style={{ color: '#cbd5e0' }}>Check back later or clear the filter.</p>
+              <p style={{ color: 'var(--text-muted)' }}>Check back later or clear the filter.</p>
             </div>
           ) : (
             <>
               {/* Upcoming exams — card grid */}
               {filteredExams.some(e => e.status === 'SCHEDULED' || e.status === 'ONGOING') && (
                 <div>
-                  <div style={{ padding: '12px 20px 8px', fontSize: 12, fontWeight: 700, color: '#2d3748', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                  <div style={{ padding: '12px 20px 8px', fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
                     Upcoming Exams
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(270px,1fr))', gap: 16, padding: '0 20px 20px' }}>
@@ -359,7 +359,7 @@ export default function StudentExams() {
               {/* Past exams — table */}
               {filteredExams.some(e => ['COMPLETED','CANCELLED'].includes(String(e.status || '').toUpperCase())) && (
                 <div>
-                  <div style={{ padding: '12px 20px 8px', fontSize: 12, fontWeight: 700, color: '#718096', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                  <div style={{ padding: '12px 20px 8px', fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
                     Past Exams
                   </div>
                   <div style={{ overflowX: 'auto' }}>
@@ -385,7 +385,7 @@ export default function StudentExams() {
                               </td>
                               <td style={{ fontWeight: 600, fontSize: 13 }}>{e.subject}</td>
                               <td style={{ fontSize: 13 }}>{fmt(e.examDate)}</td>
-                              <td style={{ fontSize: 12, color: '#718096' }}>{fmtTime(e.startTime)} – {fmtTime(e.endTime)}</td>
+                              <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{fmtTime(e.startTime)} – {fmtTime(e.endTime)}</td>
                               <td style={{ fontSize: 13, textAlign: 'center' }}>{e.maxMarks}</td>
                               <td>
                                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4,
@@ -426,7 +426,7 @@ function ExamCard({ exam }) {
 
   return (
     <div style={{
-      borderRadius: 12, border: '1.5px solid #e2e8f0', background: '#fff',
+      borderRadius: 12, border: '1.5px solid var(--border-strong)', background: 'var(--surface)',
       overflow: 'hidden',
       boxShadow: exam.status === 'ONGOING' ? '0 0 0 2px #0de1e840' : '0 1px 4px rgba(0,0,0,0.06)',
     }}>
@@ -446,8 +446,8 @@ function ExamCard({ exam }) {
       </div>
 
       <div style={{ padding: '14px 16px' }}>
-        <div style={{ fontWeight: 700, fontSize: 15, color: '#2d3748', marginBottom: 2 }}>{exam.subject}</div>
-        <div style={{ fontSize: 12, color: '#718096', marginBottom: 12 }}>{exam.examName}</div>
+        <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-primary)', marginBottom: 2 }}>{exam.subject}</div>
+        <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 12 }}>{exam.examName}</div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 12px', fontSize: 12 }}>
           {[
@@ -457,9 +457,9 @@ function ExamCard({ exam }) {
             ['grade',          'Max Marks', exam.maxMarks],
           ].map(([icon, label, value]) => (
             <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <span className="material-icons" style={{ fontSize: 13, color: '#a0aec0' }}>{icon}</span>
-              <span style={{ color: '#a0aec0' }}>{label}:</span>
-              <span style={{ color: '#2d3748', fontWeight: 600 }}>{value || '—'}</span>
+              <span className="material-icons" style={{ fontSize: 13, color: 'var(--text-muted)' }}>{icon}</span>
+              <span style={{ color: 'var(--text-muted)' }}>{label}:</span>
+              <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{value || '—'}</span>
             </div>
           ))}
         </div>
@@ -473,7 +473,7 @@ function ExamCard({ exam }) {
         )}
       </div>
 
-      <div style={{ padding: '8px 16px', borderTop: '1px solid #f0f4f8', display: 'flex', justifyContent: 'flex-end' }}>
+      <div style={{ padding: '8px 16px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end' }}>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4,
           fontSize: 11, fontWeight: 700, color: st.color, background: st.bg,
           padding: '3px 10px', borderRadius: 12 }}>

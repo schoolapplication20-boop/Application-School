@@ -17,6 +17,9 @@ public interface AppNotificationRepository extends JpaRepository<AppNotification
     void deleteByUserId(Long userId);
 
     @Modifying @Transactional
+    void deleteByUserIdIn(List<Long> userIds);
+
+    @Modifying @Transactional
     @org.springframework.data.jpa.repository.Query("DELETE FROM AppNotification n WHERE n.userId IN (SELECT u.id FROM User u WHERE u.schoolId = :schoolId)")
     void deleteBySchoolId(@org.springframework.data.repository.query.Param("schoolId") Long schoolId);
 }

@@ -118,7 +118,8 @@ public class OnlineExamService {
     @Transactional
     public ApiResponse<OnlineExam> updateExam(Teacher teacher, Long examId, Map<String, Object> body) {
         Optional<OnlineExam> opt = examRepository.findById(examId);
-        if (opt.isEmpty() || !teacher.getId().equals(opt.get().getTeacherId())) {
+        if (opt.isEmpty() || !teacher.getId().equals(opt.get().getTeacherId())
+                || !teacher.getSchoolId().equals(opt.get().getSchoolId())) {
             return ApiResponse.error("Exam not found or access denied.");
         }
         OnlineExam exam = opt.get();
@@ -157,7 +158,8 @@ public class OnlineExamService {
     @Transactional
     public ApiResponse<Void> deleteExam(Teacher teacher, Long examId) {
         Optional<OnlineExam> opt = examRepository.findById(examId);
-        if (opt.isEmpty() || !teacher.getId().equals(opt.get().getTeacherId())) {
+        if (opt.isEmpty() || !teacher.getId().equals(opt.get().getTeacherId())
+                || !teacher.getSchoolId().equals(opt.get().getSchoolId())) {
             return ApiResponse.error("Exam not found or access denied.");
         }
         OnlineExam exam = opt.get();
@@ -183,7 +185,8 @@ public class OnlineExamService {
     @Transactional
     public ApiResponse<OnlineExamQuestion> addQuestion(Teacher teacher, Long examId, Map<String, Object> body) {
         Optional<OnlineExam> opt = examRepository.findById(examId);
-        if (opt.isEmpty() || !teacher.getId().equals(opt.get().getTeacherId())) {
+        if (opt.isEmpty() || !teacher.getId().equals(opt.get().getTeacherId())
+                || !teacher.getSchoolId().equals(opt.get().getSchoolId())) {
             return ApiResponse.error("Exam not found or access denied.");
         }
         String text = (String) body.get("questionText");
@@ -244,7 +247,8 @@ public class OnlineExamService {
     @Transactional
     public ApiResponse<OnlineExamQuestion> updateQuestion(Teacher teacher, Long examId, Long qId, Map<String, Object> body) {
         Optional<OnlineExam> examOpt = examRepository.findById(examId);
-        if (examOpt.isEmpty() || !teacher.getId().equals(examOpt.get().getTeacherId())) {
+        if (examOpt.isEmpty() || !teacher.getId().equals(examOpt.get().getTeacherId())
+                || !teacher.getSchoolId().equals(examOpt.get().getSchoolId())) {
             return ApiResponse.error("Exam not found or access denied.");
         }
         Optional<OnlineExamQuestion> qOpt = questionRepository.findById(qId);
@@ -293,7 +297,8 @@ public class OnlineExamService {
     @Transactional
     public ApiResponse<Void> deleteQuestion(Teacher teacher, Long examId, Long qId) {
         Optional<OnlineExam> examOpt = examRepository.findById(examId);
-        if (examOpt.isEmpty() || !teacher.getId().equals(examOpt.get().getTeacherId())) {
+        if (examOpt.isEmpty() || !teacher.getId().equals(examOpt.get().getTeacherId())
+                || !teacher.getSchoolId().equals(examOpt.get().getSchoolId())) {
             return ApiResponse.error("Exam not found or access denied.");
         }
         Optional<OnlineExamQuestion> qOpt = questionRepository.findById(qId);
@@ -310,7 +315,8 @@ public class OnlineExamService {
     @Transactional
     public ApiResponse<OnlineExam> publishExam(Teacher teacher, Long examId) {
         Optional<OnlineExam> opt = examRepository.findById(examId);
-        if (opt.isEmpty() || !teacher.getId().equals(opt.get().getTeacherId())) {
+        if (opt.isEmpty() || !teacher.getId().equals(opt.get().getTeacherId())
+                || !teacher.getSchoolId().equals(opt.get().getSchoolId())) {
             return ApiResponse.error("Exam not found or access denied.");
         }
         OnlineExam exam = opt.get();
@@ -328,7 +334,8 @@ public class OnlineExamService {
     @Transactional
     public ApiResponse<OnlineExam> closeExam(Teacher teacher, Long examId) {
         Optional<OnlineExam> opt = examRepository.findById(examId);
-        if (opt.isEmpty() || !teacher.getId().equals(opt.get().getTeacherId())) {
+        if (opt.isEmpty() || !teacher.getId().equals(opt.get().getTeacherId())
+                || !teacher.getSchoolId().equals(opt.get().getSchoolId())) {
             return ApiResponse.error("Exam not found or access denied.");
         }
         OnlineExam exam = opt.get();
@@ -343,7 +350,8 @@ public class OnlineExamService {
 
     public ApiResponse<List<Map<String, Object>>> getExamResults(Teacher teacher, Long examId) {
         Optional<OnlineExam> opt = examRepository.findById(examId);
-        if (opt.isEmpty() || !teacher.getId().equals(opt.get().getTeacherId())) {
+        if (opt.isEmpty() || !teacher.getId().equals(opt.get().getTeacherId())
+                || !teacher.getSchoolId().equals(opt.get().getSchoolId())) {
             return ApiResponse.error("Exam not found or access denied.");
         }
         return ApiResponse.success(buildResultsList(examId, opt.get()));
@@ -353,7 +361,8 @@ public class OnlineExamService {
     public ApiResponse<Map<String, Object>> gradeAttempt(Teacher teacher, Long examId, Long attemptId,
                                                           List<Map<String, Object>> grades) {
         Optional<OnlineExam> examOpt = examRepository.findById(examId);
-        if (examOpt.isEmpty() || !teacher.getId().equals(examOpt.get().getTeacherId())) {
+        if (examOpt.isEmpty() || !teacher.getId().equals(examOpt.get().getTeacherId())
+                || !teacher.getSchoolId().equals(examOpt.get().getSchoolId())) {
             return ApiResponse.error("Exam not found or access denied.");
         }
         Optional<OnlineExamAttempt> attemptOpt = attemptRepository.findById(attemptId);

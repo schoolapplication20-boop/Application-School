@@ -15,10 +15,10 @@ export default function NotFound() {
     }}>
       <div style={{ fontSize: 80, marginBottom: 8 }}>🏫</div>
       <h1 style={{ fontSize: 96, fontWeight: 900, color: '#4f46e5', margin: 0, lineHeight: 1 }}>404</h1>
-      <h2 style={{ fontSize: 24, fontWeight: 700, color: '#1e293b', margin: '16px 0 8px' }}>
+      <h2 style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-primary)', margin: '16px 0 8px' }}>
         Page Not Found
       </h2>
-      <p style={{ color: '#64748b', fontSize: 16, maxWidth: 420, lineHeight: 1.6, marginBottom: 32 }}>
+      <p style={{ color: 'var(--text-secondary)', fontSize: 16, maxWidth: 420, lineHeight: 1.6, marginBottom: 32 }}>
         The page you're looking for doesn't exist or has been moved.
       </p>
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>

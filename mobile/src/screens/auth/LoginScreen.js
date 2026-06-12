@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../../services/api';
+import { setStoredToken, setStoredUser } from '../../services/secureStorage';
 import { useAuth } from '../../context/AuthContext';
 
 const ROLES = [
   { key: 'STUDENT', label: 'Student', icon: '🎓' },
   { key: 'TEACHER', label: 'Teacher', icon: '👨‍🏫' },
+  { key: 'ADMIN', label: 'Admin', icon: '🧑‍💼' },
+  { key: 'SUPER_ADMIN', label: 'Super Admin', icon: '👑' },
 ];
 
 export default function LoginScreen({ navigation }) {
@@ -49,8 +51,8 @@ export default function LoginScreen({ navigation }) {
         firstLogin: user.firstLogin,
       };
 
-      await AsyncStorage.setItem('token', token);
-      await AsyncStorage.setItem('user', JSON.stringify(userData));
+      await setStoredToken(token);
+      await setStoredUser(userData);
       login(userData);
     } catch (err) {
       Alert.alert('Login Failed', err?.response?.data?.message || 'Invalid credentials. Please try again.');
@@ -151,8 +153,8 @@ const styles = StyleSheet.create({
   card: { backgroundColor: '#fff', borderRadius: 20, padding: 24, elevation: 8, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 16 },
   cardTitle: { fontSize: 22, fontWeight: '800', color: '#1e293b', marginBottom: 4 },
   cardSub: { fontSize: 13, color: '#64748b', marginBottom: 20 },
-  roleRow: { flexDirection: 'row', gap: 12, marginBottom: 20 },
-  roleBtn: { flex: 1, borderWidth: 2, borderColor: '#e2e8f0', borderRadius: 14, paddingVertical: 16, alignItems: 'center', backgroundColor: '#f8fafc' },
+  roleRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 20 },
+  roleBtn: { width: '47%', borderWidth: 2, borderColor: '#e2e8f0', borderRadius: 14, paddingVertical: 16, alignItems: 'center', backgroundColor: '#f8fafc' },
   roleBtnActive: { borderColor: '#2563eb', backgroundColor: '#eff6ff' },
   roleIcon: { fontSize: 28, marginBottom: 6 },
   roleLabel: { fontSize: 13, fontWeight: '600', color: '#94a3b8' },

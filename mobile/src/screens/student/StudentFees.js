@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
-import api from '../../services/api';
+import useCachedFetch from '../../hooks/useCachedFetch';
+import OfflineBanner from '../../components/OfflineBanner';
 
 const STATUS_STYLE = {
   PAID:    { bg: '#dcfce7', text: '#166534' },
@@ -9,15 +10,8 @@ const STATUS_STYLE = {
 };
 
 export default function StudentFees() {
-  const [fees, setFees] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    api.get('/api/student/fees')
-      .then(res => setFees(res.data.data || []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+  const { data, loading, isOffline } = useCachedFetch('/api/student/fees');
+  const fees = data || [];
 
   const totalPaid = fees.filter(f => f.status === 'PAID').reduce((sum, f) => sum + (f.amount || 0), 0);
   const totalPending = fees.filter(f => f.status !== 'PAID').reduce((sum, f) => sum + (f.amount || 0), 0);
@@ -26,6 +20,7 @@ export default function StudentFees() {
 
   return (
     <View style={styles.container}>
+      <OfflineBanner visible={isOffline} />
       <View style={styles.summaryRow}>
         <View style={[styles.summaryCard, { backgroundColor: '#dcfce7' }]}>
           <Text style={styles.summaryAmount}>₹{totalPaid.toLocaleString()}</Text>

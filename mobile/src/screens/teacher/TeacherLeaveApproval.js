@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import api from '../../services/api';
+import useCachedFetch from '../../hooks/useCachedFetch';
+import OfflineBanner from '../../components/OfflineBanner';
 
 const STATUS_STYLE = {
   PENDING: { bg: '#fef9c3', text: '#854d0e' },
@@ -9,18 +11,11 @@ const STATUS_STYLE = {
 };
 
 export default function TeacherLeaveApproval() {
+  const { data, loading, isOffline } = useCachedFetch('/api/leave/teacher/class');
   const [leaves, setLeaves] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(null);
 
-  const load = () => {
-    api.get('/api/leave/teacher/class')
-      .then(res => setLeaves(res.data.data || []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => { load(); }, []);
+  useEffect(() => { if (data) setLeaves(data); }, [data]);
 
   const action = async (id, status) => {
     setActionLoading(id + status);
@@ -42,6 +37,7 @@ export default function TeacherLeaveApproval() {
       data={leaves}
       keyExtractor={(_, i) => i.toString()}
       contentContainerStyle={{ padding: 12 }}
+      ListHeaderComponent={<OfflineBanner visible={isOffline} />}
       renderItem={({ item }) => {
         const s = STATUS_STYLE[item.status] || STATUS_STYLE.PENDING;
         return (

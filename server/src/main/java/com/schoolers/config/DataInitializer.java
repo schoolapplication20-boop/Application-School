@@ -2,6 +2,7 @@ package com.schoolers.config;
 
 import com.schoolers.model.*;
 import com.schoolers.repository.*;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,14 +42,17 @@ public class DataInitializer {
         return args -> {
 
             // Resolve owner password: prefer APP_OWNER_PASSWORD env var, then Spring property,
-            // then fall back to the insecure default — warn loudly when using the default.
+            // then generate a random one-time password — never fall back to a guessable constant.
             String ownerPassword = System.getenv("APP_OWNER_PASSWORD");
             if (ownerPassword == null || ownerPassword.isBlank()) {
                 ownerPassword = ownerPasswordProp;
             }
-            if (ownerPassword == null || ownerPassword.isBlank()) {
-                ownerPassword = "SuperAdmin@123"; // fallback for local dev only
-                log.warn("[DataInitializer] APP_OWNER_PASSWORD env var not set — using insecure default. Set this in production!");
+            boolean alreadyExists = userRepo.findByEmailIgnoreCase(ownerEmail).isPresent();
+            if ((ownerPassword == null || ownerPassword.isBlank()) && !alreadyExists) {
+                ownerPassword = generateRandomPassword();
+                log.warn("[DataInitializer] APP_OWNER_PASSWORD not set — generated a random password for {}: {}",
+                        ownerEmail, ownerPassword);
+                log.warn("[DataInitializer] Save this password now — it will not be shown again. Set APP_OWNER_PASSWORD to control it explicitly.");
             }
             // Lambda below requires an effectively-final variable
             final String resolvedPassword = ownerPassword;
@@ -298,6 +302,18 @@ public class DataInitializer {
             faqRepo.saveAll(faqs);
             log.info("Seeded {} chatbot FAQs (EN + HI + TE).", faqs.size());
         };
+    }
+
+    private static final String PASSWORD_CHARS =
+            "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*";
+
+    private String generateRandomPassword() {
+        SecureRandom random = new SecureRandom();
+        StringBuilder sb = new StringBuilder(16);
+        for (int i = 0; i < 16; i++) {
+            sb.append(PASSWORD_CHARS.charAt(random.nextInt(PASSWORD_CHARS.length())));
+        }
+        return sb.toString();
     }
 
     private ChatbotFaq faq(String category, String question, String keywords,

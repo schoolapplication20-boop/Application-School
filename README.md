@@ -25,12 +25,12 @@ A full-stack Progressive Web App (PWA) for managing schools: students, teachers,
 
 ```
 my-skoolz/
-├── client/          React 18 + Vite + Tailwind CSS (PWA)
+├── client/          React 18 + Vite + plain CSS (PWA)
 ├── server/          Spring Boot 3.2 + JPA + PostgreSQL
 └── mobile/          React Native (Expo) mobile app
 ```
 
-**Frontend:** React 18, Vite, React Router v6, Tailwind CSS, Recharts, PWA (service worker + manifest)  
+**Frontend:** React 18, Vite, React Router v6, plain CSS (`src/styles/`), Recharts, PWA (service worker + manifest)  
 **Backend:** Spring Boot 3.2, Spring Security (JWT), Spring Data JPA, PostgreSQL, JavaMail  
 **Auth:** JWT-based, stateless, role-aware (`APPLICATION_OWNER → SUPER_ADMIN → ADMIN → TEACHER → STUDENT`)
 
@@ -197,8 +197,8 @@ mvn test -pl . -Dsurefire.useFile=false
 **Reports:** `server/target/surefire-reports/`
 
 **Test counts:**
-- Frontend: **95 tests** (api service, AuthContext, ProtectedRoute, InstallPrompt, Login, HomePage)
-- Backend: **42 tests** (JwtUtil ×15, AuthService ×9, AuthController ×9, AdminController ×9)
+- Frontend: **93 tests** across 2 suites (`api.test.js`, `AuthContext.test.jsx`)
+- Backend: **83 tests** across 6 suites (`JwtUtilTest`, `RequestIdFilterTest`, `AuthServiceTest`, `OwnerControllerTest`, `AdminServiceYearRolloverTest`, `ReportCardBulkImportTest`)
 
 ---
 
@@ -292,9 +292,7 @@ client/
 │   ├── __tests__/             Vitest test suites
 │   │   ├── setup.js           Global test setup (mocks matchMedia, serviceWorker)
 │   │   ├── services/          api.test.js
-│   │   ├── context/           AuthContext.test.jsx
-│   │   ├── components/        ProtectedRoute, InstallPrompt
-│   │   └── pages/             Login, HomePage
+│   │   └── context/           AuthContext.test.jsx
 │   ├── components/
 │   │   ├── InstallPrompt.jsx  PWA "Add to Home Screen" banner
 │   │   ├── ProtectedRoute.jsx Role-based route guard
@@ -333,11 +331,14 @@ server/
 │       ├── JwtFilter.java     OncePerRequestFilter — extracts Bearer token
 │       └── UserDetailsServiceImpl.java
 ├── src/test/java/com/schoolers/
-│   ├── security/JwtUtilTest.java     (15 tests — all pass)
-│   ├── service/AuthServiceTest.java  (9 tests — all pass)
+│   ├── config/RequestIdFilterTest.java          (7 tests — all pass)
+│   ├── security/JwtUtilTest.java                (16 tests — all pass)
+│   ├── service/
+│   │   ├── AuthServiceTest.java                 (27 tests — all pass)
+│   │   └── AdminServiceYearRolloverTest.java    (12 tests — all pass)
 │   ├── controller/
-│   │   ├── AuthControllerTest.java   (9 tests — all pass)
-│   │   └── AdminControllerTest.java  (9 tests — all pass)
+│   │   ├── OwnerControllerTest.java             (12 tests — all pass)
+│   │   └── ReportCardBulkImportTest.java        (9 tests — all pass)
 │   └── resources/
 │       ├── application-test.properties  H2 datasource for tests
 │       └── mockito-extensions/          Inline mock maker config

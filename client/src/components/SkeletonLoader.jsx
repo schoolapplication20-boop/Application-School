@@ -24,6 +24,32 @@ export function SkeletonCard({ style = {} }) {
   );
 }
 
+export function SkeletonTable({ rows = 6, cols = 5 }) {
+  return (
+    <>
+      <style>{`
+        @keyframes skeletonPulse {
+          0%   { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+      `}</style>
+      <table className="data-table">
+        <tbody>
+          {Array.from({ length: rows }).map((_, r) => (
+            <tr key={r}>
+              {Array.from({ length: cols }).map((_, c) => (
+                <td key={c}>
+                  <SkeletonBox height={16} width={c === 0 ? '80%' : '60%'} />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </>
+  );
+}
+
 export function SkeletonDashboard() {
   return (
     <>

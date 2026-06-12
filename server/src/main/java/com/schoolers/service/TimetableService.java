@@ -19,7 +19,7 @@ public class TimetableService {
 
     public ApiResponse<List<Timetable>> getAll(Long schoolId) {
         if (schoolId != null) return ApiResponse.success(timetableRepository.findBySchoolId(schoolId));
-        return ApiResponse.success(timetableRepository.findAll());
+        return ApiResponse.success(List.of());
     }
 
     public ApiResponse<List<Timetable>> getByTeacher(Long teacherId, Long schoolId) {
@@ -138,7 +138,7 @@ public class TimetableService {
         // Scope conflict check to this school only
         List<Timetable> existing  = schoolId != null
                 ? timetableRepository.findBySchoolId(schoolId)
-                : timetableRepository.findAll();
+                : List.of();
         List<Timetable> batchSoFar = new ArrayList<>();
         List<String>    conflicts  = new ArrayList<>();
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { authAPI } from '../../services/api';
+import Button from '../../components/Button';
 import '../../styles/auth.css';
 
 const ResetPassword = () => {
@@ -99,14 +100,13 @@ const ResetPassword = () => {
       <div className="auth-right">
         <div className="auth-right-inner">
           {!isFirstLogin && (
-            <button
-              type="button"
-              className="btn-back"
+            <Button
+              variant="back"
               onClick={() => navigate(getDashboardPath())}
             >
               <span className="material-icons">arrow_back</span>
               Back to Dashboard
-            </button>
+            </Button>
           )}
 
           <div className="auth-icon-box">

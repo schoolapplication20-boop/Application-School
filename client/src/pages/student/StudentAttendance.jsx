@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Layout from '../../components/Layout';
 import LineChartComponent from '../../components/Charts/LineChartComponent';
 import { studentAPI } from '../../services/api';
+import { formatAttendanceDate, pctTextColor, pctBgColor } from '../../utils/attendanceFormat';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -19,10 +20,7 @@ const STATUS_CONFIG = {
   HOLIDAY: { label: 'Holiday', color: '#a0aec0', light: '#f7fafc', text: '#4a5568', icon: 'beach_access'  },
 };
 
-const fmtDate    = (d) => new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 const getDayName = (d) => new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'short' });
-const pctColor   = (p) => p >= 90 ? '#276749' : p >= 75 ? '#c05621' : '#c53030';
-const pctBg      = (p) => p >= 90 ? '#f0fff4' : p >= 75 ? '#fffaf0' : '#fff5f5';
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -111,7 +109,7 @@ export default function StudentAttendance() {
   if (loading) {
     return (
       <Layout pageTitle="My Attendance">
-        <div style={{ textAlign: 'center', padding: '80px 20px', color: '#a0aec0' }}>
+        <div style={{ textAlign: 'center', padding: '80px 20px', color: 'var(--text-muted)' }}>
           <span className="material-icons" style={{ fontSize: 48, display: 'block', marginBottom: 12, animation: 'spin 1s linear infinite' }}>refresh</span>
           Loading attendance…
         </div>
@@ -129,7 +127,7 @@ export default function StudentAttendance() {
       {/* ── Top Stats ─────────────────────────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
         {[
-          { label: 'Overall %',     value: `${overallPct}%`,   icon: 'percent',      color: pctColor(overallPct) },
+          { label: 'Overall %',     value: `${overallPct}%`,   icon: 'percent',      color: pctTextColor(overallPct) },
           { label: 'Total Present', value: overallPresent,      icon: 'check_circle', color: '#0de1e8'            },
           { label: 'Total Absent',  value: records.filter(r => r.status === 'ABSENT').length, icon: 'cancel', color: '#e53e3e' },
           { label: 'Working Days',  value: overallWorking,      icon: 'today',        color: '#3182ce'            },
@@ -160,31 +158,31 @@ export default function StudentAttendance() {
               ? `Good standing — ${overallPct}% attendance`
               : `Low attendance — ${overallPct}% (minimum 75% required)`}
           </div>
-          <div style={{ fontSize: 12, color: '#718096', marginTop: 2 }}>
+          <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
             {overallPresent} present out of {overallWorking} working days this year
           </div>
         </div>
         {/* Inline progress bar */}
         <div style={{ marginLeft: 'auto', width: 160 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#718096', marginBottom: 4 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4 }}>
             <span>0%</span><span>75%</span><span>100%</span>
           </div>
-          <div style={{ height: 8, background: '#e2e8f0', borderRadius: 6, overflow: 'hidden', position: 'relative' }}>
+          <div style={{ height: 8, background: 'var(--border-strong)', borderRadius: 6, overflow: 'hidden', position: 'relative' }}>
             {/* 75% threshold marker */}
-            <div style={{ position: 'absolute', left: '75%', top: 0, bottom: 0, width: 2, background: '#718096', zIndex: 1 }} />
+            <div style={{ position: 'absolute', left: '75%', top: 0, bottom: 0, width: 2, background: 'var(--text-secondary)', zIndex: 1 }} />
             <div style={{ height: '100%', width: `${overallPct}%`, background: overallPct >= 75 ? '#0de1e8' : '#e53e3e', borderRadius: 6, transition: 'width 0.6s ease' }} />
           </div>
         </div>
       </div>
 
       {/* ── Tab Bar ──────────────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 20, background: '#fff', borderRadius: 12, padding: 6, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '1px solid #f0f4f8', width: 'fit-content' }}>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 20, background: 'var(--surface)', borderRadius: 12, padding: 6, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '1px solid var(--border)', width: 'fit-content' }}>
         {TABS.map(t => (
           <button key={t.key} onClick={() => setActiveTab(t.key)} style={{
             display: 'flex', alignItems: 'center', gap: 6, padding: '9px 20px',
             border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13,
             background: activeTab === t.key ? '#0de1e8' : 'transparent',
-            color:      activeTab === t.key ? '#fff'    : '#718096',
+            color:      activeTab === t.key ? '#fff'    : 'var(--text-secondary)',
             transition: 'all 0.2s',
           }}>
             <span className="material-icons" style={{ fontSize: 17 }}>{t.icon}</span>
@@ -214,7 +212,7 @@ export default function StudentAttendance() {
                 height={220}
               />
             ) : (
-              <div style={{ padding: '40px 0', textAlign: 'center', color: '#a0aec0', fontSize: 13 }}>
+              <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
                 No attendance data recorded yet
               </div>
             )}
@@ -232,13 +230,13 @@ export default function StudentAttendance() {
                   return (
                     <div key={status}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#4a5568' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-secondary)' }}>
                           <span className="material-icons" style={{ fontSize: 15, color: cfg.color }}>{cfg.icon}</span>
                           {cfg.label}
                         </span>
                         <span style={{ fontWeight: 700, fontSize: 13, color: cfg.color }}>{count} days</span>
                       </div>
-                      <div style={{ height: 6, background: '#e2e8f0', borderRadius: 4, overflow: 'hidden' }}>
+                      <div style={{ height: 6, background: 'var(--border-strong)', borderRadius: 4, overflow: 'hidden' }}>
                         <div style={{ width: `${pct}%`, height: '100%', background: cfg.color, borderRadius: 4, transition: 'width 0.5s' }} />
                       </div>
                     </div>
@@ -256,7 +254,7 @@ export default function StudentAttendance() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div className="data-table-card" style={{ padding: '16px 20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                <span style={{ fontWeight: 700, fontSize: 15, color: '#2d3748' }}>Select Month</span>
+                <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-primary)' }}>Select Month</span>
                 <select
                   className="form-select form-select-sm"
                   style={{ width: 'auto' }}
@@ -278,7 +276,7 @@ export default function StudentAttendance() {
                   <div key={s.label} style={{ background: s.color + '10', border: `1.5px solid ${s.color}30`, borderRadius: 10, padding: '10px 14px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                       <span className="material-icons" style={{ fontSize: 15, color: s.color }}>{s.icon}</span>
-                      <span style={{ fontSize: 11, color: '#718096', fontWeight: 600 }}>{s.label}</span>
+                      <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600 }}>{s.label}</span>
                     </div>
                     <div style={{ fontSize: 22, fontWeight: 800, color: s.color }}>{s.value}</div>
                   </div>
@@ -287,20 +285,20 @@ export default function StudentAttendance() {
 
               {/* Month % gauge */}
               {workingDays > 0 ? (
-                <div style={{ background: pctBg(monthPct), border: `1.5px solid ${pctColor(monthPct)}30`, borderRadius: 10, padding: '12px 16px', textAlign: 'center' }}>
-                  <div style={{ fontSize: 36, fontWeight: 800, color: pctColor(monthPct), lineHeight: 1 }}>{monthPct}%</div>
-                  <div style={{ fontSize: 12, color: '#718096', marginTop: 4 }}>
+                <div style={{ background: pctBgColor(monthPct), border: `1.5px solid ${pctTextColor(monthPct)}30`, borderRadius: 10, padding: '12px 16px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 36, fontWeight: 800, color: pctTextColor(monthPct), lineHeight: 1 }}>{monthPct}%</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>
                     {MONTHS[selectedMonth]} Attendance
                   </div>
-                  <div style={{ height: 8, background: '#e2e8f0', borderRadius: 6, overflow: 'hidden', marginTop: 10 }}>
-                    <div style={{ width: `${monthPct}%`, height: '100%', background: pctColor(monthPct), borderRadius: 6, transition: 'width 0.5s' }} />
+                  <div style={{ height: 8, background: 'var(--border-strong)', borderRadius: 6, overflow: 'hidden', marginTop: 10 }}>
+                    <div style={{ width: `${monthPct}%`, height: '100%', background: pctTextColor(monthPct), borderRadius: 6, transition: 'width 0.5s' }} />
                   </div>
-                  <div style={{ fontSize: 11, color: '#718096', marginTop: 6 }}>
+                  <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 6 }}>
                     {monthPct >= 75 ? 'Good standing' : 'Below 75% minimum'}
                   </div>
                 </div>
               ) : (
-                <div style={{ textAlign: 'center', padding: '20px 0', color: '#a0aec0', fontSize: 13 }}>
+                <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text-muted)', fontSize: 13 }}>
                   No records for {MONTHS[selectedMonth]}
                 </div>
               )}
@@ -309,21 +307,21 @@ export default function StudentAttendance() {
 
           {/* Right: calendar grid */}
           <div className="data-table-card" style={{ padding: '16px 20px' }}>
-            <div style={{ fontWeight: 700, fontSize: 14, color: '#2d3748', marginBottom: 12 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)', marginBottom: 12 }}>
               {MONTHS[selectedMonth]} Calendar
             </div>
             <CalendarGrid {...calendarData} />
             {/* Legend */}
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 12, paddingTop: 12, borderTop: '1px solid #f0f4f8' }}>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
               {Object.entries(STATUS_CONFIG).map(([status, cfg]) => (
                 <div key={status} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
                   <div style={{ width: 10, height: 10, borderRadius: 3, background: cfg.color }} />
-                  <span style={{ color: '#718096' }}>{cfg.label}</span>
+                  <span style={{ color: 'var(--text-secondary)' }}>{cfg.label}</span>
                 </div>
               ))}
               <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
-                <div style={{ width: 10, height: 10, borderRadius: 3, border: '1.5px solid #e2e8f0' }} />
-                <span style={{ color: '#718096' }}>No record</span>
+                <div style={{ width: 10, height: 10, borderRadius: 3, border: '1.5px solid var(--border-strong)' }} />
+                <span style={{ color: 'var(--text-secondary)' }}>No record</span>
               </div>
             </div>
           </div>
@@ -332,7 +330,7 @@ export default function StudentAttendance() {
           {monthRecords.length > 0 && (
             <div className="data-table-card" style={{ gridColumn: '1 / -1' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <span style={{ fontWeight: 700, fontSize: 14, color: '#2d3748' }}>
+                <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>
                   {MONTHS[selectedMonth]} — Day-wise Records
                 </span>
                 <select className="form-select form-select-sm" style={{ width: 'auto' }}
@@ -353,7 +351,7 @@ export default function StudentAttendance() {
       {activeTab === 'all' && (
         <div className="data-table-card">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <span style={{ fontWeight: 700, fontSize: 15, color: '#2d3748' }}>
+            <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-primary)' }}>
               All Attendance Records ({records.length} days)
             </span>
             <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -386,7 +384,7 @@ export default function StudentAttendance() {
 function AttendanceTable({ records, showMonth = false }) {
   if (records.length === 0) {
     return (
-      <div style={{ padding: '32px 0', textAlign: 'center', color: '#a0aec0', fontSize: 13 }}>
+      <div style={{ padding: '32px 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
         No records for the selected filter
       </div>
     );
@@ -409,11 +407,11 @@ function AttendanceTable({ records, showMonth = false }) {
             return (
               <tr key={r.id || r.date}
                 style={{ background: r.status === 'ABSENT' ? '#fff5f515' : r.status === 'LEAVE' ? '#fffaf015' : 'transparent' }}>
-                <td style={{ color: '#a0aec0', fontSize: 12 }}>{idx + 1}</td>
-                <td style={{ fontWeight: 600, fontSize: 13 }}>{fmtDate(r.date)}</td>
-                <td style={{ color: '#718096', fontSize: 12 }}>{getDayName(r.date)}</td>
+                <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>{idx + 1}</td>
+                <td style={{ fontWeight: 600, fontSize: 13 }}>{formatAttendanceDate(r.date)}</td>
+                <td style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{getDayName(r.date)}</td>
                 {showMonth && (
-                  <td style={{ color: '#718096', fontSize: 12 }}>
+                  <td style={{ color: 'var(--text-secondary)', fontSize: 12 }}>
                     {MONTHS[new Date(r.date + 'T00:00:00').getMonth()]}
                   </td>
                 )}
@@ -453,8 +451,8 @@ function CalendarGrid({ firstDay, daysInMonth, dateMap }) {
         height: 36, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontSize: 12, fontWeight: 700,
         background: cfg ? cfg.color : 'transparent',
-        color:      cfg ? '#fff'    : '#a0aec0',
-        border:     cfg ? 'none'    : '1.5px solid #e2e8f0',
+        color:      cfg ? '#fff'    : 'var(--text-muted)',
+        border:     cfg ? 'none'    : '1.5px solid var(--border-strong)',
         cursor:     'default',
       }}>
         {d}
@@ -465,7 +463,7 @@ function CalendarGrid({ firstDay, daysInMonth, dateMap }) {
     <div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 4 }}>
         {DAY_LABELS.map(l => (
-          <div key={l} style={{ textAlign: 'center', fontSize: 11, fontWeight: 600, color: '#a0aec0', padding: '4px 0' }}>{l}</div>
+          <div key={l} style={{ textAlign: 'center', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', padding: '4px 0' }}>{l}</div>
         ))}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>

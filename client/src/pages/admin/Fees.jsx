@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Layout from '../../components/Layout';
-import Toast from '../../components/Toast';
 import { adminAPI } from '../../services/api';
 import { sortClassNames } from '../../utils/classOrder';
+import { useToast } from '../../context/ToastContext';
 
 /* ── helpers ── */
 const fmt = (n) => Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
@@ -26,13 +26,13 @@ const StatusBadge = ({ status }) => {
 
 const FeeInput = ({ label, value, onChange }) => (
   <div>
-    <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>{label}</label>
+    <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>{label}</label>
     <div style={{ position: 'relative' }}>
-      <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#a0aec0', fontSize: 13 }}>₹</span>
+      <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: 13 }}>₹</span>
       <input
         type="number" min="0" value={value}
         onChange={e => onChange(e.target.value)}
-        style={{ width: '100%', padding: '8px 10px 8px 24px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+        style={{ width: '100%', padding: '8px 10px 8px 24px', border: '1.5px solid var(--border-strong)', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
       />
     </div>
   </div>
@@ -86,12 +86,11 @@ export default function Fees() {
     setInstallments(prev => prev.map((item, i) => i === idx ? { ...item, [field]: value } : item));
 
   const [saving, setSaving]   = useState(false);
-  const [toast, setToast]     = useState(null);
   const debounceRef           = useRef(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null); // { id, studentName }
   const [deleting, setDeleting] = useState(false);
 
-  const showToast = (message, type = 'success') => setToast({ message, type });
+  const showToast = useToast();
 
   /* ── loaders ── */
   const loadStructures = useCallback(async () => {
@@ -356,32 +355,30 @@ export default function Fees() {
   const TAB_STYLE = (active) => ({
     padding: '8px 20px', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13,
     borderBottom: active ? '2.5px solid #0de1e8' : '2.5px solid transparent',
-    color: active ? '#276749' : '#718096', background: 'none',
+    color: active ? '#276749' : 'var(--text-secondary)', background: 'none',
   });
 
   /* ── stat card ── */
   const StatCard = ({ label, value, color, icon }) => (
-    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14, flex: 1, minWidth: 160 }}>
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border-strong)', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14, flex: 1, minWidth: 160 }}>
       <div style={{ width: 42, height: 42, borderRadius: 10, background: color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <span className="material-icons" style={{ color, fontSize: 22 }}>{icon}</span>
       </div>
       <div>
-        <div style={{ fontSize: 11, color: '#a0aec0', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</div>
-        <div style={{ fontSize: 18, fontWeight: 800, color: '#2d3748', marginTop: 2 }}>{value}</div>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</div>
+        <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', marginTop: 2 }}>{value}</div>
       </div>
     </div>
   );
 
   return (
     <Layout pageTitle="Fees & Payments">
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-
       <div style={{ padding: '20px 24px' }}>
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <div>
-            <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#1a202c' }}>Fees & Payments</h2>
-            <p style={{ margin: 0, fontSize: 13, color: '#a0aec0' }}>Manage class fee structures and student fee assignments</p>
+            <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: 'var(--text-primary)' }}>Fees & Payments</h2>
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>Manage class fee structures and student fee assignments</p>
           </div>
           {tab === 'students' && (
             <button onClick={() => openAssignModal()} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 18px', background: '#0de1e8', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
@@ -401,7 +398,7 @@ export default function Fees() {
         )}
 
         {/* Tab bar */}
-        <div style={{ borderBottom: '1px solid #e2e8f0', marginBottom: 20 }}>
+        <div style={{ borderBottom: '1px solid var(--border-strong)', marginBottom: 20 }}>
           <button style={TAB_STYLE(tab === 'structure')} onClick={() => setTab('structure')}>Fee Structure</button>
           <button style={TAB_STYLE(tab === 'students')}  onClick={() => setTab('students')}>Student Fees</button>
           <button style={TAB_STYLE(tab === 'history')}   onClick={() => setTab('history')}>Payment History</button>
@@ -409,21 +406,21 @@ export default function Fees() {
 
         {/* ── TAB 1: Fee Structure ── */}
         {tab === 'structure' && (
-          <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden' }}>
-            <div style={{ padding: '14px 20px', borderBottom: '1px solid #f0f4f8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontWeight: 700, fontSize: 15, color: '#2d3748' }}>Class-wise Annual Fee Structure ({CURRENT_YEAR})</span>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border-strong)', borderRadius: 12, overflow: 'hidden' }}>
+            <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-primary)' }}>Class-wise Annual Fee Structure ({CURRENT_YEAR})</span>
             </div>
             {structLoading ? (
-              <div style={{ padding: 40, textAlign: 'center', color: '#a0aec0' }}>Loading...</div>
+              <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Loading...</div>
             ) : uniqueClasses.length === 0 ? (
-              <div style={{ padding: 40, textAlign: 'center', color: '#a0aec0' }}>No classes created yet. Add classes first.</div>
+              <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>No classes created yet. Add classes first.</div>
             ) : (
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                   <thead>
-                    <tr style={{ background: '#f7fafc' }}>
+                    <tr style={{ background: 'var(--surface-alt)' }}>
                       {['Class','Tuition','Transport','Lab','Exam','Sports','Other','Total Fee','Action'].map(h => (
-                        <th key={h} style={{ padding: '10px 14px', textAlign: h === 'Class' ? 'left' : 'right', fontWeight: 700, color: '#718096', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '1px solid #e2e8f0', whiteSpace: 'nowrap' }}>
+                        <th key={h} style={{ padding: '10px 14px', textAlign: h === 'Class' ? 'left' : 'right', fontWeight: 700, color: 'var(--text-secondary)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '1px solid var(--border-strong)', whiteSpace: 'nowrap' }}>
                           {h === 'Action' ? '' : h}
                         </th>
                       ))}
@@ -436,10 +433,10 @@ export default function Fees() {
                         ? ['tuitionFee','transportFee','labFee','examFee','sportsFee','otherFee'].reduce((sum, k) => sum + Number(s[k] || 0), 0)
                         : 0;
                       return (
-                        <tr key={cls} style={{ borderBottom: '1px solid #f0f4f8' }}>
-                          <td style={{ padding: '12px 14px', fontWeight: 700, color: '#2d3748' }}>{cls}</td>
+                        <tr key={cls} style={{ borderBottom: '1px solid var(--border)' }}>
+                          <td style={{ padding: '12px 14px', fontWeight: 700, color: 'var(--text-primary)' }}>{cls}</td>
                           {['tuitionFee','transportFee','labFee','examFee','sportsFee','otherFee'].map(k => (
-                            <td key={k} style={{ padding: '12px 14px', textAlign: 'right', color: s ? '#4a5568' : '#cbd5e0' }}>
+                            <td key={k} style={{ padding: '12px 14px', textAlign: 'right', color: s ? 'var(--text-secondary)' : 'var(--text-muted)' }}>
                               {s ? `₹${fmt(s[k])}` : '—'}
                             </td>
                           ))}
@@ -469,13 +466,13 @@ export default function Fees() {
               <input
                 placeholder="Search student or roll no..."
                 value={search} onChange={e => setSearch(e.target.value)}
-                style={{ flex: 1, minWidth: 200, padding: '8px 14px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none' }}
+                style={{ flex: 1, minWidth: 200, padding: '8px 14px', border: '1.5px solid var(--border-strong)', borderRadius: 8, fontSize: 13, outline: 'none' }}
               />
-              <select value={filterClass} onChange={e => setFilterClass(e.target.value)} style={{ padding: '8px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none' }}>
+              <select value={filterClass} onChange={e => setFilterClass(e.target.value)} style={{ padding: '8px 12px', border: '1.5px solid var(--border-strong)', borderRadius: 8, fontSize: 13, outline: 'none' }}>
                 <option value="">All Classes</option>
                 {uniqueClasses.map(c => <option key={c}>{c}</option>)}
               </select>
-              <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ padding: '8px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none' }}>
+              <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ padding: '8px 12px', border: '1.5px solid var(--border-strong)', borderRadius: 8, fontSize: 13, outline: 'none' }}>
                 <option value="">All Status</option>
                 <option value="PENDING">Pending</option>
                 <option value="PARTIAL">Partial</option>
@@ -511,11 +508,11 @@ export default function Fees() {
               </button>
             </div>
 
-            <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden' }}>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border-strong)', borderRadius: 12, overflow: 'hidden' }}>
               {assignLoading ? (
-                <div style={{ padding: 40, textAlign: 'center', color: '#a0aec0' }}>Loading...</div>
+                <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Loading...</div>
               ) : filteredAssignments.length === 0 ? (
-                <div style={{ padding: 40, textAlign: 'center', color: '#a0aec0' }}>
+                <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
                   <span className="material-icons" style={{ fontSize: 40, display: 'block', marginBottom: 8 }}>payments</span>
                   {assignments.length === 0 ? 'No fee assignments yet. Click "Assign Fee" to get started.' : 'No matching records.'}
                 </div>
@@ -523,9 +520,9 @@ export default function Fees() {
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                     <thead>
-                      <tr style={{ background: '#f7fafc' }}>
+                      <tr style={{ background: 'var(--surface-alt)' }}>
                         {['Student','Roll No','Class','Total Fee','Paid','Due Amount','Status','Actions'].map(h => (
-                          <th key={h} style={{ padding: '10px 14px', textAlign: ['Total Fee','Paid','Due Amount'].includes(h) ? 'right' : 'left', fontWeight: 700, color: '#718096', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '1px solid #e2e8f0', whiteSpace: 'nowrap' }}>{h}</th>
+                          <th key={h} style={{ padding: '10px 14px', textAlign: ['Total Fee','Paid','Due Amount'].includes(h) ? 'right' : 'left', fontWeight: 700, color: 'var(--text-secondary)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '1px solid var(--border-strong)', whiteSpace: 'nowrap' }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
@@ -533,11 +530,11 @@ export default function Fees() {
                       {filteredAssignments.map(a => {
                         const due = Number(a.totalFee || 0) - Number(a.paidAmount || 0);
                         return (
-                          <tr key={a.id} style={{ borderBottom: '1px solid #f0f4f8' }}>
-                            <td style={{ padding: '12px 14px', fontWeight: 700, color: '#2d3748' }}>{a.studentName}</td>
-                            <td style={{ padding: '12px 14px', fontFamily: 'monospace', fontSize: 12, color: '#718096' }}>{a.rollNumber || '—'}</td>
-                            <td style={{ padding: '12px 14px', color: '#4a5568' }}>{a.className}</td>
-                            <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: '#2d3748' }}>₹{fmt(a.totalFee)}</td>
+                          <tr key={a.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                            <td style={{ padding: '12px 14px', fontWeight: 700, color: 'var(--text-primary)' }}>{a.studentName}</td>
+                            <td style={{ padding: '12px 14px', fontFamily: 'monospace', fontSize: 12, color: 'var(--text-secondary)' }}>{a.rollNumber || '—'}</td>
+                            <td style={{ padding: '12px 14px', color: 'var(--text-secondary)' }}>{a.className}</td>
+                            <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: 'var(--text-primary)' }}>₹{fmt(a.totalFee)}</td>
                             <td style={{ padding: '12px 14px', textAlign: 'right', color: '#276749', fontWeight: 600 }}>₹{fmt(a.paidAmount)}</td>
                             <td style={{ padding: '12px 14px', textAlign: 'right', color: due > 0 ? '#e53e3e' : '#276749', fontWeight: 700 }}>₹{fmt(due)}</td>
                             <td style={{ padding: '12px 14px' }}><StatusBadge status={a.status} /></td>
@@ -564,35 +561,35 @@ export default function Fees() {
 
         {/* ── TAB 3: Payment History ── */}
         {tab === 'history' && (
-          <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden' }}>
-            <div style={{ padding: '14px 20px', borderBottom: '1px solid #f0f4f8' }}>
-              <span style={{ fontWeight: 700, fontSize: 15, color: '#2d3748' }}>All Payment Transactions</span>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border-strong)', borderRadius: 12, overflow: 'hidden' }}>
+            <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)' }}>
+              <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-primary)' }}>All Payment Transactions</span>
             </div>
             {payLoading ? (
-              <div style={{ padding: 40, textAlign: 'center', color: '#a0aec0' }}>Loading...</div>
+              <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Loading...</div>
             ) : payments.length === 0 ? (
-              <div style={{ padding: 40, textAlign: 'center', color: '#a0aec0' }}>No payment transactions recorded yet.</div>
+              <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>No payment transactions recorded yet.</div>
             ) : (
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                   <thead>
-                    <tr style={{ background: '#f7fafc' }}>
+                    <tr style={{ background: 'var(--surface-alt)' }}>
                       {['Date','Student','Class','Amount Paid','Receipt No','Mode','Received By','Remarks'].map(h => (
-                        <th key={h} style={{ padding: '10px 14px', textAlign: h === 'Amount Paid' ? 'right' : 'left', fontWeight: 700, color: '#718096', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '1px solid #e2e8f0', whiteSpace: 'nowrap' }}>{h}</th>
+                        <th key={h} style={{ padding: '10px 14px', textAlign: h === 'Amount Paid' ? 'right' : 'left', fontWeight: 700, color: 'var(--text-secondary)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '1px solid var(--border-strong)', whiteSpace: 'nowrap' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {payments.map(p => (
-                      <tr key={p.id} style={{ borderBottom: '1px solid #f0f4f8' }}>
-                        <td style={{ padding: '12px 14px', color: '#4a5568', whiteSpace: 'nowrap' }}>{p.paymentDate || '—'}</td>
-                        <td style={{ padding: '12px 14px', fontWeight: 700, color: '#2d3748' }}>{p.studentName}</td>
-                        <td style={{ padding: '12px 14px', color: '#4a5568' }}>{p.className}</td>
+                      <tr key={p.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                        <td style={{ padding: '12px 14px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{p.paymentDate || '—'}</td>
+                        <td style={{ padding: '12px 14px', fontWeight: 700, color: 'var(--text-primary)' }}>{p.studentName}</td>
+                        <td style={{ padding: '12px 14px', color: 'var(--text-secondary)' }}>{p.className}</td>
                         <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: '#276749' }}>₹{fmt(p.amountPaid)}</td>
-                        <td style={{ padding: '12px 14px', fontFamily: 'monospace', fontSize: 11, color: '#718096' }}>{p.receiptNumber}</td>
-                        <td style={{ padding: '12px 14px', color: '#4a5568' }}>{p.paymentMode || '—'}</td>
-                        <td style={{ padding: '12px 14px', color: '#4a5568' }}>{p.receivedBy || '—'}</td>
-                        <td style={{ padding: '12px 14px', color: '#a0aec0', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.remarks || '—'}</td>
+                        <td style={{ padding: '12px 14px', fontFamily: 'monospace', fontSize: 11, color: 'var(--text-secondary)' }}>{p.receiptNumber}</td>
+                        <td style={{ padding: '12px 14px', color: 'var(--text-secondary)' }}>{p.paymentMode || '—'}</td>
+                        <td style={{ padding: '12px 14px', color: 'var(--text-secondary)' }}>{p.receivedBy || '—'}</td>
+                        <td style={{ padding: '12px 14px', color: 'var(--text-muted)', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.remarks || '—'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -607,13 +604,13 @@ export default function Fees() {
       {showFeeModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
              onClick={e => e.target === e.currentTarget && setShowFeeModal(false)}>
-          <div className="modal-card" style={{ background: '#fff', borderRadius: 14, width: '100%', maxWidth: 480, padding: 28, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', maxHeight: '90vh', overflowY: 'auto' }}>
+          <div className="modal-card" style={{ background: 'var(--surface)', borderRadius: 14, width: '100%', maxWidth: 480, padding: 28, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#1a202c' }}>Set Fee Structure</h3>
-                <p style={{ margin: '2px 0 0', fontSize: 13, color: '#a0aec0' }}>{feeModalClassName} · {CURRENT_YEAR}</p>
+                <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: 'var(--text-primary)' }}>Set Fee Structure</h3>
+                <p style={{ margin: '2px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>{feeModalClassName} · {CURRENT_YEAR}</p>
               </div>
-              <button onClick={() => setShowFeeModal(false)} style={{ border: 'none', background: 'none', fontSize: 20, cursor: 'pointer', color: '#a0aec0' }}>×</button>
+              <button onClick={() => setShowFeeModal(false)} style={{ border: 'none', background: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--text-muted)' }}>×</button>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 20 }}>
               {[['tuitionFee','Tuition Fee'],['transportFee','Transport Fee'],['labFee','Lab Fee'],['examFee','Exam Fee'],['sportsFee','Sports Fee'],['otherFee','Other Fee']].map(([k, label]) => (
@@ -628,7 +625,7 @@ export default function Fees() {
               </span>
             </div>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              <button onClick={() => setShowFeeModal(false)} style={{ padding: '9px 20px', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', color: '#4a5568', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>Cancel</button>
+              <button onClick={() => setShowFeeModal(false)} style={{ padding: '9px 20px', border: '1px solid var(--border-strong)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>Cancel</button>
               <button onClick={saveFeeStructure} disabled={saving} style={{ padding: '9px 22px', background: '#0de1e8', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: saving ? 0.7 : 1 }}>
                 {saving ? 'Saving...' : 'Save Structure'}
               </button>
@@ -641,16 +638,16 @@ export default function Fees() {
       {showAssignModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
              onClick={e => e.target === e.currentTarget && setShowAssignModal(false)}>
-          <div className="modal-card" style={{ background: '#fff', borderRadius: 14, width: '100%', maxWidth: 460, padding: 28, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', maxHeight: '90vh', overflowY: 'auto' }}>
+          <div className="modal-card" style={{ background: 'var(--surface)', borderRadius: 14, width: '100%', maxWidth: 460, padding: 28, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#1a202c' }}>{assignTarget ? 'Edit Fee Assignment' : 'Assign Fee to Student'}</h3>
-              <button onClick={() => setShowAssignModal(false)} style={{ border: 'none', background: 'none', fontSize: 20, cursor: 'pointer', color: '#a0aec0' }}>×</button>
+              <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: 'var(--text-primary)' }}>{assignTarget ? 'Edit Fee Assignment' : 'Assign Fee to Student'}</h3>
+              <button onClick={() => setShowAssignModal(false)} style={{ border: 'none', background: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--text-muted)' }}>×</button>
             </div>
 
             {/* Student search (hide if editing) */}
             {!assignTarget && (
               <div style={{ marginBottom: 16, position: 'relative' }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Student *</label>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Student *</label>
                 <input
                   placeholder="Search by name, roll no, or phone..."
                   value={assignStudentSearch}
@@ -660,21 +657,21 @@ export default function Fees() {
                     clearTimeout(debounceRef.current);
                     debounceRef.current = setTimeout(() => searchAssignStudents(q), 300);
                   }}
-                  style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '9px 12px', border: '1.5px solid var(--border-strong)', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
                 />
-                {assignSearching && <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-25%)', color: '#a0aec0', fontSize: 12 }}>Searching...</div>}
+                {assignSearching && <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-25%)', color: 'var(--text-muted)', fontSize: 12 }}>Searching...</div>}
                 {assignStudentResults.length > 0 && (
-                  <div style={{ position: 'absolute', left: 0, right: 0, top: '100%', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 10, maxHeight: 200, overflowY: 'auto' }}>
+                  <div style={{ position: 'absolute', left: 0, right: 0, top: '100%', background: 'var(--surface)', border: '1px solid var(--border-strong)', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 10, maxHeight: 200, overflowY: 'auto' }}>
                     {assignStudentResults.map(s => (
                       <div key={s.id} onClick={() => handleStudentSelect(s)}
-                           style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid #f0f4f8' }}
-                           onMouseEnter={e => e.currentTarget.style.background = '#f7fafc'}
-                           onMouseLeave={e => e.currentTarget.style.background = '#fff'}>
-                        <div style={{ fontWeight: 700, color: '#2d3748', fontSize: 13 }}>{s.name}</div>
-                        <div style={{ fontSize: 11, color: '#a0aec0', marginTop: 2, display: 'flex', gap: 8 }}>
-                          <span>Class: <strong style={{ color: '#4a5568' }}>{s.className}</strong></span>
-                          {s.section && <span>Section: <strong style={{ color: '#4a5568' }}>{s.section}</strong></span>}
-                          {s.rollNumber && <span>Roll: <strong style={{ color: '#4a5568' }}>{s.rollNumber}</strong></span>}
+                           style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid var(--border)' }}
+                           onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-alt)'}
+                           onMouseLeave={e => e.currentTarget.style.background = 'var(--surface)'}>
+                        <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: 13 }}>{s.name}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, display: 'flex', gap: 8 }}>
+                          <span>Class: <strong style={{ color: 'var(--text-secondary)' }}>{s.className}</strong></span>
+                          {s.section && <span>Section: <strong style={{ color: 'var(--text-secondary)' }}>{s.section}</strong></span>}
+                          {s.rollNumber && <span>Roll: <strong style={{ color: 'var(--text-secondary)' }}>{s.rollNumber}</strong></span>}
                         </div>
                       </div>
                     ))}
@@ -685,13 +682,13 @@ export default function Fees() {
 
             {/* Selected student info */}
             {assignStudent && (
-              <div style={{ background: '#f7fafc', borderRadius: 8, padding: '10px 14px', marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ background: 'var(--surface-alt)', borderRadius: 8, padding: '10px 14px', marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: '#2d3748' }}>{assignStudent.name}</div>
-                  <div style={{ fontSize: 12, color: '#718096', marginTop: 3, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                    <span>Class: <strong style={{ color: '#2d3748' }}>{assignStudent.className}</strong></span>
-                    {assignStudent.section && <span>Section: <strong style={{ color: '#2d3748' }}>{assignStudent.section}</strong></span>}
-                    {assignStudent.rollNumber && <span>Roll No: <strong style={{ color: '#2d3748' }}>{assignStudent.rollNumber}</strong></span>}
+                  <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>{assignStudent.name}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 3, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    <span>Class: <strong style={{ color: 'var(--text-primary)' }}>{assignStudent.className}</strong></span>
+                    {assignStudent.section && <span>Section: <strong style={{ color: 'var(--text-primary)' }}>{assignStudent.section}</strong></span>}
+                    {assignStudent.rollNumber && <span>Roll No: <strong style={{ color: 'var(--text-primary)' }}>{assignStudent.rollNumber}</strong></span>}
                   </div>
                 </div>
                 {/* Class fee hint */}
@@ -715,28 +712,28 @@ export default function Fees() {
                 <span style={{ fontSize: 17, fontWeight: 800, color: '#276749' }}>₹{fmt(assignTotal)}</span>
               </div>
               <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Due Date</label>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Due Date</label>
                 <input type="date" value={assignForm.dueDate} onChange={e => setAssignForm(f => ({ ...f, dueDate: e.target.value }))}
-                  style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
+                  style={{ width: '100%', padding: '9px 12px', border: '1.5px solid var(--border-strong)', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
               </div>
               <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Academic Year</label>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Academic Year</label>
                 <input value={assignForm.academicYear} onChange={e => setAssignForm(f => ({ ...f, academicYear: e.target.value }))}
-                  style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
+                  style={{ width: '100%', padding: '9px 12px', border: '1.5px solid var(--border-strong)', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
               </div>
               <div style={{ gridColumn: '1/-1' }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Remarks</label>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Remarks</label>
                 <textarea value={assignForm.remarks} onChange={e => setAssignForm(f => ({ ...f, remarks: e.target.value }))}
                   rows={2} maxLength={500} placeholder="Optional notes (e.g., scholarship, concession)"
-                  style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none', resize: 'none', boxSizing: 'border-box' }} />
+                  style={{ width: '100%', padding: '9px 12px', border: '1.5px solid var(--border-strong)', borderRadius: 8, fontSize: 13, outline: 'none', resize: 'none', boxSizing: 'border-box' }} />
               </div>
 
               {/* Dynamic installment schedule */}
-              <div style={{ gridColumn: '1/-1', borderTop: '1px dashed #e2e8f0', paddingTop: 14, marginTop: 2 }}>
+              <div style={{ gridColumn: '1/-1', borderTop: '1px dashed var(--border-strong)', paddingTop: 14, marginTop: 2 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     Installment Schedule
-                    <span style={{ fontSize: 11, fontWeight: 400, color: '#a0aec0', textTransform: 'none', letterSpacing: 0, marginLeft: 6 }}>(optional)</span>
+                    <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-muted)', textTransform: 'none', letterSpacing: 0, marginLeft: 6 }}>(optional)</span>
                   </div>
                   <button type="button" onClick={addInstallment}
                     style={{ fontSize: 12, color: '#0de1e8', background: 'none', border: '1px solid #0de1e8', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontWeight: 600 }}>
@@ -747,34 +744,34 @@ export default function Fees() {
                 {installments.map((inst, idx) => (
                   <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 100px 120px 30px', gap: 6, alignItems: 'end', marginBottom: 8 }}>
                     <div>
-                      {idx === 0 && <label style={{ fontSize: 11, fontWeight: 600, color: '#718096', display: 'block', marginBottom: 3 }}>Term Name</label>}
+                      {idx === 0 && <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 3 }}>Term Name</label>}
                       <input
                         value={inst.termName}
                         onChange={e => updateInstallment(idx, 'termName', e.target.value)}
                         placeholder="e.g. Term 1"
-                        style={{ width: '100%', padding: '7px 10px', border: `1.5px solid ${String(inst.status || '').toUpperCase() === 'PAID' ? '#68d391' : '#e2e8f0'}`, borderRadius: 7, fontSize: 13, outline: 'none', boxSizing: 'border-box', background: String(inst.status || '').toUpperCase() === 'PAID' ? '#f0fff4' : '#fff' }}
+                        style={{ width: '100%', padding: '7px 10px', border: `1.5px solid ${String(inst.status || '').toUpperCase() === 'PAID' ? '#68d391' : 'var(--border-strong)'}`, borderRadius: 7, fontSize: 13, outline: 'none', boxSizing: 'border-box', background: String(inst.status || '').toUpperCase() === 'PAID' ? '#f0fff4' : 'var(--surface)' }}
                       />
                     </div>
                     <div>
-                      {idx === 0 && <label style={{ fontSize: 11, fontWeight: 600, color: '#718096', display: 'block', marginBottom: 3 }}>Amount (₹)</label>}
+                      {idx === 0 && <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 3 }}>Amount (₹)</label>}
                       <input
                         type="number" min="0"
                         value={inst.amount}
                         onChange={e => updateInstallment(idx, 'amount', e.target.value)}
                         placeholder="0"
                         disabled={String(inst.status || '').toUpperCase() === 'PAID'}
-                        style={{ width: '100%', padding: '7px 10px', border: '1.5px solid #e2e8f0', borderRadius: 7, fontSize: 13, outline: 'none', boxSizing: 'border-box', background: String(inst.status || '').toUpperCase() === 'PAID' ? '#f7fafc' : '#fff' }}
+                        style={{ width: '100%', padding: '7px 10px', border: '1.5px solid var(--border-strong)', borderRadius: 7, fontSize: 13, outline: 'none', boxSizing: 'border-box', background: String(inst.status || '').toUpperCase() === 'PAID' ? 'var(--surface-alt)' : 'var(--surface)' }}
                       />
                     </div>
                     <div>
-                      {idx === 0 && <label style={{ fontSize: 11, fontWeight: 600, color: '#718096', display: 'block', marginBottom: 3 }}>Due Date</label>}
+                      {idx === 0 && <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 3 }}>Due Date</label>}
                       <input
                         type="date"
                         value={inst.dueDate}
                         min={new Date().toISOString().split('T')[0]}
                         onChange={e => updateInstallment(idx, 'dueDate', e.target.value)}
                         disabled={String(inst.status || '').toUpperCase() === 'PAID'}
-                        style={{ width: '100%', padding: '7px 8px', border: '1.5px solid #e2e8f0', borderRadius: 7, fontSize: 12, outline: 'none', boxSizing: 'border-box', background: String(inst.status || '').toUpperCase() === 'PAID' ? '#f7fafc' : '#fff' }}
+                        style={{ width: '100%', padding: '7px 8px', border: '1.5px solid var(--border-strong)', borderRadius: 7, fontSize: 12, outline: 'none', boxSizing: 'border-box', background: String(inst.status || '').toUpperCase() === 'PAID' ? 'var(--surface-alt)' : 'var(--surface)' }}
                       />
                     </div>
                     <div>
@@ -790,7 +787,7 @@ export default function Fees() {
                 ))}
 
                 {installments.some(i => i.amount && Number(i.amount) > 0) && (
-                  <div style={{ fontSize: 12, color: '#718096', marginTop: 6, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 6, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                     <span>Installment total: ₹{fmt(installments.reduce((s, i) => s + Number(i.amount || 0), 0))}</span>
                     {assignTotal > 0 &&
                      Math.abs(Math.round(installments.reduce((s, i) => s + Number(i.amount || 0), 0) * 100) - Math.round(assignTotal * 100)) > 0 && (
@@ -802,7 +799,7 @@ export default function Fees() {
             </div>
 
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              <button onClick={() => setShowAssignModal(false)} style={{ padding: '9px 20px', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', color: '#4a5568', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>Cancel</button>
+              <button onClick={() => setShowAssignModal(false)} style={{ padding: '9px 20px', border: '1px solid var(--border-strong)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>Cancel</button>
               <button onClick={saveAssignment} disabled={saving} style={{ padding: '9px 22px', background: '#0de1e8', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: saving ? 0.7 : 1 }}>
                 {saving ? 'Saving...' : assignTarget ? 'Update Assignment' : 'Assign Fee'}
               </button>
@@ -813,18 +810,18 @@ export default function Fees() {
       {/* ══ Delete Confirmation Modal ══ */}
       {deleteConfirm && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="modal-card" style={{ background: '#fff', borderRadius: 14, width: '100%', maxWidth: 400, padding: 28, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+          <div className="modal-card" style={{ background: 'var(--surface)', borderRadius: 14, width: '100%', maxWidth: 400, padding: 28, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
             <div style={{ textAlign: 'center', marginBottom: 20 }}>
               <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#fff5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
                 <span className="material-icons" style={{ color: '#e53e3e', fontSize: 28 }}>delete_forever</span>
               </div>
-              <h3 style={{ margin: '0 0 8px', fontSize: 17, fontWeight: 800, color: '#1a202c' }}>Delete Fee Assignment?</h3>
-              <p style={{ margin: 0, fontSize: 13, color: '#718096', lineHeight: 1.5 }}>
-                This will permanently delete the fee assignment for <strong style={{ color: '#2d3748' }}>{deleteConfirm.studentName}</strong>. This action cannot be undone.
+              <h3 style={{ margin: '0 0 8px', fontSize: 17, fontWeight: 800, color: 'var(--text-primary)' }}>Delete Fee Assignment?</h3>
+              <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                This will permanently delete the fee assignment for <strong style={{ color: 'var(--text-primary)' }}>{deleteConfirm.studentName}</strong>. This action cannot be undone.
               </p>
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => setDeleteConfirm(null)} disabled={deleting} style={{ flex: 1, padding: '10px 0', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', color: '#4a5568', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>
+              <button onClick={() => setDeleteConfirm(null)} disabled={deleting} style={{ flex: 1, padding: '10px 0', border: '1px solid var(--border-strong)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>
                 Cancel
               </button>
               <button onClick={deleteAssignment} disabled={deleting} style={{ flex: 1, padding: '10px 0', background: '#e53e3e', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: deleting ? 'not-allowed' : 'pointer', opacity: deleting ? 0.7 : 1 }}>

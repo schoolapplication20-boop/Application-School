@@ -2,47 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '../../components/Layout';
 import { messageAPI } from '../../services/api';
 import { formatClassName } from '../../utils/format';
+import CategoryBadge from '../../components/CategoryBadge';
+import { MESSAGE_CATEGORIES, formatRelativeTime, formatMessageDateTime } from '../../utils/messageFormat';
 
-const CATEGORIES = ['ALL', 'GENERAL', 'ACADEMIC', 'ANNOUNCEMENT', 'EXAM', 'FEE', 'URGENT'];
-
-const categoryColor = (cat) => {
-  switch (cat) {
-    case 'URGENT':      return { bg: '#fff5f5', color: '#c53030', border: '#feb2b2' };
-    case 'EXAM':        return { bg: '#faf5ff', color: '#6b46c1', border: '#d6bcfa' };
-    case 'FEE':         return { bg: '#fffaf0', color: '#c05621', border: '#fbd38d' };
-    case 'ACADEMIC':    return { bg: '#f0fff4', color: '#276749', border: '#9ae6b4' };
-    case 'ANNOUNCEMENT':return { bg: '#ebf8ff', color: '#2b6cb0', border: '#bee3f8' };
-    default:            return { bg: '#f7fafc', color: '#4a5568', border: '#e2e8f0' };
-  }
-};
-
-// Backend stores LocalDateTime without timezone (UTC). Append 'Z' so the
-// browser converts it to local time instead of treating it as already local.
-const toUtcDate = (dt) => {
-  if (!dt) return null;
-  const utc = typeof dt === 'string' && !dt.endsWith('Z') && !dt.includes('+') ? dt + 'Z' : dt;
-  return new Date(utc);
-};
-
-const formatDate = (dt) => {
-  const d = toUtcDate(dt);
-  if (!d) return '';
-  const now = new Date();
-  const diff = now - d;
-  if (diff < 60000) return 'just now';
-  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
-  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
-  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-};
-
-const formatFullDateTime = (dt) => {
-  const d = toUtcDate(dt);
-  if (!d) return '';
-  return d.toLocaleString('en-IN', {
-    day: 'numeric', month: 'short', year: 'numeric',
-    hour: '2-digit', minute: '2-digit', hour12: true,
-  });
-};
+const CATEGORIES = ['ALL', ...MESSAGE_CATEGORIES];
 
 export default function StudentMessages() {
   const [messages, setMessages]   = useState([]);
@@ -93,30 +56,30 @@ export default function StudentMessages() {
       <div style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
           <span className="material-icons" style={{ fontSize: 28, color: '#4f46e5' }}>chat</span>
-          <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: '#1a202c' }}>Messages</h1>
+          <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: 'var(--text-primary)' }}>Messages</h1>
           {unreadCount > 0 && (
             <span style={{ background: '#4f46e5', color: '#fff', borderRadius: 12, padding: '2px 10px', fontSize: 13, fontWeight: 700 }}>
               {unreadCount} new
             </span>
           )}
         </div>
-        <p style={{ margin: 0, color: '#718096', fontSize: 14 }}>
+        <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: 14 }}>
           Messages from your school, class teacher, and subject teachers
         </p>
       </div>
 
       <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
         {/* Left: list panel */}
-        <div style={{ flex: '0 0 380px', background: '#fff', borderRadius: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+        <div style={{ flex: '0 0 380px', background: 'var(--surface)', borderRadius: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
           {/* Search */}
           <div style={{ padding: '16px 16px 0' }}>
             <div style={{ position: 'relative' }}>
-              <span className="material-icons" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#a0aec0', fontSize: 18 }}>search</span>
+              <span className="material-icons" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: 18 }}>search</span>
               <input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Search messages…"
-                style={{ width: '100%', paddingLeft: 36, paddingRight: 12, paddingTop: 9, paddingBottom: 9, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
+                style={{ width: '100%', paddingLeft: 36, paddingRight: 12, paddingTop: 9, paddingBottom: 9, border: '1px solid var(--border-strong)', borderRadius: 8, fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
               />
             </div>
           </div>
@@ -130,8 +93,8 @@ export default function StudentMessages() {
                 style={{
                   padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600,
                   border: 'none', cursor: 'pointer', whiteSpace: 'nowrap',
-                  background: category === cat ? '#4f46e5' : '#f0f4f8',
-                  color: category === cat ? '#fff' : '#4a5568',
+                  background: category === cat ? '#4f46e5' : 'var(--border)',
+                  color: category === cat ? '#fff' : 'var(--text-secondary)',
                 }}
               >
                 {cat}
@@ -142,14 +105,13 @@ export default function StudentMessages() {
           {/* Message list */}
           <div style={{ maxHeight: 'calc(100vh - 280px)', overflowY: 'auto' }}>
             {loading ? (
-              <div style={{ padding: 32, textAlign: 'center', color: '#a0aec0' }}>Loading…</div>
+              <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>Loading…</div>
             ) : filtered.length === 0 ? (
-              <div style={{ padding: 40, textAlign: 'center', color: '#a0aec0' }}>
+              <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
                 <span className="material-icons" style={{ fontSize: 40, display: 'block', marginBottom: 8 }}>inbox</span>
                 No messages
               </div>
             ) : filtered.map(msg => {
-              const colors = categoryColor(msg.category);
               const isActive = selected?.id === msg.id;
               return (
                 <div
@@ -157,30 +119,28 @@ export default function StudentMessages() {
                   onClick={() => openMessage(msg)}
                   style={{
                     padding: '14px 16px',
-                    borderBottom: '1px solid #f0f4f8',
+                    borderBottom: '1px solid var(--border)',
                     cursor: 'pointer',
-                    background: isActive ? '#eef2ff' : (msg.isRead ? '#fff' : '#f8f9ff'),
+                    background: isActive ? '#eef2ff' : (msg.isRead ? 'var(--surface)' : '#f8f9ff'),
                     borderLeft: isActive ? '3px solid #4f46e5' : '3px solid transparent',
                     transition: 'background 0.15s',
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
                     <span style={{
-                      fontSize: 13, fontWeight: msg.isRead ? 500 : 700, color: '#1a202c',
+                      fontSize: 13, fontWeight: msg.isRead ? 500 : 700, color: 'var(--text-primary)',
                       flex: 1, marginRight: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
                     }}>
                       {!msg.isRead && <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: '#4f46e5', marginRight: 6, verticalAlign: 'middle' }} />}
                       {msg.title}
                     </span>
-                    <span style={{ fontSize: 11, color: '#a0aec0', whiteSpace: 'nowrap' }}>{formatDate(msg.createdAt)}</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{formatRelativeTime(msg.createdAt)}</span>
                   </div>
-                  <div style={{ fontSize: 12, color: '#718096', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 6 }}>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 6 }}>
                     {msg.senderName} · {msg.isSchoolWide ? 'School-wide' : msg.classSection || 'Direct'}
                   </div>
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                    <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 10, background: colors.bg, color: colors.color, border: `1px solid ${colors.border}` }}>
-                      {msg.category}
-                    </span>
+                    <CategoryBadge category={msg.category} withBorder style={{ fontSize: 10 }} />
                     {msg.isImportant && (
                       <span className="material-icons" style={{ fontSize: 14, color: '#e53e3e' }}>priority_high</span>
                     )}
@@ -192,7 +152,7 @@ export default function StudentMessages() {
         </div>
 
         {/* Right: detail panel */}
-        <div style={{ flex: 1, background: '#fff', borderRadius: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', minHeight: 400 }}>
+        <div style={{ flex: 1, background: 'var(--surface)', borderRadius: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', minHeight: 400 }}>
           {selected ? (
             <div style={{ padding: 32 }}>
               {/* Detail header */}
@@ -202,38 +162,31 @@ export default function StudentMessages() {
                     {selected.isImportant && (
                       <span className="material-icons" style={{ fontSize: 20, color: '#e53e3e' }}>priority_high</span>
                     )}
-                    <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#1a202c' }}>{selected.title}</h2>
+                    <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--text-primary)' }}>{selected.title}</h2>
                   </div>
                   <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-                    {(() => {
-                      const colors = categoryColor(selected.category);
-                      return (
-                        <span style={{ fontSize: 12, fontWeight: 700, padding: '3px 10px', borderRadius: 12, background: colors.bg, color: colors.color, border: `1px solid ${colors.border}` }}>
-                          {selected.category}
-                        </span>
-                      );
-                    })()}
-                    <span style={{ fontSize: 13, color: '#718096' }}>
+                    <CategoryBadge category={selected.category} withBorder style={{ fontSize: 12, padding: '3px 10px', borderRadius: 12 }} />
+                    <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
                       From <strong>{selected.senderName}</strong> ({selected.senderRole?.replace('_', ' ')})
                     </span>
-                    <span style={{ fontSize: 13, color: '#a0aec0' }}>
+                    <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
                       {selected.isSchoolWide ? 'School-wide message' : selected.classSection ? formatClassName(selected.classSection) : 'Direct message'}
                     </span>
                   </div>
                 </div>
-                <span style={{ fontSize: 13, color: '#a0aec0', whiteSpace: 'nowrap', marginLeft: 16 }}>
-                  {formatFullDateTime(selected.createdAt)}
+                <span style={{ fontSize: 13, color: 'var(--text-muted)', whiteSpace: 'nowrap', marginLeft: 16 }}>
+                  {formatMessageDateTime(selected.createdAt)}
                 </span>
               </div>
 
-              <hr style={{ border: 'none', borderTop: '1px solid #e2e8f0', margin: '0 0 24px' }} />
+              <hr style={{ border: 'none', borderTop: '1px solid var(--border-strong)', margin: '0 0 24px' }} />
 
-              <p style={{ margin: 0, fontSize: 15, color: '#2d3748', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+              <p style={{ margin: 0, fontSize: 15, color: 'var(--text-primary)', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
                 {selected.content}
               </p>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 400, color: '#a0aec0' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 400, color: 'var(--text-muted)' }}>
               <span className="material-icons" style={{ fontSize: 56, marginBottom: 12 }}>mark_email_unread</span>
               <p style={{ margin: 0, fontSize: 15 }}>Select a message to read</p>
             </div>

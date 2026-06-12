@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { authAPI } from '../../services/api';
+import Button from '../../components/Button';
 import '../../styles/auth.css';
 
 const EnterOTP = () => {
@@ -143,14 +144,13 @@ const EnterOTP = () => {
       {/* Right Panel */}
       <div className="auth-right">
         <div className="auth-right-inner">
-          <button
-            type="button"
-            className="btn-back"
+          <Button
+            variant="back"
             onClick={() => navigate('/forgot-password')}
           >
             <span className="material-icons">arrow_back</span>
             Back
-          </button>
+          </Button>
 
           <div className="auth-icon-box">
             <span className="material-icons">dialpad</span>
@@ -199,7 +199,7 @@ const EnterOTP = () => {
                 {canResend ? (
                   <a onClick={handleResend}>Resend OTP</a>
                 ) : (
-                  <span style={{ color: '#a0aec0' }}>Resend OTP</span>
+                  <span style={{ color: 'var(--text-muted)' }}>Resend OTP</span>
                 )}
               </div>
               {!canResend && (

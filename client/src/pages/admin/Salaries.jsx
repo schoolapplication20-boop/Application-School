@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Layout from '../../components/Layout';
-import Toast from '../../components/Toast';
+import Button from '../../components/Button';
 import { salaryAPI } from '../../services/api';
+import { useToast } from '../../context/ToastContext';
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const currentYear = new Date().getFullYear();
@@ -23,7 +24,6 @@ export default function Salaries() {
   const [payments, setPayments] = useState([]);
   const [holidays, setHolidays] = useState([]);
   const [loading, setLoading]   = useState(false);
-  const [toast, setToast]       = useState(null);
 
   const [selMonth, setSelMonth] = useState(MONTHS[new Date().getMonth()]);
   const [selYear,  setSelYear]  = useState(String(currentYear));
@@ -46,15 +46,8 @@ export default function Salaries() {
   const [holidayForm, setHolidayForm] = useState({ name: '', date: '', recurring: false });
   const [payHistory,  setPayHistory]  = useState([]);
   const [saving, setSaving] = useState(false);
-  const toastTimerRef = useRef(null);
 
-  useEffect(() => () => clearTimeout(toastTimerRef.current), []);
-
-  const showToast = useCallback((message, type = 'success') => {
-    clearTimeout(toastTimerRef.current);
-    setToast({ message, type });
-    toastTimerRef.current = setTimeout(() => setToast(null), 3500);
-  }, []);
+  const showToast = useToast();
 
   const loadRecords = useCallback(async () => {
     setLoading(true);
@@ -222,8 +215,6 @@ export default function Salaries() {
 
   return (
     <Layout>
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-
       {/* Header */}
       <div className="d-flex justify-content-between align-items-center mb-3">
         <div>
@@ -239,15 +230,15 @@ export default function Salaries() {
               <select className="form-select form-select-sm" value={selYear} onChange={e => setSelYear(e.target.value)} style={{ width: 90 }}>
                 {YEARS.map(y => <option key={y}>{y}</option>)}
               </select>
-              <button className="btn btn-primary btn-sm" onClick={() => setAddModal(true)}>
+              <Button size="sm" onClick={() => setAddModal(true)}>
                 <span className="material-icons" style={{ fontSize: 16, verticalAlign: 'middle', marginRight: 4 }}>add</span>Add Staff
-              </button>
+              </Button>
             </>
           )}
           {tab === 'holidays' && (
-            <button className="btn btn-primary btn-sm" onClick={() => setHolidayModal(true)}>
+            <Button size="sm" onClick={() => setHolidayModal(true)}>
               <span className="material-icons" style={{ fontSize: 16, verticalAlign: 'middle', marginRight: 4 }}>add</span>Add Holiday
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -384,9 +375,9 @@ export default function Salaries() {
                                   <span className="material-icons" style={{ fontSize: 14 }}>event_busy</span>
                                 </button>
                                 {(['PENDING','PROCESSING'].includes(String(r.status || '').toUpperCase())) && (
-                                  <button className="btn btn-success btn-sm" title="Collect payment" onClick={() => openPay(r)}>
+                                  <Button variant="success" size="sm" title="Collect payment" onClick={() => openPay(r)}>
                                     <span className="material-icons" style={{ fontSize: 14 }}>payments</span>
-                                  </button>
+                                  </Button>
                                 )}
                               </div>
                             </td>
@@ -528,8 +519,8 @@ export default function Salaries() {
                 </div>
               </div>
               <div className="modal-footer">
-                <button className="btn btn-secondary btn-sm" onClick={() => setAddModal(false)}>Cancel</button>
-                <button className="btn btn-primary btn-sm" onClick={handleAddSave} disabled={saving}>{saving ? 'Saving…' : 'Add Record'}</button>
+                <Button variant="secondary" size="sm" onClick={() => setAddModal(false)}>Cancel</Button>
+                <Button size="sm" onClick={handleAddSave} disabled={saving}>{saving ? 'Saving…' : 'Add Record'}</Button>
               </div>
             </div>
           </div>
@@ -555,8 +546,8 @@ export default function Salaries() {
                 </div>
               </div>
               <div className="modal-footer">
-                <button className="btn btn-secondary btn-sm" onClick={() => setEditModal(null)}>Cancel</button>
-                <button className="btn btn-primary btn-sm" onClick={handleEditSave} disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</button>
+                <Button variant="secondary" size="sm" onClick={() => setEditModal(null)}>Cancel</Button>
+                <Button size="sm" onClick={handleEditSave} disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</Button>
               </div>
             </div>
           </div>
@@ -606,8 +597,8 @@ export default function Salaries() {
                 </div>
               </div>
               <div className="modal-footer">
-                <button className="btn btn-secondary btn-sm" onClick={() => setLeavesModal(null)}>Cancel</button>
-                <button className="btn btn-primary btn-sm" onClick={handleLeavesSave} disabled={saving}>{saving ? 'Saving…' : 'Update Leaves'}</button>
+                <Button variant="secondary" size="sm" onClick={() => setLeavesModal(null)}>Cancel</Button>
+                <Button size="sm" onClick={handleLeavesSave} disabled={saving}>{saving ? 'Saving…' : 'Update Leaves'}</Button>
               </div>
             </div>
           </div>
@@ -708,10 +699,10 @@ export default function Salaries() {
                 )}
               </div>
               <div className="modal-footer">
-                <button className="btn btn-secondary btn-sm" onClick={() => setPayModal(null)}>Cancel</button>
-                <button className="btn btn-success btn-sm" onClick={handlePayCollect} disabled={saving}>
+                <Button variant="secondary" size="sm" onClick={() => setPayModal(null)}>Cancel</Button>
+                <Button variant="success" size="sm" onClick={handlePayCollect} disabled={saving}>
                   {saving ? 'Processing…' : 'Collect Payment'}
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -744,8 +735,8 @@ export default function Salaries() {
                 </div>
               </div>
               <div className="modal-footer">
-                <button className="btn btn-secondary btn-sm" onClick={() => setHolidayModal(false)}>Cancel</button>
-                <button className="btn btn-primary btn-sm" onClick={handleAddHoliday} disabled={saving}>{saving ? 'Saving…' : 'Add Holiday'}</button>
+                <Button variant="secondary" size="sm" onClick={() => setHolidayModal(false)}>Cancel</Button>
+                <Button size="sm" onClick={handleAddHoliday} disabled={saving}>{saving ? 'Saving…' : 'Add Holiday'}</Button>
               </div>
             </div>
           </div>

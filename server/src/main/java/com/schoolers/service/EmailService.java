@@ -6,6 +6,7 @@ import com.schoolers.dto.JobApplicationRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -32,8 +33,10 @@ public class EmailService {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
-    // ── OTP email (critical — re-throws on failure so caller can handle) ──────
+    // ── OTP email (async — forgotPassword always returns the same generic ───
+    // message regardless of send outcome, so this never blocks the request) ──
 
+    @Async
     public void sendOtpEmail(String toEmail, String otp) {
         requireApiKey();
         send(toEmail, "My-Skoolz Password Reset OTP", buildOtpHtml(otp));
@@ -48,8 +51,10 @@ public class EmailService {
         log.info("[EmailService] Owner login OTP sent to owner: " + ownerEmail);
     }
 
-    // ── Registration email verification (re-throws on failure) ──────────────
+    // ── Registration email verification (async — both call sites already ────
+    // swallow send failures and return success regardless) ───────────────────
 
+    @Async
     public void sendRegistrationOtp(String toEmail, String name, String otp) {
         requireApiKey();
         send(toEmail, "Verify your My-Skoolz account", buildRegistrationOtpHtml(name, otp));
@@ -100,6 +105,7 @@ public class EmailService {
 
     // ── Demo booking (fire-and-forget — email failure must not break the API) ─
 
+    @Async
     public void sendDemoBookingNotification(DemoBookingRequest req) {
         try {
             requireApiKey();
@@ -119,6 +125,7 @@ public class EmailService {
 
     // ── Contact form (fire-and-forget) ───────────────────────────────────────
 
+    @Async
     public void sendContactMessageNotification(ContactMessageRequest req) {
         try {
             requireApiKey();
@@ -138,6 +145,7 @@ public class EmailService {
 
     // ── Job application (fire-and-forget) ────────────────────────────────────
 
+    @Async
     public void sendJobApplicationNotification(JobApplicationRequest req) {
         try {
             requireApiKey();
@@ -157,6 +165,7 @@ public class EmailService {
 
     // ── Low attendance alert (fire-and-forget) ────────────────────────────────
 
+    @Async
     public void sendAttendanceAlert(String parentEmail, String studentName,
             String className, double pct, String schoolName) {
         try {
@@ -172,6 +181,7 @@ public class EmailService {
 
     // ── Welcome / account-created email (fire-and-forget) ────────────────────
 
+    @Async
     public void sendWelcomeEmail(String toEmail, String name, String role, String tempPassword) {
         try {
             requireApiKey();
@@ -186,6 +196,7 @@ public class EmailService {
 
     // ── Account locked notification (fire-and-forget) ────────────────────────
 
+    @Async
     public void sendAccountLockedEmail(String toEmail, String name) {
         try {
             requireApiKey();
@@ -248,6 +259,7 @@ public class EmailService {
 
     // ── Meeting confirmation (fire-and-forget) ────────────────────────────────
 
+    @Async
     public void sendMeetingConfirmation(String parentEmail, String studentName,
             String teacherName, String date, String time, String topic, String schoolName) {
         try {
@@ -292,6 +304,7 @@ public class EmailService {
 
     // ── Issue report notification (fire-and-forget) ──────────────────────────
 
+    @Async
     public void sendIssueReportNotification(com.schoolers.model.IssueReport issue) {
         final String ISSUES_EMAIL = "schoolapplication20@gmail.com";
         try {

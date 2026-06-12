@@ -1,35 +1,31 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, ScrollView } from 'react-native';
 import api from '../../services/api';
+import useCachedFetch from '../../hooks/useCachedFetch';
+import OfflineBanner from '../../components/OfflineBanner';
 
 const STATUS_OPTIONS = ['PRESENT', 'ABSENT', 'LEAVE', 'LATE'];
 const STATUS_COLORS = { PRESENT: '#dcfce7', ABSENT: '#fee2e2', LEAVE: '#fef9c3', LATE: '#ffedd5' };
 const STATUS_TEXT = { PRESENT: '#166534', ABSENT: '#991b1b', LEAVE: '#854d0e', LATE: '#9a3412' };
 
 export default function TeacherAttendance() {
-  const [classes, setClasses] = useState([]);
+  const { data: classesData, loading: classesLoading, isOffline } = useCachedFetch('/api/teacher/classes');
+  const classes = classesData || [];
   const [selectedClass, setSelectedClass] = useState(null);
   const [students, setStudents] = useState([]);
   const [attendanceMap, setAttendanceMap] = useState({});
-  const [loading, setLoading] = useState(true);
+  const [studentsLoading, setStudentsLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [alreadyMarked, setAlreadyMarked] = useState(false);
   const today = new Date().toISOString().slice(0, 10);
 
   useEffect(() => {
-    api.get('/api/teacher/classes')
-      .then(res => {
-        const list = res.data.data || [];
-        setClasses(list);
-        if (list.length > 0) setSelectedClass(list[0]);
-      })
-      .catch(() => Alert.alert('Error', 'Failed to load classes.'))
-      .finally(() => setLoading(false));
-  }, []);
+    if (classes.length > 0 && !selectedClass) setSelectedClass(classes[0]);
+  }, [classes]);
 
   useEffect(() => {
     if (!selectedClass) return;
-    setLoading(true);
+    setStudentsLoading(true);
     Promise.all([
       api.get(`/api/teacher/class/${selectedClass.id}/students`),
       api.get(`/api/teacher/attendance/${selectedClass.id}?date=${today}`),
@@ -46,7 +42,7 @@ export default function TeacherAttendance() {
         studentList.forEach(s => { map[s.id] = 'PRESENT'; });
       }
       setAttendanceMap(map);
-    }).catch(() => {}).finally(() => setLoading(false));
+    }).catch(() => {}).finally(() => setStudentsLoading(false));
   }, [selectedClass]);
 
   const toggle = (id) => {
@@ -76,10 +72,11 @@ export default function TeacherAttendance() {
     }
   };
 
-  if (loading && classes.length === 0) return <ActivityIndicator style={{ flex: 1 }} size="large" color="#059669" />;
+  if (classesLoading && classes.length === 0) return <ActivityIndicator style={{ flex: 1 }} size="large" color="#059669" />;
 
   return (
     <View style={styles.container}>
+      <OfflineBanner visible={isOffline} />
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.classRow}>
         {classes.map(c => (
           <TouchableOpacity
@@ -99,7 +96,7 @@ export default function TeacherAttendance() {
         {alreadyMarked && <View style={styles.markedBadge}><Text style={styles.markedText}>Already Marked</Text></View>}
       </View>
 
-      {loading ? <ActivityIndicator style={{ flex: 1 }} size="large" color="#059669" /> : (
+      {studentsLoading ? <ActivityIndicator style={{ flex: 1 }} size="large" color="#059669" /> : (
         <FlatList
           data={students}
           keyExtractor={s => s.id.toString()}

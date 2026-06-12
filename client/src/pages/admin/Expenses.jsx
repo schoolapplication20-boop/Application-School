@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '../../components/Layout';
-import Toast from '../../components/Toast';
+import Button from '../../components/Button';
 import { adminAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -31,7 +32,7 @@ function Card({ icon, label, value, color, sub }) {
       </div>
       <div className="stat-value" style={{ fontSize: '22px', fontWeight: 800 }}>{value}</div>
       <div className="stat-label">{label}</div>
-      {sub && <div style={{ fontSize: '11px', color: '#a0aec0', marginTop: '2px' }}>{sub}</div>}
+      {sub && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{sub}</div>}
     </div>
   );
 }
@@ -114,7 +115,7 @@ function ExpenseModal({ initial, addedBy, addedById, onClose, onSaved, onError }
   };
 
   const inp = {
-    padding: '10px 12px', border: '1.5px solid #e2e8f0',
+    padding: '10px 12px', border: '1.5px solid var(--border-strong)',
     borderRadius: '8px', fontSize: '13px', width: '100%', boxSizing: 'border-box',
     outline: 'none', fontFamily: 'inherit',
   };
@@ -145,7 +146,7 @@ function ExpenseModal({ initial, addedBy, addedById, onClose, onSaved, onError }
 
             {/* Title — full width */}
             <div style={{ gridColumn: '1/-1' }}>
-              <label style={{ fontSize: '12px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '6px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
                 Expense Title <span style={{ color: '#e53e3e' }}>*</span>
               </label>
               <input
@@ -159,7 +160,7 @@ function ExpenseModal({ initial, addedBy, addedById, onClose, onSaved, onError }
 
             {/* Amount */}
             <div>
-              <label style={{ fontSize: '12px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '6px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
                 Amount (₹) <span style={{ color: '#e53e3e' }}>*</span>
               </label>
               <input
@@ -172,7 +173,7 @@ function ExpenseModal({ initial, addedBy, addedById, onClose, onSaved, onError }
 
             {/* Date */}
             <div>
-              <label style={{ fontSize: '12px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '6px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
                 Date <span style={{ color: '#e53e3e' }}>*</span>
               </label>
               <input
@@ -185,7 +186,7 @@ function ExpenseModal({ initial, addedBy, addedById, onClose, onSaved, onError }
 
             {/* Payment Mode */}
             <div>
-              <label style={{ fontSize: '12px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '6px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
                 Payment Mode
               </label>
               <select style={inp} value={form.paymentMode} onChange={e => set('paymentMode', e.target.value)}>
@@ -195,7 +196,7 @@ function ExpenseModal({ initial, addedBy, addedById, onClose, onSaved, onError }
 
             {/* Status */}
             <div>
-              <label style={{ fontSize: '12px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '6px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
                 Status
               </label>
               <select style={inp} value={form.status} onChange={e => set('status', e.target.value)}>
@@ -206,8 +207,8 @@ function ExpenseModal({ initial, addedBy, addedById, onClose, onSaved, onError }
 
             {/* Description — full width */}
             <div style={{ gridColumn: '1/-1' }}>
-              <label style={{ fontSize: '12px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '6px' }}>
-                Description <span style={{ fontSize: '11px', color: '#a0aec0', fontWeight: 400 }}>(optional)</span>
+              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                Description <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>(optional)</span>
               </label>
               <textarea
                 style={{ ...inp, resize: 'vertical', minHeight: '76px' }}
@@ -220,10 +221,10 @@ function ExpenseModal({ initial, addedBy, addedById, onClose, onSaved, onError }
 
             {/* Added By — read-only */}
             <div style={{ gridColumn: '1/-1' }}>
-              <label style={{ fontSize: '12px', fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: '6px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
                 Added By
               </label>
-              <input style={{ ...inp, background: '#f7fafc', color: '#718096', cursor: 'not-allowed' }}
+              <input style={{ ...inp, background: 'var(--surface-alt)', color: 'var(--text-secondary)', cursor: 'not-allowed' }}
                 readOnly value={addedBy} />
             </div>
           </div>
@@ -233,8 +234,8 @@ function ExpenseModal({ initial, addedBy, addedById, onClose, onSaved, onError }
         <div className="modal-footer">
           <button
             onClick={onClose} disabled={saving}
-            style={{ padding: '10px 22px', border: '1.5px solid #e2e8f0', borderRadius: '8px',
-              background: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>
+            style={{ padding: '10px 22px', border: '1.5px solid var(--border-strong)', borderRadius: '8px',
+              background: 'var(--surface)', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>
             Cancel
           </button>
           <button
@@ -272,16 +273,16 @@ function DeleteModal({ expense, onClose, onDeleted }) {
           <span className="material-icons" style={{ fontSize: '56px', color: '#fc8181', display: 'block', marginBottom: '12px' }}>
             delete_forever
           </span>
-          <p style={{ margin: 0, color: '#2d3748', fontSize: '15px', lineHeight: '1.5' }}>
+          <p style={{ margin: 0, color: 'var(--text-primary)', fontSize: '15px', lineHeight: '1.5' }}>
             Delete <strong>"{expense.title}"</strong>?
           </p>
-          <p style={{ margin: '8px 0 0', color: '#a0aec0', fontSize: '13px' }}>This cannot be undone.</p>
+          <p style={{ margin: '8px 0 0', color: 'var(--text-muted)', fontSize: '13px' }}>This cannot be undone.</p>
           {deleteErr && <p style={{ margin: '10px 0 0', color: '#e53e3e', fontSize: '13px', fontWeight: 600 }}>{deleteErr}</p>}
         </div>
         <div className="modal-footer">
           <button onClick={onClose} disabled={busy}
-            style={{ padding: '10px 22px', border: '1.5px solid #e2e8f0', borderRadius: '8px',
-              background: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>
+            style={{ padding: '10px 22px', border: '1.5px solid var(--border-strong)', borderRadius: '8px',
+              background: 'var(--surface)', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>
             Cancel
           </button>
           <button onClick={go} disabled={busy}
@@ -304,16 +305,8 @@ export default function Expenses() {
   const [records,  setRecords]  = useState([]);
   const [summary,  setSummary]  = useState(null);
   const [loading,  setLoading]  = useState(true);
-  const [toast,    setToast]    = useState(null);
-  const toastTimerRef = useRef(null);
 
-  useEffect(() => () => clearTimeout(toastTimerRef.current), []);
-
-  const showToast = (message, type = 'success') => {
-    clearTimeout(toastTimerRef.current);
-    setToast({ message, type });
-    toastTimerRef.current = setTimeout(() => setToast(null), 3500);
-  };
+  const showToast = useToast();
 
   // filters
   const [search,       setSearch]       = useState('');
@@ -366,7 +359,7 @@ export default function Expenses() {
   };
 
   const SortIcon = ({ col }) => {
-    if (sortBy !== col) return <span className="material-icons" style={{ fontSize: '14px', color: '#cbd5e0', verticalAlign: 'middle', marginLeft: '3px' }}>unfold_more</span>;
+    if (sortBy !== col) return <span className="material-icons" style={{ fontSize: '14px', color: 'var(--text-muted)', verticalAlign: 'middle', marginLeft: '3px' }}>unfold_more</span>;
     return <span className="material-icons" style={{ fontSize: '14px', color: '#0de1e8', verticalAlign: 'middle', marginLeft: '3px' }}>
       {sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward'}
     </span>;
@@ -380,8 +373,6 @@ export default function Expenses() {
 
   return (
     <Layout pageTitle="Expenses">
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-
       {/* Page header */}
       <div className="page-header" style={{ marginBottom: '20px' }}>
         <h1>Expense Management</h1>
@@ -412,7 +403,7 @@ export default function Expenses() {
       <div className="data-table-card">
 
         {/* ── Toolbar ── */}
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f4f8',
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)',
           display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
 
           {/* Search */}
@@ -443,7 +434,7 @@ export default function Expenses() {
             value={dateFrom} onChange={e => setDateFrom(e.target.value)}
             title="From"
           />
-          <span style={{ color: '#a0aec0', fontSize: '12px', flexShrink: 0 }}>to</span>
+          <span style={{ color: 'var(--text-muted)', fontSize: '12px', flexShrink: 0 }}>to</span>
           <input
             type="date" className="filter-select" style={{ minWidth: '130px' }}
             value={dateTo} onChange={e => setDateTo(e.target.value)}
@@ -454,8 +445,8 @@ export default function Expenses() {
           {hasFilters && (
             <button
               onClick={clearFilters}
-              style={{ padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: '8px',
-                background: '#fff', cursor: 'pointer', fontSize: '12px', color: '#718096',
+              style={{ padding: '8px 12px', border: '1px solid var(--border-strong)', borderRadius: '8px',
+                background: 'var(--surface)', cursor: 'pointer', fontSize: '12px', color: 'var(--text-secondary)',
                 display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
               <span className="material-icons" style={{ fontSize: '14px' }}>clear</span>
               Clear
@@ -463,20 +454,20 @@ export default function Expenses() {
           )}
 
           {/* Add button */}
-          <button
-            className="btn-add"
+          <Button
+            variant="add"
             onClick={() => { setEditTarget(null); setFormOpen(true); }}
             style={{ marginLeft: 'auto', flexShrink: 0 }}
           >
             <span className="material-icons">add</span>
             Add Expense
-          </button>
+          </Button>
         </div>
 
         {/* ── Results meta ── */}
         {!loading && records.length > 0 && (
-          <div style={{ padding: '8px 20px', fontSize: '13px', color: '#718096',
-            borderBottom: '1px solid #f0f4f8', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+          <div style={{ padding: '8px 20px', fontSize: '13px', color: 'var(--text-secondary)',
+            borderBottom: '1px solid var(--border)', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
             <span>{sorted.length} record{sorted.length !== 1 ? 's' : ''}</span>
             <span>Total: <strong style={{ color: '#e53e3e' }}>{fmt(totalShown)}</strong></span>
             {unpaidShown > 0 && (
@@ -491,12 +482,12 @@ export default function Expenses() {
         {/* ── Table ── */}
         <div style={{ overflowX: 'auto' }}>
           {loading ? (
-            <div style={{ padding: '64px', textAlign: 'center', color: '#a0aec0' }}>
+            <div style={{ padding: '64px', textAlign: 'center', color: 'var(--text-muted)' }}>
               <span className="material-icons" style={{ fontSize: '40px', display: 'block', marginBottom: '8px' }}>hourglass_top</span>
               Loading…
             </div>
           ) : sorted.length === 0 ? (
-            <div style={{ padding: '64px', textAlign: 'center', color: '#a0aec0' }}>
+            <div style={{ padding: '64px', textAlign: 'center', color: 'var(--text-muted)' }}>
               <span className="material-icons" style={{ fontSize: '52px', display: 'block', marginBottom: '10px' }}>receipt_long</span>
               <p style={{ margin: '0 0 16px', fontSize: '15px' }}>No expenses found.</p>
               <button
@@ -536,9 +527,9 @@ export default function Expenses() {
                     style={{ background: r.status === 'UNPAID' ? '#fffbf0' : undefined }}
                   >
                     <td>
-                      <div style={{ fontWeight: 600, color: '#2d3748', fontSize: '13px' }}>{r.title}</div>
+                      <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '13px' }}>{r.title}</div>
                       {r.description && (
-                        <div style={{ fontSize: '11px', color: '#a0aec0', marginTop: '2px',
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px',
                           maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {r.description}
                         </div>
@@ -547,28 +538,22 @@ export default function Expenses() {
                     <td style={{ fontWeight: 700, color: '#e53e3e', fontSize: '14px', whiteSpace: 'nowrap' }}>
                       {fmt(r.amount)}
                     </td>
-                    <td style={{ fontSize: '12px', color: '#718096', whiteSpace: 'nowrap' }}>
+                    <td style={{ fontSize: '12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
                       {fmtDate(r.date)}
                     </td>
-                    <td style={{ fontSize: '12px', color: '#4a5568' }}>{r.paymentMode || '—'}</td>
+                    <td style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{r.paymentMode || '—'}</td>
                     <td><StatusBadge status={r.status} /></td>
-                    <td style={{ fontSize: '12px', color: '#a0aec0' }}>{r.addedBy || '—'}</td>
+                    <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{r.addedBy || '—'}</td>
                     <td>
                       <div className="action-btns">
-                        <button
-                          className="action-btn action-btn-edit"
-                          title="Edit"
+                        <Button
+                          variant="edit"
                           onClick={() => { setEditTarget(r); setFormOpen(true); }}
-                        >
-                          <span className="material-icons">edit</span>
-                        </button>
-                        <button
-                          className="action-btn action-btn-delete"
-                          title="Delete"
+                        />
+                        <Button
+                          variant="delete"
                           onClick={() => setDeleteTarget(r)}
-                        >
-                          <span className="material-icons">delete</span>
-                        </button>
+                        />
                       </div>
                     </td>
                   </tr>

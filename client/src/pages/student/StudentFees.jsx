@@ -94,8 +94,8 @@ export default function StudentFees() {
   /* ── sub-components ── */
   const SummaryCard = ({ icon, label, value, color, highlight, sub }) => (
     <div style={{
-      background: highlight ? color + '0d' : '#fff',
-      border: `1.5px solid ${highlight ? color + '40' : '#e2e8f0'}`,
+      background: highlight ? color + '0d' : 'var(--surface)',
+      border: `1.5px solid ${highlight ? color + '40' : 'var(--border-strong)'}`,
       borderRadius: 14, padding: '18px 20px',
       display: 'flex', alignItems: 'flex-start', gap: 14, flex: 1, minWidth: 160,
     }}>
@@ -106,11 +106,11 @@ export default function StudentFees() {
         <span className="material-icons" style={{ color, fontSize: 22 }}>{icon}</span>
       </div>
       <div>
-        <div style={{ fontSize: 22, fontWeight: 800, color: highlight ? color : '#1a202c', lineHeight: 1.1 }}>
+        <div style={{ fontSize: 22, fontWeight: 800, color: highlight ? color : 'var(--text-primary)', lineHeight: 1.1 }}>
           ₹{fmt(value)}
         </div>
-        <div style={{ fontSize: 12, color: '#718096', fontWeight: 600, marginTop: 3 }}>{label}</div>
-        {sub && <div style={{ fontSize: 11, color: '#a0aec0', marginTop: 2 }}>{sub}</div>}
+        <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, marginTop: 3 }}>{label}</div>
+        {sub && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{sub}</div>}
       </div>
     </div>
   );
@@ -131,8 +131,8 @@ export default function StudentFees() {
   if (loading) return (
     <Layout pageTitle="My Fees">
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 400, gap: 16, color: '#a0aec0' }}>
-        <div style={{ width: 48, height: 48, border: '4px solid #e2e8f0', borderTopColor: '#1A56DB', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 400, gap: 16, color: 'var(--text-muted)' }}>
+        <div style={{ width: 48, height: 48, border: '4px solid var(--border-strong)', borderTopColor: '#1A56DB', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
         <span style={{ fontSize: 14, fontWeight: 600 }}>Loading your fee details…</span>
       </div>
     </Layout>
@@ -156,18 +156,18 @@ export default function StudentFees() {
     <Layout pageTitle="My Fees">
       <div style={{ padding: '20px 24px', maxWidth: 700 }}>
         <div style={{ marginBottom: 24 }}>
-          <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#1a202c' }}>My Fees</h2>
-          <p style={{ margin: '4px 0 0', fontSize: 13, color: '#a0aec0' }}>Track your fee payments and installments</p>
+          <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: 'var(--text-primary)' }}>My Fees</h2>
+          <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>Track your fee payments and installments</p>
         </div>
         <div style={{
-          background: '#fff', border: '2px dashed #e2e8f0', borderRadius: 16,
+          background: 'var(--surface)', border: '2px dashed var(--border-strong)', borderRadius: 16,
           padding: '70px 40px', textAlign: 'center',
         }}>
-          <div style={{ width: 72, height: 72, borderRadius: '50%', background: '#f0f4f8', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
-            <span className="material-icons" style={{ fontSize: 36, color: '#cbd5e0' }}>account_balance_wallet</span>
+          <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+            <span className="material-icons" style={{ fontSize: 36, color: 'var(--text-muted)' }}>account_balance_wallet</span>
           </div>
-          <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 800, color: '#4a5568' }}>No Fee Assigned Yet</h3>
-          <p style={{ margin: 0, fontSize: 14, color: '#a0aec0', maxWidth: 360, marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.6 }}>
+          <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 800, color: 'var(--text-secondary)' }}>No Fee Assigned Yet</h3>
+          <p style={{ margin: 0, fontSize: 14, color: 'var(--text-muted)', maxWidth: 360, marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.6 }}>
             Your fee details will appear here once assigned by the admin.
             Please contact your school administration if you have questions.
           </p>
@@ -190,15 +190,15 @@ export default function StudentFees() {
         {/* ── Header ── */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
           <div>
-            <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#1a202c' }}>My Fees</h2>
-            <p style={{ margin: '4px 0 0', fontSize: 13, color: '#718096' }}>
+            <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: 'var(--text-primary)' }}>My Fees</h2>
+            <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-secondary)' }}>
               <span style={{ fontWeight: 600 }}>{assignment.studentName}</span>
               {assignment.className && <> · {assignment.className}</>}
               {assignment.rollNumber && <> · Roll No: {assignment.rollNumber}</>}
               {assignment.academicYear && <> · AY {assignment.academicYear}</>}
             </p>
             {lastUpdated && (
-              <p style={{ margin: '3px 0 0', fontSize: 11, color: '#a0aec0' }}>
+              <p style={{ margin: '3px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
                 Last updated: {lastUpdated.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })}
               </p>
             )}
@@ -212,7 +212,7 @@ export default function StudentFees() {
               onClick={() => load(true)}
               disabled={refreshing}
               title="Refresh fee data"
-              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 14px', background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 12, fontWeight: 600, color: '#4a5568', cursor: refreshing ? 'not-allowed' : 'pointer', opacity: refreshing ? 0.6 : 1 }}>
+              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 14px', background: 'var(--surface)', border: '1.5px solid var(--border-strong)', borderRadius: 8, fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', cursor: refreshing ? 'not-allowed' : 'pointer', opacity: refreshing ? 0.6 : 1 }}>
               <span className="material-icons" style={{ fontSize: 15, animation: refreshing ? 'spin 0.8s linear infinite' : 'none' }}>refresh</span>
               {refreshing ? 'Refreshing…' : 'Refresh'}
             </button>
@@ -227,19 +227,19 @@ export default function StudentFees() {
         </div>
 
         {/* ── Progress bar ── */}
-        <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, padding: '16px 20px', marginBottom: 20 }}>
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border-strong)', borderRadius: 14, padding: '16px 20px', marginBottom: 20 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#2d3748' }}>Payment Progress</span>
-            <span style={{ fontSize: 13, fontWeight: 800, color: paidPct >= 100 ? '#38a169' : '#4a5568' }}>{paidPct.toFixed(0)}%</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Payment Progress</span>
+            <span style={{ fontSize: 13, fontWeight: 800, color: paidPct >= 100 ? '#38a169' : 'var(--text-secondary)' }}>{paidPct.toFixed(0)}%</span>
           </div>
-          <div style={{ height: 10, background: '#edf2f7', borderRadius: 99, overflow: 'hidden' }}>
+          <div style={{ height: 10, background: 'var(--border)', borderRadius: 99, overflow: 'hidden' }}>
             <div style={{
               height: '100%', width: `${paidPct}%`,
               background: paidPct >= 100 ? '#38a169' : 'linear-gradient(90deg, #1A56DB, #1E429F)',
               borderRadius: 99, transition: 'width 0.7s cubic-bezier(.4,0,.2,1)',
             }} />
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 11, color: '#a0aec0' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 11, color: 'var(--text-muted)' }}>
             <span>₹{fmt(paidAmount)} paid</span>
             <span>{dueAmount > 0 ? `₹${fmt(dueAmount)} remaining` : 'Fully cleared ✓'}</span>
           </div>
@@ -247,11 +247,11 @@ export default function StudentFees() {
 
         {/* ── Fee Breakdown (student assigned or class structure fallback) ── */}
         {feeTypeRows.length > 0 && (
-          <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, padding: '16px 20px', marginBottom: 20 }}>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border-strong)', borderRadius: 14, padding: '16px 20px', marginBottom: 20 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#2d3748' }}>Fee Breakdown</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Fee Breakdown</div>
               {!assignmentHasBreakup && (
-                <span style={{ fontSize: 11, color: '#a0aec0', fontStyle: 'italic' }}>Based on class fee structure</span>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic' }}>Based on class fee structure</span>
               )}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
@@ -261,20 +261,20 @@ export default function StudentFees() {
                     <span className="material-icons" style={{ fontSize: 16, color: ft.color }}>{ft.icon}</span>
                   </div>
                   <div>
-                    <div style={{ fontSize: 12, color: '#718096', fontWeight: 600 }}>{ft.label}</div>
-                    <div style={{ fontSize: 14, fontWeight: 800, color: '#2d3748' }}>₹{fmt(breakupSource[ft.key])}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>{ft.label}</div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)' }}>₹{fmt(breakupSource[ft.key])}</div>
                   </div>
                 </div>
               ))}
             </div>
-            <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px dashed #e2e8f0', display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-              <span style={{ color: '#718096', fontWeight: 600 }}>
+            <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px dashed var(--border-strong)', display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+              <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>
                 {assignmentHasBreakup ? 'Total Assigned Fee' : 'Class Total Annual Fee'}
               </span>
-              <span style={{ fontWeight: 800, color: '#1a202c' }}>₹{fmt(feeTypeRows.reduce((s, ft) => s + Number(breakupSource[ft.key] || 0), 0))}</span>
+              <span style={{ fontWeight: 800, color: 'var(--text-primary)' }}>₹{fmt(feeTypeRows.reduce((s, ft) => s + Number(breakupSource[ft.key] || 0), 0))}</span>
             </div>
             {assignment.remarks && (
-              <div style={{ marginTop: 8, fontSize: 12, color: '#718096', fontStyle: 'italic' }}>
+              <div style={{ marginTop: 8, fontSize: 12, color: 'var(--text-secondary)', fontStyle: 'italic' }}>
                 Note: {assignment.remarks}
               </div>
             )}
@@ -282,19 +282,19 @@ export default function StudentFees() {
         )}
 
         {/* ── Tabs ── */}
-        <div style={{ display: 'flex', gap: 4, marginBottom: 18, borderBottom: '2px solid #edf2f7' }}>
+        <div style={{ display: 'flex', gap: 4, marginBottom: 18, borderBottom: '2px solid var(--border)' }}>
           {tabs.map(t => (
             <button key={t.key} onClick={() => setActiveTab(t.key)} style={{
               display: 'flex', alignItems: 'center', gap: 6, padding: '10px 18px',
               border: 'none', background: 'none', cursor: 'pointer', fontSize: 13,
-              fontWeight: 600, color: activeTab === t.key ? '#276749' : '#718096',
+              fontWeight: 600, color: activeTab === t.key ? '#276749' : 'var(--text-secondary)',
               borderBottom: activeTab === t.key ? '2.5px solid #1A56DB' : '2.5px solid transparent',
               marginBottom: '-2px', transition: 'all 0.18s',
             }}>
               <span className="material-icons" style={{ fontSize: 16 }}>{t.icon}</span>
               {t.label}
               {t.count > 0 && (
-                <span style={{ background: activeTab === t.key ? '#1A56DB25' : '#f0f4f8', color: activeTab === t.key ? '#276749' : '#718096', borderRadius: 99, fontSize: 10, fontWeight: 800, padding: '1px 7px' }}>
+                <span style={{ background: activeTab === t.key ? '#1A56DB25' : 'var(--border)', color: activeTab === t.key ? '#276749' : 'var(--text-secondary)', borderRadius: 99, fontSize: 10, fontWeight: 800, padding: '1px 7px' }}>
                   {t.count}
                 </span>
               )}
@@ -305,23 +305,23 @@ export default function StudentFees() {
         {/* ── INSTALLMENTS TAB ── */}
         {activeTab === 'installments' && (
           installments.length === 0 ? (
-            <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, padding: '60px 40px', textAlign: 'center' }}>
-              <span className="material-icons" style={{ fontSize: 48, color: '#e2e8f0', display: 'block', marginBottom: 12 }}>event_note</span>
-              <p style={{ margin: 0, fontSize: 14, color: '#a0aec0', fontWeight: 600 }}>No installment schedule set</p>
-              <p style={{ margin: '6px 0 0', fontSize: 13, color: '#a0aec0' }}>
-                Your total fee of <strong style={{ color: '#2d3748' }}>₹{fmt(totalFee)}</strong> is due in full.
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border-strong)', borderRadius: 14, padding: '60px 40px', textAlign: 'center' }}>
+              <span className="material-icons" style={{ fontSize: 48, color: 'var(--border-strong)', display: 'block', marginBottom: 12 }}>event_note</span>
+              <p style={{ margin: 0, fontSize: 14, color: 'var(--text-muted)', fontWeight: 600 }}>No installment schedule set</p>
+              <p style={{ margin: '6px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>
+                Your total fee of <strong style={{ color: 'var(--text-primary)' }}>₹{fmt(totalFee)}</strong> is due in full.
                 {nextDueDate && <> Due by <strong style={{ color: '#e53e3e' }}>{fmtDate(nextDueDate)}</strong>.</>}
               </p>
             </div>
           ) : (
-            <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, overflow: 'hidden' }}>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border-strong)', borderRadius: 14, overflow: 'hidden' }}>
               {/* Mobile-friendly cards on small screens, table on wide */}
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 480 }}>
                   <thead>
-                    <tr style={{ background: '#f7fafc' }}>
+                    <tr style={{ background: 'var(--surface-alt)' }}>
                       {['#', 'Term / Installment', 'Amount', 'Due Date', 'Status', 'Paid On'].map((h, i) => (
-                        <th key={h} style={{ padding: '11px 16px', textAlign: i >= 2 && i <= 3 ? 'right' : 'left', fontSize: 11, fontWeight: 700, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1.5px solid #e2e8f0', whiteSpace: 'nowrap' }}>{h}</th>
+                        <th key={h} style={{ padding: '11px 16px', textAlign: i >= 2 && i <= 3 ? 'right' : 'left', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1.5px solid var(--border-strong)', whiteSpace: 'nowrap' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -331,18 +331,18 @@ export default function StudentFees() {
                       const isPaid  = String(inst.status || '').toUpperCase() === 'PAID';
                       return (
                         <tr key={inst.id ?? idx}
-                            style={{ borderBottom: '1px solid #f0f4f8', background: isPaid ? '#f0fff4' : overdue ? '#fff5f5' : '#fff' }}
-                            onMouseEnter={e => { e.currentTarget.style.background = isPaid ? '#e6ffed' : overdue ? '#ffe4e4' : '#fafafa'; }}
-                            onMouseLeave={e => { e.currentTarget.style.background = isPaid ? '#f0fff4' : overdue ? '#fff5f5' : '#fff'; }}>
-                          <td style={{ padding: '13px 16px', fontSize: 12, color: '#a0aec0', fontWeight: 700 }}>{idx + 1}</td>
+                            style={{ borderBottom: '1px solid var(--border)', background: isPaid ? '#f0fff4' : overdue ? '#fff5f5' : 'var(--surface)' }}
+                            onMouseEnter={e => { e.currentTarget.style.background = isPaid ? '#e6ffed' : overdue ? '#ffe4e4' : 'var(--surface-alt)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = isPaid ? '#f0fff4' : overdue ? '#fff5f5' : 'var(--surface)'; }}>
+                          <td style={{ padding: '13px 16px', fontSize: 12, color: 'var(--text-muted)', fontWeight: 700 }}>{idx + 1}</td>
                           <td style={{ padding: '13px 16px' }}>
-                            <div style={{ fontWeight: 700, color: '#2d3748', fontSize: 14 }}>{inst.termName}</div>
+                            <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: 14 }}>{inst.termName}</div>
                           </td>
-                          <td style={{ padding: '13px 16px', textAlign: 'right', fontSize: 14, fontWeight: 800, color: '#1a202c' }}>
+                          <td style={{ padding: '13px 16px', textAlign: 'right', fontSize: 14, fontWeight: 800, color: 'var(--text-primary)' }}>
                             ₹{fmt(inst.amount)}
                           </td>
                           <td style={{ padding: '13px 16px', textAlign: 'right' }}>
-                            <div style={{ fontSize: 13, color: overdue ? '#e53e3e' : '#4a5568', fontWeight: overdue ? 700 : 400 }}>
+                            <div style={{ fontSize: 13, color: overdue ? '#e53e3e' : 'var(--text-secondary)', fontWeight: overdue ? 700 : 400 }}>
                               {fmtDate(inst.dueDate)}
                             </div>
                             {overdue && <div style={{ fontSize: 10, color: '#e53e3e', fontWeight: 700, marginTop: 2 }}>PAST DUE</div>}
@@ -350,7 +350,7 @@ export default function StudentFees() {
                           <td style={{ padding: '13px 16px' }}>
                             <InstBadge status={inst.status} dueDate={inst.dueDate} />
                           </td>
-                          <td style={{ padding: '13px 16px', fontSize: 13, color: '#718096' }}>
+                          <td style={{ padding: '13px 16px', fontSize: 13, color: 'var(--text-secondary)' }}>
                             {isPaid ? fmtDate(inst.paidDate) : '—'}
                           </td>
                         </tr>
@@ -358,11 +358,11 @@ export default function StudentFees() {
                     })}
                   </tbody>
                   <tfoot>
-                    <tr style={{ background: '#f7fafc', borderTop: '2px solid #e2e8f0' }}>
-                      <td colSpan={2} style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#4a5568' }}>
+                    <tr style={{ background: 'var(--surface-alt)', borderTop: '2px solid var(--border-strong)' }}>
+                      <td colSpan={2} style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)' }}>
                         Total · {installments.filter(i => String(i.status || '').toUpperCase() === 'PAID').length} of {installments.length} paid
                       </td>
-                      <td style={{ padding: '12px 16px', textAlign: 'right', fontSize: 15, fontWeight: 800, color: '#1a202c' }}>
+                      <td style={{ padding: '12px 16px', textAlign: 'right', fontSize: 15, fontWeight: 800, color: 'var(--text-primary)' }}>
                         ₹{fmt(installments.reduce((s, i) => s + Number(i.amount || 0), 0))}
                       </td>
                       <td colSpan={3} />
@@ -377,42 +377,42 @@ export default function StudentFees() {
         {/* ── PAYMENT HISTORY TAB ── */}
         {activeTab === 'history' && (
           payments.length === 0 ? (
-            <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, padding: '60px 40px', textAlign: 'center' }}>
-              <span className="material-icons" style={{ fontSize: 48, color: '#e2e8f0', display: 'block', marginBottom: 12 }}>receipt_long</span>
-              <p style={{ margin: 0, fontSize: 14, color: '#a0aec0', fontWeight: 600 }}>No payments recorded yet</p>
-              <p style={{ margin: '6px 0 0', fontSize: 13, color: '#a0aec0' }}>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border-strong)', borderRadius: 14, padding: '60px 40px', textAlign: 'center' }}>
+              <span className="material-icons" style={{ fontSize: 48, color: 'var(--border-strong)', display: 'block', marginBottom: 12 }}>receipt_long</span>
+              <p style={{ margin: 0, fontSize: 14, color: 'var(--text-muted)', fontWeight: 600 }}>No payments recorded yet</p>
+              <p style={{ margin: '6px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>
                 Payment transactions will appear here once your school records a payment.
               </p>
             </div>
           ) : (
-            <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, overflow: 'hidden' }}>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border-strong)', borderRadius: 14, overflow: 'hidden' }}>
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 600 }}>
                   <thead>
-                    <tr style={{ background: '#f7fafc' }}>
+                    <tr style={{ background: 'var(--surface-alt)' }}>
                       {['Date', 'Term / Installment', 'Amount Paid', 'Receipt No.', 'Mode', 'Received By', 'Remarks'].map(h => (
-                        <th key={h} style={{ padding: '11px 14px', textAlign: h === 'Amount Paid' ? 'right' : 'left', fontSize: 11, fontWeight: 700, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1.5px solid #e2e8f0', whiteSpace: 'nowrap' }}>{h}</th>
+                        <th key={h} style={{ padding: '11px 14px', textAlign: h === 'Amount Paid' ? 'right' : 'left', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1.5px solid var(--border-strong)', whiteSpace: 'nowrap' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {payments.map((p, idx) => (
                       <tr key={p.id ?? idx}
-                          style={{ borderBottom: '1px solid #f0f4f8' }}
-                          onMouseEnter={e => e.currentTarget.style.background = '#fafafa'}
-                          onMouseLeave={e => e.currentTarget.style.background = '#fff'}>
-                        <td style={{ padding: '12px 14px', fontSize: 13, color: '#4a5568', whiteSpace: 'nowrap' }}>
+                          style={{ borderBottom: '1px solid var(--border)' }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-alt)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'var(--surface)'}>
+                        <td style={{ padding: '12px 14px', fontSize: 13, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
                           {fmtDate(p.paymentDate)}
                         </td>
                         <td style={{ padding: '12px 14px' }}>
                           {p.term
                             ? <span style={{ background: '#ebf8ff', color: '#2b6cb0', padding: '3px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700 }}>{p.term}</span>
-                            : <span style={{ color: '#a0aec0' }}>—</span>}
+                            : <span style={{ color: 'var(--text-muted)' }}>—</span>}
                         </td>
                         <td style={{ padding: '12px 14px', textAlign: 'right', fontSize: 15, fontWeight: 800, color: '#276749' }}>
                           ₹{fmt(p.amountPaid)}
                         </td>
-                        <td style={{ padding: '12px 14px', fontSize: 11, color: '#718096', fontFamily: 'monospace' }}>
+                        <td style={{ padding: '12px 14px', fontSize: 11, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
                           {p.receiptNumber || '—'}
                         </td>
                         <td style={{ padding: '12px 14px' }}>
@@ -420,16 +420,16 @@ export default function StudentFees() {
                             {p.paymentMode || 'Cash'}
                           </span>
                         </td>
-                        <td style={{ padding: '12px 14px', fontSize: 13, color: '#4a5568' }}>{p.receivedBy || '—'}</td>
-                        <td style={{ padding: '12px 14px', fontSize: 12, color: '#a0aec0', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <td style={{ padding: '12px 14px', fontSize: 13, color: 'var(--text-secondary)' }}>{p.receivedBy || '—'}</td>
+                        <td style={{ padding: '12px 14px', fontSize: 12, color: 'var(--text-muted)', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {p.remarks || '—'}
                         </td>
                       </tr>
                     ))}
                   </tbody>
                   <tfoot>
-                    <tr style={{ background: '#f7fafc', borderTop: '2px solid #e2e8f0' }}>
-                      <td colSpan={2} style={{ padding: '12px 14px', fontSize: 13, fontWeight: 700, color: '#4a5568' }}>
+                    <tr style={{ background: 'var(--surface-alt)', borderTop: '2px solid var(--border-strong)' }}>
+                      <td colSpan={2} style={{ padding: '12px 14px', fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)' }}>
                         {payments.length} transaction{payments.length !== 1 ? 's' : ''}
                       </td>
                       <td style={{ padding: '12px 14px', textAlign: 'right', fontSize: 15, fontWeight: 800, color: '#276749' }}>

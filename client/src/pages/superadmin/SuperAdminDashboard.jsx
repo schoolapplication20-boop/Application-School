@@ -35,9 +35,9 @@ const initials = (name = '') =>
 function InfoRow({ icon, label, value }) {
   return (
     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 6 }}>
-      <span className="material-icons" style={{ fontSize: 14, color: '#a0aec0', marginTop: 1, flexShrink: 0 }}>{icon}</span>
-      <span style={{ fontSize: 12, color: '#718096', minWidth: 48, flexShrink: 0 }}>{label}:</span>
-      <span style={{ fontSize: 12, color: '#2d3748', fontWeight: 500 }}>{value}</span>
+      <span className="material-icons" style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 1, flexShrink: 0 }}>{icon}</span>
+      <span style={{ fontSize: 12, color: 'var(--text-secondary)', minWidth: 48, flexShrink: 0 }}>{label}:</span>
+      <span style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 500 }}>{value}</span>
     </div>
   );
 }
@@ -290,9 +290,9 @@ function OwnerDashboard() {
       title: 'Delete Reported Issue',
       description: (
         <div>
-          <div style={{ fontSize: 13, color: '#2d3748', marginBottom: 6 }}>You are about to permanently delete this reported issue:</div>
+          <div style={{ fontSize: 13, color: 'var(--text-primary)', marginBottom: 6 }}>You are about to permanently delete this reported issue:</div>
           <div style={{ fontWeight: 700, fontSize: 14, color: '#dc2626' }}>{issue?.title || `Issue #${id}`}</div>
-          <div style={{ fontSize: 12, color: '#718096', marginTop: 3 }}>{issue?.reporterName} · {issue?.category}</div>
+          <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 3 }}>{issue?.reporterName} · {issue?.category}</div>
         </div>
       ),
       onConfirmed: async () => {
@@ -470,7 +470,7 @@ function OwnerDashboard() {
       </div>
 
       {/* ══ Tab Navigation ═══════════════════════════════════════════════════════ */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 24, background: '#f1f5f9', borderRadius: 14, padding: 5, width: 'fit-content', boxShadow: '0 1px 3px rgba(0,0,0,0.06) inset' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 24, background: 'var(--surface-alt)', borderRadius: 14, padding: 5, width: 'fit-content', boxShadow: '0 1px 3px rgba(0,0,0,0.06) inset' }}>
         {[
           { id: 'schools',  label: 'Schools',   icon: 'domain',       badge: totalSchools },
           { id: 'issues',   label: 'Issues',    icon: 'bug_report',   badge: issues.filter(i => i.status === 'OPEN').length },
@@ -480,14 +480,14 @@ function OwnerDashboard() {
           <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
             display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', borderRadius: 10, border: 'none', cursor: 'pointer',
             fontWeight: activeTab === tab.id ? 700 : 600, fontSize: 13, transition: 'all 0.15s',
-            background: activeTab === tab.id ? '#fff' : 'transparent',
-            color: activeTab === tab.id ? '#4f46e5' : '#64748b',
+            background: activeTab === tab.id ? 'var(--surface)' : 'transparent',
+            color: activeTab === tab.id ? '#4f46e5' : 'var(--text-muted)',
             boxShadow: activeTab === tab.id ? '0 2px 8px rgba(79,70,229,0.12), 0 1px 3px rgba(0,0,0,0.08)' : 'none',
           }}>
             <span className="material-icons" style={{ fontSize: 17 }}>{tab.icon}</span>
             {tab.label}
             {tab.badge > 0 && (
-              <span style={{ background: activeTab === tab.id ? '#4f46e5' : '#e2e8f0', color: activeTab === tab.id ? '#fff' : '#64748b', borderRadius: 20, padding: '1px 8px', fontSize: 10, fontWeight: 800 }}>{tab.badge}</span>
+              <span style={{ background: activeTab === tab.id ? '#4f46e5' : 'var(--border-strong)', color: activeTab === tab.id ? '#fff' : 'var(--text-muted)', borderRadius: 20, padding: '1px 8px', fontSize: 10, fontWeight: 800 }}>{tab.badge}</span>
             )}
           </button>
         ))}
@@ -498,14 +498,14 @@ function OwnerDashboard() {
         <div>
           {/* Search bar */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
-            <div style={{ flex: 1, minWidth: 240, display: 'flex', alignItems: 'center', gap: 10, background: '#fff', borderRadius: 12, padding: '10px 16px', border: '1.5px solid #e2e8f0', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
-              <span className="material-icons" style={{ fontSize: 18, color: '#94a3b8' }}>search</span>
+            <div style={{ flex: 1, minWidth: 240, display: 'flex', alignItems: 'center', gap: 10, background: 'var(--surface)', borderRadius: 12, padding: '10px 16px', border: '1.5px solid var(--border-strong)', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+              <span className="material-icons" style={{ fontSize: 18, color: 'var(--text-muted)' }}>search</span>
               <input
                 value={search} onChange={e => setSearch(e.target.value)}
                 placeholder="Search school, admin or email…"
-                style={{ border: 'none', outline: 'none', fontSize: 14, background: 'transparent', flex: 1, color: '#1e293b' }}
+                style={{ border: 'none', outline: 'none', fontSize: 14, background: 'transparent', flex: 1, color: 'var(--text-primary)' }}
               />
-              {search && <button onClick={() => setSearch('')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#94a3b8', lineHeight: 1, padding: 0 }}>✕</button>}
+              {search && <button onClick={() => setSearch('')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-muted)', lineHeight: 1, padding: 0 }}>✕</button>}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: '#eef2ff', borderRadius: 10, fontSize: 13, fontWeight: 700, color: '#4f46e5' }}>
               <span className="material-icons" style={{ fontSize: 16 }}>domain</span>
@@ -514,15 +514,15 @@ function OwnerDashboard() {
           </div>
 
           {loading ? (
-            <div style={{ padding: 60, textAlign: 'center', color: '#94a3b8' }}>
+            <div style={{ padding: 60, textAlign: 'center', color: 'var(--text-muted)' }}>
               <span className="material-icons" style={{ fontSize: 40, display: 'block', marginBottom: 12, animation: 'spin 1s linear infinite', color: '#c7d2fe' }}>autorenew</span>
               <div style={{ fontSize: 14, fontWeight: 600 }}>Loading schools…</div>
             </div>
           ) : filtered.length === 0 ? (
-            <div style={{ padding: '64px 20px', textAlign: 'center', background: '#fff', borderRadius: 20, border: '2px dashed #e2e8f0' }}>
-              <span className="material-icons" style={{ fontSize: 56, display: 'block', marginBottom: 14, color: '#cbd5e1' }}>domain_disabled</span>
-              <div style={{ fontSize: 16, fontWeight: 700, color: '#475569', marginBottom: 8 }}>{search ? 'No matching schools' : 'No schools yet'}</div>
-              <p style={{ color: '#94a3b8', fontSize: 14, marginBottom: 20 }}>{search ? 'Try a different search term.' : 'Onboard your first school to get started.'}</p>
+            <div style={{ padding: '64px 20px', textAlign: 'center', background: 'var(--surface)', borderRadius: 20, border: '2px dashed var(--border-strong)' }}>
+              <span className="material-icons" style={{ fontSize: 56, display: 'block', marginBottom: 14, color: 'var(--text-muted)' }}>domain_disabled</span>
+              <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>{search ? 'No matching schools' : 'No schools yet'}</div>
+              <p style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 20 }}>{search ? 'Try a different search term.' : 'Onboard your first school to get started.'}</p>
               {!search && (
                 <button onClick={() => setShowWizard(true)} style={{ padding: '11px 24px', background: 'linear-gradient(135deg,#4f46e5,#7c3aed)', color: '#fff', border: 'none', borderRadius: 12, fontWeight: 700, cursor: 'pointer', fontSize: 14 }}>
                   Onboard First School
@@ -543,7 +543,7 @@ function OwnerDashboard() {
 
                   return (
                     <div key={sa.id} style={{
-                      background: '#fff', borderRadius: 18, border: isExpanded ? '2px solid #4f46e5' : '1.5px solid #e2e8f0',
+                      background: 'var(--surface)', borderRadius: 18, border: isExpanded ? '2px solid #4f46e5' : '1.5px solid var(--border-strong)',
                       boxShadow: isExpanded ? '0 8px 30px rgba(79,70,229,0.12)' : '0 2px 8px rgba(0,0,0,0.04)',
                       transition: 'box-shadow 0.2s, border-color 0.2s', overflow: 'hidden',
                     }}>
@@ -557,13 +557,13 @@ function OwnerDashboard() {
                             {initials(sa.schoolName || sa.name)}
                           </div>
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sa.schoolName || '—'}</div>
+                            <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--text-primary)', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sa.schoolName || '—'}</div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                               {sa.schoolId != null && (
                                 <span style={{ padding: '2px 8px', background: '#eef2ff', color: '#4f46e5', borderRadius: 6, fontSize: 11, fontWeight: 700, fontFamily: 'monospace' }}>#{sa.schoolId}</span>
                               )}
                               {sa.schoolCode && (
-                                <span style={{ padding: '2px 7px', background: '#f1f5f9', color: '#64748b', borderRadius: 6, fontSize: 10, fontWeight: 700 }}>{sa.schoolCode}</span>
+                                <span style={{ padding: '2px 7px', background: 'var(--surface-alt)', color: 'var(--text-muted)', borderRadius: 6, fontSize: 10, fontWeight: 700 }}>{sa.schoolCode}</span>
                               )}
                               <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700, background: isActive ? '#f0fdf4' : '#fff7ed', color: isActive ? '#15803d' : '#c2410c' }}>
                                 {isActive ? '● Active' : '○ Suspended'}
@@ -578,16 +578,16 @@ function OwnerDashboard() {
                         </div>
 
                         {/* Super Admin row */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#f8fafc', borderRadius: 10, marginBottom: 14 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'var(--surface-alt)', borderRadius: 10, marginBottom: 14 }}>
                           <div style={{ width: 32, height: 32, borderRadius: 8, background: '#e0e7ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                             <span className="material-icons" style={{ fontSize: 16, color: '#4f46e5' }}>manage_accounts</span>
                           </div>
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontWeight: 700, fontSize: 13, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sa.name}</div>
-                            <div style={{ fontSize: 11, color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sa.email}</div>
+                            <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sa.name}</div>
+                            <div style={{ fontSize: 11, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sa.email}</div>
                           </div>
                           {sa.onboardedAt && (
-                            <div style={{ fontSize: 10, color: '#94a3b8', flexShrink: 0, textAlign: 'right' }}>
+                            <div style={{ fontSize: 10, color: 'var(--text-muted)', flexShrink: 0, textAlign: 'right' }}>
                               {new Date(sa.onboardedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' })}
                             </div>
                           )}
@@ -603,7 +603,7 @@ function OwnerDashboard() {
                             <div key={label} style={{ background: bg, borderRadius: 10, padding: '8px 10px', textAlign: 'center' }}>
                               <span className="material-icons" style={{ fontSize: 14, color, display: 'block', marginBottom: 2 }}>{icon}</span>
                               <div style={{ fontSize: 15, fontWeight: 800, color, lineHeight: 1 }}>{count.toLocaleString()}</div>
-                              <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2, fontWeight: 600 }}>{label}</div>
+                              <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2, fontWeight: 600 }}>{label}</div>
                             </div>
                           ))}
                         </div>
@@ -641,8 +641,8 @@ function OwnerDashboard() {
                             <button
                               onClick={() => { setExpandedRow(isExpanded ? null : sa.schoolDbId); if (!isExpanded) loadFeeSummary(sa.schoolDbId, sa.schoolActualId ?? sa.schoolDbId); }}
                               title={isExpanded ? 'Collapse' : 'View details'}
-                              style={{ border: 'none', background: isExpanded ? '#eef2ff' : '#f8fafc', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <span className="material-icons" style={{ fontSize: 17, color: isExpanded ? '#4f46e5' : '#94a3b8' }}>
+                              style={{ border: 'none', background: isExpanded ? '#eef2ff' : 'var(--surface-alt)', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <span className="material-icons" style={{ fontSize: 17, color: isExpanded ? '#4f46e5' : 'var(--text-muted)' }}>
                                 {isExpanded ? 'expand_less' : 'expand_more'}
                               </span>
                             </button>
@@ -663,7 +663,7 @@ function OwnerDashboard() {
                   : null;
                 const enabledCount = schoolFeatures ? ALL_MODULES.filter(m => schoolFeatures[m.key] !== false).length : ALL_MODULES.length;
                 return (
-                  <div style={{ background: '#fff', borderRadius: 20, border: '2px solid #4f46e5', boxShadow: '0 8px 40px rgba(79,70,229,0.12)', marginBottom: 8, overflow: 'hidden' }}>
+                  <div style={{ background: 'var(--surface)', borderRadius: 20, border: '2px solid #4f46e5', boxShadow: '0 8px 40px rgba(79,70,229,0.12)', marginBottom: 8, overflow: 'hidden' }}>
                     {/* Panel header */}
                     <div style={{ background: 'linear-gradient(135deg,#f0f4ff,#ede9fe)', padding: '16px 24px', borderBottom: '1px solid #e0e7ff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -684,14 +684,14 @@ function OwnerDashboard() {
                     <div style={{ padding: '20px 24px', display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, gridTemplateRows: 'auto auto' }}>
 
                               {/* School info + User Limit */}
-                              <div style={{ background: '#fff', borderRadius: 10, padding: '12px 14px', border: '1.5px solid #e2e8f0' }}>
-                                <div style={{ fontSize: 11, fontWeight: 700, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>School Info</div>
+                              <div style={{ background: 'var(--surface)', borderRadius: 10, padding: '12px 14px', border: '1.5px solid var(--border-strong)' }}>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>School Info</div>
                                 <InfoRow icon="school"           label="Name"       value={sa.schoolName || '—'} />
                                 <InfoRow icon="tag"              label="Code"       value={<span style={{ fontFamily:'monospace', fontWeight:700 }}>{sa.schoolCode || '—'}</span>} />
                                 <InfoRow icon="fingerprint"      label="DB ID"      value={`#${sa.schoolDbId}`} />
                                 <InfoRow icon="event"            label="Onboarded"  value={sa.onboardedAt ? new Date(sa.onboardedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'} />
                                 {/* Role-wise user counts */}
-                                <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #f1f5f9', display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6 }}>
+                                <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)', display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6 }}>
                                   {[
                                     { label: 'Admins',   count: sa.adminCount   ?? 0, color: '#7c3aed', icon: 'badge' },
                                     { label: 'Teachers', count: sa.teacherCount ?? 0, color: '#0369a1', icon: 'school' },
@@ -700,14 +700,14 @@ function OwnerDashboard() {
                                     <div key={label} style={{ background: color + '0f', borderRadius: 8, padding: '8px 10px', textAlign: 'center', border: `1px solid ${color}20` }}>
                                       <span className="material-icons" style={{ fontSize: 14, color, display: 'block' }}>{icon}</span>
                                       <div style={{ fontSize: 16, fontWeight: 800, color, marginTop: 2 }}>{count.toLocaleString()}</div>
-                                      <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600 }}>{label}</div>
+                                      <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>{label}</div>
                                     </div>
                                   ))}
                                 </div>
 
                                 {/* ── User Count / Limit ── */}
-                                <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #f1f5f9' }}>
-                                  <div style={{ fontSize: 11, fontWeight: 700, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>User Limit</div>
+                                <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+                                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>User Limit</div>
 
                                   {/* Count / limit bar */}
                                   {(() => {
@@ -718,14 +718,14 @@ function OwnerDashboard() {
                                     return (
                                       <div style={{ marginBottom: 8 }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                                          <span style={{ fontSize: 13, fontWeight: 800, color: '#1e293b' }}>
+                                          <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)' }}>
                                             {count.toLocaleString()}
-                                            {limit ? <span style={{ color: '#94a3b8', fontWeight: 400 }}> / {limit.toLocaleString()}</span> : <span style={{ color: '#94a3b8', fontSize: 11, fontWeight: 400 }}> / ∞ unlimited</span>}
+                                            {limit ? <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}> / {limit.toLocaleString()}</span> : <span style={{ color: 'var(--text-muted)', fontSize: 11, fontWeight: 400 }}> / ∞ unlimited</span>}
                                           </span>
                                           {limit && <span style={{ fontSize: 11, fontWeight: 700, color }}>{pct}%</span>}
                                         </div>
                                         {limit && (
-                                          <div style={{ height: 6, background: '#f1f5f9', borderRadius: 4, overflow: 'hidden' }}>
+                                          <div style={{ height: 6, background: 'var(--border-strong)', borderRadius: 4, overflow: 'hidden' }}>
                                             <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 4, transition: 'width 0.4s' }} />
                                           </div>
                                         )}
@@ -741,7 +741,7 @@ function OwnerDashboard() {
                                         placeholder="e.g. 1000"
                                         value={limitEdit[sa.schoolDbId]}
                                         onChange={e => setLimitEdit(prev => ({ ...prev, [sa.schoolDbId]: e.target.value }))}
-                                        style={{ width: 80, padding: '4px 8px', fontSize: 12, border: '1.5px solid #e2e8f0', borderRadius: 6, outline: 'none' }}
+                                        style={{ width: 80, padding: '4px 8px', fontSize: 12, border: '1.5px solid var(--border-strong)', borderRadius: 6, outline: 'none' }}
                                         onKeyDown={e => { if (e.key === 'Enter') saveLimitFor(sa); if (e.key === 'Escape') closeLimitEdit(sa.schoolDbId); }}
                                         autoFocus
                                       />
@@ -751,15 +751,15 @@ function OwnerDashboard() {
                                       </button>
                                       <button onClick={() => saveLimitFor({ ...sa, userLimit: null })} disabled={limitSaving[sa.schoolDbId]}
                                         title="Remove limit (unlimited)"
-                                        style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#fff', color: '#94a3b8', fontSize: 11, cursor: 'pointer' }}>
+                                        style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border-strong)', background: 'var(--surface)', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer' }}>
                                         ∞
                                       </button>
                                       <button onClick={() => closeLimitEdit(sa.schoolDbId)}
-                                        style={{ padding: '4px 6px', borderRadius: 6, border: 'none', background: 'none', color: '#94a3b8', fontSize: 14, cursor: 'pointer' }}>✕</button>
+                                        style={{ padding: '4px 6px', borderRadius: 6, border: 'none', background: 'none', color: 'var(--text-muted)', fontSize: 14, cursor: 'pointer' }}>✕</button>
                                     </div>
                                   ) : (
                                     <button onClick={() => openLimitEdit(sa)}
-                                      style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#f8faff', color: '#4f46e5', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                                      style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 6, border: '1px solid var(--border-strong)', background: 'var(--surface-alt)', color: '#4f46e5', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
                                       <span className="material-icons" style={{ fontSize: 13 }}>edit</span>
                                       {sa.userLimit ? 'Edit Limit' : 'Set Limit'}
                                     </button>
@@ -767,16 +767,16 @@ function OwnerDashboard() {
                                 </div>
                               </div>
                               {/* Super admin */}
-                              <div style={{ background: '#fff', borderRadius: 10, padding: '12px 14px', border: '1.5px solid #e2e8f0' }}>
-                                <div style={{ fontSize: 11, fontWeight: 700, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Super Admin</div>
+                              <div style={{ background: 'var(--surface)', borderRadius: 10, padding: '12px 14px', border: '1.5px solid var(--border-strong)' }}>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Super Admin</div>
                                 <InfoRow icon="person"   label="Name"   value={sa.name}   />
                                 <InfoRow icon="email"    label="Email"  value={sa.email}  />
                                 <InfoRow icon="phone"    label="Mobile" value={sa.mobile || '—'} />
                               </div>
                               {/* Enabled modules */}
-                              <div style={{ background: '#fff', borderRadius: 10, padding: '12px 14px', border: '1.5px solid #e2e8f0' }}>
+                              <div style={{ background: 'var(--surface)', borderRadius: 10, padding: '12px 14px', border: '1.5px solid var(--border-strong)' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                                  <div style={{ fontSize: 11, fontWeight: 700, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: 1 }}>
+                                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>
                                     Enabled Modules ({enabledCount}/{ALL_MODULES.length})
                                   </div>
                                   <button
@@ -791,16 +791,16 @@ function OwnerDashboard() {
                                   {ALL_MODULES.map(m => {
                                     const on = schoolFeatures ? schoolFeatures[m.key] !== false : true;
                                     return (
-                                      <span key={m.key} style={{ padding: '2px 8px', background: on ? '#ede9fe' : '#f1f5f9', color: on ? '#5b21b6' : '#94a3b8', borderRadius: 12, fontSize: 10, fontWeight: 600, textDecoration: on ? 'none' : 'line-through' }}>{m.label}</span>
+                                      <span key={m.key} style={{ padding: '2px 8px', background: on ? '#ede9fe' : 'var(--surface-alt)', color: on ? '#5b21b6' : 'var(--text-muted)', borderRadius: 12, fontSize: 10, fontWeight: 600, textDecoration: on ? 'none' : 'line-through' }}>{m.label}</span>
                                     );
                                   })}
                                 </div>
                               </div>
 
                               {/* ── Platform Billing ─────────────────────── */}
-                              <div style={{ background: '#fff', borderRadius: 10, padding: '12px 14px', border: '1.5px solid #e2e8f0' }}>
+                              <div style={{ background: 'var(--surface)', borderRadius: 10, padding: '12px 14px', border: '1.5px solid var(--border-strong)' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                                  <div style={{ fontSize: 11, fontWeight: 700, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: 1 }}>Platform Billing</div>
+                                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>Platform Billing</div>
                                   {sa.pricePerUser != null && (
                                     <button onClick={() => openPaymentModal(sa)} style={{ padding: '3px 9px', borderRadius: 6, border: 'none', background: '#4f46e5', color: '#fff', fontSize: 10, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3 }}>
                                       <span className="material-icons" style={{ fontSize: 12 }}>add</span>Record Payment
@@ -823,35 +823,35 @@ function OwnerDashboard() {
                                       {sa.pricePerUser != null ? (
                                         <>
                                           {[
-                                            ['Price / user', fmt(price), '#64748b'],
-                                            ['Active users', activeUsers.toLocaleString(), '#64748b'],
-                                            ['Plan', (sa.paymentPlan || 'YEARLY').replace('_',' '), '#64748b'],
+                                            ['Price / user', fmt(price), 'var(--text-muted)'],
+                                            ['Active users', activeUsers.toLocaleString(), 'var(--text-muted)'],
+                                            ['Plan', (sa.paymentPlan || 'YEARLY').replace('_',' '), 'var(--text-muted)'],
                                           ].map(([lbl, val, c]) => (
                                             <div key={lbl} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
-                                              <span style={{ color: '#94a3b8' }}>{lbl}</span>
+                                              <span style={{ color: 'var(--text-muted)' }}>{lbl}</span>
                                               <span style={{ fontWeight: 600, color: c }}>{val}</span>
                                             </div>
                                           ))}
-                                          <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 8, marginTop: 6 }}>
+                                          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 8, marginTop: 6 }}>
                                             {[
-                                              ['Total Fee',  fmt(total), '#1e293b', false],
+                                              ['Total Fee',  fmt(total), 'var(--text-primary)', false],
                                               ['Paid',       fmt(paid),  '#16a34a', false],
-                                              ['Pending',    fmt(pending), pending > 0 ? '#dc2626' : '#94a3b8', true],
+                                              ['Pending',    fmt(pending), pending > 0 ? '#dc2626' : 'var(--text-muted)', true],
                                             ].map(([lbl, val, c, bold]) => (
                                               <div key={lbl} style={{ display: 'flex', justifyContent: 'space-between', fontSize: bold ? 13 : 12, marginBottom: 5 }}>
-                                                <span style={{ color: '#64748b', fontWeight: bold ? 700 : 400 }}>{lbl}</span>
+                                                <span style={{ color: 'var(--text-muted)', fontWeight: bold ? 700 : 400 }}>{lbl}</span>
                                                 <span style={{ fontWeight: 800, color: c }}>{val}</span>
                                               </div>
                                             ))}
                                             {total > 0 && (
-                                              <div style={{ marginTop: 6, height: 6, background: '#f1f5f9', borderRadius: 4, overflow: 'hidden' }}>
+                                              <div style={{ marginTop: 6, height: 6, background: 'var(--border-strong)', borderRadius: 4, overflow: 'hidden' }}>
                                                 <div style={{ width: `${pct}%`, height: '100%', background: pct >= 100 ? '#16a34a' : pct >= 50 ? '#f59e0b' : '#4f46e5', borderRadius: 4 }} />
                                               </div>
                                             )}
                                           </div>
                                         </>
                                       ) : (
-                                        <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 8 }}>No price set — school is billed at ₹0</div>
+                                        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>No price set — school is billed at ₹0</div>
                                       )}
                                     </div>
                                   );
@@ -860,31 +860,31 @@ function OwnerDashboard() {
                                 {/* Edit price */}
                                 {priceEdit[sa.schoolDbId] !== undefined ? (
                                   <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap' }}>
-                                    <span style={{ fontSize: 11, color: '#64748b', flexShrink: 0 }}>₹</span>
+                                    <span style={{ fontSize: 11, color: 'var(--text-muted)', flexShrink: 0 }}>₹</span>
                                     <input
                                       type="number" min="0" step="0.01"
                                       placeholder="e.g. 50"
                                       value={priceEdit[sa.schoolDbId]}
                                       onChange={e => setPriceEdit(prev => ({ ...prev, [sa.schoolDbId]: e.target.value }))}
-                                      style={{ width: 80, padding: '4px 8px', fontSize: 12, border: '1.5px solid #e2e8f0', borderRadius: 6, outline: 'none' }}
+                                      style={{ width: 80, padding: '4px 8px', fontSize: 12, border: '1.5px solid var(--border-strong)', borderRadius: 6, outline: 'none' }}
                                       onKeyDown={e => { if (e.key === 'Enter') savePriceFor(sa); if (e.key === 'Escape') closePriceEdit(sa.schoolDbId); }}
                                       autoFocus
                                     />
-                                    <span style={{ fontSize: 10, color: '#94a3b8' }}>per user</span>
+                                    <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>per user</span>
                                     <button onClick={() => savePriceFor(sa)} disabled={priceSaving[sa.schoolDbId]}
                                       style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: '#4f46e5', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
                                       {priceSaving[sa.schoolDbId] ? '…' : 'Save'}
                                     </button>
                                     <button onClick={() => savePriceFor(sa, true)} disabled={priceSaving[sa.schoolDbId]}
-                                      title="Remove price" style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#fff', color: '#94a3b8', fontSize: 11, cursor: 'pointer' }}>
+                                      title="Remove price" style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border-strong)', background: 'var(--surface)', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer' }}>
                                       Free
                                     </button>
                                     <button onClick={() => closePriceEdit(sa.schoolDbId)}
-                                      style={{ padding: '4px 6px', borderRadius: 6, border: 'none', background: 'none', color: '#94a3b8', fontSize: 14, cursor: 'pointer' }}>✕</button>
+                                      style={{ padding: '4px 6px', borderRadius: 6, border: 'none', background: 'none', color: 'var(--text-muted)', fontSize: 14, cursor: 'pointer' }}>✕</button>
                                   </div>
                                 ) : (
                                   <button onClick={() => openPriceEdit(sa)}
-                                    style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#f8faff', color: '#4f46e5', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                                    style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 6, border: '1px solid var(--border-strong)', background: 'var(--surface-alt)', color: '#4f46e5', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
                                     <span className="material-icons" style={{ fontSize: 13 }}>edit</span>
                                     {sa.pricePerUser != null ? 'Edit Price' : 'Set Price'}
                                   </button>
@@ -892,9 +892,9 @@ function OwnerDashboard() {
                               </div>
 
                               {/* ── Fee Summary — enhanced full-width panel ── */}
-                              <div style={{ gridColumn: '1 / -1', background: '#fff', borderRadius: 10, padding: '16px', border: '1.5px solid #e2e8f0' }}>
+                              <div style={{ gridColumn: '1 / -1', background: 'var(--surface)', borderRadius: 10, padding: '16px', border: '1.5px solid var(--border-strong)' }}>
                                 {feeSummaryLoading[sa.schoolDbId] || feeSummaryMap[sa.schoolDbId] === undefined ? (
-                                  <div style={{ textAlign: 'center', padding: 16, color: '#a0aec0', fontSize: 12 }}>Loading fee summary…</div>
+                                  <div style={{ textAlign: 'center', padding: 16, color: 'var(--text-muted)', fontSize: 12 }}>Loading fee summary…</div>
                                 ) : (() => {
                                   const fs = feeSummaryMap[sa.schoolDbId] ?? {};
                                   const years = fs.years ?? [];
@@ -912,15 +912,15 @@ function OwnerDashboard() {
                                     <>
                                       {/* Header row: title + year dropdown + payment plan */}
                                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
-                                        <div style={{ fontSize: 11, fontWeight: 700, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: 1 }}>Fee Summary</div>
+                                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>Fee Summary</div>
                                         {years.length > 0 && (
                                           <select value={selYear || ''} onChange={e => setSelectedYearMap(prev => ({ ...prev, [sa.schoolDbId]: e.target.value }))}
-                                            style={{ padding: '3px 8px', fontSize: 12, border: '1.5px solid #e2e8f0', borderRadius: 6, fontWeight: 700, color: '#4f46e5', background: '#f8faff', outline: 'none' }}>
+                                            style={{ padding: '3px 8px', fontSize: 12, border: '1.5px solid var(--border-strong)', borderRadius: 6, fontWeight: 700, color: '#4f46e5', background: 'var(--surface-alt)', outline: 'none' }}>
                                             {years.map(y => <option key={y.year} value={y.year}>{y.year}</option>)}
                                           </select>
                                         )}
                                         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                          <span style={{ fontSize: 11, color: '#64748b' }}>Payment Plan:</span>
+                                          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Payment Plan:</span>
                                           <select value={sa.paymentPlan || 'YEARLY'} disabled={planSaving[sa.schoolDbId]}
                                             onChange={e => savePaymentPlan(sa, e.target.value)}
                                             style={{ padding: '3px 8px', fontSize: 12, border: '1.5px solid #4f46e5', borderRadius: 6, fontWeight: 700, color: '#4f46e5', background: '#eef2ff', outline: 'none', cursor: 'pointer' }}>
@@ -943,7 +943,7 @@ function OwnerDashboard() {
                                           { label: 'Plan',         val: (sa.paymentPlan || 'YEARLY').replace('_',' '), color: '#64748b', raw: true },
                                         ].map(({ label, val, color, raw }) => (
                                           <div key={label} style={{ background: color + '0d', borderRadius: 8, padding: '8px 10px', border: `1px solid ${color}20` }}>
-                                            <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em' }}>{label}</div>
+                                            <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em' }}>{label}</div>
                                             <div style={{ fontSize: 15, fontWeight: 800, color, marginTop: 3 }}>{raw ? val : Number(val).toLocaleString()}</div>
                                           </div>
                                         ))}
@@ -953,11 +953,11 @@ function OwnerDashboard() {
                                       {total > 0 && (
                                         <div style={{ marginBottom: 10 }}>
                                           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 5 }}>
-                                            <span style={{ fontWeight: 700, color: '#1e293b' }}>{fmt(paid)} collected</span>
+                                            <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{fmt(paid)} collected</span>
                                             <span style={{ color: pending > 0 ? '#dc2626' : '#16a34a', fontWeight: 700 }}>{pending > 0 ? `${fmt(pending)} pending` : '✓ Fully collected'}</span>
-                                            <span style={{ color: '#64748b' }}>Total: {fmt(total)}</span>
+                                            <span style={{ color: 'var(--text-muted)' }}>Total: {fmt(total)}</span>
                                           </div>
-                                          <div style={{ height: 8, background: '#f1f5f9', borderRadius: 4, overflow: 'hidden' }}>
+                                          <div style={{ height: 8, background: 'var(--border-strong)', borderRadius: 4, overflow: 'hidden' }}>
                                             <div style={{ width: `${pct}%`, height: '100%', background: pctColor, borderRadius: 4, transition: 'width 0.4s' }} />
                                           </div>
                                           <div style={{ fontSize: 11, color: pctColor, fontWeight: 700, marginTop: 4 }}>{pct}% collected for {selYear}</div>
@@ -969,9 +969,9 @@ function OwnerDashboard() {
                                         <div style={{ overflowX: 'auto' }}>
                                           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
                                             <thead>
-                                              <tr style={{ background: '#f8faff' }}>
+                                              <tr style={{ background: 'var(--surface-alt)' }}>
                                                 {['Year','Students','Total Fees','Collected','Pending','%'].map(h => (
-                                                  <th key={h} style={{ padding: '5px 10px', textAlign: h === 'Year' || h === 'Students' ? 'left' : 'right', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', borderBottom: '1px solid #e2e8f0', whiteSpace: 'nowrap' }}>{h}</th>
+                                                  <th key={h} style={{ padding: '5px 10px', textAlign: h === 'Year' || h === 'Students' ? 'left' : 'right', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', borderBottom: '1px solid var(--border-strong)', whiteSpace: 'nowrap' }}>{h}</th>
                                                 ))}
                                               </tr>
                                             </thead>
@@ -982,12 +982,12 @@ function OwnerDashboard() {
                                                 const pc2 = pc >= 90 ? '#16a34a' : pc >= 60 ? '#f59e0b' : '#dc2626';
                                                 return (
                                                   <tr key={i} onClick={() => setSelectedYearMap(prev => ({ ...prev, [sa.schoolDbId]: row.year }))}
-                                                    style={{ borderBottom: '1px solid #f1f5f9', background: row.year === selYear ? '#eef2ff' : i % 2 === 0 ? '#fff' : '#fafcff', cursor: 'pointer' }}>
-                                                    <td style={{ padding: '6px 10px', fontWeight: 700, color: row.year === selYear ? '#4f46e5' : '#1e293b' }}>{row.year || '—'}</td>
-                                                    <td style={{ padding: '6px 10px', color: '#64748b' }}>{row.studentCount}</td>
-                                                    <td style={{ padding: '6px 10px', textAlign: 'right', color: '#1e293b' }}>{fmt(t)}</td>
+                                                    style={{ borderBottom: '1px solid var(--border)', background: row.year === selYear ? '#eef2ff' : i % 2 === 0 ? 'var(--surface)' : 'var(--surface-alt)', cursor: 'pointer' }}>
+                                                    <td style={{ padding: '6px 10px', fontWeight: 700, color: row.year === selYear ? '#4f46e5' : 'var(--text-primary)' }}>{row.year || '—'}</td>
+                                                    <td style={{ padding: '6px 10px', color: 'var(--text-muted)' }}>{row.studentCount}</td>
+                                                    <td style={{ padding: '6px 10px', textAlign: 'right', color: 'var(--text-primary)' }}>{fmt(t)}</td>
                                                     <td style={{ padding: '6px 10px', textAlign: 'right', color: '#16a34a', fontWeight: 700 }}>{fmt(p2)}</td>
-                                                    <td style={{ padding: '6px 10px', textAlign: 'right', color: pe > 0 ? '#dc2626' : '#94a3b8', fontWeight: 700 }}>{pe > 0 ? fmt(pe) : '—'}</td>
+                                                    <td style={{ padding: '6px 10px', textAlign: 'right', color: pe > 0 ? '#dc2626' : 'var(--text-muted)', fontWeight: 700 }}>{pe > 0 ? fmt(pe) : '—'}</td>
                                                     <td style={{ padding: '6px 10px', textAlign: 'right' }}>
                                                       <span style={{ padding: '1px 7px', borderRadius: 20, fontSize: 10, fontWeight: 800, background: pc2 + '18', color: pc2 }}>{pc}%</span>
                                                     </td>
@@ -998,7 +998,7 @@ function OwnerDashboard() {
                                           </table>
                                         </div>
                                       )}
-                                      {years.length === 0 && <div style={{ textAlign: 'center', padding: 12, color: '#cbd5e0', fontSize: 12 }}>No fee assignments found for this school.</div>}
+                                      {years.length === 0 && <div style={{ textAlign: 'center', padding: 12, color: 'var(--text-muted)', fontSize: 12 }}>No fee assignments found for this school.</div>}
                                     </>
                                   );
                                 })()}
@@ -1017,8 +1017,8 @@ function OwnerDashboard() {
       <div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
           <div>
-            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#0f172a' }}>Demo Booking Leads</h2>
-            <p style={{ margin: '4px 0 0', fontSize: 13, color: '#64748b' }}>Schools that submitted the "Book Free Demo" form on the website</p>
+            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--text-primary)' }}>Demo Booking Leads</h2>
+            <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>Schools that submitted the "Book Free Demo" form on the website</p>
           </div>
           <span style={{ background: '#ede9fe', color: '#5b21b6', borderRadius: 20, padding: '4px 14px', fontSize: 12, fontWeight: 700 }}>
             {demoBookings.filter(b => b.status === 'NEW').length} new
@@ -1026,38 +1026,38 @@ function OwnerDashboard() {
         </div>
 
         {bookingsLoading ? (
-          <div style={{ textAlign: 'center', padding: '32px 20px', color: '#a0aec0', background: '#fff', borderRadius: 14, border: '1.5px solid #e2e8f0' }}>
+          <div style={{ textAlign: 'center', padding: '32px 20px', color: 'var(--text-muted)', background: 'var(--surface)', borderRadius: 14, border: '1.5px solid var(--border-strong)' }}>
             Loading leads…
           </div>
         ) : demoBookings.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px 20px', color: '#a0aec0', background: '#fff', borderRadius: 14, border: '1.5px dashed #e2e8f0' }}>
+          <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)', background: 'var(--surface)', borderRadius: 14, border: '1.5px dashed var(--border-strong)' }}>
             <span className="material-icons" style={{ fontSize: 36, display: 'block', marginBottom: 8 }}>inbox</span>
             No demo bookings yet. Share the website link to attract leads.
           </div>
         ) : (
-          <div style={{ background: '#fff', borderRadius: 14, border: '1.5px solid #e2e8f0', overflow: 'hidden' }}>
+          <div style={{ background: 'var(--surface)', borderRadius: 14, border: '1.5px solid var(--border-strong)', overflow: 'hidden' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
-                <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #e2e8f0' }}>
+                <tr style={{ background: 'var(--surface-alt)', borderBottom: '1.5px solid var(--border-strong)' }}>
                   {['School', 'Contact Person', 'Email', 'Phone', 'Type', 'Students', 'Date', 'Status', ''].map(h => (
-                    <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 700, color: '#4a5568', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, whiteSpace: 'nowrap' }}>{h}</th>
+                    <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 700, color: 'var(--text-secondary)', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {demoBookings.map((b, i) => (
-                  <tr key={b.id} style={{ borderBottom: i < demoBookings.length - 1 ? '1px solid #f1f5f9' : 'none', background: b.status === 'NEW' ? '#fefce8' : '#fff' }}>
-                    <td style={{ padding: '10px 14px', fontWeight: 700, color: '#1a202c', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.schoolName}</td>
-                    <td style={{ padding: '10px 14px', color: '#4a5568' }}>{b.contactPerson}</td>
+                  <tr key={b.id} style={{ borderBottom: i < demoBookings.length - 1 ? '1px solid var(--border)' : 'none', background: b.status === 'NEW' ? '#fefce8' : 'var(--surface)' }}>
+                    <td style={{ padding: '10px 14px', fontWeight: 700, color: 'var(--text-primary)', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.schoolName}</td>
+                    <td style={{ padding: '10px 14px', color: 'var(--text-secondary)' }}>{b.contactPerson}</td>
                     <td style={{ padding: '10px 14px' }}>
                       <a href={`mailto:${b.email}`} style={{ color: '#2563eb', textDecoration: 'none' }}>{b.email}</a>
                     </td>
                     <td style={{ padding: '10px 14px' }}>
                       <a href={`tel:${b.phone}`} style={{ color: '#2563eb', textDecoration: 'none' }}>{b.phone}</a>
                     </td>
-                    <td style={{ padding: '10px 14px', color: '#718096', textTransform: 'capitalize' }}>{b.schoolType || '—'}</td>
-                    <td style={{ padding: '10px 14px', color: '#718096', textAlign: 'center' }}>{b.studentCount || '—'}</td>
-                    <td style={{ padding: '10px 14px', color: '#a0aec0', whiteSpace: 'nowrap', fontSize: 11 }}>
+                    <td style={{ padding: '10px 14px', color: 'var(--text-secondary)', textTransform: 'capitalize' }}>{b.schoolType || '—'}</td>
+                    <td style={{ padding: '10px 14px', color: 'var(--text-secondary)', textAlign: 'center' }}>{b.studentCount || '—'}</td>
+                    <td style={{ padding: '10px 14px', color: 'var(--text-muted)', whiteSpace: 'nowrap', fontSize: 11 }}>
                       {b.createdAt ? new Date(b.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
                     </td>
                     <td style={{ padding: '10px 14px' }}>
@@ -1091,16 +1091,16 @@ function OwnerDashboard() {
       <div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
           <div>
-            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#0f172a' }}>Reported Issues</h2>
-            <p style={{ margin: '4px 0 0', fontSize: 13, color: '#64748b' }}>Bugs and feedback submitted by users across all roles</p>
+            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--text-primary)' }}>Reported Issues</h2>
+            <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>Bugs and feedback submitted by users across all roles</p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {['', 'OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'].map(s => (
               <button key={s} onClick={() => setIssueFilter(s)}
                 style={{
                   padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: 'none',
-                  background: issueFilter === s ? '#4f46e5' : '#f1f5f9',
-                  color:      issueFilter === s ? '#fff'    : '#64748b',
+                  background: issueFilter === s ? '#4f46e5' : 'var(--surface-alt)',
+                  color:      issueFilter === s ? '#fff'    : 'var(--text-muted)',
                 }}
               >{s || 'ALL'}</button>
             ))}
@@ -1111,9 +1111,9 @@ function OwnerDashboard() {
         </div>
 
         {issuesLoading ? (
-          <div style={{ textAlign: 'center', padding: 32, color: '#a0aec0' }}>Loading issues…</div>
+          <div style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)' }}>Loading issues…</div>
         ) : issues.filter(i => !issueFilter || i.status === issueFilter).length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 40, background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', color: '#a0aec0' }}>
+          <div style={{ textAlign: 'center', padding: 40, background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--border-strong)', color: 'var(--text-muted)' }}>
             <span className="material-icons" style={{ fontSize: 40, display: 'block', marginBottom: 8 }}>bug_report</span>
             No issues {issueFilter ? `with status "${issueFilter}"` : 'reported yet'}
           </div>
@@ -1124,7 +1124,7 @@ function OwnerDashboard() {
               const priColor = { CRITICAL: '#dc2626', HIGH: '#f97316', MEDIUM: '#f59e0b', LOW: '#22c55e' }[issue.priority] || '#94a3b8';
               const stColor  = { OPEN: '#3b82f6', IN_PROGRESS: '#f59e0b', RESOLVED: '#22c55e', CLOSED: '#94a3b8' }[issue.status] || '#94a3b8';
               return (
-                <div key={issue.id} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden' }}>
+                <div key={issue.id} style={{ background: 'var(--surface)', border: '1px solid var(--border-strong)', borderRadius: 12, overflow: 'hidden' }}>
                   {/* Row */}
                   <div
                     onClick={() => {
@@ -1133,14 +1133,14 @@ function OwnerDashboard() {
                     }}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px',
-                      cursor: 'pointer', background: isExpanded ? '#f8faff' : '#fff',
-                      borderBottom: isExpanded ? '1px solid #e2e8f0' : 'none',
+                      cursor: 'pointer', background: isExpanded ? 'var(--surface-alt)' : 'var(--surface)',
+                      borderBottom: isExpanded ? '1px solid var(--border-strong)' : 'none',
                     }}
                   >
                     <span className="material-icons" style={{ fontSize: 20, color: priColor, flexShrink: 0 }}>bug_report</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: 14, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{issue.title}</div>
-                      <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
+                      <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{issue.title}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
                         {issue.reporterName || 'Unknown'} · {issue.reporterRole || '?'} · {issue.schoolName || 'No school'}
                         {' · '}{issue.createdAt ? new Date(issue.createdAt).toLocaleDateString('en-IN') : ''}
                       </div>
@@ -1148,16 +1148,16 @@ function OwnerDashboard() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                       <span style={{ padding: '2px 9px', borderRadius: 20, fontSize: 10, fontWeight: 700, background: priColor + '18', color: priColor }}>{issue.priority}</span>
                       <span style={{ padding: '2px 9px', borderRadius: 20, fontSize: 10, fontWeight: 700, background: stColor + '18', color: stColor }}>{issue.status}</span>
-                      <span style={{ padding: '2px 9px', borderRadius: 20, fontSize: 10, fontWeight: 700, background: '#f1f5f9', color: '#64748b' }}>{(issue.category || '').replace('_', ' ')}</span>
-                      <span className="material-icons" style={{ fontSize: 16, color: '#94a3b8' }}>{isExpanded ? 'expand_less' : 'expand_more'}</span>
+                      <span style={{ padding: '2px 9px', borderRadius: 20, fontSize: 10, fontWeight: 700, background: 'var(--surface-alt)', color: 'var(--text-muted)' }}>{(issue.category || '').replace('_', ' ')}</span>
+                      <span className="material-icons" style={{ fontSize: 16, color: 'var(--text-muted)' }}>{isExpanded ? 'expand_less' : 'expand_more'}</span>
                     </div>
                   </div>
 
                   {/* Expanded detail */}
                   {isExpanded && (
                     <div style={{ padding: '18px 20px' }}>
-                      <div style={{ background: '#f8faff', borderLeft: '3px solid #4f46e5', padding: '12px 16px', borderRadius: '0 8px 8px 0', marginBottom: 16 }}>
-                        <p style={{ margin: 0, fontSize: 13, color: '#1e293b', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{issue.description}</p>
+                      <div style={{ background: 'var(--surface-alt)', borderLeft: '3px solid #4f46e5', padding: '12px 16px', borderRadius: '0 8px 8px 0', marginBottom: 16 }}>
+                        <p style={{ margin: 0, fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{issue.description}</p>
                       </div>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, marginBottom: 16 }}>
                         {[
@@ -1168,9 +1168,9 @@ function OwnerDashboard() {
                           ['Category',  (issue.category || '').replace('_', ' ')],
                           ['Submitted', issue.createdAt ? new Date(issue.createdAt).toLocaleString('en-IN') : '—'],
                         ].map(([k, v]) => (
-                          <div key={k} style={{ background: '#f8faff', borderRadius: 8, padding: '8px 12px' }}>
-                            <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em' }}>{k}</div>
-                            <div style={{ fontSize: 12, color: '#1e293b', fontWeight: 600, marginTop: 2 }}>{v}</div>
+                          <div key={k} style={{ background: 'var(--surface-alt)', borderRadius: 8, padding: '8px 12px' }}>
+                            <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em' }}>{k}</div>
+                            <div style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 600, marginTop: 2 }}>{v}</div>
                           </div>
                         ))}
                       </div>
@@ -1183,8 +1183,8 @@ function OwnerDashboard() {
                             style={{
                               padding: '5px 14px', borderRadius: 8, fontSize: 11, fontWeight: 700,
                               border: 'none', cursor: issue.status === s ? 'default' : 'pointer',
-                              background: issue.status === s ? '#4f46e5' : '#f1f5f9',
-                              color: issue.status === s ? '#fff' : '#64748b',
+                              background: issue.status === s ? '#4f46e5' : 'var(--surface-alt)',
+                              color: issue.status === s ? '#fff' : 'var(--text-muted)',
                               opacity: savingIssue ? 0.6 : 1,
                             }}
                           >{s.replace('_', ' ')}</button>
@@ -1197,14 +1197,14 @@ function OwnerDashboard() {
 
                       {/* Owner note */}
                       <div>
-                        <label style={{ fontSize: 11, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.05em' }}>Internal Note</label>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.05em' }}>Internal Note</label>
                         <textarea
                           value={issueNote}
                           onChange={e => setIssueNote(e.target.value)}
                           placeholder="Add a note for internal tracking..."
                           maxLength={2000}
                           rows={2}
-                          style={{ width: '100%', padding: '8px 12px', fontSize: 12, border: '1.5px solid #e2e8f0', borderRadius: 8, outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit' }}
+                          style={{ width: '100%', padding: '8px 12px', fontSize: 12, border: '1.5px solid var(--border-strong)', borderRadius: 8, outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit' }}
                         />
                         <button onClick={() => handleIssueSaveNote(issue)} disabled={savingIssue}
                           style={{ marginTop: 6, padding: '5px 14px', borderRadius: 7, fontSize: 11, fontWeight: 700, border: 'none', cursor: 'pointer', background: '#4f46e5', color: '#fff', opacity: savingIssue ? 0.6 : 1 }}>
@@ -1229,8 +1229,8 @@ function OwnerDashboard() {
             <span className="material-icons" style={{ color: '#d97706', fontSize: 24 }}>announcement</span>
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 800, fontSize: 16, color: '#0f172a' }}>System Maintenance Notice</div>
-            <div style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>
+            <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text-primary)' }}>System Maintenance Notice</div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
               This message will appear as a banner on every user's dashboard
             </div>
           </div>
@@ -1252,9 +1252,9 @@ function OwnerDashboard() {
               {activeNotice.severity === 'CRITICAL' ? 'error' : activeNotice.severity === 'INFO' ? 'info' : 'warning'}
             </span>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#2d3748' }}>{activeNotice.message}</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{activeNotice.message}</div>
               {activeNotice.scheduledAt && (
-                <div style={{ fontSize: 11, color: '#718096', marginTop: 4 }}>
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>
                   {(() => {
                     const start = new Date(activeNotice.scheduledAt);
                     const fmt   = d => d.toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' });
@@ -1279,16 +1279,16 @@ function OwnerDashboard() {
             placeholder="e.g. We have scheduled a maintenance upgrade on Saturday, 24 May from 2:00 AM – 4:00 AM IST. The platform may be unavailable during this window."
             maxLength={5000}
             rows={3}
-            style={{ width: '100%', border: '1.5px solid #e2e8f0', borderRadius: 8, padding: '10px 12px', fontSize: 13, resize: 'vertical', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
+            style={{ width: '100%', border: '1.5px solid var(--border-strong)', borderRadius: 8, padding: '10px 12px', fontSize: 13, resize: 'vertical', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
           />
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
             <div>
-              <label style={{ fontSize: 11, color: '#718096', fontWeight: 600, display: 'block', marginBottom: 4 }}>Severity</label>
+              <label style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: 4 }}>Severity</label>
               <select
                 value={noticeForm.severity}
                 onChange={e => setNoticeForm(f => ({ ...f, severity: e.target.value }))}
-                style={{ width: '100%', border: '1.5px solid #e2e8f0', borderRadius: 8, padding: '8px 10px', fontSize: 13, outline: 'none' }}
+                style={{ width: '100%', border: '1.5px solid var(--border-strong)', borderRadius: 8, padding: '8px 10px', fontSize: 13, outline: 'none' }}
               >
                 <option value="INFO">ℹ️ Info</option>
                 <option value="WARNING">⚠️ Warning</option>
@@ -1297,23 +1297,23 @@ function OwnerDashboard() {
             </div>
 
             <div>
-              <label style={{ fontSize: 11, color: '#718096', fontWeight: 600, display: 'block', marginBottom: 4 }}>Scheduled Date &amp; Time</label>
+              <label style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: 4 }}>Scheduled Date &amp; Time</label>
               <input
                 type="datetime-local"
                 value={noticeForm.scheduledAt}
                 onChange={e => setNoticeForm(f => ({ ...f, scheduledAt: e.target.value }))}
-                style={{ width: '100%', border: '1.5px solid #e2e8f0', borderRadius: 8, padding: '8px 10px', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+                style={{ width: '100%', border: '1.5px solid var(--border-strong)', borderRadius: 8, padding: '8px 10px', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
               />
             </div>
 
             <div>
-              <label style={{ fontSize: 11, color: '#718096', fontWeight: 600, display: 'block', marginBottom: 4 }}>End Time</label>
+              <label style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: 4 }}>End Time</label>
               <input
                 type="datetime-local"
                 value={noticeForm.endTime}
                 min={noticeForm.scheduledAt || undefined}
                 onChange={e => setNoticeForm(f => ({ ...f, endTime: e.target.value }))}
-                style={{ width: '100%', border: '1.5px solid #e2e8f0', borderRadius: 8, padding: '8px 10px', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+                style={{ width: '100%', border: '1.5px solid var(--border-strong)', borderRadius: 8, padding: '8px 10px', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
               />
             </div>
           </div>
@@ -1323,7 +1323,7 @@ function OwnerDashboard() {
               <button
                 onClick={clearNotice}
                 disabled={noticeClearing}
-                style={{ padding: '9px 18px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: '#fff', color: '#718096', fontWeight: 600, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+                style={{ padding: '9px 18px', borderRadius: 8, border: '1.5px solid var(--border-strong)', background: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
               >
                 <span className="material-icons" style={{ fontSize: 16 }}>clear</span>
                 {noticeClearing ? 'Clearing…' : 'Clear Notice'}
@@ -1345,44 +1345,44 @@ function OwnerDashboard() {
       {/* ── School Users Modal ─────────────────────────────────────────────── */}
       {usersModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 700, maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.25)' }}>
+          <div style={{ background: 'var(--surface)', borderRadius: 16, width: '100%', maxWidth: 700, maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.25)' }}>
             {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 24px', borderBottom: '1.5px solid #e2e8f0', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 24px', borderBottom: '1.5px solid var(--border-strong)', flexShrink: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <div style={{ width: 40, height: 40, borderRadius: 10, background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <span className="material-icons" style={{ color: '#2563eb', fontSize: 22 }}>group</span>
                 </div>
                 <div>
-                  <div style={{ fontWeight: 800, fontSize: 16, color: '#1a202c' }}>{usersModal.school.schoolName || 'School'} — Users</div>
-                  <div style={{ fontSize: 12, color: '#718096' }}>All accounts registered under this school</div>
+                  <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text-primary)' }}>{usersModal.school.schoolName || 'School'} — Users</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>All accounts registered under this school</div>
                 </div>
               </div>
               <button
                 onClick={() => setUsersModal(null)}
-                style={{ border: 'none', background: '#f8fafc', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                style={{ border: 'none', background: 'var(--surface-alt)', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
-                <span className="material-icons" style={{ fontSize: 18, color: '#718096' }}>close</span>
+                <span className="material-icons" style={{ fontSize: 18, color: 'var(--text-secondary)' }}>close</span>
               </button>
             </div>
 
             {/* Body */}
             <div style={{ overflowY: 'auto', flexGrow: 1 }}>
               {usersLoading ? (
-                <div style={{ padding: 48, textAlign: 'center', color: '#a0aec0' }}>
+                <div style={{ padding: 48, textAlign: 'center', color: 'var(--text-muted)' }}>
                   <span className="material-icons" style={{ fontSize: 36, display: 'block', marginBottom: 8, animation: 'spin 1s linear infinite' }}>autorenew</span>
                   Loading users…
                 </div>
               ) : usersModal.users.length === 0 ? (
-                <div style={{ padding: 48, textAlign: 'center', color: '#a0aec0' }}>
-                  <span className="material-icons" style={{ fontSize: 40, display: 'block', marginBottom: 8, color: '#e2e8f0' }}>person_off</span>
+                <div style={{ padding: 48, textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <span className="material-icons" style={{ fontSize: 40, display: 'block', marginBottom: 8, color: 'var(--border-strong)' }}>person_off</span>
                   No users found for this school.
                 </div>
               ) : (
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                   <thead>
-                    <tr style={{ background: '#f8fafc', position: 'sticky', top: 0 }}>
+                    <tr style={{ background: 'var(--surface-alt)', position: 'sticky', top: 0 }}>
                       {['#', 'Name', 'Login ID (Email)', 'Role', 'Status'].map(h => (
-                        <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 700, color: '#4a5568', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, borderBottom: '1.5px solid #e2e8f0' }}>{h}</th>
+                        <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 700, color: 'var(--text-secondary)', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, borderBottom: '1.5px solid var(--border-strong)' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -1396,14 +1396,14 @@ function OwnerDashboard() {
                       };
                       const rc = roleColors[u.role] || { bg: '#f1f5f9', text: '#4a5568' };
                       return (
-                        <tr key={u.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                          <td style={{ padding: '10px 16px', color: '#a0aec0', fontSize: 12 }}>{idx + 1}</td>
-                          <td style={{ padding: '10px 16px', fontWeight: 600, color: '#1a202c' }}>{u.name || '—'}</td>
+                        <tr key={u.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                          <td style={{ padding: '10px 16px', color: 'var(--text-muted)', fontSize: 12 }}>{idx + 1}</td>
+                          <td style={{ padding: '10px 16px', fontWeight: 600, color: 'var(--text-primary)' }}>{u.name || '—'}</td>
                           <td style={{ padding: '10px 16px' }}>
                             <span style={{ fontFamily: 'monospace', fontSize: 12, color: '#2563eb' }}>
                               {u.email?.endsWith('@my-skoolz.com') ? u.email.split('@')[0] : (u.email || u.username || '—')}
                             </span>
-                            {u.mobile && <div style={{ fontSize: 11, color: '#a0aec0', marginTop: 2 }}>{u.mobile}</div>}
+                            {u.mobile && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{u.mobile}</div>}
                           </td>
                           <td style={{ padding: '10px 16px' }}>
                             <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: rc.bg, color: rc.text }}>
@@ -1425,11 +1425,11 @@ function OwnerDashboard() {
 
             {/* Footer */}
             {!usersLoading && usersModal.users.length > 0 && (
-              <div style={{ padding: '12px 24px', borderTop: '1.5px solid #e2e8f0', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8fafc', borderRadius: '0 0 16px 16px' }}>
-                <span style={{ fontSize: 12, color: '#718096' }}>{usersModal.users.length} user{usersModal.users.length !== 1 ? 's' : ''} total</span>
+              <div style={{ padding: '12px 24px', borderTop: '1.5px solid var(--border-strong)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--surface-alt)', borderRadius: '0 0 16px 16px' }}>
+                <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{usersModal.users.length} user{usersModal.users.length !== 1 ? 's' : ''} total</span>
                 <button
                   onClick={() => setUsersModal(null)}
-                  style={{ padding: '7px 18px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: '#fff', color: '#4a5568', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
+                  style={{ padding: '7px 18px', borderRadius: 8, border: '1.5px solid var(--border-strong)', background: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
                 >
                   Close
                 </button>
@@ -1442,23 +1442,23 @@ function OwnerDashboard() {
       {/* ── Manage Modules Modal ───────────────────────────────────────────── */}
       {modulesModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 560, maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.25)' }}>
+          <div style={{ background: 'var(--surface)', borderRadius: 16, width: '100%', maxWidth: 560, maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.25)' }}>
             {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 24px', borderBottom: '1.5px solid #e2e8f0', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 24px', borderBottom: '1.5px solid var(--border-strong)', flexShrink: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <div style={{ width: 40, height: 40, borderRadius: 10, background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <span className="material-icons" style={{ color: '#16a34a', fontSize: 22 }}>tune</span>
                 </div>
                 <div>
-                  <div style={{ fontWeight: 800, fontSize: 16, color: '#1a202c' }}>Manage Modules — {modulesModal.schoolName || 'School'}</div>
-                  <div style={{ fontSize: 12, color: '#718096' }}>Enable or disable modules for this school. Changes take effect within 60 seconds.</div>
+                  <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text-primary)' }}>Manage Modules — {modulesModal.schoolName || 'School'}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Enable or disable modules for this school. Changes take effect within 60 seconds.</div>
                 </div>
               </div>
               <button
                 onClick={() => setModulesModal(null)}
-                style={{ border: 'none', background: '#f8fafc', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                style={{ border: 'none', background: 'var(--surface-alt)', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
-                <span className="material-icons" style={{ fontSize: 18, color: '#718096' }}>close</span>
+                <span className="material-icons" style={{ fontSize: 18, color: 'var(--text-secondary)' }}>close</span>
               </button>
             </div>
 
@@ -1474,14 +1474,14 @@ function OwnerDashboard() {
                       style={{
                         display: 'flex', alignItems: 'center', gap: 10,
                         padding: '10px 14px', borderRadius: 10, cursor: 'pointer',
-                        border: `1.5px solid ${enabled ? '#bbf7d0' : '#e2e8f0'}`,
-                        background: enabled ? '#f0fdf4' : '#f8fafc',
+                        border: `1.5px solid ${enabled ? '#bbf7d0' : 'var(--border-strong)'}`,
+                        background: enabled ? '#f0fdf4' : 'var(--surface-alt)',
                         textAlign: 'left', transition: 'all 0.15s',
                       }}
                     >
-                      <span className="material-icons" style={{ fontSize: 18, color: enabled ? '#16a34a' : '#cbd5e0', flexShrink: 0 }}>{m.icon}</span>
-                      <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: enabled ? '#166534' : '#94a3b8' }}>{m.label}</span>
-                      <span className="material-icons" style={{ fontSize: 20, color: enabled ? '#16a34a' : '#cbd5e0', flexShrink: 0 }}>
+                      <span className="material-icons" style={{ fontSize: 18, color: enabled ? '#16a34a' : 'var(--text-muted)', flexShrink: 0 }}>{m.icon}</span>
+                      <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: enabled ? '#166534' : 'var(--text-muted)' }}>{m.label}</span>
+                      <span className="material-icons" style={{ fontSize: 20, color: enabled ? '#16a34a' : 'var(--text-muted)', flexShrink: 0 }}>
                         {enabled ? 'toggle_on' : 'toggle_off'}
                       </span>
                     </button>
@@ -1495,15 +1495,15 @@ function OwnerDashboard() {
             </div>
 
             {/* Footer */}
-            <div style={{ padding: '14px 24px', borderTop: '1.5px solid #e2e8f0', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, background: '#f8fafc', borderRadius: '0 0 16px 16px' }}>
-              <span style={{ fontSize: 12, color: '#718096' }}>
+            <div style={{ padding: '14px 24px', borderTop: '1.5px solid var(--border-strong)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, background: 'var(--surface-alt)', borderRadius: '0 0 16px 16px' }}>
+              <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
                 {ALL_MODULES.filter(m => moduleToggles[m.key] !== false).length} / {ALL_MODULES.length} modules enabled
               </span>
               <div style={{ display: 'flex', gap: 10 }}>
                 <button
                   onClick={() => setModulesModal(null)}
                   disabled={modulesSaving}
-                  style={{ padding: '8px 18px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: '#fff', color: '#4a5568', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
+                  style={{ padding: '8px 18px', borderRadius: 8, border: '1.5px solid var(--border-strong)', background: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
                 >
                   Cancel
                 </button>
@@ -1555,22 +1555,22 @@ function OwnerDashboard() {
       {/* ── Suspend School Modal ─────────────────────────────────────────────── */}
       {schoolSuspendTarget && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div className="modal-card" style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 460, width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.25)', maxHeight: '90vh', overflowY: 'auto' }}>
+          <div className="modal-card" style={{ background: 'var(--surface)', borderRadius: 16, padding: 28, maxWidth: 460, width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.25)', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
               <div style={{ width: 48, height: 48, borderRadius: 12, background: '#fffbeb', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <span className="material-icons" style={{ color: '#d97706', fontSize: 28 }}>pause_circle</span>
               </div>
               <div>
-                <div style={{ fontWeight: 800, fontSize: 17, color: '#1a202c' }}>Suspend School</div>
+                <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--text-primary)' }}>Suspend School</div>
                 <div style={{ fontSize: 12, color: '#d97706', marginTop: 2, fontWeight: 600 }}>All users will be blocked from login</div>
               </div>
             </div>
 
             <div style={{ background: '#fffbeb', borderRadius: 10, padding: '14px 16px', marginBottom: 16, border: '1.5px solid #fcd34d' }}>
-              <div style={{ fontSize: 13, color: '#2d3748', marginBottom: 6 }}>You are suspending:</div>
+              <div style={{ fontSize: 13, color: 'var(--text-primary)', marginBottom: 6 }}>You are suspending:</div>
               <div style={{ fontWeight: 800, fontSize: 16, color: '#92400e' }}>{schoolSuspendTarget.schoolName || '—'}</div>
-              <div style={{ fontSize: 12, color: '#718096', marginTop: 2 }}>Code: {schoolSuspendTarget.schoolCode || '—'}</div>
-              <div style={{ fontSize: 12, color: '#718096', marginTop: 1 }}>{schoolSuspendTarget.name} · {schoolSuspendTarget.email}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>Code: {schoolSuspendTarget.schoolCode || '—'}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 1 }}>{schoolSuspendTarget.name} · {schoolSuspendTarget.email}</div>
             </div>
 
             <div style={{ background: '#fff7ed', borderRadius: 8, padding: '12px 14px', marginBottom: 20, border: '1px solid #fed7aa', fontSize: 12, color: '#9a3412', lineHeight: 1.7 }}>
@@ -1587,7 +1587,7 @@ function OwnerDashboard() {
               <button
                 onClick={() => setSchoolSuspendTarget(null)}
                 disabled={schoolSuspending}
-                style={{ padding: '9px 20px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: '#fff', color: '#4a5568', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
+                style={{ padding: '9px 20px', borderRadius: 8, border: '1.5px solid var(--border-strong)', background: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
               >
                 Cancel
               </button>
@@ -1616,25 +1616,25 @@ function OwnerDashboard() {
       {/* ── Reactivate School Modal ──────────────────────────────────────────── */}
       {schoolReactivateTarget && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div className="modal-card" style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 460, width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.25)', maxHeight: '90vh', overflowY: 'auto' }}>
+          <div className="modal-card" style={{ background: 'var(--surface)', borderRadius: 16, padding: 28, maxWidth: 460, width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.25)', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
               <div style={{ width: 48, height: 48, borderRadius: 12, background: '#f0fff4', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <span className="material-icons" style={{ color: '#276749', fontSize: 28 }}>play_circle</span>
               </div>
               <div>
-                <div style={{ fontWeight: 800, fontSize: 17, color: '#1a202c' }}>Reactivate School</div>
+                <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--text-primary)' }}>Reactivate School</div>
                 <div style={{ fontSize: 12, color: '#276749', marginTop: 2, fontWeight: 600 }}>Users will regain login access</div>
               </div>
             </div>
 
             <div style={{ background: '#f0fff4', borderRadius: 10, padding: '14px 16px', marginBottom: 16, border: '1.5px solid #9ae6b4' }}>
               <div style={{ fontWeight: 800, fontSize: 15, color: '#276749' }}>{schoolReactivateTarget.schoolName || '—'}</div>
-              <div style={{ fontSize: 12, color: '#718096', marginTop: 2 }}>Code: {schoolReactivateTarget.schoolCode || '—'}</div>
-              <div style={{ fontSize: 12, color: '#718096', marginTop: 1 }}>{schoolReactivateTarget.name} · {schoolReactivateTarget.email}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>Code: {schoolReactivateTarget.schoolCode || '—'}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 1 }}>{schoolReactivateTarget.name} · {schoolReactivateTarget.email}</div>
             </div>
 
             <div style={{ marginBottom: 20 }}>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#2d3748', marginBottom: 6 }}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
                 New Subscription Expiry Date
               </label>
               <input
@@ -1642,9 +1642,9 @@ function OwnerDashboard() {
                 value={reactivateExpiry}
                 min={new Date().toISOString().split('T')[0]}
                 onChange={e => setReactivateExpiry(e.target.value)}
-                style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 14, color: '#2d3748', outline: 'none', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '9px 12px', border: '1.5px solid var(--border-strong)', borderRadius: 8, fontSize: 14, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }}
               />
-              <div style={{ fontSize: 11, color: '#a0aec0', marginTop: 4 }}>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
                 Leave blank to default to 1 year from today.
               </div>
             </div>
@@ -1653,7 +1653,7 @@ function OwnerDashboard() {
               <button
                 onClick={() => setSchoolReactivateTarget(null)}
                 disabled={schoolReactivating}
-                style={{ padding: '9px 20px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: '#fff', color: '#4a5568', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
+                style={{ padding: '9px 20px', borderRadius: 8, border: '1.5px solid var(--border-strong)', background: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
               >
                 Cancel
               </button>
@@ -1685,13 +1685,13 @@ function OwnerDashboard() {
       {paymentModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', zIndex: 10100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
           onClick={e => e.target === e.currentTarget && setPaymentModal(null)}>
-          <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 400, boxShadow: '0 24px 64px rgba(0,0,0,0.2)', overflow: 'hidden' }}>
+          <div style={{ background: 'var(--surface)', borderRadius: 16, width: '100%', maxWidth: 400, boxShadow: '0 24px 64px rgba(0,0,0,0.2)', overflow: 'hidden' }}>
             <div style={{ background: 'linear-gradient(135deg,#1e1b4b,#4f46e5)', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ color: '#fff', fontWeight: 800, fontSize: 15 }}>Record Platform Payment</div>
               <button onClick={() => setPaymentModal(null)} style={{ background: 'rgba(255,255,255,0.12)', border: 'none', borderRadius: 8, width: 28, height: 28, color: '#fff', cursor: 'pointer', fontSize: 15 }}>✕</button>
             </div>
             <div style={{ padding: 20 }}>
-              <div style={{ fontSize: 12, color: '#64748b', marginBottom: 14 }}>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 14 }}>
                 Recording payment from <strong>{paymentModal.sa.schoolName}</strong>
               </div>
               {[
@@ -1700,21 +1700,21 @@ function OwnerDashboard() {
                 { label: 'Notes', key: 'notes', type: 'text', placeholder: 'Optional' },
               ].map(({ label, key, type, placeholder }) => (
                 <div key={key} style={{ marginBottom: 12 }}>
-                  <label style={{ fontSize: 11, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 4 }}>{label}</label>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>{label}</label>
                   <input type={type} value={paymentModal[key]} placeholder={placeholder}
                     onChange={e => setPaymentModal(p => ({ ...p, [key]: e.target.value }))}
-                    style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
+                    style={{ width: '100%', padding: '8px 12px', border: '1.5px solid var(--border-strong)', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
                 </div>
               ))}
               <div style={{ marginBottom: 16 }}>
-                <label style={{ fontSize: 11, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 4 }}>Payment Mode</label>
+                <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Payment Mode</label>
                 <select value={paymentModal.mode} onChange={e => setPaymentModal(p => ({ ...p, mode: e.target.value }))}
-                  style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none', background: '#fff' }}>
+                  style={{ width: '100%', padding: '8px 12px', border: '1.5px solid var(--border-strong)', borderRadius: 8, fontSize: 13, outline: 'none', background: 'var(--surface)' }}>
                   {['BANK_TRANSFER','UPI','CHEQUE','CASH','OTHER'].map(m => <option key={m} value={m}>{m.replace('_',' ')}</option>)}
                 </select>
               </div>
               <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-                <button onClick={() => setPaymentModal(null)} style={{ padding: '9px 18px', border: '1.5px solid #e2e8f0', borderRadius: 8, background: '#fff', fontSize: 13, cursor: 'pointer', fontWeight: 600 }}>Cancel</button>
+                <button onClick={() => setPaymentModal(null)} style={{ padding: '9px 18px', border: '1.5px solid var(--border-strong)', borderRadius: 8, background: 'var(--surface)', fontSize: 13, cursor: 'pointer', fontWeight: 600 }}>Cancel</button>
                 <button onClick={submitPlatformPayment} disabled={recordingPayment || !paymentModal.amount}
                   style={{ padding: '9px 20px', border: 'none', borderRadius: 8, background: '#4f46e5', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: recordingPayment ? 0.7 : 1 }}>
                   {recordingPayment ? 'Saving…' : 'Record Payment'}
@@ -1765,19 +1765,19 @@ const WIZARD_INIT = {
 
 const inp = (err) => ({
   width: '100%', padding: '10px 14px',
-  border: `1.5px solid ${err ? '#fc8181' : '#e2e8f0'}`,
-  borderRadius: 8, fontSize: 14, outline: 'none', boxSizing: 'border-box', background: '#fff',
+  border: `1.5px solid ${err ? '#fc8181' : 'var(--border-strong)'}`,
+  borderRadius: 8, fontSize: 14, outline: 'none', boxSizing: 'border-box', background: 'var(--surface)',
 });
 const sel = { ...inp(false), cursor: 'pointer' };
 
 function WizardField({ label, required, hint, error, children }) {
   return (
     <div style={{ marginBottom: 14 }}>
-      <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: '#374151', marginBottom: 5 }}>
+      <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: 'var(--text-secondary)', marginBottom: 5 }}>
         {label}{required && <span style={{ color: '#dc2626', marginLeft: 2 }}>*</span>}
       </label>
       {children}
-      {hint  && !error && <div style={{ fontSize: 11, color: '#a0aec0', marginTop: 3 }}>{hint}</div>}
+      {hint  && !error && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>{hint}</div>}
       {error && <div style={{ fontSize: 11, color: '#e53e3e', marginTop: 3 }}>{error}</div>}
     </div>
   );
@@ -2004,28 +2004,28 @@ function CreateSuperAdminWizard({ onClose, onCreated }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 620, maxHeight: '94vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)', overflow: 'hidden' }}>
+      <div style={{ background: 'var(--surface)', borderRadius: 16, width: '100%', maxWidth: 620, maxHeight: '94vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)', overflow: 'hidden' }}>
 
         {/* Header */}
-        <div style={{ padding: '18px 24px 14px', borderBottom: '1px solid #f0f4f8', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+        <div style={{ padding: '18px 24px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <div>
-            <div style={{ fontWeight: 800, fontSize: 16, color: '#1a202c' }}>Create School &amp; Super Admin</div>
-            <div style={{ fontSize: 12, color: '#718096', marginTop: 2 }}>
+            <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text-primary)' }}>Create School &amp; Super Admin</div>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
               Step {step} of 8 — <span style={{ fontWeight: 600, color: '#dc2626' }}>{WIZARD_STEPS[step - 1].label}</span>
             </div>
           </div>
-          <button onClick={onClose} style={{ border: 'none', background: '#f7fafc', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span className="material-icons" style={{ fontSize: 18, color: '#718096' }}>close</span>
+          <button onClick={onClose} style={{ border: 'none', background: 'var(--surface-alt)', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span className="material-icons" style={{ fontSize: 18, color: 'var(--text-secondary)' }}>close</span>
           </button>
         </div>
 
         {/* Progress bar */}
-        <div style={{ height: 4, background: '#f0f4f8', flexShrink: 0 }}>
+        <div style={{ height: 4, background: 'var(--border)', flexShrink: 0 }}>
           <div style={{ height: '100%', width: `${pct}%`, background: 'linear-gradient(90deg,#dc2626,#7c3aed)', transition: 'width 0.3s ease' }} />
         </div>
 
         {/* Step pills */}
-        <div style={{ display: 'flex', gap: 4, padding: '10px 20px', borderBottom: '1px solid #f0f4f8', flexShrink: 0, overflowX: 'auto' }}>
+        <div style={{ display: 'flex', gap: 4, padding: '10px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0, overflowX: 'auto' }}>
           {WIZARD_STEPS.map((s, i) => {
             const n = i + 1;
             const done   = step > n;
@@ -2033,9 +2033,9 @@ function CreateSuperAdminWizard({ onClose, onCreated }) {
             return (
               <div key={s.label} onClick={() => done && setStep(n)}
                 style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 11px', borderRadius: 20, fontSize: 11, fontWeight: 700, flexShrink: 0, cursor: done ? 'pointer' : 'default',
-                  background: active ? '#dc2626' : done ? '#fef2f2' : '#f8fafc',
-                  color:      active ? '#fff'    : done ? '#dc2626' : '#a0aec0',
-                  border:     `1.5px solid ${active ? '#dc2626' : done ? '#fca5a5' : '#e2e8f0'}` }}>
+                  background: active ? '#dc2626' : done ? '#fef2f2' : 'var(--surface-alt)',
+                  color:      active ? '#fff'    : done ? '#dc2626' : 'var(--text-muted)',
+                  border:     `1.5px solid ${active ? '#dc2626' : done ? '#fca5a5' : 'var(--border-strong)'}` }}>
                 <span className="material-icons" style={{ fontSize: 12 }}>{done ? 'check' : s.icon}</span>
                 {s.label}
               </div>
@@ -2067,7 +2067,7 @@ function CreateSuperAdminWizard({ onClose, onCreated }) {
                     placeholder="e.g. 1"
                     style={{ ...inp(error && (isNaN(Number(form.schoolId)) || Number(form.schoolId) < 1)), width: 120, fontWeight: 700, fontSize: 18, textAlign: 'center' }}
                   />
-                  <span style={{ fontSize: 12, color: '#718096' }}>All data for this school will be linked to this ID</span>
+                  <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>All data for this school will be linked to this ID</span>
                 </div>
               </WizardField>
 
@@ -2143,9 +2143,9 @@ function CreateSuperAdminWizard({ onClose, onCreated }) {
                 {logoPreview ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                     <img src={logoPreview} alt="logo preview"
-                      style={{ width: 72, height: 72, objectFit: 'contain', borderRadius: 10, border: '1.5px solid #e2e8f0', background: '#f8fafc', padding: 4 }} />
+                      style={{ width: 72, height: 72, objectFit: 'contain', borderRadius: 10, border: '1.5px solid var(--border-strong)', background: 'var(--surface-alt)', padding: 4 }} />
                     <div>
-                      <div style={{ fontSize: 12, color: '#374151', fontWeight: 600, marginBottom: 6 }}>{logoFile?.name}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, marginBottom: 6 }}>{logoFile?.name}</div>
                       <div style={{ display: 'flex', gap: 8 }}>
                         <label style={{ padding: '6px 14px', background: '#f0fdf4', color: '#16a34a', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1.5px solid #bbf7d0' }}>
                           Change
@@ -2161,13 +2161,13 @@ function CreateSuperAdminWizard({ onClose, onCreated }) {
                   <label
                     onDragOver={e => e.preventDefault()}
                     onDrop={e => { e.preventDefault(); handleLogoChange(e.dataTransfer.files[0]); }}
-                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '24px 16px', border: '2px dashed #e2e8f0', borderRadius: 10, cursor: 'pointer', background: '#fafbfc', transition: 'border-color 0.2s' }}
+                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '24px 16px', border: '2px dashed var(--border-strong)', borderRadius: 10, cursor: 'pointer', background: 'var(--surface-alt)', transition: 'border-color 0.2s' }}
                     onMouseEnter={e => e.currentTarget.style.borderColor = '#76C442'}
-                    onMouseLeave={e => e.currentTarget.style.borderColor = '#e2e8f0'}
+                    onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border-strong)'}
                   >
-                    <span className="material-icons" style={{ fontSize: 36, color: '#cbd5e0' }}>add_photo_alternate</span>
-                    <div style={{ fontSize: 13, color: '#4a5568', fontWeight: 600 }}>Click to upload or drag &amp; drop</div>
-                    <div style={{ fontSize: 11, color: '#a0aec0' }}>PNG, JPG, SVG · max 2 MB</div>
+                    <span className="material-icons" style={{ fontSize: 36, color: 'var(--text-muted)' }}>add_photo_alternate</span>
+                    <div style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 600 }}>Click to upload or drag &amp; drop</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>PNG, JPG, SVG · max 2 MB</div>
                     <input type="file" accept="image/*" onChange={e => handleLogoChange(e.target.files[0])} style={{ display: 'none' }} />
                   </label>
                 )}
@@ -2177,28 +2177,28 @@ function CreateSuperAdminWizard({ onClose, onCreated }) {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 18px' }}>
                 <WizardField label="Primary Color">
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <input type="color" value={form.primaryColor} onChange={on('primaryColor')} style={{ width: 48, height: 40, padding: 2, border: '1.5px solid #e2e8f0', borderRadius: 8, cursor: 'pointer' }} />
+                    <input type="color" value={form.primaryColor} onChange={on('primaryColor')} style={{ width: 48, height: 40, padding: 2, border: '1.5px solid var(--border-strong)', borderRadius: 8, cursor: 'pointer' }} />
                     <input value={form.primaryColor} onChange={on('primaryColor')} style={{ ...inp(false), flex: 1, fontFamily: 'monospace' }} />
                   </div>
                 </WizardField>
                 <WizardField label="Secondary Color">
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <input type="color" value={form.secondaryColor} onChange={on('secondaryColor')} style={{ width: 48, height: 40, padding: 2, border: '1.5px solid #e2e8f0', borderRadius: 8, cursor: 'pointer' }} />
+                    <input type="color" value={form.secondaryColor} onChange={on('secondaryColor')} style={{ width: 48, height: 40, padding: 2, border: '1.5px solid var(--border-strong)', borderRadius: 8, cursor: 'pointer' }} />
                     <input value={form.secondaryColor} onChange={on('secondaryColor')} style={{ ...inp(false), flex: 1, fontFamily: 'monospace' }} />
                   </div>
                 </WizardField>
               </div>
 
               {/* Brand preview */}
-              <div style={{ marginTop: 4, padding: '14px 18px', borderRadius: 10, border: '1.5px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 14 }}>
+              <div style={{ marginTop: 4, padding: '14px 18px', borderRadius: 10, border: '1.5px solid var(--border-strong)', display: 'flex', alignItems: 'center', gap: 14 }}>
                 {logoPreview ? (
-                  <img src={logoPreview} alt="logo" style={{ width: 40, height: 40, objectFit: 'contain', borderRadius: 8, background: '#f8fafc', padding: 3 }} />
+                  <img src={logoPreview} alt="logo" style={{ width: 40, height: 40, objectFit: 'contain', borderRadius: 8, background: 'var(--surface-alt)', padding: 3 }} />
                 ) : (
                   <div style={{ width: 40, height: 40, borderRadius: 10, background: `linear-gradient(135deg, ${form.primaryColor}, ${form.secondaryColor})`, flexShrink: 0 }} />
                 )}
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 13, color: form.primaryColor }}>{form.name || 'School Name'}</div>
-                  <div style={{ fontSize: 11, color: '#718096' }}>Brand preview</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Brand preview</div>
                 </div>
               </div>
             </div>
@@ -2237,7 +2237,7 @@ function CreateSuperAdminWizard({ onClose, onCreated }) {
                     onChange={on('adminEmail')}
                     placeholder="e.g. rajesh@springfield.edu"
                     disabled={otpVerified}
-                    style={{ ...inp(false), flex: 1, background: otpVerified ? '#f0fff4' : '#fff' }}
+                    style={{ ...inp(false), flex: 1, background: otpVerified ? '#f0fff4' : 'var(--surface)' }}
                   />
                   {!otpVerified && (
                     <button
@@ -2285,7 +2285,7 @@ function CreateSuperAdminWizard({ onClose, onCreated }) {
                       {otpLoading ? '…' : 'Verify'}
                     </button>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 5, fontSize: 11, color: '#a0aec0' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 5, fontSize: 11, color: 'var(--text-muted)' }}>
                     <span>OTP sent to {form.adminEmail}</span>
                     {otpTimer > 0
                       ? <span>Expires in {fmtTimer(otpTimer)}</span>
@@ -2330,7 +2330,7 @@ function CreateSuperAdminWizard({ onClose, onCreated }) {
               <WizardField label="Expiry Date" hint="Leave blank for no expiry">
                 <input type="date" value={form.subscriptionExpiry} onChange={on('subscriptionExpiry')} style={inp(false)} />
               </WizardField>
-              <div style={{ borderTop: '1px solid #e2e8f0', margin: '16px 0', paddingTop: 16 }}>
+              <div style={{ borderTop: '1px solid var(--border-strong)', margin: '16px 0', paddingTop: 16 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: '#4f46e5', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '.05em' }}>Platform Billing</div>
                 <WizardField label="Price per User (₹/year)" hint="Annual platform fee per active user">
                   <input type="number" min="0" step="0.01" placeholder="e.g. 600"
@@ -2342,7 +2342,7 @@ function CreateSuperAdminWizard({ onClose, onCreated }) {
                   </select>
                 </WizardField>
               </div>
-              <div style={{ padding: '12px 14px', background: '#f8fafc', borderRadius: 8, fontSize: 12, color: '#718096' }}>
+              <div style={{ padding: '12px 14px', background: 'var(--surface-alt)', borderRadius: 8, fontSize: 12, color: 'var(--text-secondary)' }}>
                 <strong>BASIC</strong> — Core modules · <strong>STANDARD</strong> — All modules · <strong>PREMIUM</strong> — Priority support · <strong>ENTERPRISE</strong> — Custom SLA
               </div>
             </div>
@@ -2355,16 +2355,16 @@ function CreateSuperAdminWizard({ onClose, onCreated }) {
                 Select which modules this Super Admin can access in their school portal.
               </div>
               <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-                <button onClick={() => toggleAll(true)}  disabled={allEnabled}  style={{ padding: '6px 16px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: allEnabled  ? 'not-allowed' : 'pointer', background: allEnabled  ? '#f0fff4' : '#fff', color: allEnabled  ? '#276749' : '#374151' }}>Select All</button>
-                <button onClick={() => toggleAll(false)} disabled={noneEnabled} style={{ padding: '6px 16px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: noneEnabled ? 'not-allowed' : 'pointer', background: noneEnabled ? '#fff5f5' : '#fff', color: noneEnabled ? '#e53e3e' : '#374151' }}>Deselect All</button>
+                <button onClick={() => toggleAll(true)}  disabled={allEnabled}  style={{ padding: '6px 16px', border: '1.5px solid var(--border-strong)', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: allEnabled  ? 'not-allowed' : 'pointer', background: allEnabled  ? '#f0fff4' : 'var(--surface)', color: allEnabled  ? '#276749' : 'var(--text-secondary)' }}>Select All</button>
+                <button onClick={() => toggleAll(false)} disabled={noneEnabled} style={{ padding: '6px 16px', border: '1.5px solid var(--border-strong)', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: noneEnabled ? 'not-allowed' : 'pointer', background: noneEnabled ? '#fff5f5' : 'var(--surface)', color: noneEnabled ? '#e53e3e' : 'var(--text-secondary)' }}>Deselect All</button>
                 <span style={{ marginLeft: 'auto', fontSize: 12, color: '#7c3aed', fontWeight: 700, alignSelf: 'center' }}>{Object.values(perms).filter(Boolean).length} / {ALL_MODULES.length} enabled</span>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
                 {ALL_MODULES.map(m => (
-                  <label key={m.key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', border: `1.5px solid ${perms[m.key] ? '#7c3aed' : '#e2e8f0'}`, borderRadius: 10, cursor: 'pointer', background: perms[m.key] ? '#f5f3ff' : '#fafafa' }}>
-                    <span className="material-icons" style={{ fontSize: 18, color: perms[m.key] ? '#7c3aed' : '#a0aec0' }}>{m.icon}</span>
-                    <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: perms[m.key] ? '#4c1d95' : '#718096' }}>{m.label}</span>
-                    <div style={{ width: 36, height: 20, borderRadius: 10, background: perms[m.key] ? '#7c3aed' : '#e2e8f0', position: 'relative', flexShrink: 0 }}>
+                  <label key={m.key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', border: `1.5px solid ${perms[m.key] ? '#7c3aed' : 'var(--border-strong)'}`, borderRadius: 10, cursor: 'pointer', background: perms[m.key] ? '#f5f3ff' : 'var(--surface-alt)' }}>
+                    <span className="material-icons" style={{ fontSize: 18, color: perms[m.key] ? '#7c3aed' : 'var(--text-muted)' }}>{m.icon}</span>
+                    <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: perms[m.key] ? '#4c1d95' : 'var(--text-secondary)' }}>{m.label}</span>
+                    <div style={{ width: 36, height: 20, borderRadius: 10, background: perms[m.key] ? '#7c3aed' : 'var(--border-strong)', position: 'relative', flexShrink: 0 }}>
                       <div style={{ position: 'absolute', top: 2, left: perms[m.key] ? 18 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
                     </div>
                     <input type="checkbox" checked={!!perms[m.key]} onChange={() => setPerms(p => ({ ...p, [m.key]: !p[m.key] }))} style={{ display: 'none' }} />
@@ -2383,11 +2383,11 @@ function CreateSuperAdminWizard({ onClose, onCreated }) {
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '14px 24px', borderTop: '1px solid #f0f4f8', display: 'flex', gap: 10, justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
-          <div style={{ fontSize: 12, color: '#a0aec0' }}>{pct}% complete</div>
+        <div style={{ padding: '14px 24px', borderTop: '1px solid var(--border)', display: 'flex', gap: 10, justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{pct}% complete</div>
           <div style={{ display: 'flex', gap: 10 }}>
             {step > 1 && (
-              <button onClick={back} style={{ padding: '9px 20px', border: '1.5px solid #e2e8f0', borderRadius: 8, background: '#fff', fontWeight: 600, fontSize: 14, cursor: 'pointer', color: '#374151' }}>
+              <button onClick={back} style={{ padding: '9px 20px', border: '1.5px solid var(--border-strong)', borderRadius: 8, background: 'var(--surface)', fontWeight: 600, fontSize: 14, cursor: 'pointer', color: 'var(--text-secondary)' }}>
                 ← Back
               </button>
             )}
@@ -2608,28 +2608,28 @@ function EditSchoolWizard({ sa, onClose, onSaved }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 620, maxHeight: '94vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)', overflow: 'hidden' }}>
+      <div style={{ background: 'var(--surface)', borderRadius: 16, width: '100%', maxWidth: 620, maxHeight: '94vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)', overflow: 'hidden' }}>
 
         {/* Header */}
-        <div style={{ padding: '18px 24px 14px', borderBottom: '1px solid #f0f4f8', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+        <div style={{ padding: '18px 24px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <div>
-            <div style={{ fontWeight: 800, fontSize: 16, color: '#1a202c' }}>Edit School</div>
-            <div style={{ fontSize: 12, color: '#718096', marginTop: 2 }}>
+            <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text-primary)' }}>Edit School</div>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
               {sa.schoolName} — Step {step} of 8 — <span style={{ fontWeight: 600, color: '#276749' }}>{WIZARD_STEPS[step - 1].label}</span>
             </div>
           </div>
-          <button onClick={onClose} style={{ border: 'none', background: '#f7fafc', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span className="material-icons" style={{ fontSize: 18, color: '#718096' }}>close</span>
+          <button onClick={onClose} style={{ border: 'none', background: 'var(--surface-alt)', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span className="material-icons" style={{ fontSize: 18, color: 'var(--text-secondary)' }}>close</span>
           </button>
         </div>
 
         {/* Progress bar */}
-        <div style={{ height: 4, background: '#f0f4f8', flexShrink: 0 }}>
+        <div style={{ height: 4, background: 'var(--border)', flexShrink: 0 }}>
           <div style={{ height: '100%', width: `${pct}%`, background: 'linear-gradient(90deg,#276749,#16a34a)', transition: 'width 0.3s ease' }} />
         </div>
 
         {/* Step pills — all clickable once data is loaded */}
-        <div style={{ display: 'flex', gap: 4, padding: '10px 20px', borderBottom: '1px solid #f0f4f8', flexShrink: 0, overflowX: 'auto' }}>
+        <div style={{ display: 'flex', gap: 4, padding: '10px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0, overflowX: 'auto' }}>
           {WIZARD_STEPS.map((s, i) => {
             const n = i + 1;
             const done   = step > n;
@@ -2638,9 +2638,9 @@ function EditSchoolWizard({ sa, onClose, onSaved }) {
               <div key={s.label} onClick={() => !loading && setStep(n)}
                 style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 11px', borderRadius: 20, fontSize: 11, fontWeight: 700, flexShrink: 0,
                   cursor: loading ? 'default' : 'pointer',
-                  background: active ? '#276749' : done ? '#f0fdf4' : '#f8fafc',
-                  color:      active ? '#fff'    : done ? '#276749' : '#a0aec0',
-                  border:     `1.5px solid ${active ? '#276749' : done ? '#86efac' : '#e2e8f0'}` }}>
+                  background: active ? '#276749' : done ? '#f0fdf4' : 'var(--surface-alt)',
+                  color:      active ? '#fff'    : done ? '#276749' : 'var(--text-muted)',
+                  border:     `1.5px solid ${active ? '#276749' : done ? '#86efac' : 'var(--border-strong)'}` }}>
                 <span className="material-icons" style={{ fontSize: 12 }}>{done ? 'check' : s.icon}</span>
                 {s.label}
               </div>
@@ -2669,7 +2669,7 @@ function EditSchoolWizard({ sa, onClose, onSaved }) {
                     <span className="material-icons" style={{ color: '#fff', fontSize: 20 }}>tag</span>
                   </div>
                   <input type="number" value={form.schoolId} readOnly
-                    style={{ ...inp(false), width: 120, fontWeight: 700, fontSize: 18, textAlign: 'center', background: '#f8fafc', color: '#718096', cursor: 'not-allowed' }} />
+                    style={{ ...inp(false), width: 120, fontWeight: 700, fontSize: 18, textAlign: 'center', background: 'var(--surface-alt)', color: 'var(--text-secondary)', cursor: 'not-allowed' }} />
                 </div>
               </WizardField>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 18px' }}>
@@ -2736,9 +2736,9 @@ function EditSchoolWizard({ sa, onClose, onSaved }) {
               <WizardField label="School Logo" hint="PNG, JPG or SVG · max 2 MB">
                 {logoPreview ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                    <img src={logoPreview} alt="logo preview" style={{ width: 72, height: 72, objectFit: 'contain', borderRadius: 10, border: '1.5px solid #276749', background: '#f8fafc', padding: 4 }} />
+                    <img src={logoPreview} alt="logo preview" style={{ width: 72, height: 72, objectFit: 'contain', borderRadius: 10, border: '1.5px solid #276749', background: 'var(--surface-alt)', padding: 4 }} />
                     <div>
-                      <div style={{ fontSize: 12, color: '#374151', fontWeight: 600, marginBottom: 6 }}>{logoFile?.name}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, marginBottom: 6 }}>{logoFile?.name}</div>
                       <div style={{ display: 'flex', gap: 8 }}>
                         <label style={{ padding: '6px 14px', background: '#f0fdf4', color: '#16a34a', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1.5px solid #bbf7d0' }}>
                           Change <input type="file" accept="image/*" onChange={e => handleLogoChange(e.target.files[0])} style={{ display: 'none' }} />
@@ -2749,9 +2749,9 @@ function EditSchoolWizard({ sa, onClose, onSaved }) {
                   </div>
                 ) : form.logoUrl ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                    <img src={form.logoUrl} alt="Current logo" style={{ width: 72, height: 72, objectFit: 'contain', borderRadius: 10, border: '1.5px solid #e2e8f0', background: '#f8fafc', padding: 4 }} />
+                    <img src={form.logoUrl} alt="Current logo" style={{ width: 72, height: 72, objectFit: 'contain', borderRadius: 10, border: '1.5px solid var(--border-strong)', background: 'var(--surface-alt)', padding: 4 }} />
                     <div>
-                      <div style={{ fontSize: 12, color: '#374151', fontWeight: 600, marginBottom: 6 }}>Current logo</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, marginBottom: 6 }}>Current logo</div>
                       <label style={{ padding: '6px 14px', background: '#f0fdf4', color: '#16a34a', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1.5px solid #bbf7d0' }}>
                         Replace <input type="file" accept="image/*" onChange={e => handleLogoChange(e.target.files[0])} style={{ display: 'none' }} />
                       </label>
@@ -2759,12 +2759,12 @@ function EditSchoolWizard({ sa, onClose, onSaved }) {
                   </div>
                 ) : (
                   <label onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); handleLogoChange(e.dataTransfer.files[0]); }}
-                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '24px 16px', border: '2px dashed #e2e8f0', borderRadius: 10, cursor: 'pointer', background: '#fafbfc' }}
+                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '24px 16px', border: '2px dashed var(--border-strong)', borderRadius: 10, cursor: 'pointer', background: 'var(--surface-alt)' }}
                     onMouseEnter={e => e.currentTarget.style.borderColor = '#76C442'}
-                    onMouseLeave={e => e.currentTarget.style.borderColor = '#e2e8f0'}>
-                    <span className="material-icons" style={{ fontSize: 36, color: '#cbd5e0' }}>add_photo_alternate</span>
-                    <div style={{ fontSize: 13, color: '#4a5568', fontWeight: 600 }}>Click to upload or drag &amp; drop</div>
-                    <div style={{ fontSize: 11, color: '#a0aec0' }}>PNG, JPG, SVG · max 2 MB</div>
+                    onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border-strong)'}>
+                    <span className="material-icons" style={{ fontSize: 36, color: 'var(--text-muted)' }}>add_photo_alternate</span>
+                    <div style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 600 }}>Click to upload or drag &amp; drop</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>PNG, JPG, SVG · max 2 MB</div>
                     <input type="file" accept="image/*" onChange={e => handleLogoChange(e.target.files[0])} style={{ display: 'none' }} />
                   </label>
                 )}
@@ -2772,26 +2772,26 @@ function EditSchoolWizard({ sa, onClose, onSaved }) {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 18px' }}>
                 <WizardField label="Primary Color">
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <input type="color" value={form.primaryColor} onChange={on('primaryColor')} style={{ width: 48, height: 40, padding: 2, border: '1.5px solid #e2e8f0', borderRadius: 8, cursor: 'pointer' }} />
+                    <input type="color" value={form.primaryColor} onChange={on('primaryColor')} style={{ width: 48, height: 40, padding: 2, border: '1.5px solid var(--border-strong)', borderRadius: 8, cursor: 'pointer' }} />
                     <input value={form.primaryColor} onChange={on('primaryColor')} style={{ ...inp(false), flex: 1, fontFamily: 'monospace' }} />
                   </div>
                 </WizardField>
                 <WizardField label="Secondary Color">
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <input type="color" value={form.secondaryColor} onChange={on('secondaryColor')} style={{ width: 48, height: 40, padding: 2, border: '1.5px solid #e2e8f0', borderRadius: 8, cursor: 'pointer' }} />
+                    <input type="color" value={form.secondaryColor} onChange={on('secondaryColor')} style={{ width: 48, height: 40, padding: 2, border: '1.5px solid var(--border-strong)', borderRadius: 8, cursor: 'pointer' }} />
                     <input value={form.secondaryColor} onChange={on('secondaryColor')} style={{ ...inp(false), flex: 1, fontFamily: 'monospace' }} />
                   </div>
                 </WizardField>
               </div>
-              <div style={{ marginTop: 4, padding: '14px 18px', borderRadius: 10, border: '1.5px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 14 }}>
+              <div style={{ marginTop: 4, padding: '14px 18px', borderRadius: 10, border: '1.5px solid var(--border-strong)', display: 'flex', alignItems: 'center', gap: 14 }}>
                 {(logoPreview || form.logoUrl) ? (
-                  <img src={logoPreview || form.logoUrl} alt="logo" style={{ width: 40, height: 40, objectFit: 'contain', borderRadius: 8, background: '#f8fafc', padding: 3 }} />
+                  <img src={logoPreview || form.logoUrl} alt="logo" style={{ width: 40, height: 40, objectFit: 'contain', borderRadius: 8, background: 'var(--surface-alt)', padding: 3 }} />
                 ) : (
                   <div style={{ width: 40, height: 40, borderRadius: 10, background: `linear-gradient(135deg, ${form.primaryColor}, ${form.secondaryColor})`, flexShrink: 0 }} />
                 )}
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 13, color: form.primaryColor }}>{form.name || 'School Name'}</div>
-                  <div style={{ fontSize: 11, color: '#718096' }}>Brand preview</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Brand preview</div>
                 </div>
               </div>
             </div>
@@ -2818,13 +2818,13 @@ function EditSchoolWizard({ sa, onClose, onSaved }) {
                 Super Admin account details are shown below for reference. To update credentials, use the Super Admin management panel.
               </div>
               <WizardField label="Full Name">
-                <input value={form.adminName} readOnly style={{ ...inp(false), background: '#f8fafc', color: '#718096', cursor: 'not-allowed' }} />
+                <input value={form.adminName} readOnly style={{ ...inp(false), background: 'var(--surface-alt)', color: 'var(--text-secondary)', cursor: 'not-allowed' }} />
               </WizardField>
               <WizardField label="Email Address">
-                <input value={form.adminEmail} readOnly style={{ ...inp(false), background: '#f8fafc', color: '#718096', cursor: 'not-allowed' }} />
+                <input value={form.adminEmail} readOnly style={{ ...inp(false), background: 'var(--surface-alt)', color: 'var(--text-secondary)', cursor: 'not-allowed' }} />
               </WizardField>
               <WizardField label="Mobile Number">
-                <input value={form.adminMobile || '—'} readOnly style={{ ...inp(false), background: '#f8fafc', color: '#718096', cursor: 'not-allowed' }} />
+                <input value={form.adminMobile || '—'} readOnly style={{ ...inp(false), background: 'var(--surface-alt)', color: 'var(--text-secondary)', cursor: 'not-allowed' }} />
               </WizardField>
             </div>
           )}
@@ -2845,7 +2845,7 @@ function EditSchoolWizard({ sa, onClose, onSaved }) {
                 const color = days <= 5 ? '#c53030' : days <= 30 ? '#dd6b20' : '#276749';
                 return <div style={{ fontSize: 12, color, marginTop: 4, fontWeight: 600 }}>{days < 0 ? `Expired ${Math.abs(days)} days ago` : days === 0 ? 'Expires today' : `Expires in ${days} day${days !== 1 ? 's' : ''}`}</div>;
               })()}
-              <div style={{ marginTop: 8, padding: '12px 14px', background: '#f8fafc', borderRadius: 8, fontSize: 12, color: '#718096' }}>
+              <div style={{ marginTop: 8, padding: '12px 14px', background: 'var(--surface-alt)', borderRadius: 8, fontSize: 12, color: 'var(--text-secondary)' }}>
                 <strong>BASIC</strong> — Core modules · <strong>STANDARD</strong> — All modules · <strong>PREMIUM</strong> — Priority support · <strong>ENTERPRISE</strong> — Custom SLA
               </div>
             </div>
@@ -2858,16 +2858,16 @@ function EditSchoolWizard({ sa, onClose, onSaved }) {
                 Enable or disable modules for this school.
               </div>
               <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-                <button onClick={() => toggleAll(true)}  disabled={allEnabled}  style={{ padding: '6px 16px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: allEnabled  ? 'not-allowed' : 'pointer', background: allEnabled  ? '#f0fff4' : '#fff', color: allEnabled  ? '#276749' : '#374151' }}>Select All</button>
-                <button onClick={() => toggleAll(false)} disabled={noneEnabled} style={{ padding: '6px 16px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: noneEnabled ? 'not-allowed' : 'pointer', background: noneEnabled ? '#fff5f5' : '#fff', color: noneEnabled ? '#e53e3e' : '#374151' }}>Deselect All</button>
+                <button onClick={() => toggleAll(true)}  disabled={allEnabled}  style={{ padding: '6px 16px', border: '1.5px solid var(--border-strong)', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: allEnabled  ? 'not-allowed' : 'pointer', background: allEnabled  ? '#f0fff4' : 'var(--surface)', color: allEnabled  ? '#276749' : 'var(--text-secondary)' }}>Select All</button>
+                <button onClick={() => toggleAll(false)} disabled={noneEnabled} style={{ padding: '6px 16px', border: '1.5px solid var(--border-strong)', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: noneEnabled ? 'not-allowed' : 'pointer', background: noneEnabled ? '#fff5f5' : 'var(--surface)', color: noneEnabled ? '#e53e3e' : 'var(--text-secondary)' }}>Deselect All</button>
                 <span style={{ marginLeft: 'auto', fontSize: 12, color: '#7c3aed', fontWeight: 700, alignSelf: 'center' }}>{Object.values(perms).filter(Boolean).length} / {ALL_MODULES.length} enabled</span>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
                 {ALL_MODULES.map(m => (
-                  <label key={m.key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', border: `1.5px solid ${perms[m.key] ? '#276749' : '#e2e8f0'}`, borderRadius: 10, cursor: 'pointer', background: perms[m.key] ? '#f0fdf4' : '#fafafa' }}>
-                    <span className="material-icons" style={{ fontSize: 18, color: perms[m.key] ? '#276749' : '#a0aec0' }}>{m.icon}</span>
-                    <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: perms[m.key] ? '#14532d' : '#718096' }}>{m.label}</span>
-                    <div style={{ width: 36, height: 20, borderRadius: 10, background: perms[m.key] ? '#276749' : '#e2e8f0', position: 'relative', flexShrink: 0 }}>
+                  <label key={m.key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', border: `1.5px solid ${perms[m.key] ? '#276749' : 'var(--border-strong)'}`, borderRadius: 10, cursor: 'pointer', background: perms[m.key] ? '#f0fdf4' : 'var(--surface-alt)' }}>
+                    <span className="material-icons" style={{ fontSize: 18, color: perms[m.key] ? '#276749' : 'var(--text-muted)' }}>{m.icon}</span>
+                    <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: perms[m.key] ? '#14532d' : 'var(--text-secondary)' }}>{m.label}</span>
+                    <div style={{ width: 36, height: 20, borderRadius: 10, background: perms[m.key] ? '#276749' : 'var(--border-strong)', position: 'relative', flexShrink: 0 }}>
                       <div style={{ position: 'absolute', top: 2, left: perms[m.key] ? 18 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
                     </div>
                     <input type="checkbox" checked={!!perms[m.key]} onChange={() => setPerms(p => ({ ...p, [m.key]: !p[m.key] }))} style={{ display: 'none' }} />
@@ -2887,11 +2887,11 @@ function EditSchoolWizard({ sa, onClose, onSaved }) {
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '14px 24px', borderTop: '1px solid #f0f4f8', display: 'flex', gap: 10, justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
-          <div style={{ fontSize: 12, color: '#a0aec0' }}>{pct}% complete</div>
+        <div style={{ padding: '14px 24px', borderTop: '1px solid var(--border)', display: 'flex', gap: 10, justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{pct}% complete</div>
           <div style={{ display: 'flex', gap: 10 }}>
             {step > 1 && (
-              <button onClick={back} style={{ padding: '9px 20px', border: '1.5px solid #e2e8f0', borderRadius: 8, background: '#fff', fontWeight: 600, fontSize: 14, cursor: 'pointer', color: '#374151' }}>
+              <button onClick={back} style={{ padding: '9px 20px', border: '1.5px solid var(--border-strong)', borderRadius: 8, background: 'var(--surface)', fontWeight: 600, fontSize: 14, cursor: 'pointer', color: 'var(--text-secondary)' }}>
                 ← Back
               </button>
             )}
@@ -2931,7 +2931,7 @@ function CredentialsModal({ creds, onClose }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div className="modal-card" style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 480, boxShadow: '0 20px 60px rgba(0,0,0,0.3)', maxHeight: '90vh', overflowY: 'auto' }}>
+      <div className="modal-card" style={{ background: 'var(--surface)', borderRadius: 16, width: '100%', maxWidth: 480, boxShadow: '0 20px 60px rgba(0,0,0,0.3)', maxHeight: '90vh', overflowY: 'auto' }}>
 
         {/* Success Header */}
         <div style={{ padding: '24px', background: 'linear-gradient(135deg,#dcfce7,#f0fdf4)', textAlign: 'center', borderBottom: '1px solid #bbf7d0' }}>
@@ -2944,21 +2944,21 @@ function CredentialsModal({ creds, onClose }) {
 
         <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
           {/* School */}
-          <div style={{ background: '#f8fafc', borderRadius: 10, padding: '12px 14px' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>School</div>
-            <div style={{ fontWeight: 700, color: '#1a202c' }}>{creds.schoolName}</div>
-            <div style={{ fontSize: 12, color: '#718096' }}>Code: <strong style={{ fontFamily: 'monospace' }}>{creds.schoolCode}</strong></div>
+          <div style={{ background: 'var(--surface-alt)', borderRadius: 10, padding: '12px 14px' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>School</div>
+            <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{creds.schoolName}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Code: <strong style={{ fontFamily: 'monospace' }}>{creds.schoolCode}</strong></div>
           </div>
 
           {/* Credentials */}
-          <div style={{ background: '#f8fafc', borderRadius: 10, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: 1 }}>Login Credentials</div>
+          <div style={{ background: 'var(--surface-alt)', borderRadius: 10, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>Login Credentials</div>
 
             {/* Name (display only) */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span className="material-icons" style={{ fontSize: 16, color: '#94a3b8' }}>badge</span>
-              <span style={{ fontSize: 11, color: '#94a3b8', minWidth: 68 }}>Name</span>
-              <span style={{ fontSize: 13, color: '#374151', fontWeight: 500 }}>{creds.name}</span>
+              <span className="material-icons" style={{ fontSize: 16, color: 'var(--text-muted)' }}>badge</span>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)', minWidth: 68 }}>Name</span>
+              <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500 }}>{creds.name}</span>
             </div>
 
             {/* Login ID = email */}
@@ -2975,12 +2975,12 @@ function CredentialsModal({ creds, onClose }) {
 
             {/* Password */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span className="material-icons" style={{ fontSize: 16, color: '#94a3b8' }}>key</span>
-              <span style={{ fontSize: 11, color: '#94a3b8', minWidth: 68 }}>Password</span>
-              <span style={{ fontSize: 13, color: '#374151', flex: 1, fontFamily: 'monospace', background: '#fffbeb', padding: '2px 8px', borderRadius: 6 }}>
+              <span className="material-icons" style={{ fontSize: 16, color: 'var(--text-muted)' }}>key</span>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)', minWidth: 68 }}>Password</span>
+              <span style={{ fontSize: 13, color: 'var(--text-secondary)', flex: 1, fontFamily: 'monospace', background: '#fffbeb', padding: '2px 8px', borderRadius: 6 }}>
                 {showPwd ? creds.password : '••••••••••'}
               </span>
-              <button onClick={() => setShowPwd(v => !v)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#718096' }}>
+              <button onClick={() => setShowPwd(v => !v)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
                 <span className="material-icons" style={{ fontSize: 16 }}>{showPwd ? 'visibility_off' : 'visibility'}</span>
               </button>
               <button onClick={() => copy(creds.password)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#7c3aed' }}>
@@ -2990,8 +2990,8 @@ function CredentialsModal({ creds, onClose }) {
           </div>
 
           {/* Modules */}
-          <div style={{ background: '#f8fafc', borderRadius: 10, padding: '12px 14px' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
+          <div style={{ background: 'var(--surface-alt)', borderRadius: 10, padding: '12px 14px' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
               Enabled Modules ({creds.modules.length})
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -3008,7 +3008,7 @@ function CredentialsModal({ creds, onClose }) {
 
           {/* Actions */}
           <div style={{ display: 'flex', gap: 10 }}>
-            <button onClick={copyAll} style={{ flex: 1, padding: '10px', border: '1.5px solid #e2e8f0', borderRadius: 8, background: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, color: '#374151' }}>
+            <button onClick={copyAll} style={{ flex: 1, padding: '10px', border: '1.5px solid var(--border-strong)', borderRadius: 8, background: 'var(--surface)', fontWeight: 600, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, color: 'var(--text-secondary)' }}>
               <span className="material-icons" style={{ fontSize: 16 }}>content_copy</span>
               {copied ? 'Copied!' : 'Copy All'}
             </button>
@@ -3128,13 +3128,13 @@ function SchoolDashboard() {
 
       {/* ── Fee Summary Card ──────────────────────────────────────────────────── */}
       {feeSummary && (
-        <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #e2e8f0', padding: '20px 24px', marginBottom: 24, boxShadow: '0 1px 6px rgba(0,0,0,0.06)' }}>
+        <div style={{ background: 'var(--surface)', borderRadius: 16, border: '1px solid var(--border-strong)', padding: '20px 24px', marginBottom: 24, boxShadow: '0 1px 6px rgba(0,0,0,0.06)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18, flexWrap: 'wrap', gap: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{ width: 4, height: 22, background: 'linear-gradient(180deg,#16a34a,#22c55e)', borderRadius: 2 }} />
               <div>
-                <div style={{ fontWeight: 800, fontSize: 16, color: '#1e293b' }}>Fee Collection Overview</div>
-                <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>Across all students and academic years</div>
+                <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text-primary)' }}>Fee Collection Overview</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Across all students and academic years</div>
               </div>
             </div>
           </div>
@@ -3142,9 +3142,9 @@ function SchoolDashboard() {
           {/* Grand totals */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: feeSummary.years?.length > 0 ? 20 : 0 }}>
             {[
-              { label: 'Total Fees Assigned', value: feeSummary.grandTotal,   color: '#1e293b', bg: '#f8faff',   icon: 'receipt_long' },
+              { label: 'Total Fees Assigned', value: feeSummary.grandTotal,   color: 'var(--text-primary)', bg: 'var(--surface-alt)',   icon: 'receipt_long' },
               { label: 'Total Collected',     value: feeSummary.grandPaid,    color: '#16a34a', bg: '#f0fdf4',   icon: 'check_circle' },
-              { label: 'Total Pending',       value: feeSummary.grandPending, color: Number(feeSummary.grandPending) > 0 ? '#dc2626' : '#94a3b8', bg: Number(feeSummary.grandPending) > 0 ? '#fff5f5' : '#f8faff', icon: 'pending_actions' },
+              { label: 'Total Pending',       value: feeSummary.grandPending, color: Number(feeSummary.grandPending) > 0 ? '#dc2626' : 'var(--text-muted)', bg: Number(feeSummary.grandPending) > 0 ? '#fff5f5' : 'var(--surface-alt)', icon: 'pending_actions' },
             ].map(({ label, value, color, bg, icon }) => {
               const num = Number(value || 0);
               const fmt = n => '₹' + n.toLocaleString('en-IN', { maximumFractionDigits: 0 });
@@ -3154,15 +3154,15 @@ function SchoolDashboard() {
                 <div key={label} style={{ background: bg, borderRadius: 12, padding: '16px 18px', border: `1px solid ${color}18` }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                     <span className="material-icons" style={{ fontSize: 18, color }}>{icon}</span>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '.05em' }}>{label}</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '.05em' }}>{label}</span>
                   </div>
                   <div style={{ fontSize: 24, fontWeight: 800, color, letterSpacing: '-0.02em' }}>{fmt(num)}</div>
                   {pct !== null && (
                     <div style={{ marginTop: 8 }}>
-                      <div style={{ height: 6, background: '#e2e8f0', borderRadius: 4, overflow: 'hidden' }}>
+                      <div style={{ height: 6, background: 'var(--border-strong)', borderRadius: 4, overflow: 'hidden' }}>
                         <div style={{ width: `${pct}%`, height: '100%', background: pct >= 80 ? '#16a34a' : pct >= 50 ? '#f59e0b' : '#dc2626', borderRadius: 4 }} />
                       </div>
-                      <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>{pct}% collected</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{pct}% collected</div>
                     </div>
                   )}
                 </div>
@@ -3175,9 +3175,9 @@ function SchoolDashboard() {
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
-                  <tr style={{ background: '#f8faff' }}>
+                  <tr style={{ background: 'var(--surface-alt)' }}>
                     {['Academic Year', 'Students', 'Total Fees', 'Collected', 'Pending', 'Collection %'].map(h => (
-                      <th key={h} style={{ padding: '8px 14px', textAlign: h === 'Academic Year' || h === 'Students' ? 'left' : 'right', color: '#64748b', fontWeight: 700, fontSize: 11, textTransform: 'uppercase', letterSpacing: '.04em', borderBottom: '1px solid #e2e8f0', whiteSpace: 'nowrap' }}>{h}</th>
+                      <th key={h} style={{ padding: '8px 14px', textAlign: h === 'Academic Year' || h === 'Students' ? 'left' : 'right', color: 'var(--text-muted)', fontWeight: 700, fontSize: 11, textTransform: 'uppercase', letterSpacing: '.04em', borderBottom: '1px solid var(--border-strong)', whiteSpace: 'nowrap' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -3190,12 +3190,12 @@ function SchoolDashboard() {
                     const pctColor = pct >= 90 ? '#16a34a' : pct >= 60 ? '#f59e0b' : '#dc2626';
                     const fmt = n => '₹' + Number(n).toLocaleString('en-IN', { maximumFractionDigits: 0 });
                     return (
-                      <tr key={i} style={{ borderBottom: '1px solid #f1f5f9', background: i % 2 === 0 ? '#fff' : '#fafcff' }}>
-                        <td style={{ padding: '9px 14px', fontWeight: 700, color: '#1e293b' }}>{row.year || '—'}</td>
-                        <td style={{ padding: '9px 14px', color: '#64748b' }}>{row.studentCount}</td>
-                        <td style={{ padding: '9px 14px', textAlign: 'right', fontWeight: 600, color: '#1e293b' }}>{fmt(total)}</td>
+                      <tr key={i} style={{ borderBottom: '1px solid var(--border)', background: i % 2 === 0 ? 'var(--surface)' : 'var(--surface-alt)' }}>
+                        <td style={{ padding: '9px 14px', fontWeight: 700, color: 'var(--text-primary)' }}>{row.year || '—'}</td>
+                        <td style={{ padding: '9px 14px', color: 'var(--text-muted)' }}>{row.studentCount}</td>
+                        <td style={{ padding: '9px 14px', textAlign: 'right', fontWeight: 600, color: 'var(--text-primary)' }}>{fmt(total)}</td>
                         <td style={{ padding: '9px 14px', textAlign: 'right', fontWeight: 700, color: '#16a34a' }}>{fmt(paid)}</td>
-                        <td style={{ padding: '9px 14px', textAlign: 'right', fontWeight: 700, color: pending > 0 ? '#dc2626' : '#94a3b8' }}>{pending > 0 ? fmt(pending) : '—'}</td>
+                        <td style={{ padding: '9px 14px', textAlign: 'right', fontWeight: 700, color: pending > 0 ? '#dc2626' : 'var(--text-muted)' }}>{pending > 0 ? fmt(pending) : '—'}</td>
                         <td style={{ padding: '9px 14px', textAlign: 'right' }}>
                           <span style={{ padding: '2px 9px', borderRadius: 20, fontSize: 11, fontWeight: 800, background: pctColor + '18', color: pctColor }}>{pct}%</span>
                         </td>
@@ -3222,22 +3222,22 @@ function SchoolDashboard() {
             </div>
             <div className="stat-value">{c.value}</div>
             <div className="stat-label">{c.label}</div>
-            <div style={{ fontSize: '11px', color: '#a0aec0', marginTop: '2px' }}>{c.sub}</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{c.sub}</div>
           </div>
         ))}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: '24px', marginBottom: '24px' }}>
         <div className="data-table-card">
-          <div style={{ fontWeight: 700, fontSize: '15px', color: '#2d3748', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span className="material-icons" style={{ color: '#76C442', fontSize: '20px' }}>manage_accounts</span>
             Admin Overview
             <span style={{ marginLeft: 'auto', background: '#76C44220', color: '#276749', padding: '2px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 700 }}>{admins.length} admins</span>
           </div>
           {admins.length === 0 ? (
             <div className="empty-state" style={{ padding: '32px' }}>
-              <span className="material-icons" style={{ fontSize: 40, color: '#e2e8f0', display: 'block', marginBottom: 8 }}>manage_accounts</span>
-              <p style={{ color: '#a0aec0' }}>No admins created yet.</p>
+              <span className="material-icons" style={{ fontSize: 40, color: 'var(--border-strong)', display: 'block', marginBottom: 8 }}>manage_accounts</span>
+              <p style={{ color: 'var(--text-muted)' }}>No admins created yet.</p>
             </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
@@ -3253,7 +3253,7 @@ function SchoolDashboard() {
                           </div>
                           <div>
                             <div style={{ fontWeight: 700, fontSize: '13px' }}>{a.name}</div>
-                            <div style={{ fontSize: '11px', color: '#a0aec0' }}>{a.email}</div>
+                            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{a.email}</div>
                           </div>
                         </div>
                       </td>
@@ -3269,7 +3269,7 @@ function SchoolDashboard() {
                             <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: 600, background: '#76C44220', color: '#276749' }}>Full Access</span>
                           )}
                           {a.permissions && getPermCount(a) > 3 && (
-                            <span style={{ padding: '2px 7px', borderRadius: '12px', fontSize: '10px', fontWeight: 600, background: '#f7fafc', color: '#718096' }}>+{getPermCount(a) - 3} more</span>
+                            <span style={{ padding: '2px 7px', borderRadius: '12px', fontSize: '10px', fontWeight: 600, background: 'var(--surface-alt)', color: 'var(--text-secondary)' }}>+{getPermCount(a) - 3} more</span>
                           )}
                         </div>
                       </td>
@@ -3287,25 +3287,25 @@ function SchoolDashboard() {
         </div>
 
         <div className="data-table-card">
-          <div style={{ fontWeight: 700, fontSize: '15px', color: '#2d3748', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span className="material-icons" style={{ color: '#3182ce', fontSize: '20px' }}>timeline</span>
             Activity Log
           </div>
           {logs.length === 0 ? (
             <div className="empty-state" style={{ padding: '32px' }}>
-              <span className="material-icons" style={{ fontSize: 40, color: '#e2e8f0', display: 'block', marginBottom: 8 }}>timeline</span>
-              <p style={{ color: '#a0aec0' }}>No recent activity.</p>
+              <span className="material-icons" style={{ fontSize: 40, color: 'var(--border-strong)', display: 'block', marginBottom: 8 }}>timeline</span>
+              <p style={{ color: 'var(--text-muted)' }}>No recent activity.</p>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
               {logs.map((log, i) => (
-                <div key={log.id} style={{ display: 'flex', gap: '12px', padding: '10px 0', borderBottom: i < logs.length - 1 ? '1px solid #f7fafc' : 'none' }}>
+                <div key={log.id} style={{ display: 'flex', gap: '12px', padding: '10px 0', borderBottom: i < logs.length - 1 ? '1px solid var(--border)' : 'none' }}>
                   <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#3182ce18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <span className="material-icons" style={{ fontSize: '15px', color: '#3182ce' }}>history</span>
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '12px', color: '#2d3748', fontWeight: 500 }}>{log.action}</div>
-                    <div style={{ fontSize: '10px', color: '#a0aec0', marginTop: '2px' }}>{log.module} · {log.timestamp}</div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-primary)', fontWeight: 500 }}>{log.action}</div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>{log.module} · {log.timestamp}</div>
                   </div>
                 </div>
               ))}
@@ -3315,21 +3315,21 @@ function SchoolDashboard() {
       </div>
 
       <div className="data-table-card">
-        <div style={{ fontWeight: 700, fontSize: '15px', color: '#2d3748', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span className="material-icons" style={{ color: '#805ad5', fontSize: '20px' }}>bar_chart</span>
           Student Overview
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: '12px' }}>
           {[
-            { label: 'Total',    value: students.length,                                       color: '#2d3748' },
+            { label: 'Total',    value: students.length,                                       color: 'var(--text-primary)' },
             { label: 'Active',   value: students.filter(s => s.status === 'Active').length,    color: '#76C442' },
             { label: 'Inactive', value: students.filter(s => s.status === 'Inactive').length,  color: '#e53e3e' },
             { label: 'Male',     value: students.filter(s => s.gender === 'Male').length,      color: '#3182ce' },
             { label: 'Female',   value: students.filter(s => s.gender === 'Female').length,    color: '#ed8936' },
           ].map(item => (
-            <div key={item.label} style={{ padding: '16px', background: '#f7fafc', borderRadius: '10px', textAlign: 'center' }}>
+            <div key={item.label} style={{ padding: '16px', background: 'var(--surface-alt)', borderRadius: '10px', textAlign: 'center' }}>
               <div style={{ fontSize: '24px', fontWeight: 800, color: item.color }}>{item.value}</div>
-              <div style={{ fontSize: '12px', color: '#718096', marginTop: '4px' }}>{item.label}</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>{item.label}</div>
             </div>
           ))}
         </div>

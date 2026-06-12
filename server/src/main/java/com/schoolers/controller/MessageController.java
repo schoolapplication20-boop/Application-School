@@ -62,8 +62,8 @@ public class MessageController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','TEACHER','STUDENT')")
-    public ResponseEntity<?> sendMessage(@RequestBody Map<String, Object> body) {
-        var response = messageService.sendMessage(body);
+    public ResponseEntity<?> sendMessage(@RequestBody Map<String, Object> body, Authentication auth) {
+        var response = messageService.sendMessage(body, auth);
         return response.isSuccess()
                 ? ResponseEntity.status(201).body(response)
                 : ResponseEntity.badRequest().body(response);
@@ -71,7 +71,11 @@ public class MessageController {
 
     @PatchMapping("/{id}/read")
     @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','TEACHER','STUDENT')")
-    public ResponseEntity<?> markAsRead(@PathVariable Long id) {
+    public ResponseEntity<?> markAsRead(@PathVariable Long id, Authentication auth) {
+        Message msg = messageService.findById(id).orElse(null);
+        if (msg == null) return ResponseEntity.notFound().build();
+        if (!isOwnerOrAdmin(msg.getReceiverId(), auth))
+            return ResponseEntity.status(403).body(ApiResponse.error("Access denied."));
         var response = messageService.markAsRead(id);
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
     }

@@ -2,9 +2,11 @@ package com.schoolers.repository;
 
 import com.schoolers.model.StudentFeeAssignment;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -19,9 +21,13 @@ public interface StudentFeeAssignmentRepository extends JpaRepository<StudentFee
     List<StudentFeeAssignment> findAllByOrderByCreatedAtDesc();
     void deleteByStudentId(Long studentId);
 
+    @Modifying @Transactional
+    void deleteByStudentIdIn(List<Long> studentIds);
+
     // School-scoped queries
     List<StudentFeeAssignment> findBySchoolIdOrderByCreatedAtDesc(Long schoolId);
     Optional<StudentFeeAssignment> findByStudentIdAndAcademicYearAndSchoolId(Long studentId, String academicYear, Long schoolId);
+    List<StudentFeeAssignment> findByStudentIdInAndAcademicYearAndSchoolId(List<Long> studentIds, String academicYear, Long schoolId);
 
     @Query("SELECT COALESCE(SUM(s.paidAmount), 0) FROM StudentFeeAssignment s WHERE s.schoolId = :schoolId")
     BigDecimal sumTotalPaidBySchool(@Param("schoolId") Long schoolId);

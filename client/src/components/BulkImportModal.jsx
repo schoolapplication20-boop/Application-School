@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import * as XLSX from 'xlsx';
 import { adminAPI } from '../services/api';
+import Button from './Button';
 import './BulkImportModal.css';
 
 /* ── Column mapping from Excel header → internal field ─────────────── */
@@ -254,10 +255,10 @@ export default function BulkImportModal({ onClose, onImportDone }) {
           </div>
           <div className="bim-header-right">
             {step === 0 && (
-              <button className="bim-btn-ghost" onClick={loadHistory}>
+              <Button variant="bim-ghost" onClick={loadHistory}>
                 <span className="material-icons" style={{ fontSize: 16 }}>history</span>
                 History
-              </button>
+              </Button>
             )}
             <button className="bim-close" onClick={onClose}>
               <span className="material-icons">close</span>
@@ -311,11 +312,11 @@ export default function BulkImportModal({ onClose, onImportDone }) {
                       {dragging ? 'Drop file here' : 'Drag & drop or click to upload'}
                     </p>
                     <p className="bim-drop-sub">Supports .xlsx, .xls, .csv · Max 10 MB · Up to 5000 rows</p>
-                    <button className="bim-btn-primary" style={{ marginTop: 16 }}
+                    <Button variant="bim-primary" style={{ marginTop: 16 }}
                       onClick={e => { e.stopPropagation(); fileRef.current.click(); }}>
                       <span className="material-icons">folder_open</span>
                       Choose File
-                    </button>
+                    </Button>
                   </>
                 )}
               </div>
@@ -327,10 +328,10 @@ export default function BulkImportModal({ onClose, onImportDone }) {
                   <p className="bim-template-title">Need a template?</p>
                   <p className="bim-template-sub">Download the sample Excel file with correct column headers and a sample row.</p>
                 </div>
-                <button className="bim-btn-outline" onClick={downloadTemplate}>
+                <Button variant="bim-outline" onClick={downloadTemplate}>
                   <span className="material-icons" style={{ fontSize: 16 }}>download</span>
                   Download Template
-                </button>
+                </Button>
               </div>
 
               {/* Columns info */}
@@ -352,10 +353,10 @@ export default function BulkImportModal({ onClose, onImportDone }) {
           {step === 0 && showHistory && (
             <div className="bim-history">
               <div className="bim-history-header">
-                <button className="bim-btn-ghost" onClick={() => setShowHistory(false)}>
+                <Button variant="bim-ghost" onClick={() => setShowHistory(false)}>
                   <span className="material-icons" style={{ fontSize: 16 }}>arrow_back</span>
                   Back
-                </button>
+                </Button>
                 <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>Recent Imports</h3>
               </div>
               {!history ? (
@@ -379,10 +380,10 @@ export default function BulkImportModal({ onClose, onImportDone }) {
                         <td><span className={`bim-status-badge ${h.status.toLowerCase()}`}>{h.status}</span></td>
                         <td>
                           {h.failedRows > 0 && (
-                            <button className="bim-btn-xs" onClick={() => downloadServerFailed(h.id)}>
+                            <Button variant="bim-xs" onClick={() => downloadServerFailed(h.id)}>
                               <span className="material-icons" style={{ fontSize: 13 }}>download</span>
                               Download
-                            </button>
+                            </Button>
                           )}
                         </td>
                       </tr>
@@ -440,11 +441,11 @@ export default function BulkImportModal({ onClose, onImportDone }) {
                   >{l}</button>
                 ))}
                 {invalid.length > 0 && (
-                  <button className="bim-btn-xs" style={{ marginLeft: 'auto' }}
+                  <Button variant="bim-xs" style={{ marginLeft: 'auto' }}
                     onClick={() => downloadFailed(invalid.map(r => ({ ...r, reason: r.errors.join('; ') })))}>
                     <span className="material-icons" style={{ fontSize: 13 }}>download</span>
                     Download Invalid
-                  </button>
+                  </Button>
                 )}
               </div>
 
@@ -531,11 +532,11 @@ export default function BulkImportModal({ onClose, onImportDone }) {
                     <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: '#dc2626' }}>
                       Failed Rows ({result.failedRowDetails.length})
                     </p>
-                    <button className="bim-btn-outline"
+                    <Button variant="bim-outline"
                       onClick={() => downloadFailed(result.failedRowDetails)}>
                       <span className="material-icons" style={{ fontSize: 15 }}>download</span>
                       Download Failed Rows
-                    </button>
+                    </Button>
                   </div>
                   <div className="bim-table-wrap" style={{ maxHeight: 200 }}>
                     <table className="bim-table">
@@ -563,14 +564,14 @@ export default function BulkImportModal({ onClose, onImportDone }) {
         {/* ── Footer ── */}
         <div className="bim-footer">
           {step === 0 && !showHistory && (
-            <button className="bim-btn-ghost" onClick={onClose}>Cancel</button>
+            <Button variant="bim-ghost" onClick={onClose}>Cancel</Button>
           )}
 
           {step === 1 && (
             <>
-              <button className="bim-btn-ghost" onClick={() => { setStep(0); setRows([]); setFilterTab('all'); }}>
+              <Button variant="bim-ghost" onClick={() => { setStep(0); setRows([]); setFilterTab('all'); }}>
                 ← Back
-              </button>
+              </Button>
               <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                 {(skipInvalid ? valid.length : rows.length) === 0 ? (
                   <span style={{ fontSize: 13, color: '#dc2626' }}>No valid rows to import</span>
@@ -579,8 +580,8 @@ export default function BulkImportModal({ onClose, onImportDone }) {
                     Will import <strong>{skipInvalid ? valid.length : rows.length}</strong> student{(skipInvalid ? valid.length : rows.length) > 1 ? 's' : ''}
                   </span>
                 )}
-                <button
-                  className="bim-btn-primary"
+                <Button
+                  variant="bim-primary"
                   disabled={importing || (skipInvalid ? valid.length : rows.length) === 0}
                   onClick={handleImport}
                 >
@@ -589,17 +590,17 @@ export default function BulkImportModal({ onClose, onImportDone }) {
                   ) : (
                     <><span className="material-icons" style={{ fontSize: 18 }}>upload</span> Confirm Import</>
                   )}
-                </button>
+                </Button>
               </div>
             </>
           )}
 
           {step === 2 && (
             <>
-              <button className="bim-btn-ghost" onClick={() => { setStep(0); setRows([]); setResult(null); setFilterTab('all'); }}>
+              <Button variant="bim-ghost" onClick={() => { setStep(0); setRows([]); setResult(null); setFilterTab('all'); }}>
                 Import More
-              </button>
-              <button className="bim-btn-primary" onClick={onClose}>Done</button>
+              </Button>
+              <Button variant="bim-primary" onClick={onClose}>Done</Button>
             </>
           )}
         </div>

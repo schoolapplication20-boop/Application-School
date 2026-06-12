@@ -40,19 +40,19 @@ export default function TeacherAttendanceView() {
       <div style={{ maxWidth: 900, margin: '0 auto' }}>
 
         <div style={{ marginBottom: 24 }}>
-          <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1a202c', margin: 0 }}>Teacher Attendance</h2>
-          <p style={{ color: '#718096', margin: '4px 0 0', fontSize: 14 }}>View attendance marked by teachers</p>
+          <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>Teacher Attendance</h2>
+          <p style={{ color: 'var(--text-secondary)', margin: '4px 0 0', fontSize: 14 }}>View attendance marked by teachers</p>
         </div>
 
         {/* Filter Panel */}
-        <div style={{ background: '#fff', borderRadius: 16, padding: 20, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: 20 }}>
+        <div style={{ background: 'var(--surface)', borderRadius: 16, padding: 20, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: 20 }}>
           {/* View toggle */}
           <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
             {['date', 'range'].map(v => (
               <button key={v} onClick={() => setView(v)} style={{
                 padding: '8px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13,
-                background: view === v ? '#7c3aed' : '#f0f4f8',
-                color: view === v ? '#fff' : '#4a5568',
+                background: view === v ? '#7c3aed' : 'var(--border)',
+                color: view === v ? '#fff' : 'var(--text-secondary)',
               }}>
                 {v === 'date' ? 'By Date' : 'Date Range'}
               </button>
@@ -62,21 +62,21 @@ export default function TeacherAttendanceView() {
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
             {view === 'date' ? (
               <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: '#718096', display: 'block', marginBottom: 4 }}>Date</label>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Date</label>
                 <input type="date" value={date} onChange={e => setDate(e.target.value)}
-                  style={{ padding: '9px 12px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: 14, outline: 'none' }} />
+                  style={{ padding: '9px 12px', borderRadius: 8, border: '1.5px solid var(--border-strong)', fontSize: 14, outline: 'none' }} />
               </div>
             ) : (
               <>
                 <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: '#718096', display: 'block', marginBottom: 4 }}>From</label>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>From</label>
                   <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)}
-                    style={{ padding: '9px 12px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: 14, outline: 'none' }} />
+                    style={{ padding: '9px 12px', borderRadius: 8, border: '1.5px solid var(--border-strong)', fontSize: 14, outline: 'none' }} />
                 </div>
                 <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: '#718096', display: 'block', marginBottom: 4 }}>To</label>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>To</label>
                   <input type="date" value={toDate} onChange={e => setToDate(e.target.value)}
-                    style={{ padding: '9px 12px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: 14, outline: 'none' }} />
+                    style={{ padding: '9px 12px', borderRadius: 8, border: '1.5px solid var(--border-strong)', fontSize: 14, outline: 'none' }} />
                 </div>
               </>
             )}
@@ -103,18 +103,18 @@ export default function TeacherAttendanceView() {
         </div>
 
         {/* Table */}
-        <div style={{ background: '#fff', borderRadius: 16, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f4f8', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ background: 'var(--surface)', borderRadius: 16, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
             <span className="material-icons" style={{ color: '#7c3aed', fontSize: 20 }}>person_check</span>
-            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#2d3748' }}>
+            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
               Attendance Records {records.length > 0 && `(${records.length})`}
             </h3>
           </div>
 
           {loading ? (
-            <div style={{ padding: 40, textAlign: 'center', color: '#a0aec0' }}>Loading…</div>
+            <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Loading…</div>
           ) : records.length === 0 ? (
-            <div style={{ padding: 40, textAlign: 'center', color: '#a0aec0' }}>
+            <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
               <span className="material-icons" style={{ fontSize: 48, display: 'block', marginBottom: 8 }}>event_note</span>
               No attendance records found
             </div>
@@ -124,9 +124,9 @@ export default function TeacherAttendanceView() {
               <div className="table-responsive" style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
-                    <tr style={{ background: '#f8fafc' }}>
+                    <tr style={{ background: 'var(--surface-alt)' }}>
                       {['Teacher', 'Date', 'Status', 'Note'].map(h => (
-                        <th key={h} style={{ padding: '12px 20px', textAlign: 'left', fontSize: 12, fontWeight: 700, color: '#718096', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+                        <th key={h} style={{ padding: '12px 20px', textAlign: 'left', fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -134,10 +134,10 @@ export default function TeacherAttendanceView() {
                     {records.map(r => {
                       const cfg = STATUS_CONFIG[r.status] || STATUS_CONFIG.PRESENT;
                       return (
-                        <tr key={r.id} style={{ borderTop: '1px solid #f0f4f8' }}
-                          onMouseEnter={e => e.currentTarget.style.background = '#fafafa'}
+                        <tr key={r.id} style={{ borderTop: '1px solid var(--border)' }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-alt)'}
                           onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                          <td style={{ padding: '14px 20px', fontWeight: 600, color: '#2d3748', fontSize: 14 }}>
+                          <td style={{ padding: '14px 20px', fontWeight: 600, color: 'var(--text-primary)', fontSize: 14 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                               <div style={{
                                 width: 34, height: 34, borderRadius: '50%',
@@ -150,7 +150,7 @@ export default function TeacherAttendanceView() {
                               {r.teacherName || '—'}
                             </div>
                           </td>
-                          <td style={{ padding: '14px 20px', color: '#4a5568', fontSize: 14 }}>
+                          <td style={{ padding: '14px 20px', color: 'var(--text-secondary)', fontSize: 14 }}>
                             {new Date(r.date).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
                           </td>
                           <td style={{ padding: '14px 20px' }}>
@@ -163,7 +163,7 @@ export default function TeacherAttendanceView() {
                               {cfg.label}
                             </span>
                           </td>
-                          <td style={{ padding: '14px 20px', color: '#718096', fontSize: 13 }}>
+                          <td style={{ padding: '14px 20px', color: 'var(--text-secondary)', fontSize: 13 }}>
                             {r.note || '—'}
                           </td>
                         </tr>

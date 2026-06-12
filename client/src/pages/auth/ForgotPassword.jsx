@@ -262,7 +262,7 @@ const ForgotPassword = () => {
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999,
         }}>
           <div style={{
-            background: '#fff', borderRadius: '18px', padding: '32px 24px',
+            background: 'var(--surface)', borderRadius: '18px', padding: '32px 24px',
             width: 'calc(100% - 32px)', maxWidth: '400px', boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
             position: 'relative', boxSizing: 'border-box', overflow: 'hidden',
           }}>
@@ -272,7 +272,7 @@ const ForgotPassword = () => {
               style={{
                 position: 'absolute', top: '14px', right: '16px',
                 background: 'none', border: 'none', cursor: 'pointer',
-                color: '#a0aec0', fontSize: '22px', lineHeight: 1,
+                color: 'var(--text-muted)', fontSize: '22px', lineHeight: 1,
               }}
             >
               <span className="material-icons">close</span>
@@ -287,8 +287,8 @@ const ForgotPassword = () => {
               }}>
                 <span className="material-icons" style={{ color: '#fff', fontSize: '28px' }}>dialpad</span>
               </div>
-              <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#2d3748', margin: '0 0 6px' }}>Enter OTP</h2>
-              <p style={{ fontSize: '13px', color: '#718096', margin: 0 }}>
+              <h2 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 6px' }}>Enter OTP</h2>
+              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>
                 OTP sent to the email registered for{' '}
                 <span style={{ fontWeight: 600, color: '#0de1e8' }}>{maskIdentifier(identifier)}</span>
               </p>
@@ -325,7 +325,7 @@ const ForgotPassword = () => {
                   {canResend ? (
                     <a onClick={handleResend} style={{ cursor: 'pointer' }}>Resend OTP</a>
                   ) : (
-                    <span style={{ color: '#a0aec0' }}>Resend OTP</span>
+                    <span style={{ color: 'var(--text-muted)' }}>Resend OTP</span>
                   )}
                 </div>
                 {!canResend && (

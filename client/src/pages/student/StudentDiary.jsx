@@ -34,7 +34,7 @@ export default function StudentDiary() {
   if (loading) {
     return (
       <Layout pageTitle="Class Diary">
-        <div style={{ textAlign: 'center', padding: '80px 20px', color: '#a0aec0' }}>
+        <div style={{ textAlign: 'center', padding: '80px 20px', color: 'var(--text-muted)' }}>
           <span className="material-icons" style={{ fontSize: 48, display: 'block', marginBottom: 12 }}>hourglass_empty</span>
           Loading…
         </div>
@@ -82,14 +82,14 @@ export default function StudentDiary() {
           </select>
           <input type="date" value={filterDate}
             onChange={e => setFilterDate(e.target.value)}
-            style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '13px' }} />
+            style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-strong)', fontSize: '13px' }} />
           {(filterSubject || filterDate) && (
             <button onClick={() => { setFilterSubject(''); setFilterDate(''); }}
-              style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#fff5f5', color: '#e53e3e', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>
+              style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid var(--border-strong)', background: '#fff5f5', color: '#e53e3e', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>
               Clear Filters
             </button>
           )}
-          <span style={{ marginLeft: 'auto', fontSize: 13, color: '#a0aec0' }}>
+          <span style={{ marginLeft: 'auto', fontSize: 13, color: 'var(--text-muted)' }}>
             {filtered.length} {filtered.length === 1 ? 'entry' : 'entries'}
           </span>
         </div>
@@ -97,9 +97,9 @@ export default function StudentDiary() {
 
       {/* Table */}
       {filtered.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '60px', color: '#a0aec0' }}>
-          <span className="material-icons" style={{ fontSize: 56, color: '#e2e8f0', display: 'block', marginBottom: 12 }}>menu_book</span>
-          <h3 style={{ color: '#a0aec0', margin: '0 0 8px' }}>
+        <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)' }}>
+          <span className="material-icons" style={{ fontSize: 56, color: 'var(--border-strong)', display: 'block', marginBottom: 12 }}>menu_book</span>
+          <h3 style={{ color: 'var(--text-muted)', margin: '0 0 8px' }}>
             {entries.length === 0 ? 'No diary entries yet' : 'No entries match your filters'}
           </h3>
         </div>
@@ -118,7 +118,7 @@ export default function StudentDiary() {
             <tbody>
               {filtered.map(entry => (
                 <tr key={entry.id}>
-                  <td style={{ fontSize: 13, color: '#4a5568', whiteSpace: 'nowrap' }}>
+                  <td style={{ fontSize: 13, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
                     {fmtDate(entry.diaryDate)}
                   </td>
                   <td>
@@ -129,12 +129,12 @@ export default function StudentDiary() {
                       {entry.subject || 'General'}
                     </span>
                   </td>
-                  <td style={{ fontSize: 13, color: '#2d3748', maxWidth: 240 }}>
+                  <td style={{ fontSize: 13, color: 'var(--text-primary)', maxWidth: 240 }}>
                     {entry.topic && entry.topic.length > 60
                       ? entry.topic.slice(0, 60) + '…'
                       : (entry.topic || '—')}
                   </td>
-                  <td style={{ fontSize: 13, color: '#4a5568', maxWidth: 240 }}>
+                  <td style={{ fontSize: 13, color: 'var(--text-secondary)', maxWidth: 240 }}>
                     {entry.homework && entry.homework.length > 60
                       ? entry.homework.slice(0, 60) + '…'
                       : (entry.homework || '—')}
@@ -157,15 +157,15 @@ export default function StudentDiary() {
         <div onClick={() => setSelected(null)}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
           <div onClick={e => e.stopPropagation()}
-            className="modal-card" style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 540, boxShadow: '0 20px 60px rgba(0,0,0,0.15)', maxHeight: '90vh', overflowY: 'auto' }}>
+            className="modal-card" style={{ background: 'var(--surface)', borderRadius: 16, width: '100%', maxWidth: 540, boxShadow: '0 20px 60px rgba(0,0,0,0.15)', maxHeight: '90vh', overflowY: 'auto' }}>
 
             {/* Header */}
-            <div style={{ padding: '20px 24px', borderBottom: '1px solid #f0f4f8', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div>
-                <div style={{ fontWeight: 700, fontSize: 17, color: '#2d3748' }}>
+                <div style={{ fontWeight: 700, fontSize: 17, color: 'var(--text-primary)' }}>
                   {selected.subject || 'General Diary'}
                 </div>
-                <div style={{ fontSize: 13, color: '#a0aec0', marginTop: 2 }}>
+                <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
                   {fmtDate(selected.diaryDate)}
                   {selected.teacherName && ` · By ${selected.teacherName}`}
                 </div>
@@ -179,10 +179,10 @@ export default function StudentDiary() {
             <div style={{ padding: '24px' }}>
               {/* Topic */}
               <div style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
                   Topic Covered
                 </div>
-                <div style={{ fontSize: 14, color: '#2d3748', lineHeight: 1.6 }}>{selected.topic || '—'}</div>
+                <div style={{ fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.6 }}>{selected.topic || '—'}</div>
               </div>
 
               {/* Homework */}
@@ -190,16 +190,16 @@ export default function StudentDiary() {
                 <div style={{ fontSize: 11, fontWeight: 700, color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
                   Homework
                 </div>
-                <div style={{ fontSize: 14, color: '#2d3748', lineHeight: 1.6 }}>{selected.homework || '—'}</div>
+                <div style={{ fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.6 }}>{selected.homework || '—'}</div>
               </div>
 
               {/* Description */}
               {selected.description && (
                 <div style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
                     Notes
                   </div>
-                  <div style={{ fontSize: 13, color: '#4a5568', lineHeight: 1.6 }}>{selected.description}</div>
+                  <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>{selected.description}</div>
                 </div>
               )}
 
@@ -209,18 +209,18 @@ export default function StudentDiary() {
                   <div style={{ fontSize: 11, fontWeight: 700, color: '#6b21a8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
                     Teacher's Remark
                   </div>
-                  <div style={{ fontSize: 13, color: '#4a5568', fontStyle: 'italic' }}>{selected.remarks}</div>
+                  <div style={{ fontSize: 13, color: 'var(--text-secondary)', fontStyle: 'italic' }}>{selected.remarks}</div>
                 </div>
               )}
 
               {/* Image */}
               {selected.imageUrl && (
                 <div style={{ marginTop: 8 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
                     Diary Photo
                   </div>
                   <img src={selected.imageUrl} alt="Diary"
-                    style={{ width: '100%', maxHeight: 300, objectFit: 'contain', borderRadius: 10, background: '#f7fafc' }} />
+                    style={{ width: '100%', maxHeight: 300, objectFit: 'contain', borderRadius: 10, background: 'var(--surface-alt)' }} />
                 </div>
               )}
             </div>

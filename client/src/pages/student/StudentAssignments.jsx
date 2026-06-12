@@ -188,7 +188,7 @@ export default function StudentAssignments() {
                             <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: sub?.notes || graded ? 10 : 0 }}>
                               {a.className && <span style={{ fontSize: 12, color: 'var(--text-muted, #718096)', display: 'flex', alignItems: 'center', gap: 3 }}><span className="material-icons" style={{ fontSize: 13 }}>class</span>{formatClassName(a.className)}</span>}
                               {a.dueDate && <span style={{ fontSize: 12, color: 'var(--text-muted, #718096)', display: 'flex', alignItems: 'center', gap: 3 }}><span className="material-icons" style={{ fontSize: 13 }}>event</span>Due: {fmtDate(a.dueDate)}</span>}
-                              <span style={{ fontSize: 12, color: '#718096', display: 'flex', alignItems: 'center', gap: 3 }}><span className="material-icons" style={{ fontSize: 13 }}>schedule</span>Submitted: {sub?.submittedAt ? new Date(sub.submittedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : ''}</span>
+                              <span style={{ fontSize: 12, color: 'var(--text-muted, #718096)', display: 'flex', alignItems: 'center', gap: 3 }}><span className="material-icons" style={{ fontSize: 13 }}>schedule</span>Submitted: {sub?.submittedAt ? new Date(sub.submittedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : ''}</span>
                             </div>
                             {sub?.notes && (
                               <div style={{ fontSize: 13, color: 'var(--text-secondary, #4a5568)', padding: '8px 12px', background: 'var(--surface-alt, #f7fafc)', borderRadius: 8, marginBottom: 8 }}>
@@ -199,7 +199,7 @@ export default function StudentAssignments() {
                             {graded && (
                               <div style={{ padding: '8px 12px', background: '#ebf8ff', border: '1px solid #bee3f8', borderRadius: 8 }}>
                                 <span style={{ fontSize: 13, fontWeight: 700, color: '#2b6cb0' }}>Grade: {sub.grade}</span>
-                                {sub.feedback && <div style={{ fontSize: 12, color: '#4a5568', marginTop: 4, fontStyle: 'italic' }}>"{sub.feedback}"</div>}
+                                {sub.feedback && <div style={{ fontSize: 12, color: 'var(--text-secondary, #4a5568)', marginTop: 4, fontStyle: 'italic' }}>"{sub.feedback}"</div>}
                               </div>
                             )}
                           </div>

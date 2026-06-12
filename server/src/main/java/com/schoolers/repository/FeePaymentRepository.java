@@ -54,6 +54,9 @@ public interface FeePaymentRepository extends JpaRepository<FeePayment, Long> {
     @Modifying @Transactional
     void deleteByStudentId(Long studentId);
 
+    @Modifying @Transactional
+    void deleteByStudentIdIn(List<Long> studentIds);
+
     @org.springframework.data.jpa.repository.Modifying
     @org.springframework.transaction.annotation.Transactional
     void deleteBySchoolId(Long schoolId);

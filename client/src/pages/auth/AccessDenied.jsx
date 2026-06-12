@@ -17,14 +17,14 @@ export default function AccessDenied({ module }) {
       padding: '24px',
     }}>
       <div style={{
-        background: '#fff',
+        background: 'var(--surface)',
         borderRadius: '20px',
         padding: '56px 48px',
         maxWidth: '480px',
         width: '100%',
         textAlign: 'center',
         boxShadow: '0 20px 60px rgba(0,0,0,0.08)',
-        border: '1px solid #f0f4f8',
+        border: '1px solid var(--border)',
       }}>
         {/* Icon */}
         <div style={{
@@ -42,13 +42,13 @@ export default function AccessDenied({ module }) {
         </div>
 
         {/* Title */}
-        <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#2d3748', margin: '0 0 8px' }}>
+        <h1 style={{ fontSize: '28px', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 8px' }}>
           Access Denied
         </h1>
-        <p style={{ fontSize: '15px', color: '#718096', margin: '0 0 24px', lineHeight: 1.6 }}>
+        <p style={{ fontSize: '15px', color: 'var(--text-secondary)', margin: '0 0 24px', lineHeight: 1.6 }}>
           You don't have permission to access{' '}
           {module ? (
-            <strong style={{ color: '#4a5568' }}>"{module}"</strong>
+            <strong style={{ color: 'var(--text-secondary)' }}>"{module}"</strong>
           ) : 'this page'}.
         </p>
 
@@ -81,7 +81,7 @@ export default function AccessDenied({ module }) {
             display: 'flex',
             alignItems: 'center',
             gap: '10px',
-            background: '#f7fafc',
+            background: 'var(--surface-alt)',
             borderRadius: '10px',
             padding: '10px 14px',
             marginBottom: '28px',
@@ -103,8 +103,8 @@ export default function AccessDenied({ module }) {
               {(user.name || 'A').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
             </div>
             <div>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: '#2d3748' }}>{user.name}</div>
-              <div style={{ fontSize: '11px', color: '#a0aec0' }}>{user.email}</div>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>{user.name}</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{user.email}</div>
             </div>
             <span style={{
               marginLeft: 'auto',
@@ -126,10 +126,10 @@ export default function AccessDenied({ module }) {
             onClick={() => navigate(-1)}
             style={{
               padding: '11px 22px',
-              border: '1.5px solid #e2e8f0',
+              border: '1.5px solid var(--border-strong)',
               borderRadius: '10px',
-              background: '#fff',
-              color: '#4a5568',
+              background: 'var(--surface)',
+              color: 'var(--text-secondary)',
               fontWeight: 600,
               fontSize: '14px',
               cursor: 'pointer',

@@ -26,7 +26,7 @@ function ReportCardView({ data, onPrint }) {
   const overallPct = grandMax > 0 ? Math.round((grandMarks / grandMax) * 100) : 0;
 
   return (
-    <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+    <div style={{ background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--border-strong)', overflow: 'hidden' }}>
       {/* School header */}
       <div style={{ background: 'linear-gradient(135deg,#1e1b4b,#4f46e5)', padding: '20px 24px', color: '#fff', display: 'flex', alignItems: 'center', gap: 16 }}>
         {logoSrc && <img src={logoSrc} alt="" style={{ width: 56, height: 56, borderRadius: 10, objectFit: 'contain', background: '#fff', padding: 4 }} onError={e => e.target.style.display='none'} />}
@@ -46,7 +46,7 @@ function ReportCardView({ data, onPrint }) {
       </div>
 
       {/* Student info */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 0, borderBottom: '1px solid #e2e8f0' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 0, borderBottom: '1px solid var(--border-strong)' }}>
         {[
           ['Name', student?.name],
           ['Roll No.', student?.rollNumber],
@@ -56,15 +56,15 @@ function ReportCardView({ data, onPrint }) {
           ['Attendance', `${attendance?.presentDays || 0}/${attendance?.totalDays || 0} days (${fmt(attendance?.percentage)}%)`],
         ].map(([label, val], i) => (
           <div key={i} style={{ padding: '10px 16px', borderRight: i % 3 < 2 ? '1px solid #f1f5f9' : 'none', borderBottom: i < 3 ? '1px solid #f1f5f9' : 'none' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.05em' }}>{label}</div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', marginTop: 2 }}>{val || '—'}</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '.05em' }}>{label}</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginTop: 2 }}>{val || '—'}</div>
           </div>
         ))}
       </div>
 
       {/* Marks by exam */}
       {allExams.length === 0 ? (
-        <div style={{ padding: 32, textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>No marks recorded for this filter.</div>
+        <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>No marks recorded for this filter.</div>
       ) : allExams.map(([examType, rows]) => {
         const etTotal = rows.reduce((s, r) => s + Number(r.marks || 0), 0);
         const etMax   = rows.reduce((s, r) => s + Number(r.maxMarks || 0), 0);
@@ -81,7 +81,7 @@ function ReportCardView({ data, onPrint }) {
               <thead>
                 <tr style={{ background: '#fafcff' }}>
                   {['Subject', 'Marks', 'Max', '%', 'Grade', 'Date'].map(h => (
-                    <th key={h} style={{ padding: '7px 14px', textAlign: h === 'Subject' ? 'left' : 'center', color: '#64748b', fontWeight: 700, fontSize: 11, textTransform: 'uppercase', borderBottom: '1px solid #f1f5f9' }}>{h}</th>
+                    <th key={h} style={{ padding: '7px 14px', textAlign: h === 'Subject' ? 'left' : 'center', color: 'var(--text-secondary)', fontWeight: 700, fontSize: 11, textTransform: 'uppercase', borderBottom: '1px solid #f1f5f9' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -90,9 +90,9 @@ function ReportCardView({ data, onPrint }) {
                   const p = pct(r.marks, r.maxMarks);
                   return (
                     <tr key={i} style={{ borderBottom: '1px solid #f9fafb' }}>
-                      <td style={{ padding: '8px 14px', fontWeight: 600, color: '#1e293b' }}>{r.subject}</td>
+                      <td style={{ padding: '8px 14px', fontWeight: 600, color: 'var(--text-primary)' }}>{r.subject}</td>
                       <td style={{ padding: '8px 14px', textAlign: 'center', fontWeight: 700 }}>{r.marks}</td>
-                      <td style={{ padding: '8px 14px', textAlign: 'center', color: '#64748b' }}>{r.maxMarks}</td>
+                      <td style={{ padding: '8px 14px', textAlign: 'center', color: 'var(--text-secondary)' }}>{r.maxMarks}</td>
                       <td style={{ padding: '8px 14px', textAlign: 'center' }}>
                         <div style={{ background: '#f1f5f9', borderRadius: 20, height: 6, width: 60, margin: '0 auto 3px', overflow: 'hidden' }}>
                           <div style={{ width: `${p}%`, height: '100%', background: p >= 80 ? '#16a34a' : p >= 50 ? '#f59e0b' : '#dc2626', borderRadius: 20 }} />
@@ -102,7 +102,7 @@ function ReportCardView({ data, onPrint }) {
                       <td style={{ padding: '8px 14px', textAlign: 'center' }}>
                         <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 800, background: (GRADE_COLOR[r.grade] || '#64748b') + '18', color: GRADE_COLOR[r.grade] || '#64748b' }}>{r.grade || '—'}</span>
                       </td>
-                      <td style={{ padding: '8px 14px', textAlign: 'center', color: '#94a3b8', fontSize: 11 }}>{r.examDate || '—'}</td>
+                      <td style={{ padding: '8px 14px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 11 }}>{r.examDate || '—'}</td>
                     </tr>
                   );
                 })}
@@ -335,16 +335,16 @@ export default function ReportCardHub() {
 
       {/* Not a class teacher */}
       {isTeacher && isClassTeacher === false && (
-        <div style={{ textAlign: 'center', padding: '60px 20px', color: '#94a3b8' }}>
-          <span className="material-icons" style={{ fontSize: 56, display: 'block', marginBottom: 12, color: '#e2e8f0' }}>assignment_ind</span>
-          <p style={{ fontSize: 15, fontWeight: 600, color: '#475569' }}>Report cards are available to class teachers only</p>
+        <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
+          <span className="material-icons" style={{ fontSize: 56, display: 'block', marginBottom: 12, color: 'var(--border-strong)' }}>assignment_ind</span>
+          <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-secondary)' }}>Report cards are available to class teachers only</p>
           <p style={{ fontSize: 13, marginTop: 6 }}>You are not assigned as a class teacher. Contact your admin to update your role.</p>
         </div>
       )}
 
       {/* Loading teacher assignment */}
       {isTeacher && isClassTeacher === null && (
-        <div style={{ textAlign: 'center', padding: 40, color: '#94a3b8' }}>Loading your class assignment…</div>
+        <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>Loading your class assignment…</div>
       )}
 
       {/* Filters bar — shown for admin/super_admin and class teachers */}
@@ -353,9 +353,9 @@ export default function ReportCardHub() {
         {/* Class selector — only for admin/super_admin; teachers have their class auto-selected */}
         {!isTeacher && (
           <div>
-            <label style={{ fontSize: 11, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 4 }}>Class</label>
+            <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Class</label>
             <select value={filterClass} onChange={e => { setFilterClass(e.target.value); setSelectedStudent(null); setCardData(null); }}
-              style={{ padding: '8px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none', minWidth: 140 }}>
+              style={{ padding: '8px 12px', border: '1.5px solid var(--border-strong)', borderRadius: 8, fontSize: 13, outline: 'none', minWidth: 140 }}>
               <option value="">— Select class —</option>
               {visibleClasses.map(c => (
                 <option key={c.id} value={c.id}>{c.name}{c.section ? ` - ${c.section}` : ''}</option>
@@ -366,9 +366,9 @@ export default function ReportCardHub() {
 
         {/* Exam type */}
         <div>
-          <label style={{ fontSize: 11, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 4 }}>Exam Type</label>
+          <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Exam Type</label>
           <select value={filterExam} onChange={e => setFilterExam(e.target.value)}
-            style={{ padding: '8px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none', minWidth: 150 }}>
+            style={{ padding: '8px 12px', border: '1.5px solid var(--border-strong)', borderRadius: 8, fontSize: 13, outline: 'none', minWidth: 150 }}>
             <option value="">All Exam Types</option>
             {examTypes.map(et => <option key={et} value={et}>{et}</option>)}
           </select>
@@ -377,19 +377,19 @@ export default function ReportCardHub() {
         {/* OR search student — admin/super_admin only */}
         {!isTeacher && (
           <div style={{ position: 'relative' }}>
-            <label style={{ fontSize: 11, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 4 }}>Or search student</label>
+            <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Or search student</label>
             <input value={studentSearch} onChange={e => setStudentSearch(e.target.value)} placeholder="Name or admission no…"
-              style={{ padding: '8px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none', width: 200 }} />
-            {searching && <span style={{ position: 'absolute', right: 10, top: 32, fontSize: 11, color: '#94a3b8' }}>Searching…</span>}
+              style={{ padding: '8px 12px', border: '1.5px solid var(--border-strong)', borderRadius: 8, fontSize: 13, outline: 'none', width: 200 }} />
+            {searching && <span style={{ position: 'absolute', right: 10, top: 32, fontSize: 11, color: 'var(--text-muted)' }}>Searching…</span>}
             {searchResults.length > 0 && (
-              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 100, maxHeight: 200, overflowY: 'auto' }}>
+              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--surface)', border: '1px solid var(--border-strong)', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 100, maxHeight: 200, overflowY: 'auto' }}>
                 {searchResults.map(s => (
                   <div key={s.id} onMouseDown={() => selectStudent(s)}
-                    style={{ padding: '9px 14px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', fontSize: 13 }}
-                    onMouseEnter={e => e.currentTarget.style.background = '#f8faff'}
-                    onMouseLeave={e => e.currentTarget.style.background = '#fff'}>
+                    style={{ padding: '9px 14px', cursor: 'pointer', borderBottom: '1px solid var(--border)', fontSize: 13 }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-alt)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'var(--surface)'}>
                     <div style={{ fontWeight: 700 }}>{s.name}</div>
-                    <div style={{ fontSize: 11, color: '#94a3b8' }}>{s.className}{s.section ? ` - ${s.section}` : ''} · Roll: {s.rollNumber}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{s.className}{s.section ? ` - ${s.section}` : ''} · Roll: {s.rollNumber}</div>
                   </div>
                 ))}
               </div>
@@ -399,7 +399,7 @@ export default function ReportCardHub() {
 
         {(selectedStudent || (!isTeacher && filterClass)) && (
           <button onClick={() => { setSelectedStudent(null); if (!isTeacher) setFilterClass(''); setCardData(null); setClassStudents([]); setStudentSearch(''); }}
-            style={{ padding: '8px 14px', border: '1.5px solid #e2e8f0', borderRadius: 8, background: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', color: '#64748b', marginTop: 18 }}>
+            style={{ padding: '8px 14px', border: '1.5px solid var(--border-strong)', borderRadius: 8, background: 'var(--surface)', fontSize: 12, fontWeight: 600, cursor: 'pointer', color: 'var(--text-secondary)', marginTop: 18 }}>
             {isTeacher ? 'Back to class' : 'Clear'}
           </button>
         )}
@@ -408,11 +408,11 @@ export default function ReportCardHub() {
 
       {/* Class student list */}
       {filterClass && !selectedStudent && (
-        <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, marginBottom: 20, overflow: 'hidden' }}>
-          <div style={{ padding: '12px 16px', background: '#f8faff', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontWeight: 700, fontSize: 14, color: '#1e293b' }}>Students in class</span>
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border-strong)', borderRadius: 14, marginBottom: 20, overflow: 'hidden' }}>
+          <div style={{ padding: '12px 16px', background: 'var(--surface-alt)', borderBottom: '1px solid var(--border-strong)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>Students in class</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 12, color: '#64748b' }}>{loadingClass ? 'Loading…' : `${classStudents.length} students`}</span>
+              <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{loadingClass ? 'Loading…' : `${classStudents.length} students`}</span>
               {classStudents.length > 0 && !loadingClass && (
                 <button onClick={printAllReportCards} disabled={printingAll}
                   style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', border: 'none', borderRadius: 7, background: printingAll ? '#a5b4fc' : 'linear-gradient(135deg,#4f46e5,#7c3aed)', color: '#fff', fontWeight: 700, fontSize: 11, cursor: printingAll ? 'not-allowed' : 'pointer' }}>
@@ -423,24 +423,24 @@ export default function ReportCardHub() {
             </div>
           </div>
           {loadingClass ? (
-            <div style={{ padding: 24, textAlign: 'center', color: '#94a3b8' }}>Loading…</div>
+            <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)' }}>Loading…</div>
           ) : classStudents.length === 0 ? (
-            <div style={{ padding: 24, textAlign: 'center', color: '#94a3b8' }}>No students found</div>
+            <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)' }}>No students found</div>
           ) : (
             <div style={{ maxHeight: 320, overflowY: 'auto' }}>
               {classStudents.map((s, i) => (
                 <div key={s.studentId} onClick={() => selectClassStudent(s)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px', cursor: 'pointer', borderBottom: '1px solid #f9fafb', background: i % 2 === 0 ? '#fff' : '#fafcff' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px', cursor: 'pointer', borderBottom: '1px solid var(--border)', background: i % 2 === 0 ? 'var(--surface)' : 'var(--surface-alt)' }}
                   onMouseEnter={e => e.currentTarget.style.background = '#eef2ff'}
-                  onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? '#fff' : '#fafcff'}>
+                  onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? 'var(--surface)' : 'var(--surface-alt)'}>
                   <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#4f46e5,#7c3aed)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
                     {(s.name || '?')[0].toUpperCase()}
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, fontSize: 13, color: '#1e293b' }}>{s.name}</div>
-                    <div style={{ fontSize: 11, color: '#94a3b8' }}>Roll: {s.rollNumber} · Adm: {s.admissionNumber || '—'}</div>
+                    <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)' }}>{s.name}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Roll: {s.rollNumber} · Adm: {s.admissionNumber || '—'}</div>
                   </div>
-                  <div style={{ fontSize: 11, color: '#64748b' }}>
+                  <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
                     {Object.keys(s.marksByExam || {}).length} exam type{Object.keys(s.marksByExam || {}).length !== 1 ? 's' : ''}
                   </div>
                   <span className="material-icons" style={{ color: '#4f46e5', fontSize: 18 }}>chevron_right</span>
@@ -456,14 +456,14 @@ export default function ReportCardHub() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
             <button onClick={() => { setSelectedStudent(null); setCardData(null); }}
-              style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 12px', border: '1.5px solid #e2e8f0', borderRadius: 8, background: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', color: '#64748b' }}>
+              style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 12px', border: '1.5px solid var(--border-strong)', borderRadius: 8, background: 'var(--surface)', fontSize: 12, fontWeight: 600, cursor: 'pointer', color: 'var(--text-secondary)' }}>
               <span className="material-icons" style={{ fontSize: 16 }}>arrow_back</span>
               {filterClass ? 'Back to class' : 'Clear'}
             </button>
-            <span style={{ fontWeight: 700, fontSize: 14, color: '#1e293b' }}>{selectedStudent.name}</span>
+            <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>{selectedStudent.name}</span>
           </div>
           {loading ? (
-            <div style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>Loading report card…</div>
+            <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Loading report card…</div>
           ) : (
             <ReportCardView data={cardData} onPrint={handlePrint} />
           )}
@@ -472,8 +472,8 @@ export default function ReportCardHub() {
 
       {/* Empty state — only for admin/super_admin (teachers auto-load their class) */}
       {!isTeacher && !filterClass && !selectedStudent && (
-        <div style={{ textAlign: 'center', padding: '60px 20px', color: '#94a3b8' }}>
-          <span className="material-icons" style={{ fontSize: 56, display: 'block', marginBottom: 12, color: '#e2e8f0' }}>school</span>
+        <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
+          <span className="material-icons" style={{ fontSize: 56, display: 'block', marginBottom: 12, color: 'var(--border-strong)' }}>school</span>
           <p style={{ fontSize: 15, fontWeight: 600 }}>Select a class or search for a student to view report cards</p>
           <p style={{ fontSize: 13, marginTop: 6 }}>Use the class dropdown to browse all students, or type a name to search directly</p>
         </div>

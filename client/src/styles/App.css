@@ -2,6 +2,21 @@
    SCHOOLERS - Global App Styles
    ============================================ */
 
+/* ============================================
+   Responsive breakpoint convention
+   CSS custom properties cannot be used inside @media
+   queries, so these are documented values, not vars.
+   New @media (max-width: ...) rules should use one of:
+     480px  - phones
+     768px  - tablets / small laptops
+     1024px - laptops / small desktops
+     1200px - wide desktops
+   Existing rules using other values (360, 380, 520, 540,
+   600, 640, 700, 900px, etc.) predate this convention and
+   are left as-is to avoid changing responsive behavior
+   without per-page visual review.
+   ============================================ */
+
 :root {
   --primary: #F97316;
   --primary-green: #F97316;

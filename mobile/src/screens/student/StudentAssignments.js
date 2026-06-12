@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
-import api from '../../services/api';
+import useCachedFetch from '../../hooks/useCachedFetch';
+import OfflineBanner from '../../components/OfflineBanner';
 
 const STATUS_COLORS = {
   Active: { bg: '#dcfce7', text: '#166534' },
@@ -9,21 +10,8 @@ const STATUS_COLORS = {
 };
 
 export default function StudentAssignments() {
-  const [assignments, setAssignments] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    api.get('/api/student/assignments')
-      .then(res => setAssignments(res.data.data || []))
-      .catch(() => {
-        api.get('/api/teacher/assignments/my-class')
-          .then(res => setAssignments(res.data.data || []))
-          .catch(() => {})
-          .finally(() => setLoading(false));
-        return;
-      })
-      .finally(() => setLoading(false));
-  }, []);
+  const { data, loading, isOffline } = useCachedFetch(['/api/student/assignments', '/api/teacher/assignments/my-class']);
+  const assignments = data || [];
 
   if (loading) return <ActivityIndicator style={{ flex: 1 }} size="large" color="#d97706" />;
 
@@ -33,6 +21,7 @@ export default function StudentAssignments() {
       data={assignments}
       keyExtractor={(_, i) => i.toString()}
       contentContainerStyle={{ padding: 12 }}
+      ListHeaderComponent={<OfflineBanner visible={isOffline} />}
       renderItem={({ item }) => {
         const s = STATUS_COLORS[item.status] || STATUS_COLORS.Active;
         const isOverdue = item.dueDate && new Date(item.dueDate) < new Date();
