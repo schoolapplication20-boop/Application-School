@@ -161,6 +161,20 @@ export const SchoolProvider = ({ children }) => {
     clearSchool,
     /** Convenience: is a feature enabled for this school? */
     hasFeature: (key) => school?.features?.[key] !== false,
+    /**
+     * Is `key` enabled for `role` (TEACHER/STUDENT)?
+     * Checks the school-wide toggle first (master switch), then an optional
+     * per-role override map (school.features.teacherModules / .studentModules).
+     * Missing role-map entries default to enabled, so schools without these
+     * maps configured behave exactly as before.
+     */
+    hasRoleModule: (role, key) => {
+      if (school?.features?.[key] === false) return false;
+      const roleMap = role === 'TEACHER' ? school?.features?.teacherModules
+        : role === 'STUDENT' ? school?.features?.studentModules
+        : null;
+      return roleMap?.[key] !== false;
+    },
   };
 
   return (
