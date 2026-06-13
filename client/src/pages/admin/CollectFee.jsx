@@ -37,6 +37,7 @@ export default function CollectFee() {
   const [filterClassName, setFilterClassName] = useState(''); // just the name e.g. "Class 10"
   const [filterSection, setFilterSection]     = useState(''); // just the section e.g. "A"
   const [classList, setClassList]       = useState([]);   // [{label, name, section}]
+  const [loadingClasses, setLoadingClasses] = useState(true); // true until /api/admin/classes resolves
   const [classStudents, setClassStudents] = useState([]);   // full list for selected class
   const [loadingClass, setLoadingClass] = useState(false);  // loading class student list
   const [suggestions, setSuggestions]   = useState([]);     // name-search dropdown
@@ -68,10 +69,13 @@ export default function CollectFee() {
 
   const showToast = useToast();
 
-  /* ── load class list ── */
+  /* ── load class list (once on mount) ── */
   useEffect(() => {
+    let active = true;
+    setLoadingClasses(true);
     adminAPI.getClasses()
       .then(res => {
+        if (!active) return;
         const raw = res.data?.data ?? [];
         const items = raw
           .filter(c => c.name)
@@ -85,7 +89,9 @@ export default function CollectFee() {
         const seen = new Set();
         setClassList(items.filter(i => { if (seen.has(i.label)) return false; seen.add(i.label); return true; }));
       })
-      .catch(() => {});
+      .catch(err => { console.error('[CollectFee] Failed to load class list:', err); })
+      .finally(() => { if (active) setLoadingClasses(false); });
+    return () => { active = false; };
   }, []);
 
   /* ── load ALL students when class filter changes ── */
@@ -356,6 +362,7 @@ export default function CollectFee() {
             <span className="material-icons" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: 18, pointerEvents: 'none' }}>class</span>
             <select
               value={filterClass}
+              disabled={loadingClasses}
               onChange={e => {
                 const selected = classList.find(c => c.label === e.target.value);
                 setFilterClass(e.target.value);
@@ -363,9 +370,9 @@ export default function CollectFee() {
                 setFilterSection(selected?.section || '');
                 setStudent(null); setQuery(''); setSuggestions([]);
               }}
-              style={{ paddingLeft: 34, paddingRight: 32, paddingTop: 12, paddingBottom: 12, border: '2px solid var(--border-strong)', borderRadius: 10, fontSize: 14, outline: 'none', background: 'var(--surface)', cursor: 'pointer', minWidth: 160, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', appearance: 'none', color: filterClass ? 'var(--text-primary)' : 'var(--text-muted)' }}
+              style={{ paddingLeft: 34, paddingRight: 32, paddingTop: 12, paddingBottom: 12, border: '2px solid var(--border-strong)', borderRadius: 10, fontSize: 14, outline: 'none', background: 'var(--surface)', cursor: loadingClasses ? 'wait' : 'pointer', minWidth: 160, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', appearance: 'none', color: filterClass ? 'var(--text-primary)' : 'var(--text-muted)' }}
             >
-              <option value="">All Classes</option>
+              <option value="">{loadingClasses ? 'Loading classes…' : 'All Classes'}</option>
               {classList.map(c => <option key={c.label} value={c.label}>{c.label}</option>)}
             </select>
             <span className="material-icons" style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: 18, pointerEvents: 'none' }}>expand_more</span>
