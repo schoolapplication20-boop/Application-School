@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -419,6 +420,10 @@ public class AdminService {
             // Step 1: Save the student record to obtain its generated ID
             Student saved = studentRepository.save(student);
             ensureClassExists(saved.getClassName(), saved.getSection(), schoolId);
+
+            // Step 2: If this class already has a fee structure, auto-assign it
+            // to the new student so their fee shows up immediately.
+            syncClassFeeAssignment(saved);
 
             // Step 3: Create user account only when an email was provided.
             // Without an email the student record is saved first; the student can
@@ -1702,7 +1707,9 @@ public class AdminService {
         // Auto-apply fee structure to all students in this class
         int updatedCount = 0;
         if (schoolId != null && totalFee.compareTo(BigDecimal.ZERO) > 0) {
-            List<Student> students = studentRepository.findBySchoolIdAndClassName(schoolId, className);
+            // Case/whitespace-tolerant match so students aren't skipped due to
+            // minor className differences (e.g. "Class 1" vs "class 1 ").
+            List<Student> students = studentRepository.findBySchoolIdAndClassNameNormalized(schoolId, className);
             List<Long> studentIds = students.stream().map(Student::getId).collect(Collectors.toList());
             Map<Long, StudentFeeAssignment> existingByStudentId = studentIds.isEmpty()
                     ? Map.of()
@@ -1760,15 +1767,57 @@ public class AdminService {
         return ApiResponse.success(studentFeeAssignmentRepository.findBySchoolIdOrderByCreatedAtDesc(schoolId));
     }
 
+    @Transactional
     public ApiResponse<StudentFeeAssignment> getStudentFeeAssignment(Long studentId, Long schoolId) {
-        if (schoolId != null) {
-            Student student = studentRepository.findById(studentId).orElse(null);
-            if (student == null || schoolMismatch(schoolId, student.getSchoolId()))
-                return ApiResponse.error("No fee assignment found for this student");
-        }
-        return studentFeeAssignmentRepository.findFirstByStudentIdOrderByCreatedAtDesc(studentId)
-                .map(a -> ApiResponse.success(a))
-                .orElse(ApiResponse.error("No fee assignment found for this student"));
+        Student student = studentRepository.findById(studentId).orElse(null);
+        if (student == null) return ApiResponse.error("No fee assignment found for this student");
+        if (schoolId != null && schoolMismatch(schoolId, student.getSchoolId()))
+            return ApiResponse.error("No fee assignment found for this student");
+
+        Optional<StudentFeeAssignment> existing = studentFeeAssignmentRepository.findFirstByStudentIdOrderByCreatedAtDesc(studentId);
+        if (existing.isPresent()) return ApiResponse.success(existing.get());
+
+        // No assignment row yet — if the student's class already has a fee structure,
+        // auto-create the assignment now so the fee shows up immediately.
+        return syncClassFeeAssignment(student)
+                .map(ApiResponse::success)
+                .orElse(ApiResponse.error("Fee not assigned"));
+    }
+
+    /**
+     * Ensures a StudentFeeAssignment exists for the student's current class/academic year
+     * when a matching ClassFeeStructure is defined. Returns the existing assignment for the
+     * current academic year if present, otherwise creates one from the class fee structure.
+     * Returns empty if no fee structure is defined for the student's class (or the student
+     * has no school/class), without creating or modifying anything — never duplicates rows
+     * and never touches payment history.
+     */
+    private Optional<StudentFeeAssignment> syncClassFeeAssignment(Student student) {
+        Long schoolId = student.getSchoolId();
+        String className = student.getClassName();
+        if (schoolId == null || className == null || className.isBlank()) return Optional.empty();
+
+        String academicYear = currentAcademicYear();
+
+        Optional<StudentFeeAssignment> existing = studentFeeAssignmentRepository
+                .findByStudentIdAndAcademicYearAndSchoolId(student.getId(), academicYear, schoolId);
+        if (existing.isPresent()) return existing;
+
+        return classFeeStructureRepository
+                .findBySchoolIdAndClassNameNormalizedAndAcademicYear(schoolId, className, academicYear)
+                .map(ClassFeeStructure::getTotalFee)
+                .filter(totalFee -> totalFee != null && totalFee.compareTo(BigDecimal.ZERO) > 0)
+                .map(totalFee -> studentFeeAssignmentRepository.save(StudentFeeAssignment.builder()
+                        .studentId(student.getId())
+                        .studentName(student.getName())
+                        .rollNumber(student.getRollNumber())
+                        .className(className)
+                        .academicYear(academicYear)
+                        .schoolId(schoolId)
+                        .totalFee(totalFee)
+                        .paidAmount(BigDecimal.ZERO)
+                        .status(StudentFeeAssignment.Status.PENDING)
+                        .build()));
     }
 
     public ApiResponse<List<FeePayment>> getAssignmentPayments(Long assignmentId, Long schoolId) {

@@ -28,6 +28,14 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
 
     List<Student> findBySchoolIdAndClassName(Long schoolId, String className);
 
+    /**
+     * Same as findBySchoolIdAndClassName but tolerant of case differences and
+     * leading/trailing whitespace, so fee-structure auto-apply doesn't silently
+     * skip students whose stored className differs only by case/spacing.
+     */
+    @Query("SELECT s FROM Student s WHERE s.schoolId = :schoolId AND LOWER(TRIM(s.className)) = LOWER(TRIM(:className))")
+    List<Student> findBySchoolIdAndClassNameNormalized(@Param("schoolId") Long schoolId, @Param("className") String className);
+
     List<Student> findBySchoolIdAndClassNameAndSection(Long schoolId, String className, String section);
 
     List<Student> findBySchoolIdAndClassNameIgnoreCaseAndSectionIgnoreCase(Long schoolId, String className, String section);
