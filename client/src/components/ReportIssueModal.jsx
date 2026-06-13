@@ -38,7 +38,9 @@ export default function ReportIssueModal({ onClose }) {
     try {
       await issueAPI.report(form);
       setSubmitted(true);
+      setForm({ title: '', category: 'BUG', priority: 'MEDIUM', description: '' });
     } catch (err) {
+      console.error('[ReportIssue] submit failed:', err);
       setError(err.response?.data?.message || 'Failed to submit. Please try again.');
     } finally {
       setSubmitting(false);
