@@ -7,14 +7,15 @@
 ## Table of Contents
 
 1. [Pre-Deployment Checklist](#pre-deployment-checklist)
-2. [Local Environment Setup](#local-environment-setup)
-3. [Docker Build & Deploy](#docker-build--deploy)
-4. [Cloud Deployment](#cloud-deployment)
-5. [Database Setup](#database-setup)
-6. [Environment Configuration](#environment-configuration)
-7. [Monitoring & Logging](#monitoring--logging)
-8. [Backup & Recovery](#backup--recovery)
-9. [Troubleshooting](#troubleshooting)
+2. [Railway Deployment (Recommended)](#railway-deployment-recommended)
+3. [Local Environment Setup](#local-environment-setup)
+4. [Docker Build & Deploy](#docker-build--deploy)
+5. [Cloud Deployment](#cloud-deployment)
+6. [Database Setup](#database-setup)
+7. [Environment Configuration](#environment-configuration)
+8. [Monitoring & Logging](#monitoring--logging)
+9. [Backup & Recovery](#backup--recovery)
+10. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -48,6 +49,73 @@
 - [ ] Domain name configured
 - [ ] SSL certificate installed
 - [ ] CDN configured (if applicable)
+
+---
+
+## Railway Deployment (Recommended)
+
+This is the deployment target used for this project. The repo includes
+`backend/railway.json` and `frontend/railway.json` so each service builds
+with sensible defaults out of the box.
+
+### 1. Create the project and data plugins
+
+1. In Railway, create a new project (or use the existing one for this repo).
+2. Add a **PostgreSQL** plugin - it provides `DATABASE_URL` automatically.
+3. Add a **Redis** plugin - it provides `REDIS_URL` automatically.
+
+The backend reads `DATABASE_URL`/`REDIS_URL` when present (see
+`backend/src/config/dbEnv.js`), so no manual host/port/user wiring is needed.
+
+### 2. Backend service
+
+1. **New Service → Deploy from GitHub repo**, set **Root Directory** to
+   `whatsapp-ordering-portal/backend`.
+2. Railway detects Node via Nixpacks and uses `backend/railway.json`, which:
+   - runs `npm run migrate && npm start` on deploy (migrations are idempotent
+     - safe to run every deploy)
+   - health-checks `/health`
+3. Add the PostgreSQL and Redis plugins as variable references (Railway lets
+   you reference `${{Postgres.DATABASE_URL}}` / `${{Redis.REDIS_URL}}`), or
+   rely on the automatic shared variables if the plugins are in the same
+   project.
+4. Set the remaining environment variables (see
+   [Environment Configuration](#environment-configuration)):
+   - `NODE_ENV=production`
+   - `JWT_SECRET`, `JWT_REFRESH_SECRET`, `ENCRYPTION_KEY` (32+ chars each)
+   - `DB_SCHEMA=whatsapp_portal`
+   - `DB_SSL=require` if Railway's Postgres requires SSL for your plan
+   - `CORS_ORIGIN` - set after the frontend domain is known (step 3)
+   - `FRONTEND_URL` - the frontend's Railway domain
+   - SMTP and WhatsApp Cloud API credentials
+5. Generate a public domain for this service (Settings → Networking →
+   Generate Domain). Note the URL, e.g. `https://wa-portal-api.up.railway.app`.
+
+### 3. Frontend service
+
+1. **New Service → Deploy from GitHub repo**, set **Root Directory** to
+   `whatsapp-ordering-portal/frontend`.
+2. `frontend/railway.json` runs `npm run build` then serves the `dist/`
+   folder with `serve` bound to Railway's `$PORT`.
+3. Set the build-time environment variable:
+   - `VITE_API_BASE_URL=https://<backend-domain>/api/v1` (from step 2.5)
+4. Generate a public domain for this service, e.g.
+   `https://wa-portal.up.railway.app`.
+
+### 4. Wire CORS
+
+Back on the backend service, set:
+- `CORS_ORIGIN=https://<frontend-domain>` (from step 3.4)
+- `ALLOW_CREDENTIALS=true`
+
+Redeploy the backend so the new CORS origin takes effect.
+
+### 5. Configure WhatsApp webhook
+
+Once both services are live, point the Meta WhatsApp app's webhook at:
+`https://<backend-domain>/api/v1/webhooks/whatsapp/messages`, using the same
+`webhook_verify_token` configured for the business in the portal's Settings
+page.
 
 ---
 

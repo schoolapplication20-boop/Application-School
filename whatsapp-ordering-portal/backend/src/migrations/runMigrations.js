@@ -3,21 +3,30 @@ import { Sequelize } from 'sequelize';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import { getDbConnectionConfig } from '../config/dbEnv.js';
 
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const dbConfig = getDbConnectionConfig();
+
 const sequelize = new Sequelize(
-  process.env.DB_NAME,
-  process.env.DB_USERNAME,
-  process.env.DB_PASSWORD,
+  dbConfig.database,
+  dbConfig.username,
+  dbConfig.password,
   {
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT,
+    host: dbConfig.host,
+    port: dbConfig.port,
     dialect: 'postgres',
     logging: console.log,
+    dialectOptions: process.env.DB_SSL === 'require' ? {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false,
+      },
+    } : {},
   },
 );
 

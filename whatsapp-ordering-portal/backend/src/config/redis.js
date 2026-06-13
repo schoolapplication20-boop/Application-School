@@ -10,16 +10,24 @@ let redisClient;
  */
 export const initializeRedis = async () => {
   try {
-    const client = createClient({
+    const reconnectStrategy = (retries) => (retries > 3 ? new Error('Redis connection retries exhausted') : Math.min(retries * 200, 1000));
+
+    // Railway's Redis plugin provides a single REDIS_URL; local/dev uses discrete vars.
+    const clientOptions = process.env.REDIS_URL ? {
+      url: process.env.REDIS_URL,
+      socket: { connectTimeout: 5000, reconnectStrategy },
+    } : {
       socket: {
         host: process.env.REDIS_HOST || 'localhost',
         port: process.env.REDIS_PORT || 6379,
         connectTimeout: 5000,
-        reconnectStrategy: (retries) => (retries > 3 ? new Error('Redis connection retries exhausted') : Math.min(retries * 200, 1000)),
+        reconnectStrategy,
       },
       password: process.env.REDIS_PASSWORD || undefined,
       db: process.env.REDIS_DB || 1,
-    });
+    };
+
+    const client = createClient(clientOptions);
 
     client.on('error', (err) => console.error('Redis Error:', err.message));
     client.on('connect', () => console.log('✓ Redis connected'));

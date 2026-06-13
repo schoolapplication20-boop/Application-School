@@ -1,25 +1,21 @@
 import { Sequelize } from 'sequelize';
 import dotenv from 'dotenv';
+import { getDbConnectionConfig } from './dbEnv.js';
 
 dotenv.config();
 
 const isDevelopment = process.env.NODE_ENV === 'development';
 const isTest = process.env.NODE_ENV === 'test';
 
-const dbName = isTest ? process.env.TEST_DB_NAME : process.env.DB_NAME || 'postgres';
-
-// For Supabase/pooler, username might be postgres.project_id
-// Extract just the 'postgres' part if it contains a dot
-const username = process.env.DB_USERNAME || 'postgres';
-const [baseUsername] = username.split('.'); // Takes everything before the dot
+const dbConfig = getDbConnectionConfig();
 
 const sequelize = new Sequelize({
   dialect: 'postgres',
-  host: process.env.DB_HOST || 'localhost',
-  port: process.env.DB_PORT || 5432,
-  database: dbName,
-  username: baseUsername,
-  password: process.env.DB_PASSWORD || 'postgres',
+  host: dbConfig.host,
+  port: dbConfig.port,
+  database: dbConfig.database,
+  username: dbConfig.username,
+  password: dbConfig.password,
   schema: process.env.DB_SCHEMA || 'whatsapp_portal',
   logging: isDevelopment ? console.log : false,
   dialectOptions: process.env.DB_SSL === 'require' ? {
