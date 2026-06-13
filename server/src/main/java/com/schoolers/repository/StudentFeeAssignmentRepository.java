@@ -26,6 +26,10 @@ public interface StudentFeeAssignmentRepository extends JpaRepository<StudentFee
 
     // School-scoped queries
     List<StudentFeeAssignment> findBySchoolIdOrderByCreatedAtDesc(Long schoolId);
+
+    /** Used by the SMS module to resolve "fee-due students' parents" for a school. */
+    List<StudentFeeAssignment> findBySchoolIdAndStatusIn(Long schoolId, List<StudentFeeAssignment.Status> statuses);
+
     Optional<StudentFeeAssignment> findByStudentIdAndAcademicYearAndSchoolId(Long studentId, String academicYear, Long schoolId);
     List<StudentFeeAssignment> findByStudentIdInAndAcademicYearAndSchoolId(List<Long> studentIds, String academicYear, Long schoolId);
 

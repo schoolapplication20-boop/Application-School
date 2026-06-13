@@ -743,4 +743,36 @@ export const onlineExamAdminAPI = {
 };
 
 // ============================================
+// SMS / BULK SMS NOTIFICATION APIs (ADMIN, SUPER_ADMIN)
+// ============================================
+
+export const smsAPI = {
+  // Sending
+  sendSingle:        (data)   => api.post('/api/sms/send', data),
+  sendBulk:          (data)   => api.post('/api/sms/bulk', data),
+  previewRecipients: (params) => api.get('/api/sms/recipients/preview', { params }),
+
+  // Campaigns
+  getCampaigns:       (page, size) => api.get('/api/sms/campaigns', { params: { page, size } }),
+  getActiveCampaigns: ()            => api.get('/api/sms/campaigns/active'),
+  getCampaign:        (id)          => api.get(`/api/sms/campaigns/${id}`),
+  cancelCampaign:     (id)          => api.post(`/api/sms/campaigns/${id}/cancel`),
+
+  // History & dashboard
+  getHistory: (params) => api.get('/api/sms/history', { params }),
+  getStats:   ()       => api.get('/api/sms/stats'),
+
+  // Templates
+  getTemplates:    (activeOnly) => api.get('/api/sms/templates', { params: activeOnly ? { activeOnly: true } : {} }),
+  getTemplate:     (id)         => api.get(`/api/sms/templates/${id}`),
+  createTemplate:  (data)       => api.post('/api/sms/templates', data),
+  updateTemplate:  (id, data)   => api.put(`/api/sms/templates/${id}`, data),
+  deleteTemplate:  (id)         => api.delete(`/api/sms/templates/${id}`),
+
+  // Notification preferences
+  getPreferences:    ()                    => api.get('/api/sms/preferences'),
+  updatePreference:  (category, smsEnabled) => api.put(`/api/sms/preferences/${category}`, { smsEnabled }),
+};
+
+// ============================================
 export default api;

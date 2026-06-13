@@ -20,6 +20,7 @@ const MODULES = [
   { key: 'leave',        label: 'Leave Management',   icon: 'event_busy',             desc: 'Student & teacher leave' },
   { key: 'examination',  label: 'Exam & Certificates', icon: 'verified',               desc: 'Hall tickets, certificates & exam schedules' },
   { key: 'timetable',   label: 'Timetable',           icon: 'schedule',               desc: 'View and manage class timetables' },
+  { key: 'sms',         label: 'SMS Notifications',   icon: 'sms',                    desc: 'Send SMS & bulk notifications to parents' },
 ];
 
 const DEFAULT_PERMS = Object.fromEntries(MODULES.map(m => [m.key, false]));

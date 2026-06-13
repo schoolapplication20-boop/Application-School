@@ -24,6 +24,7 @@ const adminNavItems = [
   { path: '/report-cards',              icon: 'assessment',              label: 'Report Cards',        permKey: 'examination' },
   { path: '/admin/examination',        icon: 'verified',                label: 'Exam & Certificates', permKey: 'examination' },
   { path: '/admin/messages',            icon: 'campaign',                label: 'Messages',            permKey: 'messages' },
+  { path: '/admin/sms',                 icon: 'sms',                     label: 'SMS Notifications',   permKey: 'sms' },
   { path: '/school/calendar',           icon: 'event',                   label: 'School Calendar',      permKey: null },
   { path: '/admin/settings',            icon: 'settings',                label: 'School Settings',      permKey: null },
 ];

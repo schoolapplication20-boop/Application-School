@@ -1,0 +1,116 @@
+export const BUSINESS_TYPES = {
+  RESTAURANT: 'RESTAURANT',
+  CAFE: 'CAFE',
+  GROCERY: 'GROCERY',
+  RETAIL: 'RETAIL',
+  OTHER: 'OTHER',
+};
+
+export const BUSINESS_TYPE_LABELS = {
+  [BUSINESS_TYPES.RESTAURANT]: 'Restaurant',
+  [BUSINESS_TYPES.CAFE]: 'Cafe',
+  [BUSINESS_TYPES.GROCERY]: 'Grocery Store',
+  [BUSINESS_TYPES.RETAIL]: 'Retail Shop',
+  [BUSINESS_TYPES.OTHER]: 'Other',
+};
+
+export const ORDER_STATUS = {
+  CART: 'CART',
+  PENDING: 'PENDING',
+  ACCEPTED: 'ACCEPTED',
+  PREPARING: 'PREPARING',
+  READY: 'READY',
+  DELIVERED: 'DELIVERED',
+  COMPLETED: 'COMPLETED',
+  CANCELED: 'CANCELED',
+  REFUNDED: 'REFUNDED',
+};
+
+export const ORDER_STATUS_LABELS = {
+  [ORDER_STATUS.CART]: 'Cart',
+  [ORDER_STATUS.PENDING]: 'Pending',
+  [ORDER_STATUS.ACCEPTED]: 'Accepted',
+  [ORDER_STATUS.PREPARING]: 'Preparing',
+  [ORDER_STATUS.READY]: 'Ready',
+  [ORDER_STATUS.DELIVERED]: 'Delivered',
+  [ORDER_STATUS.COMPLETED]: 'Completed',
+  [ORDER_STATUS.CANCELED]: 'Canceled',
+  [ORDER_STATUS.REFUNDED]: 'Refunded',
+};
+
+export const ORDER_STATUS_COLORS = {
+  [ORDER_STATUS.CART]: 'default',
+  [ORDER_STATUS.PENDING]: 'warning',
+  [ORDER_STATUS.ACCEPTED]: 'info',
+  [ORDER_STATUS.PREPARING]: 'info',
+  [ORDER_STATUS.READY]: 'info',
+  [ORDER_STATUS.DELIVERED]: 'success',
+  [ORDER_STATUS.COMPLETED]: 'success',
+  [ORDER_STATUS.CANCELED]: 'danger',
+  [ORDER_STATUS.REFUNDED]: 'danger',
+};
+
+export const PAYMENT_METHODS = {
+  CASH: 'CASH',
+  CARD: 'CARD',
+  ONLINE: 'ONLINE',
+  UPI: 'UPI',
+};
+
+export const PAYMENT_METHOD_LABELS = {
+  [PAYMENT_METHODS.CASH]: 'Cash',
+  [PAYMENT_METHODS.CARD]: 'Card',
+  [PAYMENT_METHODS.ONLINE]: 'Online Payment',
+  [PAYMENT_METHODS.UPI]: 'UPI',
+};
+
+export const PAYMENT_STATUS = {
+  PENDING: 'PENDING',
+  COMPLETED: 'COMPLETED',
+  FAILED: 'FAILED',
+  REFUNDED: 'REFUNDED',
+};
+
+export const PAYMENT_STATUS_COLORS = {
+  [PAYMENT_STATUS.PENDING]: 'warning',
+  [PAYMENT_STATUS.COMPLETED]: 'success',
+  [PAYMENT_STATUS.FAILED]: 'danger',
+  [PAYMENT_STATUS.REFUNDED]: 'danger',
+};
+
+export const DELIVERY_TYPES = {
+  DELIVERY: 'DELIVERY',
+  PICKUP: 'PICKUP',
+};
+
+export const DELIVERY_TYPE_LABELS = {
+  [DELIVERY_TYPES.DELIVERY]: 'Delivery',
+  [DELIVERY_TYPES.PICKUP]: 'Pickup',
+};
+
+export const OTP_PURPOSE = {
+  LOGIN: 'LOGIN',
+  SIGNUP: 'SIGNUP',
+  PASSWORD_RESET: 'PASSWORD_RESET',
+};
+
+export const NOTIFICATION_TYPES = {
+  NEW_ORDER: 'NEW_ORDER',
+  PAYMENT_RECEIVED: 'PAYMENT_RECEIVED',
+  CUSTOMER_MESSAGE: 'CUSTOMER_MESSAGE',
+  SYSTEM_ALERT: 'SYSTEM_ALERT',
+};
+
+export const STORAGE_KEYS = {
+  ACCESS_TOKEN: 'wa_portal_access_token',
+  REFRESH_TOKEN: 'wa_portal_refresh_token',
+  USER: 'wa_portal_user',
+  THEME: 'wa_portal_theme',
+};
+
+export const ORDER_ACTIONS = {
+  ACCEPT: 'accept',
+  REJECT: 'reject',
+  COMPLETE: 'complete',
+  CANCEL: 'cancel',
+};

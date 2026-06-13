@@ -60,6 +60,9 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
 
     List<Attendance> findBySchoolIdAndDateBetween(Long schoolId, LocalDate start, LocalDate end);
 
+    /** Used by the SMS module to resolve "absent students' parents" for a given date. */
+    List<Attendance> findBySchoolIdAndDateAndStatus(Long schoolId, LocalDate date, Attendance.Status status);
+
     List<Attendance> findBySchoolIdAndClassIdAndDate(Long schoolId, Long classId, LocalDate date);
 
     List<Attendance> findBySchoolIdAndClassIdAndDateBetween(Long schoolId, Long classId, LocalDate start, LocalDate end);

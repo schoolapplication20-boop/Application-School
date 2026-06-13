@@ -102,6 +102,9 @@ const ReportCardHub = lazy(() => import('./pages/shared/ReportCardHub'));
 // Admin Messages
 const AdminMessages = lazy(() => import('./pages/admin/AdminMessages'));
 
+// Admin SMS Notifications
+const SMS = lazy(() => import('./pages/admin/sms/SMS'));
+
 // School Settings
 const SchoolSettings = lazy(() => import('./pages/admin/SchoolSettings'));
 
@@ -261,6 +264,9 @@ function App() {
 
             {/* Admin Messages */}
             <Route path="/admin/messages"     element={<ProtectedRoute allowedRoles={['ADMIN','SUPER_ADMIN']} permKey="messages"><AdminMessages /></ProtectedRoute>} />
+
+            {/* Admin SMS Notifications */}
+            <Route path="/admin/sms"          element={<ProtectedRoute allowedRoles={['ADMIN','SUPER_ADMIN']} permKey="sms"><SMS /></ProtectedRoute>} />
 
             {/* School Settings */}
             <Route path="/admin/settings"     element={<ProtectedRoute allowedRoles={['ADMIN','SUPER_ADMIN']}><SchoolSettings /></ProtectedRoute>} />

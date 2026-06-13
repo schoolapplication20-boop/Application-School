@@ -35,6 +35,8 @@ public class RateLimitingInterceptor implements HandlerInterceptor {
     private final Map<String, Bucket>     passwordResetBuckets  = new ConcurrentHashMap<>();
     /** Tight bucket for onboarding OTP send — prevents email-bombing users */
     private final Map<String, Bucket>     onboardingOtpBuckets  = new ConcurrentHashMap<>();
+    /** Tight bucket for SMS send/bulk — a compromised admin session can't blast unlimited campaigns */
+    private final Map<String, Bucket>     smsSendBuckets        = new ConcurrentHashMap<>();
     /** Last-access epoch-ms per IP — used by evictStaleBuckets() to remove idle entries */
     private final Map<String, AtomicLong> lastSeen              = new ConcurrentHashMap<>();
 
@@ -88,6 +90,14 @@ public class RateLimitingInterceptor implements HandlerInterceptor {
                     .build());
         }
 
+        // SMS send/bulk: 30 requests per 10 minutes per IP — on top of the general authenticated
+        // bucket below. Bulk throughput itself is governed by sms.queue.batch.size + poll interval.
+        if (path.equals("/api/sms/send") || path.equals("/api/sms/bulk")) {
+            return smsSendBuckets.computeIfAbsent(ipAddress, k -> Bucket4j.builder()
+                    .addLimit(Bandwidth.classic(30, Refill.intervally(30, java.time.Duration.ofMinutes(10))))
+                    .build());
+        }
+
         // Public endpoints (admissions, marketing) get moderate limit
         if (path.contains("/api/applications") || path.contains("/api/marketing") || path.contains("/api/chatbot")) {
             return generalBuckets.computeIfAbsent(ipAddress, k -> Bucket4j.builder()
@@ -114,6 +124,7 @@ public class RateLimitingInterceptor implements HandlerInterceptor {
                 authenticationBuckets.remove(ip);
                 passwordResetBuckets.remove(ip);
                 onboardingOtpBuckets.remove(ip);
+                smsSendBuckets.remove(ip);
                 lastSeen.remove(ip);
                 removed++;
             }

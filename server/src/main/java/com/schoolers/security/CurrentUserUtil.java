@@ -34,4 +34,23 @@ public class CurrentUserUtil {
                 .map(com.schoolers.model.User::getSchoolId)
                 .orElse(null);
     }
+
+    /** Resolves the authenticated user's id, preferring the JWT claims and falling back to a DB lookup by email. */
+    public Long getCurrentUserId(Authentication auth) {
+        if (auth == null) return null;
+        if (auth.getDetails() instanceof Map) {
+            Object v = ((Map<?, ?>) auth.getDetails()).get("userId");
+            if (v != null) {
+                if (v instanceof Long) return (Long) v;
+                try {
+                    return Long.parseLong(v.toString());
+                } catch (NumberFormatException e) {
+                    return null;
+                }
+            }
+        }
+        return userRepository.findByEmailIgnoreCase(auth.getName())
+                .map(com.schoolers.model.User::getId)
+                .orElse(null);
+    }
 }
