@@ -57,7 +57,7 @@ public class IssueReport {
     @Column(length = 30)
     private String reporterRole;
 
-    @NotNull
+    // Nullable: APPLICATION_OWNER users (no school affiliation) can also report issues.
     @Column
     private Long schoolId;
 
