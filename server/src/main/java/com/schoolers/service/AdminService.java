@@ -1612,21 +1612,39 @@ public class AdminService {
                     if (schoolMismatch(schoolId, fee.getSchoolId()))
                         return ApiResponse.<Fee>error("Fee not found");
                     if (body.containsKey("paidAmount") && body.get("paidAmount") != null) {
+                        BigDecimal paid;
                         try {
-                            BigDecimal paid = new BigDecimal(body.get("paidAmount").toString());
-                            if (paid.compareTo(BigDecimal.ZERO) >= 0) {
-                                fee.setPaidAmount(paid);
-                                if (paid.compareTo(fee.getAmount()) >= 0) {
-                                    fee.setStatus(Fee.Status.PAID);
-                                } else if (paid.compareTo(BigDecimal.ZERO) > 0) {
-                                    fee.setStatus(Fee.Status.PARTIAL);
-                                }
-                            }
-                        } catch (Exception ignored) {}
+                            paid = new BigDecimal(body.get("paidAmount").toString());
+                        } catch (Exception e) {
+                            return ApiResponse.<Fee>error("Invalid paid amount");
+                        }
+                        if (paid.compareTo(BigDecimal.ZERO) < 0) {
+                            return ApiResponse.<Fee>error("Paid amount cannot be negative");
+                        }
+                        if (paid.compareTo(fee.getAmount()) > 0) {
+                            return ApiResponse.<Fee>error("Paid amount cannot exceed total amount");
+                        }
+                        fee.setPaidAmount(paid);
+                        if (paid.compareTo(fee.getAmount()) >= 0) {
+                            fee.setStatus(Fee.Status.PAID);
+                        } else if (paid.compareTo(BigDecimal.ZERO) > 0) {
+                            fee.setStatus(Fee.Status.PARTIAL);
+                        }
                     }
                     if (body.containsKey("status")) {
-                        try { fee.setStatus(Fee.Status.valueOf(str(body, "status", "PENDING").toUpperCase())); }
-                        catch (IllegalArgumentException ignored) {}
+                        // PAID/PARTIAL must always be derived from paidAmount above, never set directly,
+                        // so they can't be decoupled from the actual amount paid. Only PENDING/OVERDUE
+                        // (which reflect due-date state rather than payment state) can be toggled manually,
+                        // and only while nothing has been paid yet.
+                        BigDecimal currentPaid = fee.getPaidAmount() != null ? fee.getPaidAmount() : BigDecimal.ZERO;
+                        if (currentPaid.compareTo(BigDecimal.ZERO) == 0) {
+                            try {
+                                Fee.Status requested = Fee.Status.valueOf(str(body, "status", "PENDING").toUpperCase());
+                                if (requested == Fee.Status.PENDING || requested == Fee.Status.OVERDUE) {
+                                    fee.setStatus(requested);
+                                }
+                            } catch (IllegalArgumentException ignored) {}
+                        }
                     }
                     if (body.containsKey("paidDate") && body.get("paidDate") != null) {
                         try { fee.setPaidDate(java.time.LocalDate.parse(str(body, "paidDate", null))); }

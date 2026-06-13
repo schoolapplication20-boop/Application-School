@@ -54,13 +54,24 @@ public class MessageService {
         if (content == null || content.isBlank()) return ApiResponse.error("Message content is required");
         if (content.length() > 5000) return ApiResponse.error("Message content cannot exceed 5000 characters");
 
+        User receiver = userRepository.findById(receiverId).orElse(null);
+        if (receiver == null) return ApiResponse.error("Recipient not found");
+
+        // Cross-tenant messaging is only allowed for the platform-level APPLICATION_OWNER (no schoolId)
+        boolean senderIsPlatformOwner = sender.getRole() == User.Role.APPLICATION_OWNER;
+        boolean receiverIsPlatformOwner = receiver.getRole() == User.Role.APPLICATION_OWNER;
+        if (!senderIsPlatformOwner && !receiverIsPlatformOwner
+                && (sender.getSchoolId() == null || !sender.getSchoolId().equals(receiver.getSchoolId()))) {
+            return ApiResponse.error("Recipient not found");
+        }
+
         Message msg = Message.builder()
                 .senderId(sender.getId())
                 .senderName(sender.getName())
                 .senderRole(sender.getRole().name())
-                .receiverId(receiverId)
-                .receiverName(str(body, "receiverName", null))
-                .receiverRole(str(body, "receiverRole", null))
+                .receiverId(receiver.getId())
+                .receiverName(receiver.getName())
+                .receiverRole(receiver.getRole().name())
                 .content(content)
                 .build();
         Message saved = messageRepository.save(msg);
