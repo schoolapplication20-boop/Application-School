@@ -1792,11 +1792,10 @@ public class AdminService {
         if (schoolId != null && schoolMismatch(schoolId, student.getSchoolId()))
             return ApiResponse.error("No fee assignment found for this student");
 
-        Optional<StudentFeeAssignment> existing = studentFeeAssignmentRepository.findFirstByStudentIdOrderByCreatedAtDesc(studentId);
-        if (existing.isPresent()) return ApiResponse.success(existing.get());
-
-        // No assignment row yet — if the student's class already has a fee structure,
-        // auto-create the assignment now so the fee shows up immediately.
+        // Look up (or auto-create) the assignment for the CURRENT academic year only.
+        // A row from a prior academic year must never be returned here — otherwise a
+        // student whose class fee structure was just created/updated for this year
+        // would keep seeing last year's stale fee instead of the current one.
         return syncClassFeeAssignment(student)
                 .map(ApiResponse::success)
                 .orElse(ApiResponse.error("Fee not assigned"));

@@ -32,8 +32,10 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
      * Same as findBySchoolIdAndClassName but tolerant of case differences and
      * leading/trailing whitespace, so fee-structure auto-apply doesn't silently
      * skip students whose stored className differs only by case/spacing.
+     * Only matches active students (isActive true or unset).
      */
-    @Query("SELECT s FROM Student s WHERE s.schoolId = :schoolId AND LOWER(TRIM(s.className)) = LOWER(TRIM(:className))")
+    @Query("SELECT s FROM Student s WHERE s.schoolId = :schoolId AND LOWER(TRIM(s.className)) = LOWER(TRIM(:className)) " +
+           "AND (s.isActive IS NULL OR s.isActive = true)")
     List<Student> findBySchoolIdAndClassNameNormalized(@Param("schoolId") Long schoolId, @Param("className") String className);
 
     List<Student> findBySchoolIdAndClassNameAndSection(Long schoolId, String className, String section);
