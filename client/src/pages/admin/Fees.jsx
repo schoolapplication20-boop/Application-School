@@ -24,14 +24,17 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-const FeeInput = ({ label, value, onChange }) => (
+const FeeInput = ({ label, value, onChange, required }) => (
   <div>
-    <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>{label}</label>
+    <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
+      {label}{required && <span style={{ color: '#e53e3e' }}> *</span>}
+    </label>
     <div style={{ position: 'relative' }}>
       <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: 13 }}>₹</span>
       <input
         type="number" min="0" value={value}
         onChange={e => onChange(e.target.value)}
+        placeholder={required ? '' : '0 (optional)'}
         style={{ width: '100%', padding: '8px 10px 8px 24px', border: '1.5px solid var(--border-strong)', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
       />
     </div>
@@ -63,6 +66,7 @@ export default function Fees() {
   const [feeModalClass, setFeeModalClass]   = useState(null); // ClassFeeStructure or null
   const [feeModalClassName, setFeeModalClassName] = useState('');
   const [feeForm, setFeeForm]               = useState({ tuitionFee: '', transportFee: '', labFee: '', examFee: '', sportsFee: '', otherFee: '' });
+  const [termFees, setTermFees]             = useState([]); // class-level term-wise split: [{termName, amount}]
 
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assignTarget, setAssignTarget]       = useState(null); // existing assignment or null
@@ -84,6 +88,14 @@ export default function Fees() {
     setInstallments(prev => prev.filter((_, i) => i !== idx));
   const updateInstallment = (idx, field, value) =>
     setInstallments(prev => prev.map((item, i) => i === idx ? { ...item, [field]: value } : item));
+
+  // Class-level term-wise fee split (Set Fee Structure modal)
+  const addTermFee = () =>
+    setTermFees(prev => [...prev, { termName: `Term ${prev.length + 1}`, amount: '' }]);
+  const removeTermFee = (idx) =>
+    setTermFees(prev => prev.filter((_, i) => i !== idx));
+  const updateTermFee = (idx, field, value) =>
+    setTermFees(prev => prev.map((item, i) => i === idx ? { ...item, [field]: value } : item));
 
   const [saving, setSaving]   = useState(false);
   const debounceRef           = useRef(null);
@@ -169,20 +181,65 @@ export default function Fees() {
       sportsFee:    existing?.sportsFee    ?? '',
       otherFee:     existing?.otherFee     ?? '',
     });
+    setTermFees(
+      existing?.termFees?.length
+        ? existing.termFees.map(t => ({ termName: t.termName, amount: String(t.amount) }))
+        : []
+    );
     setShowFeeModal(true);
   };
 
+  /* ── totals for the Set Fee Structure modal ── */
+  const feeFormTotal = useMemo(() =>
+    ['tuitionFee','transportFee','labFee','examFee','sportsFee','otherFee']
+      .reduce((sum, k) => sum + Number(feeForm[k] || 0), 0),
+  [feeForm]);
+
+  const termFeesTotal = useMemo(() =>
+    termFees.reduce((sum, t) => sum + Number(t.amount || 0), 0),
+  [termFees]);
+
   const saveFeeStructure = async () => {
+    if (!feeForm.tuitionFee || Number(feeForm.tuitionFee) <= 0) {
+      showToast('Tuition Fee is required and must be greater than 0', 'error');
+      return;
+    }
+
+    // Term-wise split is optional; validate amounts and total if provided.
+    const filledTermFees = termFees.filter(t => t.termName?.trim() && t.amount !== '');
+    for (const t of filledTermFees) {
+      if (isNaN(Number(t.amount)) || Number(t.amount) < 0) {
+        showToast(`Invalid amount for "${t.termName}". Term fee must be a non-negative number.`, 'error');
+        return;
+      }
+    }
+    if (filledTermFees.length > 0) {
+      const termTotal = filledTermFees.reduce((s, t) => s + Number(t.amount || 0), 0);
+      if (Math.round(termTotal * 100) > Math.round(feeFormTotal * 100)) {
+        showToast(`Term-wise total ₹${fmt(termTotal)} cannot exceed the Total Annual Fee ₹${fmt(feeFormTotal)}.`, 'error');
+        return;
+      }
+    }
+
     setSaving(true);
     try {
-      const res = await adminAPI.saveClassFeeStructure({ className: feeModalClassName, academicYear: CURRENT_YEAR, ...feeForm });
+      const res = await adminAPI.saveClassFeeStructure({
+        className: feeModalClassName,
+        academicYear: CURRENT_YEAR,
+        ...feeForm,
+        termFees: filledTermFees.map(t => ({ termName: t.termName.trim(), amount: Number(t.amount) })),
+      });
       showToast(res.data?.message || 'Fee structure saved');
       setShowFeeModal(false);
       setFeeModalClassName('');
       setFeeForm({ tuitionFee: '', transportFee: '', labFee: '', examFee: '', sportsFee: '', otherFee: '' });
+      setTermFees([]);
       loadStructures();
       loadAssignments();
-    } catch { showToast('Failed to save fee structure', 'error'); } finally { setSaving(false); }
+    } catch (err) {
+      const msg = err?.response?.data?.message || 'Failed to save fee structure';
+      showToast(msg, 'error');
+    } finally { setSaving(false); }
   };
 
   /* ── assign fee modal ── */
@@ -277,6 +334,13 @@ export default function Fees() {
           sportsFee:    cfs.sportsFee    ?? '',
           otherFee:     cfs.otherFee     ?? '',
         }));
+
+        // Prefill the installment schedule from the class's term-wise split,
+        // but only if the admin hasn't already entered any installment amounts.
+        const hasInstallmentAmounts = installments.some(i => i.amount && Number(i.amount) > 0);
+        if (!hasInstallmentAmounts && cfs.termFees?.length > 0) {
+          setInstallments(cfs.termFees.map(t => ({ termName: t.termName, amount: String(t.amount), dueDate: '' })));
+        }
       }
     }
   };
@@ -614,16 +678,69 @@ export default function Fees() {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 20 }}>
               {[['tuitionFee','Tuition Fee'],['transportFee','Transport Fee'],['labFee','Lab Fee'],['examFee','Exam Fee'],['sportsFee','Sports Fee'],['otherFee','Other Fee']].map(([k, label]) => (
-                <FeeInput key={k} label={label} value={feeForm[k]} onChange={v => setFeeForm(f => ({ ...f, [k]: v }))} />
+                <FeeInput key={k} label={label} required={k === 'tuitionFee'} value={feeForm[k]} onChange={v => setFeeForm(f => ({ ...f, [k]: v }))} />
               ))}
             </div>
             {/* Total preview */}
             <div style={{ background: '#f0fff4', border: '1.5px solid #0de1e840', borderRadius: 8, padding: '10px 14px', marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontWeight: 700, color: '#276749', fontSize: 14 }}>Total Annual Fee</span>
               <span style={{ fontWeight: 800, color: '#276749', fontSize: 18 }}>
-                ₹{fmt(Object.values(feeForm).reduce((sum, v) => sum + Number(v || 0), 0))}
+                ₹{fmt(feeFormTotal)}
               </span>
             </div>
+
+            {/* Term-wise fee split (optional) */}
+            <div style={{ borderTop: '1px dashed var(--border-strong)', paddingTop: 14, marginBottom: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Term-wise Fee
+                  <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-muted)', textTransform: 'none', letterSpacing: 0, marginLeft: 6 }}>(optional)</span>
+                </div>
+                <button type="button" onClick={addTermFee}
+                  style={{ fontSize: 12, color: '#0de1e8', background: 'none', border: '1px solid #0de1e8', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontWeight: 600 }}>
+                  + Add Term
+                </button>
+              </div>
+
+              {termFees.map((t, idx) => (
+                <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 130px 30px', gap: 6, alignItems: 'end', marginBottom: 8 }}>
+                  <div>
+                    {idx === 0 && <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 3 }}>Term Name</label>}
+                    <input
+                      value={t.termName}
+                      onChange={e => updateTermFee(idx, 'termName', e.target.value)}
+                      placeholder="e.g. Term 1"
+                      style={{ width: '100%', padding: '7px 10px', border: '1.5px solid var(--border-strong)', borderRadius: 7, fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                  <div>
+                    {idx === 0 && <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 3 }}>Amount (₹)</label>}
+                    <input
+                      type="number" min="0"
+                      value={t.amount}
+                      onChange={e => updateTermFee(idx, 'amount', e.target.value)}
+                      placeholder="0"
+                      style={{ width: '100%', padding: '7px 10px', border: '1.5px solid var(--border-strong)', borderRadius: 7, fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                  <div>
+                    {idx === 0 && <div style={{ height: 20 }} />}
+                    <button type="button" onClick={() => removeTermFee(idx)}
+                      style={{ width: 30, height: 32, border: 'none', background: '#fff5f5', borderRadius: 6, color: '#e53e3e', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+                  </div>
+                </div>
+              ))}
+
+              {termFees.some(t => t.amount !== '') && (
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 6, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                  <span>Term total: ₹{fmt(termFeesTotal)}</span>
+                  {termFeesTotal > feeFormTotal && (
+                    <span style={{ color: '#e53e3e' }}>⚠ Exceeds Total Annual Fee (₹{fmt(feeFormTotal)})</span>
+                  )}
+                </div>
+              )}
+            </div>
+
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
               <button onClick={() => setShowFeeModal(false)} style={{ padding: '9px 20px', border: '1px solid var(--border-strong)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>Cancel</button>
               <button onClick={saveFeeStructure} disabled={saving} style={{ padding: '9px 22px', background: '#0de1e8', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: saving ? 0.7 : 1 }}>

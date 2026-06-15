@@ -1708,16 +1708,57 @@ public class AdminService {
                     .orElse(ClassFeeStructure.builder().className(className).academicYear(academicYear).build());
         }
 
+        // Tuition fee is the only mandatory component, and must be greater than zero.
+        Object tuitionVal = body.get("tuitionFee");
+        if (tuitionVal == null || tuitionVal.toString().isBlank())
+            return ApiResponse.error("Tuition fee is required");
         try {
-            if (body.containsKey("tuitionFee"))   cfs.setTuitionFee(new BigDecimal(body.get("tuitionFee").toString()));
-            if (body.containsKey("transportFee"))  cfs.setTransportFee(new BigDecimal(body.get("transportFee").toString()));
-            if (body.containsKey("labFee"))        cfs.setLabFee(new BigDecimal(body.get("labFee").toString()));
-            if (body.containsKey("examFee"))       cfs.setExamFee(new BigDecimal(body.get("examFee").toString()));
-            if (body.containsKey("sportsFee"))     cfs.setSportsFee(new BigDecimal(body.get("sportsFee").toString()));
-            if (body.containsKey("otherFee"))      cfs.setOtherFee(new BigDecimal(body.get("otherFee").toString()));
+            BigDecimal tuition = new BigDecimal(tuitionVal.toString());
+            if (tuition.compareTo(BigDecimal.ZERO) <= 0) return ApiResponse.error("Tuition fee must be greater than 0");
+            cfs.setTuitionFee(tuition);
+        } catch (Exception e) {
+            return ApiResponse.error("Invalid tuition fee amount");
+        }
+
+        // All other fee components are optional — blank values are treated as 0.
+        try {
+            cfs.setTransportFee(parseOptionalFee(body.get("transportFee")));
+            cfs.setLabFee(parseOptionalFee(body.get("labFee")));
+            cfs.setExamFee(parseOptionalFee(body.get("examFee")));
+            cfs.setSportsFee(parseOptionalFee(body.get("sportsFee")));
+            cfs.setOtherFee(parseOptionalFee(body.get("otherFee")));
         } catch (Exception e) {
             return ApiResponse.error("Invalid fee amount");
         }
+
+        BigDecimal annualTotal = cfs.getTotalFee();
+
+        // Optional class-level term-wise split: [{termName, amount}, ...].
+        // Each amount must be numeric and >= 0, and the sum must not exceed the annual total.
+        List<Map<String, Object>> termFees = new ArrayList<>();
+        Object termFeesObj = body.get("termFees");
+        if (termFeesObj instanceof List<?> rawTerms) {
+            BigDecimal termTotal = BigDecimal.ZERO;
+            for (Object raw : rawTerms) {
+                if (!(raw instanceof Map<?, ?> termMap)) continue;
+                String termName = termMap.get("termName") != null ? termMap.get("termName").toString().trim() : "";
+                if (termName.isEmpty()) continue;
+                if (termMap.get("amount") == null || termMap.get("amount").toString().isBlank()) continue;
+                BigDecimal amount;
+                try { amount = new BigDecimal(termMap.get("amount").toString()); }
+                catch (Exception e) { return ApiResponse.error("Invalid amount for term '" + termName + "'"); }
+                if (amount.compareTo(BigDecimal.ZERO) < 0) return ApiResponse.error("Term fee amount cannot be negative");
+                termTotal = termTotal.add(amount);
+                Map<String, Object> entry = new LinkedHashMap<>();
+                entry.put("termName", termName);
+                entry.put("amount", amount);
+                termFees.add(entry);
+            }
+            if (!termFees.isEmpty() && termTotal.compareTo(annualTotal) > 0) {
+                return ApiResponse.error("Term-wise fee total (₹" + termTotal + ") cannot exceed the Total Annual Fee (₹" + annualTotal + ")");
+            }
+        }
+        cfs.setTermFees(termFees);
 
         ClassFeeStructure saved = classFeeStructureRepository.save(cfs);
         BigDecimal totalFee = saved.getTotalFee();
@@ -1757,8 +1798,14 @@ public class AdminService {
 
                 toSave.add(assignment);
             }
-            studentFeeAssignmentRepository.saveAll(toSave);
-            updatedCount = toSave.size();
+            List<StudentFeeAssignment> savedAssignments = studentFeeAssignmentRepository.saveAll(toSave);
+            List<Map<String, Object>> termFeeBreakup = saved.getTermFees();
+            if (!termFeeBreakup.isEmpty()) {
+                for (StudentFeeAssignment a : savedAssignments) {
+                    applyTermInstallments(a, termFeeBreakup);
+                }
+            }
+            updatedCount = savedAssignments.size();
         }
 
         String msg = updatedCount > 0
@@ -1822,19 +1869,22 @@ public class AdminService {
 
         return classFeeStructureRepository
                 .findBySchoolIdAndClassNameNormalizedAndAcademicYear(schoolId, className, academicYear)
-                .map(ClassFeeStructure::getTotalFee)
-                .filter(totalFee -> totalFee != null && totalFee.compareTo(BigDecimal.ZERO) > 0)
-                .map(totalFee -> studentFeeAssignmentRepository.save(StudentFeeAssignment.builder()
-                        .studentId(student.getId())
-                        .studentName(student.getName())
-                        .rollNumber(student.getRollNumber())
-                        .className(className)
-                        .academicYear(academicYear)
-                        .schoolId(schoolId)
-                        .totalFee(totalFee)
-                        .paidAmount(BigDecimal.ZERO)
-                        .status(StudentFeeAssignment.Status.PENDING)
-                        .build()));
+                .filter(cfs -> cfs.getTotalFee() != null && cfs.getTotalFee().compareTo(BigDecimal.ZERO) > 0)
+                .map(cfs -> {
+                    StudentFeeAssignment saved = studentFeeAssignmentRepository.save(StudentFeeAssignment.builder()
+                            .studentId(student.getId())
+                            .studentName(student.getName())
+                            .rollNumber(student.getRollNumber())
+                            .className(className)
+                            .academicYear(academicYear)
+                            .schoolId(schoolId)
+                            .totalFee(cfs.getTotalFee())
+                            .paidAmount(BigDecimal.ZERO)
+                            .status(StudentFeeAssignment.Status.PENDING)
+                            .build());
+                    applyTermInstallments(saved, cfs.getTermFees());
+                    return saved;
+                });
     }
 
     public ApiResponse<List<FeePayment>> getAssignmentPayments(Long assignmentId, Long schoolId) {
@@ -2546,6 +2596,40 @@ public class AdminService {
     private String str(Map<String, Object> map, String key, String fallback) {
         Object v = map.get(key);
         return v instanceof String ? (String) v : fallback;
+    }
+
+    /** Parses an optional fee field: blank/missing values default to zero. */
+    private BigDecimal parseOptionalFee(Object val) {
+        if (val == null || val.toString().isBlank()) return BigDecimal.ZERO;
+        return new BigDecimal(val.toString());
+    }
+
+    /**
+     * Creates FeeInstallment rows for a freshly-synced assignment from a class-level
+     * term-wise breakup ([{termName, amount}, ...]). No-ops if the breakup is empty
+     * or the assignment already has installments, so existing payment history (and
+     * any admin-customized installments) is never touched.
+     */
+    private void applyTermInstallments(StudentFeeAssignment assignment, List<Map<String, Object>> termFees) {
+        if (termFees == null || termFees.isEmpty()) return;
+        if (feeInstallmentRepository.countByAssignmentId(assignment.getId()) > 0) return;
+        for (Map<String, Object> term : termFees) {
+            Object nameObj = term.get("termName");
+            Object amtObj  = term.get("amount");
+            if (nameObj == null || amtObj == null) continue;
+            String termName = nameObj.toString().trim();
+            if (termName.isEmpty()) continue;
+            BigDecimal amount;
+            try { amount = new BigDecimal(amtObj.toString()); } catch (Exception e) { continue; }
+            if (amount.compareTo(BigDecimal.ZERO) <= 0) continue;
+            feeInstallmentRepository.save(FeeInstallment.builder()
+                    .assignmentId(assignment.getId())
+                    .termName(termName)
+                    .amount(amount)
+                    .status(FeeInstallment.Status.PENDING)
+                    .schoolId(assignment.getSchoolId())
+                    .build());
+        }
     }
 
     // ── Attendance Summary ────────────────────────────────────────────────────
