@@ -87,13 +87,13 @@ export default function ScheduleModal({
 
           {/* ── Section 2: Subject Rows ── */}
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, fontWeight: 700, color: '#276749' }}>
                 <span className="material-icons" style={{ fontSize: 17 }}>menu_book</span>
                 {editSched ? 'Subject Details' : `Subject Schedule (${subjectRows.length} subject${subjectRows.length !== 1 ? 's' : ''})`}
               </div>
               {!editSched && (
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                   <label style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600 }}>Apply date to all:</label>
                   <input type="date" defaultValue={today()}
                     onChange={e => setSubjectRows(rows => rows.map(r => ({ ...r, examDate: e.target.value })))}
@@ -108,13 +108,15 @@ export default function ScheduleModal({
               )}
             </div>
 
+            {/* Table — wrapped in a horizontal scroll container so it never overflows the modal on mobile */}
+            <div className="exam-subject-table-scroll">
             {/* Table header */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1.3fr 90px 90px 1.1fr 74px 32px', gap: 0, background: 'var(--border)', borderRadius: '8px 8px 0 0', border: '1px solid var(--border-strong)', borderBottom: 'none', padding: '8px 10px', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1.3fr 90px 90px 1.1fr 74px 32px', gap: 0, minWidth: 560, background: 'var(--border)', borderRadius: '8px 8px 0 0', border: '1px solid var(--border-strong)', borderBottom: 'none', padding: '8px 10px', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               <div>Subject *</div><div>Exam Date *</div><div>Start</div><div>End</div><div>Hall / Room *</div><div style={{ textAlign: 'center' }}>Marks</div><div></div>
             </div>
 
             {/* Rows */}
-            <div style={{ border: '1px solid var(--border-strong)', borderRadius: '0 0 8px 8px', overflow: 'hidden' }}>
+            <div style={{ border: '1px solid var(--border-strong)', borderRadius: '0 0 8px 8px', overflow: 'hidden', minWidth: 560 }}>
               {subjectRows.map((row, idx) => {
                 const re = rowErrors[row._id] || {};
                 const cs = (err) => ({ width: '100%', padding: '7px 9px', borderRadius: 6, border: `1px solid ${err ? '#fc8181' : 'var(--border-strong)'}`, fontSize: 12, outline: 'none', background: 'var(--surface)', boxSizing: 'border-box' });
@@ -167,6 +169,8 @@ export default function ScheduleModal({
                 );
               })}
             </div>
+
+            </div>{/* end .exam-subject-table-scroll */}
 
             {/* Add more — bottom dashed button */}
             {!editSched && (

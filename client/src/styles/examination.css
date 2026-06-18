@@ -342,7 +342,9 @@
   width: 100%;
   max-width: 680px;
   max-height: 90vh;
-  overflow-y: auto;
+  overflow: hidden;           /* clip children; body scrolls internally */
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 20px 60px rgba(0,0,0,0.2);
   animation: examModalIn 0.2s ease;
 }
@@ -396,6 +398,9 @@
 
 .exam-modal-body {
   padding: 20px 24px;
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;              /* allow flex child to shrink and scroll */
 }
 
 .exam-modal-footer {
@@ -432,9 +437,54 @@
     grid-column: 1;
   }
 
-  /* Exam modal full-width on phone */
+  /* Exam modal full-width on phone, reduced padding */
   .exam-modal-overlay {
-    padding: 10px;
+    padding: 8px;
+    align-items: flex-start;   /* prevent tall modals from being cut at top */
+    padding-top: env(safe-area-inset-top, 8px);
+  }
+
+  .exam-modal {
+    border-radius: 12px;
+    max-height: calc(100vh - 16px);
+    max-height: calc(100svh - 16px);
+  }
+
+  .exam-modal-header {
+    padding: 14px 14px 12px;
+    flex-shrink: 0;
+  }
+
+  .exam-modal-header h2 {
+    font-size: 15px;
+  }
+
+  .exam-modal-body {
+    padding: 14px;
+  }
+
+  /* Footer: stack info text + buttons vertically on phone */
+  .exam-modal-footer {
+    padding: 12px 14px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .exam-modal-footer > span {
+    text-align: center;
+    font-size: 11px !important;
+  }
+
+  .exam-modal-footer > div {
+    display: flex;
+    gap: 8px;
+  }
+
+  .exam-modal-footer > div > * {
+    flex: 1;
+    justify-content: center;
   }
 
   /* Exam tabs scroll on mobile */
@@ -834,6 +884,13 @@
   color: #0de1e8;
   font-weight: 600;
   margin-bottom: 16px;
+}
+
+/* Subject table horizontal scroll wrapper — prevents table overflowing modal on mobile */
+.exam-subject-table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 8px;
 }
 
 /* Responsive */

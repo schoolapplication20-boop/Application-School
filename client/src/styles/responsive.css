@@ -482,3 +482,97 @@
     padding-right: 14px !important;
   }
 }
+
+/* ── 37. Global modal overlay — mobile safety ────────────────────────────────
+   Any overlay using position:fixed with inset:0 should use flex-start
+   alignment on very small/short screens so the modal top is always visible
+   and the user can scroll to see the full content.                          */
+@media (max-width: 480px) {
+  .modal-overlay,
+  .exam-modal-overlay {
+    align-items: flex-start !important;
+    padding: 8px !important;
+    padding-top: max(8px, env(safe-area-inset-top)) !important;
+    overflow-y: auto;
+  }
+
+  /* modal-container is already max-height: 90vh and overflow-y: auto;
+     on phones just make sure it fills the available width. */
+  .modal-container {
+    max-height: calc(100vh - 16px) !important;
+    max-height: calc(100svh - 16px) !important;
+  }
+}
+
+/* ── 38. Global form-inside-modal improvements ───────────────────────────────
+   Forms inside modals should stack vertically and inputs should be full-
+   width so they don't overflow the card.                                    */
+@media (max-width: 540px) {
+  /* Ensure the common 2-col modal form grids collapse to 1 col */
+  .modal-container [style*="display: grid"],
+  .modal-card [style*="display: grid"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Reduce padding on modal cards that use 28px */
+  .modal-card {
+    padding: 18px !important;
+  }
+
+  /* Modal footer buttons — stretch full width on very small phones */
+  .modal-footer {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .modal-footer > * {
+    flex: 1;
+    min-width: 120px;
+    justify-content: center;
+  }
+}
+
+/* ── 39. Tables inside modals — horizontal scroll ────────────────────────────
+   Any table inside a modal container should scroll horizontally, not
+   push the modal wider.                                                     */
+@media (max-width: 768px) {
+  .modal-container table,
+  .modal-card table,
+  .exam-modal table {
+    min-width: 400px;
+  }
+
+  .modal-container > .data-table-wrapper,
+  .modal-card > .data-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* ── 40. Inline-style overlays (position:fixed, inset:0) on mobile ───────────
+   Many pages build modals with inline style={{ position:'fixed', inset:0 }}.
+   Ensure the overlay is a proper scroll container.                          */
+@media (max-width: 540px) {
+  [style*="position: fixed"][style*="inset: 0"] {
+    padding: 8px !important;
+    align-items: flex-start !important;
+    overflow-y: auto;
+  }
+
+  /* The inner card within an inset:0 overlay */
+  [style*="position: fixed"][style*="inset: 0"] > .modal-card,
+  [style*="position: fixed"][style*="inset: 0"] > [class*="modal"] {
+    max-height: calc(100vh - 16px);
+    overflow-y: auto;
+  }
+}
+
+/* ── 41. Inline-style modals with large fixed widths ─────────────────────────
+   Some modals use maxWidth: 700-900px inline — ensure they fit phones.     */
+@media (max-width: 640px) {
+  [style*="maxWidth: 7"],
+  [style*="maxWidth: 8"],
+  [style*="maxWidth: 9"] {
+    max-width: calc(100vw - 16px) !important;
+  }
+}
