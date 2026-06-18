@@ -371,3 +371,114 @@
     border-radius: 12px !important;
   }
 }
+
+/* ── 30. CSS Grid min-content floor fix ─────────────────────────────────────
+   In CSS Grid, 1fr tracks have an implicit min-content minimum by default.
+   When card content (e.g. ₹1,47,006 at 24px bold) is wider than the track's
+   fair share of available space, the track expands — causing the grid to
+   overflow its container and the page to overflow the viewport.
+   Setting min-width: 0 on grid items removes that floor so tracks can
+   allocate space freely without content forcing them wider.                 */
+@media (max-width: 900px) {
+  [style*="repeat(3,1fr)"] > *,
+  [style*="repeat(3, 1fr)"] > *,
+  [style*="repeat(4,1fr)"] > *,
+  [style*="repeat(4, 1fr)"] > *,
+  [style*="repeat(5,1fr)"] > *,
+  [style*="repeat(5, 1fr)"] > *,
+  [style*="repeat(6,1fr)"] > *,
+  [style*="repeat(6, 1fr)"] > *,
+  [style*="1fr 1fr 1fr"] > *,
+  [style*="2fr 1fr 1fr"] > *,
+  [style*="1fr 1fr"] > *,
+  [style*="2fr 1fr"] > *,
+  [style*="3fr 2fr"] > * {
+    min-width: 0;
+  }
+}
+
+/* ── 31. repeat(5,1fr) responsive breakpoints ───────────────────────────────
+   App.css handles repeat(3,4,6) but has no rules for 5-column grids.
+   The Student Overview card uses repeat(5,1fr) and stays 5 columns on all
+   screen sizes — at 393px this needs ~458px, causing 93px page overflow.  */
+@media (max-width: 768px) {
+  [style*="repeat(5,1fr)"],
+  [style*="repeat(5, 1fr)"] {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+@media (max-width: 640px) {
+  [style*="repeat(5,1fr)"],
+  [style*="repeat(5, 1fr)"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+@media (max-width: 480px) {
+  [style*="repeat(5,1fr)"],
+  [style*="repeat(5, 1fr)"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ── 32. Earlier 3-col and 4-col collapse (400px → 480px) ───────────────────
+   App.css collapses repeat(3,1fr) and repeat(4,1fr) to a single column
+   only at ≤400px. Typical iPhones are 375–393px — barely below 400px and
+   at risk of triggering at sub-pixel boundaries or on devices at 401px+.
+   Moving the threshold to 480px makes all phones reliably single-column.
+   For repeat(4,1fr): 2 columns at 480px are still too narrow on small
+   phones when card content has large text, so collapse early here too.    */
+@media (max-width: 480px) {
+  [style*="repeat(3,1fr)"],
+  [style*="repeat(3, 1fr)"],
+  [style*="repeat(4,1fr)"],
+  [style*="repeat(4, 1fr)"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ── 33. .main-content overflow guard ──────────────────────────────────────
+   Without an overflow constraint on the content wrapper, grid overflow
+   propagates all the way to <body> where it's only clipped — the layout
+   calculation still places items as if the page were wider than viewport.
+   Containing it here stops that propagation without clipping dropdowns
+   (which are position:fixed and escape the stacking context).             */
+@media (max-width: 768px) {
+  .main-content {
+    overflow-x: hidden;
+  }
+}
+
+/* ── 34. Prevent large inline-padded banners from squeezing content ────────
+   The Super Admin welcome banner uses padding: 28px 32px inline.
+   On very small screens 32px horizontal padding leaves <100px of content
+   space, making stat tiles and text illegible.                            */
+@media (max-width: 480px) {
+  [style*="padding: 28px 32px"],
+  [style*="padding: '28px 32px'"] {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+}
+
+/* ── 35. Owner Dashboard tab bar — horizontally scrollable on mobile ─────────
+   Platform Dashboard tabs use width: fit-content. With 4 tabs (Schools,
+   Issues, Bookings, System) the bar is ~396px, overflowing a 337px
+   content area on phones.                                                  */
+@media (max-width: 640px) {
+  [style*="width: fit-content"][style*="border-radius: 14px"] {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* ── 36. Owner layout main padding reduction on mobile ──────────────────────
+   OwnerLayout's <main> uses padding: 32px 28px which reduces the mobile
+   content area to only 337px. Match the sidebar-layout's 14px mobile
+   padding for consistency.                                                 */
+@media (max-width: 640px) {
+  [style*="max-width: 1400px"] {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+  }
+}
