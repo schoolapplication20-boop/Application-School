@@ -150,6 +150,9 @@ const AiChat = () => {
   const hasDragged      = useRef(false);
   const fabRef          = useRef(null);
 
+  /* keyboard offset — visualViewport shrinks when soft keyboard opens on mobile */
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
+
   const bottomRef  = useRef(null);
   const inputRef   = useRef(null);
   const sessTabRef = useRef(null);
@@ -203,6 +206,20 @@ const AiChat = () => {
 
   /* cleanup typing animation interval on unmount */
   useEffect(() => () => clearInterval(animIntervalRef.current), []);
+
+  /* track virtual keyboard height via visualViewport so the panel stays above it */
+  useEffect(() => {
+    if (!open) { setKeyboardOffset(0); return; }
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => {
+      const kbHeight = window.innerHeight - vv.offsetTop - vv.height;
+      setKeyboardOffset(Math.max(0, kbHeight));
+    };
+    vv.addEventListener('resize', update);
+    update();
+    return () => { vv.removeEventListener('resize', update); setKeyboardOffset(0); };
+  }, [open]);
 
   const loadSessions = async () => {
     try {
@@ -410,6 +427,8 @@ const AiChat = () => {
       const onEnd = () => {
         window.removeEventListener('touchmove', onMove);
         window.removeEventListener('touchend',  onEnd);
+        // preventDefault() on touchstart blocks synthetic click — manually toggle
+        if (!hasDragged.current) setOpen(o => !o);
       };
       window.addEventListener('touchmove', onMove, { passive: false });
       window.addEventListener('touchend',  onEnd);
@@ -434,7 +453,13 @@ const AiChat = () => {
       </button>
 
       {open && (
-        <div className="ai-panel" style={{ bottom: pos.bottom + 64, right: pos.right }}>
+        <div
+          className="ai-panel"
+          style={{
+            bottom: pos.bottom + 64 + keyboardOffset,
+            right: Math.min(pos.right, window.innerWidth - 30),
+          }}
+        >
 
           {/* Header */}
           <div className="ai-panel__header">
