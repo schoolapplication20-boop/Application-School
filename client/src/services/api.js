@@ -772,6 +772,9 @@ export const smsAPI = {
   // Notification preferences
   getPreferences:    ()                    => api.get('/api/sms/preferences'),
   updatePreference:  (category, smsEnabled) => api.put(`/api/sms/preferences/${category}`, { smsEnabled }),
+
+  getProviderSettings:    ()     => api.get('/api/sms/provider-settings'),
+  updateProviderSettings: (data) => api.put('/api/sms/provider-settings', data),
 };
 
 // ============================================

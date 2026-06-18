@@ -10,7 +10,6 @@ import com.schoolers.repository.sms.SmsCampaignRepository;
 import com.schoolers.repository.sms.SmsLogRepository;
 import com.schoolers.repository.sms.SmsQueueRepository;
 import com.schoolers.sms.PhoneUtil;
-import com.schoolers.sms.SmsProvider;
 import com.schoolers.sms.SmsSendResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,16 +32,16 @@ public class SmsQueueWorker {
     private final SmsQueueRepository queueRepository;
     private final SmsLogRepository logRepository;
     private final SmsCampaignRepository campaignRepository;
-    private final SmsProvider smsProvider;
+    private final SmsProviderSettingsService providerSettingsService;
 
     public SmsQueueWorker(SmsQueueRepository queueRepository,
                            SmsLogRepository logRepository,
                            SmsCampaignRepository campaignRepository,
-                           SmsProvider smsProvider) {
+                           SmsProviderSettingsService providerSettingsService) {
         this.queueRepository = queueRepository;
         this.logRepository = logRepository;
         this.campaignRepository = campaignRepository;
-        this.smsProvider = smsProvider;
+        this.providerSettingsService = providerSettingsService;
     }
 
     @Async
@@ -58,7 +57,7 @@ public class SmsQueueWorker {
             return;
         }
 
-        SmsSendResult result = smsProvider.send(item.getRecipientPhone(), item.getMessageContent());
+        SmsSendResult result = providerSettingsService.sendSms(item.getSchoolId(), item.getRecipientPhone(), item.getMessageContent());
 
         if (result.accepted()) {
             handleSuccess(item, result);
@@ -83,7 +82,7 @@ public class SmsQueueWorker {
                 .recipientPhone(item.getRecipientPhone())
                 .recipientName(item.getRecipientName())
                 .messageContent(item.getMessageContent())
-                .provider(smsProvider.getProviderName())
+                .provider(providerSettingsService.getProviderName(item.getSchoolId()))
                 .providerMessageId(result.providerMessageId())
                 .status(SmsLogStatus.SENT)
                 .segments(Math.max(1, result.segments()))
@@ -120,7 +119,7 @@ public class SmsQueueWorker {
                 .recipientPhone(item.getRecipientPhone())
                 .recipientName(item.getRecipientName())
                 .messageContent(item.getMessageContent())
-                .provider(smsProvider.getProviderName())
+                .provider(providerSettingsService.getProviderName(item.getSchoolId()))
                 .status(SmsLogStatus.FAILED)
                 .segments(1)
                 .errorCode(truncate(result.errorCode(), 30))

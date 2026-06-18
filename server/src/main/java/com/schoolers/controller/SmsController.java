@@ -1,10 +1,12 @@
 package com.schoolers.controller;
 
 import com.schoolers.dto.sms.SmsBulkSendRequest;
+import com.schoolers.dto.sms.SmsProviderSettingsRequest;
 import com.schoolers.dto.sms.SmsSendRequest;
 import com.schoolers.model.sms.TargetType;
 import com.schoolers.security.CurrentUserUtil;
 import com.schoolers.service.sms.NotificationPreferenceService;
+import com.schoolers.service.sms.SmsProviderSettingsService;
 import com.schoolers.service.sms.SmsService;
 import com.schoolers.service.sms.SmsTemplateService;
 import com.schoolers.service.sms.TargetSelection;
@@ -28,15 +30,18 @@ public class SmsController {
     private final SmsService smsService;
     private final SmsTemplateService templateService;
     private final NotificationPreferenceService preferenceService;
+    private final SmsProviderSettingsService providerSettingsService;
     private final CurrentUserUtil currentUserUtil;
 
     public SmsController(SmsService smsService,
                           SmsTemplateService templateService,
                           NotificationPreferenceService preferenceService,
+                          SmsProviderSettingsService providerSettingsService,
                           CurrentUserUtil currentUserUtil) {
         this.smsService = smsService;
         this.templateService = templateService;
         this.preferenceService = preferenceService;
+        this.providerSettingsService = providerSettingsService;
         this.currentUserUtil = currentUserUtil;
     }
 
@@ -145,6 +150,19 @@ public class SmsController {
     public ResponseEntity<?> deleteTemplate(@PathVariable Long id, Authentication auth) {
         var response = templateService.delete(currentUserUtil.getCurrentSchoolId(auth), id);
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.status(404).body(response);
+    }
+
+    // ── Provider settings ─────────────────────────────────────────────────
+
+    @GetMapping("/provider-settings")
+    public ResponseEntity<?> getProviderSettings(Authentication auth) {
+        return ResponseEntity.ok(providerSettingsService.getSettings(currentUserUtil.getCurrentSchoolId(auth)));
+    }
+
+    @PutMapping("/provider-settings")
+    public ResponseEntity<?> saveProviderSettings(@RequestBody SmsProviderSettingsRequest request, Authentication auth) {
+        var response = providerSettingsService.saveSettings(currentUserUtil.getCurrentSchoolId(auth), request);
+        return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
     // ── Notification preferences ──────────────────────────────────────────

@@ -22,7 +22,7 @@ import com.schoolers.repository.sms.SmsLogRepository;
 import com.schoolers.repository.sms.SmsQueueRepository;
 import com.schoolers.repository.sms.SmsTemplateRepository;
 import com.schoolers.sms.PhoneUtil;
-import com.schoolers.sms.SmsProvider;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -60,7 +60,7 @@ public class SmsService {
     private final SmsRecipientResolver recipientResolver;
     private final StudentRepository studentRepository;
     private final SchoolRepository schoolRepository;
-    private final SmsProvider smsProvider;
+    private final SmsProviderSettingsService providerSettingsService;
     private final SmsQueueProcessor queueProcessor;
 
     @Value("${sms.default.country.code:+91}")
@@ -77,7 +77,7 @@ public class SmsService {
                        SmsRecipientResolver recipientResolver,
                        StudentRepository studentRepository,
                        SchoolRepository schoolRepository,
-                       SmsProvider smsProvider,
+                       SmsProviderSettingsService providerSettingsService,
                        SmsQueueProcessor queueProcessor) {
         this.campaignRepository = campaignRepository;
         this.queueRepository = queueRepository;
@@ -87,7 +87,7 @@ public class SmsService {
         this.recipientResolver = recipientResolver;
         this.studentRepository = studentRepository;
         this.schoolRepository = schoolRepository;
-        this.smsProvider = smsProvider;
+        this.providerSettingsService = providerSettingsService;
         this.queueProcessor = queueProcessor;
     }
 
@@ -99,6 +99,9 @@ public class SmsService {
     /** Queues a single SMS to a student's parent (resolved by {@code studentId}) or a raw phone number. */
     @Transactional
     public ApiResponse<SmsCampaignResponse> sendSingle(Long schoolId, Long createdBy, SmsSendRequest request) {
+        if (!providerSettingsService.isConfigured(schoolId)) {
+            return ApiResponse.error("SMS provider not configured — go to SMS → Settings to add your MSG91 credentials");
+        }
         String recipientPhone;
         String recipientName = null;
         Long studentId = null;
@@ -181,6 +184,9 @@ public class SmsService {
     /** Resolves recipients for {@code request.targetType} and queues a campaign, deduping repeat submissions via {@code idempotencyKey}. */
     @Transactional
     public ApiResponse<SmsCampaignResponse> sendBulk(Long schoolId, Long createdBy, SmsBulkSendRequest request) {
+        if (!providerSettingsService.isConfigured(schoolId)) {
+            return ApiResponse.error("SMS provider not configured — go to SMS → Settings to add your MSG91 credentials");
+        }
         if (request.getIdempotencyKey() != null && !request.getIdempotencyKey().isBlank()) {
             var existing = campaignRepository.findBySchoolIdAndIdempotencyKey(schoolId, request.getIdempotencyKey().trim());
             if (existing.isPresent()) {
@@ -342,8 +348,8 @@ public class SmsService {
                 .pendingInQueue(pendingInQueue)
                 .statusBreakdown(statusBreakdown)
                 .recentCampaigns(recentCampaigns)
-                .providerConfigured(smsProvider.isConfigured())
-                .providerName(smsProvider.getProviderName())
+                .providerConfigured(providerSettingsService.isConfigured(schoolId))
+                .providerName(providerSettingsService.getProviderName(schoolId))
                 .build());
     }
 
