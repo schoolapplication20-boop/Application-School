@@ -582,3 +582,60 @@ body.printing-report-card #report-card {
     grid-template-columns: 1fr !important;
   }
 }
+
+/* ── Override inline repeat(N,1fr) grids on mobile ────────────────────────────
+   Many pages use inline style gridTemplateColumns: 'repeat(4,1fr)' which CSS
+   media queries cannot normally override. These attribute selectors + !important
+   make them responsive without touching every JSX file. */
+
+@media (max-width: 768px) {
+  /* 6-col grids (Transport, etc.) → 3 columns on tablet */
+  [style*="repeat(6,1fr)"],
+  [style*="repeat(6, 1fr)"] {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+
+@media (max-width: 640px) {
+  /* 4-col stat/filter grids → 2 columns */
+  [style*="repeat(4,1fr)"],
+  [style*="repeat(4, 1fr)"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  /* 6-col → 2 columns on phones */
+  [style*="repeat(6,1fr)"],
+  [style*="repeat(6, 1fr)"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  /* 3-col grids → 2 columns */
+  [style*="repeat(3,1fr)"],
+  [style*="repeat(3, 1fr)"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  /* Bootstrap col-4 without responsive modifiers → half width on mobile */
+  .row > .col-4 {
+    flex: 0 0 50%;
+    max-width: 50%;
+  }
+  /* Prevent filter inputs from forcing container wider than viewport */
+  input[style*="minWidth"],
+  select[style*="minWidth"] {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 400px) {
+  /* Very small phones: single column for all multi-col grids */
+  [style*="repeat(4,1fr)"],
+  [style*="repeat(4, 1fr)"],
+  [style*="repeat(3,1fr)"],
+  [style*="repeat(3, 1fr)"] {
+    grid-template-columns: 1fr !important;
+  }
+  /* 6-col → 2 on very small */
+  [style*="repeat(6,1fr)"],
+  [style*="repeat(6, 1fr)"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
