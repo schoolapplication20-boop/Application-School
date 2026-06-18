@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.schoolers.dto.sms.SmsProviderSettingsRequest;
 import com.schoolers.dto.sms.SmsProviderSettingsResponse;
-import com.schoolers.model.ApiResponse;
+import com.schoolers.dto.ApiResponse;
 import com.schoolers.model.sms.SmsProviderSettings;
 import com.schoolers.repository.sms.SmsProviderSettingsRepository;
 import com.schoolers.sms.PhoneUtil;
