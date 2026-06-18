@@ -1,5 +1,7 @@
 package com.schoolers.model;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -10,6 +12,9 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 @Entity
 @Table(name = "class_fee_structure",
@@ -57,6 +62,14 @@ public class ClassFeeStructure {
     @Builder.Default
     private BigDecimal otherFee = BigDecimal.ZERO;
 
+    /**
+     * Optional class-level term-wise split, stored as a JSON array of
+     * {"termName": ..., "amount": ...} objects. Use getTermFees()/setTermFees()
+     * for the parsed form; this raw column is only used for persistence.
+     */
+    @Column(name = "term_fees", columnDefinition = "TEXT")
+    private String termFeesJson;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -64,6 +77,29 @@ public class ClassFeeStructure {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    private static final ObjectMapper TERM_FEES_MAPPER = new ObjectMapper();
+
+    /** Parses the stored term-fee JSON into a list of {termName, amount} maps. Empty if unset/invalid. */
+    @Transient
+    public List<Map<String, Object>> getTermFees() {
+        if (termFeesJson == null || termFeesJson.isBlank()) return Collections.emptyList();
+        try {
+            return TERM_FEES_MAPPER.readValue(termFeesJson, new TypeReference<List<Map<String, Object>>>() {});
+        } catch (Exception e) {
+            return Collections.emptyList();
+        }
+    }
+
+    /** Serializes a list of {termName, amount} maps into the stored JSON column. */
+    public void setTermFees(List<Map<String, Object>> breakup) {
+        if (breakup == null || breakup.isEmpty()) { this.termFeesJson = null; return; }
+        try {
+            this.termFeesJson = TERM_FEES_MAPPER.writeValueAsString(breakup);
+        } catch (Exception e) {
+            this.termFeesJson = null;
+        }
+    }
 
     public BigDecimal getTotalFee() {
         BigDecimal total = BigDecimal.ZERO;

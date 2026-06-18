@@ -73,6 +73,12 @@ public class FeeInstallment {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    /** Optimistic lock: prevents two concurrent payments from both applying to a stale read. */
+    @Version
+    @Column(nullable = false)
+    @Builder.Default
+    private Long version = 0L;
+
     /** Total amount actually due for this term (base + any rollover from previous term). */
     @Transient
     public BigDecimal getEffectiveDue() {

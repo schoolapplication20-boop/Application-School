@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -419,6 +420,10 @@ public class AdminService {
             // Step 1: Save the student record to obtain its generated ID
             Student saved = studentRepository.save(student);
             ensureClassExists(saved.getClassName(), saved.getSection(), schoolId);
+
+            // Step 2: If this class already has a fee structure, auto-assign it
+            // to the new student so their fee shows up immediately.
+            syncClassFeeAssignment(saved);
 
             // Step 3: Create user account only when an email was provided.
             // Without an email the student record is saved first; the student can
@@ -1607,21 +1612,39 @@ public class AdminService {
                     if (schoolMismatch(schoolId, fee.getSchoolId()))
                         return ApiResponse.<Fee>error("Fee not found");
                     if (body.containsKey("paidAmount") && body.get("paidAmount") != null) {
+                        BigDecimal paid;
                         try {
-                            BigDecimal paid = new BigDecimal(body.get("paidAmount").toString());
-                            if (paid.compareTo(BigDecimal.ZERO) >= 0) {
-                                fee.setPaidAmount(paid);
-                                if (paid.compareTo(fee.getAmount()) >= 0) {
-                                    fee.setStatus(Fee.Status.PAID);
-                                } else if (paid.compareTo(BigDecimal.ZERO) > 0) {
-                                    fee.setStatus(Fee.Status.PARTIAL);
-                                }
-                            }
-                        } catch (Exception ignored) {}
+                            paid = new BigDecimal(body.get("paidAmount").toString());
+                        } catch (Exception e) {
+                            return ApiResponse.<Fee>error("Invalid paid amount");
+                        }
+                        if (paid.compareTo(BigDecimal.ZERO) < 0) {
+                            return ApiResponse.<Fee>error("Paid amount cannot be negative");
+                        }
+                        if (paid.compareTo(fee.getAmount()) > 0) {
+                            return ApiResponse.<Fee>error("Paid amount cannot exceed total amount");
+                        }
+                        fee.setPaidAmount(paid);
+                        if (paid.compareTo(fee.getAmount()) >= 0) {
+                            fee.setStatus(Fee.Status.PAID);
+                        } else if (paid.compareTo(BigDecimal.ZERO) > 0) {
+                            fee.setStatus(Fee.Status.PARTIAL);
+                        }
                     }
                     if (body.containsKey("status")) {
-                        try { fee.setStatus(Fee.Status.valueOf(str(body, "status", "PENDING").toUpperCase())); }
-                        catch (IllegalArgumentException ignored) {}
+                        // PAID/PARTIAL must always be derived from paidAmount above, never set directly,
+                        // so they can't be decoupled from the actual amount paid. Only PENDING/OVERDUE
+                        // (which reflect due-date state rather than payment state) can be toggled manually,
+                        // and only while nothing has been paid yet.
+                        BigDecimal currentPaid = fee.getPaidAmount() != null ? fee.getPaidAmount() : BigDecimal.ZERO;
+                        if (currentPaid.compareTo(BigDecimal.ZERO) == 0) {
+                            try {
+                                Fee.Status requested = Fee.Status.valueOf(str(body, "status", "PENDING").toUpperCase());
+                                if (requested == Fee.Status.PENDING || requested == Fee.Status.OVERDUE) {
+                                    fee.setStatus(requested);
+                                }
+                            } catch (IllegalArgumentException ignored) {}
+                        }
                     }
                     if (body.containsKey("paidDate") && body.get("paidDate") != null) {
                         try { fee.setPaidDate(java.time.LocalDate.parse(str(body, "paidDate", null))); }
@@ -1685,16 +1708,57 @@ public class AdminService {
                     .orElse(ClassFeeStructure.builder().className(className).academicYear(academicYear).build());
         }
 
+        // Tuition fee is the only mandatory component, and must be greater than zero.
+        Object tuitionVal = body.get("tuitionFee");
+        if (tuitionVal == null || tuitionVal.toString().isBlank())
+            return ApiResponse.error("Tuition fee is required");
         try {
-            if (body.containsKey("tuitionFee"))   cfs.setTuitionFee(new BigDecimal(body.get("tuitionFee").toString()));
-            if (body.containsKey("transportFee"))  cfs.setTransportFee(new BigDecimal(body.get("transportFee").toString()));
-            if (body.containsKey("labFee"))        cfs.setLabFee(new BigDecimal(body.get("labFee").toString()));
-            if (body.containsKey("examFee"))       cfs.setExamFee(new BigDecimal(body.get("examFee").toString()));
-            if (body.containsKey("sportsFee"))     cfs.setSportsFee(new BigDecimal(body.get("sportsFee").toString()));
-            if (body.containsKey("otherFee"))      cfs.setOtherFee(new BigDecimal(body.get("otherFee").toString()));
+            BigDecimal tuition = new BigDecimal(tuitionVal.toString());
+            if (tuition.compareTo(BigDecimal.ZERO) <= 0) return ApiResponse.error("Tuition fee must be greater than 0");
+            cfs.setTuitionFee(tuition);
+        } catch (Exception e) {
+            return ApiResponse.error("Invalid tuition fee amount");
+        }
+
+        // All other fee components are optional — blank values are treated as 0.
+        try {
+            cfs.setTransportFee(parseOptionalFee(body.get("transportFee")));
+            cfs.setLabFee(parseOptionalFee(body.get("labFee")));
+            cfs.setExamFee(parseOptionalFee(body.get("examFee")));
+            cfs.setSportsFee(parseOptionalFee(body.get("sportsFee")));
+            cfs.setOtherFee(parseOptionalFee(body.get("otherFee")));
         } catch (Exception e) {
             return ApiResponse.error("Invalid fee amount");
         }
+
+        BigDecimal annualTotal = cfs.getTotalFee();
+
+        // Optional class-level term-wise split: [{termName, amount}, ...].
+        // Each amount must be numeric and >= 0, and the sum must not exceed the annual total.
+        List<Map<String, Object>> termFees = new ArrayList<>();
+        Object termFeesObj = body.get("termFees");
+        if (termFeesObj instanceof List<?> rawTerms) {
+            BigDecimal termTotal = BigDecimal.ZERO;
+            for (Object raw : rawTerms) {
+                if (!(raw instanceof Map<?, ?> termMap)) continue;
+                String termName = termMap.get("termName") != null ? termMap.get("termName").toString().trim() : "";
+                if (termName.isEmpty()) continue;
+                if (termMap.get("amount") == null || termMap.get("amount").toString().isBlank()) continue;
+                BigDecimal amount;
+                try { amount = new BigDecimal(termMap.get("amount").toString()); }
+                catch (Exception e) { return ApiResponse.error("Invalid amount for term '" + termName + "'"); }
+                if (amount.compareTo(BigDecimal.ZERO) < 0) return ApiResponse.error("Term fee amount cannot be negative");
+                termTotal = termTotal.add(amount);
+                Map<String, Object> entry = new LinkedHashMap<>();
+                entry.put("termName", termName);
+                entry.put("amount", amount);
+                termFees.add(entry);
+            }
+            if (!termFees.isEmpty() && termTotal.compareTo(annualTotal) > 0) {
+                return ApiResponse.error("Term-wise fee total (₹" + termTotal + ") cannot exceed the Total Annual Fee (₹" + annualTotal + ")");
+            }
+        }
+        cfs.setTermFees(termFees);
 
         ClassFeeStructure saved = classFeeStructureRepository.save(cfs);
         BigDecimal totalFee = saved.getTotalFee();
@@ -1702,7 +1766,9 @@ public class AdminService {
         // Auto-apply fee structure to all students in this class
         int updatedCount = 0;
         if (schoolId != null && totalFee.compareTo(BigDecimal.ZERO) > 0) {
-            List<Student> students = studentRepository.findBySchoolIdAndClassName(schoolId, className);
+            // Case/whitespace-tolerant match so students aren't skipped due to
+            // minor className differences (e.g. "Class 1" vs "class 1 ").
+            List<Student> students = studentRepository.findBySchoolIdAndClassNameNormalized(schoolId, className);
             List<Long> studentIds = students.stream().map(Student::getId).collect(Collectors.toList());
             Map<Long, StudentFeeAssignment> existingByStudentId = studentIds.isEmpty()
                     ? Map.of()
@@ -1732,8 +1798,14 @@ public class AdminService {
 
                 toSave.add(assignment);
             }
-            studentFeeAssignmentRepository.saveAll(toSave);
-            updatedCount = toSave.size();
+            List<StudentFeeAssignment> savedAssignments = studentFeeAssignmentRepository.saveAll(toSave);
+            List<Map<String, Object>> termFeeBreakup = saved.getTermFees();
+            if (!termFeeBreakup.isEmpty()) {
+                for (StudentFeeAssignment a : savedAssignments) {
+                    applyTermInstallments(a, termFeeBreakup);
+                }
+            }
+            updatedCount = savedAssignments.size();
         }
 
         String msg = updatedCount > 0
@@ -1760,15 +1832,59 @@ public class AdminService {
         return ApiResponse.success(studentFeeAssignmentRepository.findBySchoolIdOrderByCreatedAtDesc(schoolId));
     }
 
+    @Transactional
     public ApiResponse<StudentFeeAssignment> getStudentFeeAssignment(Long studentId, Long schoolId) {
-        if (schoolId != null) {
-            Student student = studentRepository.findById(studentId).orElse(null);
-            if (student == null || schoolMismatch(schoolId, student.getSchoolId()))
-                return ApiResponse.error("No fee assignment found for this student");
-        }
-        return studentFeeAssignmentRepository.findFirstByStudentIdOrderByCreatedAtDesc(studentId)
-                .map(a -> ApiResponse.success(a))
-                .orElse(ApiResponse.error("No fee assignment found for this student"));
+        Student student = studentRepository.findById(studentId).orElse(null);
+        if (student == null) return ApiResponse.error("No fee assignment found for this student");
+        if (schoolId != null && schoolMismatch(schoolId, student.getSchoolId()))
+            return ApiResponse.error("No fee assignment found for this student");
+
+        // Look up (or auto-create) the assignment for the CURRENT academic year only.
+        // A row from a prior academic year must never be returned here — otherwise a
+        // student whose class fee structure was just created/updated for this year
+        // would keep seeing last year's stale fee instead of the current one.
+        return syncClassFeeAssignment(student)
+                .map(ApiResponse::success)
+                .orElse(ApiResponse.error("Fee not assigned"));
+    }
+
+    /**
+     * Ensures a StudentFeeAssignment exists for the student's current class/academic year
+     * when a matching ClassFeeStructure is defined. Returns the existing assignment for the
+     * current academic year if present, otherwise creates one from the class fee structure.
+     * Returns empty if no fee structure is defined for the student's class (or the student
+     * has no school/class), without creating or modifying anything — never duplicates rows
+     * and never touches payment history.
+     */
+    private Optional<StudentFeeAssignment> syncClassFeeAssignment(Student student) {
+        Long schoolId = student.getSchoolId();
+        String className = student.getClassName();
+        if (schoolId == null || className == null || className.isBlank()) return Optional.empty();
+
+        String academicYear = currentAcademicYear();
+
+        Optional<StudentFeeAssignment> existing = studentFeeAssignmentRepository
+                .findByStudentIdAndAcademicYearAndSchoolId(student.getId(), academicYear, schoolId);
+        if (existing.isPresent()) return existing;
+
+        return classFeeStructureRepository
+                .findBySchoolIdAndClassNameNormalizedAndAcademicYear(schoolId, className, academicYear)
+                .filter(cfs -> cfs.getTotalFee() != null && cfs.getTotalFee().compareTo(BigDecimal.ZERO) > 0)
+                .map(cfs -> {
+                    StudentFeeAssignment saved = studentFeeAssignmentRepository.save(StudentFeeAssignment.builder()
+                            .studentId(student.getId())
+                            .studentName(student.getName())
+                            .rollNumber(student.getRollNumber())
+                            .className(className)
+                            .academicYear(academicYear)
+                            .schoolId(schoolId)
+                            .totalFee(cfs.getTotalFee())
+                            .paidAmount(BigDecimal.ZERO)
+                            .status(StudentFeeAssignment.Status.PENDING)
+                            .build());
+                    applyTermInstallments(saved, cfs.getTermFees());
+                    return saved;
+                });
     }
 
     public ApiResponse<List<FeePayment>> getAssignmentPayments(Long assignmentId, Long schoolId) {
@@ -2480,6 +2596,40 @@ public class AdminService {
     private String str(Map<String, Object> map, String key, String fallback) {
         Object v = map.get(key);
         return v instanceof String ? (String) v : fallback;
+    }
+
+    /** Parses an optional fee field: blank/missing values default to zero. */
+    private BigDecimal parseOptionalFee(Object val) {
+        if (val == null || val.toString().isBlank()) return BigDecimal.ZERO;
+        return new BigDecimal(val.toString());
+    }
+
+    /**
+     * Creates FeeInstallment rows for a freshly-synced assignment from a class-level
+     * term-wise breakup ([{termName, amount}, ...]). No-ops if the breakup is empty
+     * or the assignment already has installments, so existing payment history (and
+     * any admin-customized installments) is never touched.
+     */
+    private void applyTermInstallments(StudentFeeAssignment assignment, List<Map<String, Object>> termFees) {
+        if (termFees == null || termFees.isEmpty()) return;
+        if (feeInstallmentRepository.countByAssignmentId(assignment.getId()) > 0) return;
+        for (Map<String, Object> term : termFees) {
+            Object nameObj = term.get("termName");
+            Object amtObj  = term.get("amount");
+            if (nameObj == null || amtObj == null) continue;
+            String termName = nameObj.toString().trim();
+            if (termName.isEmpty()) continue;
+            BigDecimal amount;
+            try { amount = new BigDecimal(amtObj.toString()); } catch (Exception e) { continue; }
+            if (amount.compareTo(BigDecimal.ZERO) <= 0) continue;
+            feeInstallmentRepository.save(FeeInstallment.builder()
+                    .assignmentId(assignment.getId())
+                    .termName(termName)
+                    .amount(amount)
+                    .status(FeeInstallment.Status.PENDING)
+                    .schoolId(assignment.getSchoolId())
+                    .build());
+        }
     }
 
     // ── Attendance Summary ────────────────────────────────────────────────────

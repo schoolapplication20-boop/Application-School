@@ -47,6 +47,7 @@ export default function CollectFee() {
 
   /* assignment data */
   const [assignment, setAssignment]     = useState(null);
+  const [feeMessage, setFeeMessage]     = useState(''); // shown when no assignment exists
   const [installments, setInstallments] = useState([]);
   const [payments, setPayments]         = useState([]);
   const [loadingFee, setLoadingFee]     = useState(false);
@@ -154,6 +155,7 @@ export default function CollectFee() {
     setQuery(s.name);
     setShowDrop(false);
     setAssignment(null);
+    setFeeMessage('');
     setInstallments([]);
     setPayments([]);
     setSelectedInstallment(null);
@@ -167,7 +169,10 @@ export default function CollectFee() {
       const a = aRes.data?.data;
       setAssignment(a || null);
       if (a?.id) await reloadFeeData(a.id);
-    } catch { setAssignment(null); } finally { setLoadingFee(false); }
+    } catch (err) {
+      setAssignment(null);
+      setFeeMessage(err.response?.data?.message === 'Fee not assigned' ? 'Fee not assigned' : '');
+    } finally { setLoadingFee(false); }
   }, [reloadFeeData]);
 
   /* ── effective due for an installment (base + carry-over − already paid) ── */
@@ -419,13 +424,13 @@ export default function CollectFee() {
               onClick={() => {
                 if (student && filterClass) {
                   // Go back to class list, keep filter
-                  setStudent(null); setAssignment(null); setInstallments([]); setPayments([]);
+                  setStudent(null); setAssignment(null); setFeeMessage(''); setInstallments([]); setPayments([]);
                   setSelectedInstallment(null); setQuery('');
                 } else {
                   // Clear everything
                   setFilterClass(''); setFilterClassName(''); setFilterSection('');
                   setQuery(''); setStudent(null); setSuggestions([]);
-                  setClassStudents([]); setAssignment(null); setInstallments([]);
+                  setClassStudents([]); setAssignment(null); setFeeMessage(''); setInstallments([]);
                   setPayments([]); setSelectedInstallment(null);
                 }
               }}
@@ -547,7 +552,7 @@ export default function CollectFee() {
                 {!assignment ? (
                   <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text-muted)' }}>
                     <span className="material-icons" style={{ fontSize: 32, display: 'block', marginBottom: 6 }}>info</span>
-                    <p style={{ fontSize: 13 }}>No fee assigned to this student yet.</p>
+                    <p style={{ fontSize: 13 }}>{feeMessage === 'Fee not assigned' ? 'Fee not assigned' : 'No fee assigned to this student yet.'}</p>
                     <p style={{ fontSize: 12 }}>Go to <strong>Fees &amp; Payments</strong> → <strong>Student Fees</strong> → <strong>Assign Fee</strong>.</p>
                   </div>
                 ) : (

@@ -4,6 +4,7 @@ import com.schoolers.dto.ApiResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -40,6 +41,13 @@ public class GlobalExceptionHandler {
             }
         }
         return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(msg));
+    }
+
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ResponseEntity<ApiResponse<?>> handleOptimisticLock(OptimisticLockingFailureException ex) {
+        log.warn("[OptimisticLock] {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error("This record was just updated by another request. Please refresh and try again."));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

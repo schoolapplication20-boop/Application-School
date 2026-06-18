@@ -85,6 +85,12 @@ public class StudentFeeAssignment {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    /** Optimistic lock: prevents two concurrent payments from both applying to a stale read. */
+    @Version
+    @Column(nullable = false)
+    @Builder.Default
+    private Long version = 0L;
+
     /** Computed field: totalFee - paidAmount */
     @Transient
     public BigDecimal getDueAmount() {
