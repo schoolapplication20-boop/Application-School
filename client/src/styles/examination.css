@@ -426,6 +426,47 @@
   .exam-form-grid.cols-3 {
     grid-template-columns: 1fr;
   }
+
+  /* Reset span-2 groups — no room to span in single-column grid */
+  .exam-form-group.span-2 {
+    grid-column: 1;
+  }
+
+  /* Exam modal full-width on phone */
+  .exam-modal-overlay {
+    padding: 10px;
+  }
+
+  /* Exam tabs scroll on mobile */
+  .exam-tab {
+    min-width: 100px;
+    padding: 9px 12px;
+    font-size: 12px;
+  }
+
+  /* Exam toolbar wraps */
+  .exam-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .exam-filter-select,
+  .exam-search-box {
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* Stat card compact */
+  .exam-stat-card {
+    padding: 13px 14px;
+    gap: 10px;
+  }
+  .exam-stat-value {
+    font-size: 20px;
+  }
+  .exam-stat-icon {
+    width: 36px;
+    height: 36px;
+  }
 }
 
 .exam-form-group {

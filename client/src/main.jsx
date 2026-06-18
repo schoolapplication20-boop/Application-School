@@ -4,6 +4,7 @@ import { HelmetProvider } from 'react-helmet-async'
 import App from './App.jsx'
 import './styles/App.css'
 import './styles/dark.css'
+import './styles/responsive.css'
 
 // Global keyframe animations
 const style = document.createElement('style');

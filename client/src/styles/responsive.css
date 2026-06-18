@@ -1,0 +1,373 @@
+/* ============================================
+   SCHOOLERS - Comprehensive Mobile Responsive
+   Fixes for inline-style heavy pages.
+
+   Works alongside sidebar.css, dashboard.css,
+   auth.css, and App.css — never duplicates their
+   existing rules, only fills the gaps.
+
+   Breakpoints used:
+     1024px  tablet / small laptop
+      768px  large phone / small tablet
+      640px  phone landscape / compact tablet
+      480px  phone portrait
+      360px  small phone
+   ============================================ */
+
+/* ── 0. Root overflow guard ──────────────────────────────────────────── */
+#root {
+  overflow-x: hidden;
+  min-width: 0;
+}
+
+/* ── 1. Table overflow — any container holding a table scrolls ────────
+   Applied globally so inline-styled table wrappers scroll even when
+   the JSX author forgot to add overflowX:auto. */
+@media (max-width: 768px) {
+  /* Wrap any <table> not already inside an overflow wrapper */
+  .table-scroll-wrap,
+  .data-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Ensure tables have a sensible minimum so columns don't squeeze */
+  table {
+    min-width: 480px;
+  }
+
+  /* Tables already wrapped by an inline overflow-x:auto div — trust those */
+  [style*="overflow-x: auto"] table,
+  [style*="overflowX: auto"] table,
+  [style*="overflow-x:auto"] table {
+    min-width: 0; /* let the parent constrain */
+  }
+}
+
+/* ── 2. Two-and-three-column inline grids → stack on mobile ───────────
+   Many pages use style={{ gridTemplateColumns: '…' }} inline.
+   CSS attribute selectors with !important override those.
+   Rule order (most specific → least specific) is intentional.      */
+
+/* ── 2a. Fixed-pixel panel layouts (collapse on tablet+) ── */
+@media (max-width: 900px) {
+  [style*="380px 1fr"],
+  [style*="360px 1fr"],
+  [style*="200px 1fr"],
+  [style*="1fr 380px"],
+  [style*="1fr 320px"],
+  [style*="1fr 400px"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ── 2b. Fractional multi-column grids → 2-col on tablet ── */
+@media (max-width: 900px) {
+  [style*="1fr 1fr 1fr"],
+  [style*="2fr 1fr 1fr"],
+  [style*="1fr 1fr 1fr 1fr"] {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
+
+/* ── 2c. All 2-col fractional grids → single column on phones ── */
+@media (max-width: 640px) {
+  [style*="1fr 1fr"],
+  [style*="2fr 1fr"],
+  [style*="1fr 2fr"],
+  [style*="3fr 2fr"],
+  [style*="2fr 1fr 1fr"],
+  [style*="1fr 1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ── 3. Flex filter/action bars → wrap on small screens ─────────────
+   Input and select elements with explicit minWidths should be
+   full-width on phones. Pages that use inline flexWrap:'wrap' already
+   work; this targets the ones that missed it. */
+@media (max-width: 640px) {
+  /* Input/select with explicit minWidth should stretch full-width on phones */
+  input[style*="minWidth"],
+  select[style*="minWidth"] {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  /* The .search-filter-bar class already has flex-wrap in dashboard.css;
+     these additional classes used across pages also need it. */
+  .filter-bar,
+  .filter-row,
+  .action-bar,
+  .toolbar-row {
+    flex-wrap: wrap !important;
+  }
+}
+
+/* ── 4. Navbar dropdowns — prevent overflow on tiny phones ─────────── */
+.notif-dropdown,
+.user-dropdown {
+  max-width: calc(100vw - 20px) !important;
+  right: 0 !important;
+}
+
+@media (max-width: 400px) {
+  .notif-dropdown {
+    width: calc(100vw - 20px) !important;
+  }
+}
+
+/* ── 5. Modal cards — full-width on phones ──────────────────────────
+   Many pages use a modal-card class or inline maxWidth/width pattern.
+   Ensure fixed-width modals don't overflow on small screens. */
+.modal-card {
+  max-width: calc(100vw - 24px) !important;
+}
+
+/* Inline-style modals with specific fixed widths */
+@media (max-width: 480px) {
+  [style*="maxWidth: 48"],
+  [style*="maxWidth: 52"],
+  [style*="maxWidth: 56"],
+  [style*="maxWidth: 60"] {
+    max-width: calc(100vw - 24px) !important;
+    width: 100% !important;
+  }
+
+  /* Modals with explicit width (not maxWidth) */
+  [style*="width: '420px'"],
+  [style*="width: '460px'"],
+  [style*="width: '480px'"],
+  [style*="width: '500px'"] {
+    width: calc(100vw - 24px) !important;
+    max-width: 100% !important;
+  }
+}
+
+/* ── 6. Page-specific stat/summary card grids ────────────────────────
+   Pages use inline repeat(N,1fr) which App.css already overrides;
+   these handle the edge cases those rules miss. */
+@media (max-width: 768px) {
+  /* 2-col grids: keep 2-col on large phones, collapse on small phones */
+  .stats-inline-2 {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-inline-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── 7. School Settings form grid ────────────────────────────────────
+   SchoolSettings uses '1fr 1fr' for the main settings form — collapses
+   at 640px via rule 2c above. This ensures the form inputs inside also
+   get proper full-width treatment. */
+@media (max-width: 640px) {
+  /* Settings form section full-width */
+  [style*="padding: '20px 24px'"][style*="grid"],
+  [style*="padding: '16px 24px'"][style*="grid"] {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+  }
+}
+
+/* ── 8. CollectFee page ──────────────────────────────────────────────
+   CollectFee uses '380px 1fr' which is caught by rule 2a above.
+   The right-side panel should come first (payment form) on mobile. */
+
+/* ── 9. Timetable — horizontal scroll ───────────────────────────────
+   Timetable grids are complex week-day layouts; scrolling is better
+   than stacking. Ensure the table container scrolls. */
+@media (max-width: 768px) {
+  .timetable-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* ── 10. Search/filter input bars ────────────────────────────────────
+   Generic search input wrappers that shouldn't have hard min-widths */
+@media (max-width: 640px) {
+  .search-filter-bar {
+    flex-wrap: wrap;
+  }
+  .search-filter-bar > * {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
+
+/* ── 11. Examination / Report Card ──────────────────────────────────
+   examination.css covers most cases; ensure exam schedule and hall
+   ticket tables scroll on mobile. */
+@media (max-width: 768px) {
+  .exam-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* ── 12. SMS Compose / Settings page ─────────────────────────────────
+   SMS settings has a '1fr 1fr' form grid inside a card; collapses via
+   rule 2c. This ensures the card itself doesn't overflow. */
+@media (max-width: 640px) {
+  .sms-compose-grid,
+  .sms-settings-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ── 13. Teacher & Student portal ────────────────────────────────────
+   Student/teacher pages use inline 2-col grids for info cards;
+   these are collapsed by rule 2c. Extra touch-target adjustments: */
+@media (max-width: 480px) {
+  /* Buttons — ensure minimum tap target */
+  button, [role="button"] {
+    min-height: 36px;
+  }
+
+  /* Shrink large section headings slightly */
+  .page-header h1 {
+    font-size: 18px;
+  }
+}
+
+/* ── 14. Admin Messages / Chat ───────────────────────────────────────
+   Messages page uses a split '1fr 320px'/'1fr 380px' layout.
+   Already caught by rules 2a; this adds extra safety. */
+@media (max-width: 640px) {
+  [style*="320px"],
+  [style*="380px"] {
+    /* Only apply when these are grid-template-columns values */
+    /* (handled by rules 2a — this is just documentation) */
+  }
+}
+
+/* ── 15. Applications page ──────────────────────────────────────────
+   Applications uses a detail-pane layout similar to messages. */
+
+/* ── 16. Transport / Bus Management ─────────────────────────────────
+   Already caught by repeat(6,1fr) override in App.css. */
+
+/* ── 17. Salary & Expenses ───────────────────────────────────────────
+   Filter bars with date pickers — ensure they wrap. */
+@media (max-width: 640px) {
+  input[type="date"],
+  input[type="month"] {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+/* ── 18. Attendance Report page ─────────────────────────────────────
+   AttendanceReport has '1fr 1fr' for its filter row → collapses via 2c. */
+
+/* ── 19. Super Admin pages ───────────────────────────────────────────
+   SuperAdminDashboard, AdminManagement, SetupSchool, Transport pages
+   all use standard grid patterns covered by rules above. */
+
+/* ── 20. Student portal specific ────────────────────────────────────
+   StudentAttendance calendar, StudentMarks, StudentExams, StudentFees */
+@media (max-width: 480px) {
+  /* Ensure online exam options grid (2-col) stacks on phone */
+  .exam-options-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* StudentDashboard quick actions */
+  .student-quick-actions {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+
+/* ── 21. Owner layout ─────────────────────────────────────────────────
+   OwnerLayout uses a top-bar + content layout which is already
+   responsive via flex/max-width: 1400px. Just pad on small screens. */
+@media (max-width: 480px) {
+  /* Owner header: hide user name text, keep avatar */
+  .owner-header-user-text {
+    display: none;
+  }
+}
+
+/* ── 22. Marketing pages ─────────────────────────────────────────────
+   marketing.css is standalone; these are global extras. */
+@media (max-width: 640px) {
+  .marketing-hero-text h1 {
+    font-size: clamp(24px, 7vw, 48px);
+  }
+}
+
+/* ── 23. Print safety ────────────────────────────────────────────────
+   For print, single-column is usually fine. The existing App.css and
+   sidebar.css print rules hide the sidebar and reset the layout,
+   so no additional overrides are needed here. */
+
+/* ── 24. Safe bottom area (iOS home bar) ─────────────────────────────
+   Already in sidebar.css; duplicate only for page content areas
+   that may have been added later. */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* ── 25. Global touch & font improvements ────────────────────────────
+   Make all interactive elements meet touch target standards. */
+@media (max-width: 768px) {
+  /* Ensure select dropdowns are tappable */
+  select {
+    min-height: 38px;
+    font-size: 14px;
+  }
+
+  /* Prevent iOS auto-zoom on input focus (font < 16px triggers zoom) */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="date"],
+  input[type="search"],
+  textarea,
+  select {
+    font-size: max(16px, 1em);
+  }
+}
+
+/* ── 26. Long words / URLs don't break mobile layouts ────────────────*/
+@media (max-width: 640px) {
+  p, td, th, li, .message-preview {
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+}
+
+/* ── 27. Sticky table headers ────────────────────────────────────────
+   On mobile, tables scroll horizontally. Ensure the header row doesn't
+   pop out of view. */
+@media (max-width: 768px) {
+  .data-table th,
+  .custom-table th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+}
+
+/* ── 28. Notification badge positioning ──────────────────────────────
+   The notification count badge on the bell icon is already handled
+   inline; just ensure the parent button has position:relative. */
+.navbar-icon-btn {
+  position: relative;
+}
+
+/* ── 29. Inline border-radius / shadow corrections on very small ────*/
+@media (max-width: 360px) {
+  .modal-card,
+  .modal-container {
+    border-radius: 12px !important;
+  }
+}
