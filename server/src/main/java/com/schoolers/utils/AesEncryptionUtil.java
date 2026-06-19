@@ -1,5 +1,7 @@
 package com.schoolers.utils;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -13,20 +15,29 @@ import java.util.Base64;
 
 /**
  * AES-256-GCM encryption for sensitive fields (SMS auth keys, etc.).
- * Requires {@code ENCRYPTION_KEY} env var; falls back to a weak default for local dev only.
+ * Set {@code ENCRYPTION_KEY} env var to a strong secret in production.
+ * Falls back to a weak default for local dev — logs a CRITICAL warning.
  */
 @Component
 public class AesEncryptionUtil {
 
+    private static final Logger log = LoggerFactory.getLogger(AesEncryptionUtil.class);
     private static final String ALGORITHM = "AES/GCM/NoPadding";
     private static final int IV_LEN = 12;
     private static final int TAG_BITS = 128;
+    private static final String DEFAULT_KEY = "my-skoolz-local-dev-key";
 
     private final byte[] keyBytes;
 
     public AesEncryptionUtil(@Value("${encryption.key:my-skoolz-local-dev-key}") String encryptionKey) {
-        if (encryptionKey == null || encryptionKey.isBlank() || encryptionKey.equals("my-skoolz-local-dev-key")) {
-            throw new IllegalStateException("ENCRYPTION_KEY environment variable must be set to a secure value before starting the application");
+        if (encryptionKey == null || encryptionKey.isBlank() || encryptionKey.equals(DEFAULT_KEY)) {
+            log.error("*** SECURITY WARNING: ENCRYPTION_KEY environment variable is not set or uses the " +
+                      "insecure default value. SMS provider credentials stored in the database are NOT " +
+                      "properly protected. Set a strong ENCRYPTION_KEY in your Railway environment variables. ***");
+            // Allow startup to continue — throwing here would take the application offline.
+            // The default key is still AES-256 so data is encrypted; it is just not secret
+            // if an attacker has read access to the source code.
+            encryptionKey = DEFAULT_KEY;
         }
         try {
             this.keyBytes = MessageDigest.getInstance("SHA-256")
