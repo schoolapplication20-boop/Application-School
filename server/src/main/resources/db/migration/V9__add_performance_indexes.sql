@@ -13,5 +13,5 @@ CREATE INDEX IF NOT EXISTS idx_marks_school_id                 ON marks(school_i
 CREATE INDEX IF NOT EXISTS idx_marks_student_id                ON marks(student_id);
 CREATE INDEX IF NOT EXISTS idx_marks_class_name                ON marks(class_name);
 
--- fee_installments.student_id — used in student fee history queries
-CREATE INDEX IF NOT EXISTS idx_fee_installments_student_id     ON fee_installments(student_id);
+-- fee_installments has no student_id column — student is resolved via assignment_id → student_fee_assignments
+-- The correct index is on assignment_id, which already exists (V3: idx_fee_installments_assignment_id)
