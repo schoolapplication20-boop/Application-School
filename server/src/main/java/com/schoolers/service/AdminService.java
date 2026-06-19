@@ -2207,13 +2207,26 @@ public class AdminService {
 
         if (fullyCovered) {
             installment.setStatus(FeeInstallment.Status.PAID);
+            // If a prior partial payment pushed a carry-over to the next term, clear it now
+            // that this term is fully paid — the debt is no longer outstanding.
+            if (prevPaid.compareTo(BigDecimal.ZERO) > 0) {
+                final BigDecimal priorShortage = effectiveDue; // what was carried to next term earlier
+                feeInstallmentRepository.findNextPending(installment.getAssignmentId(), installment.getId())
+                    .ifPresent(next -> {
+                        BigDecimal existingCarry = next.getCarryOver() != null ? next.getCarryOver() : BigDecimal.ZERO;
+                        next.setCarryOver(existingCarry.subtract(priorShortage).max(BigDecimal.ZERO));
+                        feeInstallmentRepository.save(next);
+                        log.info("[collectInstallmentFee] carry-over ₹{} cleared from '{}' — '{}' fully paid",
+                            priorShortage, next.getTermName(), installment.getTermName());
+                    });
+            }
         } else {
             // Partial payment — roll the shortage to the next pending term.
             // If this installment was already PARTIAL (prevPaid > 0), the next term's
             // carryOver already includes our old shortage (= effectiveDue). We replace
-            // that contribution with the new shortage rather than adding on top (F-02).
+            // that contribution with the new shortage rather than adding on top.
             BigDecimal carryDelta = prevPaid.compareTo(BigDecimal.ZERO) > 0
-                    ? shortage.subtract(effectiveDue)   // = -(amountPaid): net correction
+                    ? shortage.subtract(effectiveDue)   // net correction: new shortage - old shortage
                     : shortage;                          // first partial: add full shortage
             installment.setStatus(FeeInstallment.Status.PARTIAL);
             feeInstallmentRepository.findNextPending(installment.getAssignmentId(), installment.getId())

@@ -17,10 +17,10 @@ const isOverdue = (dueDateStr) => dueDateStr && new Date(dueDateStr) < new Date(
 
 const StatusBadge = ({ status }) => {
   const map = {
-    PAID:    { bg: '#f0fff4', color: '#276749', label: 'Paid'    },
-    PARTIAL: { bg: '#fffbeb', color: '#b45309', label: 'Partial' },
-    PENDING: { bg: '#fff5f5', color: '#c53030', label: 'Pending' },
-    OVERDUE: { bg: '#fff5f5', color: '#9b2c2c', label: 'Overdue' },
+    PAID:    { bg: '#f0fff4', color: '#276749', label: 'Paid'          },
+    PARTIAL: { bg: '#fffbeb', color: '#b45309', label: 'Partially Paid' },
+    PENDING: { bg: '#fff5f5', color: '#c53030', label: 'Unpaid'        },
+    OVERDUE: { bg: '#fff5f5', color: '#9b2c2c', label: 'Overdue'       },
   };
   const s = map[String(status || '').toUpperCase()] || map.PENDING;
   return <span style={{ padding: '3px 10px', background: s.bg, color: s.color, borderRadius: 20, fontSize: 11, fontWeight: 700 }}>{s.label}</span>;
@@ -260,6 +260,7 @@ export default function CollectFee() {
       showToast('Payment recorded successfully');
     } catch (err) {
       showToast(err?.response?.data?.message || 'Payment failed', 'error');
+      setReceiptNo(genReceipt()); // fresh receipt so admin can retry without hitting duplicate
     } finally { setPaying(false); }
   };
 
