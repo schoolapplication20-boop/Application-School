@@ -35,6 +35,8 @@ public class GlobalExceptionHandler {
                     msg = "This class/section already exists in your school";
                 } else if (lower.contains("uk_users_email") || lower.contains("users_email")) {
                     msg = "An account with this email already exists.";
+                } else if (lower.contains("receipt_number") || lower.contains("fee_payments_receipt")) {
+                    msg = "This receipt number is already used. A new receipt number has been generated — please try again.";
                 }
                 // Log the full detail internally but never send it to the client
                 log.warn("[DataIntegrity] {}", detail);
