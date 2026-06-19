@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.List;
@@ -2052,7 +2053,7 @@ public class AdminService {
     }
 
     @Transactional
-    public ApiResponse<StudentFeeAssignment> collectAssignmentFee(Long assignmentId, Map<String, Object> body, Long schoolId) {
+    public ApiResponse<Map<String, Object>> collectAssignmentFee(Long assignmentId, Map<String, Object> body, Long schoolId) {
         StudentFeeAssignment assignment = studentFeeAssignmentRepository.findById(assignmentId).orElse(null);
         if (assignment == null) return ApiResponse.error("Fee assignment not found");
         if (schoolId != null) {
@@ -2074,11 +2075,8 @@ public class AdminService {
         BigDecimal due = assignment.getTotalFee().subtract(currentPaid);
         if (amountPaid.compareTo(due) > 0) return ApiResponse.error("Amount exceeds due balance of ₹" + due);
 
-        String receiptNumber = str(body, "receiptNumber", null);
-        if (receiptNumber == null || receiptNumber.isBlank()) return ApiResponse.error("Receipt number is required");
-        receiptNumber = receiptNumber.trim();
-        if (feePaymentRepository.existsByReceiptNumber(receiptNumber))
-            return ApiResponse.error("Duplicate receipt number: " + receiptNumber);
+        // Always generate server-side receipt — never trust the frontend value.
+        String receiptNumber = generateUniqueReceiptNumber();
 
         String paidDateStr = str(body, "paidDate", null);
         LocalDate paymentDate = LocalDate.now();
@@ -2110,13 +2108,16 @@ public class AdminService {
                 .term(term != null && !term.isBlank() ? term : null)
                 .amountPaid(amountPaid)
                 .paymentDate(paymentDate)
-                .paymentMode("CASH")
+                .paymentMode(str(body, "paymentMode", "CASH"))
                 .receiptNumber(receiptNumber)
                 .receivedBy(str(body, "receivedBy", null))
                 .remarks(str(body, "remarks", null))
                 .build());
 
-        return ApiResponse.success("Payment recorded", saved);
+        Map<String, Object> responseData = new LinkedHashMap<>();
+        responseData.put("assignment", saved);
+        responseData.put("receiptNumber", receiptNumber);
+        return ApiResponse.success("Payment recorded", responseData);
     }
 
     public ApiResponse<List<FeePayment>> getAllFeePayments(Long schoolId) {
@@ -2141,11 +2142,26 @@ public class AdminService {
     }
 
     /**
+     * Generates a receipt number that is guaranteed unique in fee_payments.
+     * Uses a UUID so it cannot collide with any stale frontend value.
+     */
+    private String generateUniqueReceiptNumber() {
+        String year = String.valueOf(LocalDate.now().getYear());
+        for (int attempt = 0; attempt < 5; attempt++) {
+            String candidate = "RCP-" + year + "-" +
+                UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
+            if (!feePaymentRepository.existsByReceiptNumber(candidate)) return candidate;
+        }
+        // Collision after 5 tries is astronomically unlikely; fall back to full UUID
+        return "RCP-" + year + "-" + UUID.randomUUID().toString().replace("-", "").toUpperCase();
+    }
+
+    /**
      * Record a cash payment for a specific installment.
-     * Marks the installment PAID and updates the parent assignment's paidAmount.
+     * Marks the installment PAID/PARTIAL and updates the parent assignment's paidAmount.
      */
     @Transactional
-    public ApiResponse<FeeInstallment> collectInstallmentFee(Long installmentId, Map<String, Object> body, Long schoolId) {
+    public ApiResponse<Map<String, Object>> collectInstallmentFee(Long installmentId, Map<String, Object> body, Long schoolId) {
         FeeInstallment installment = feeInstallmentRepository.findById(installmentId).orElse(null);
         if (installment == null) return ApiResponse.error("Installment not found");
         if (installment.getStatus() == FeeInstallment.Status.PAID)
@@ -2161,13 +2177,9 @@ public class AdminService {
                 return ApiResponse.error("Unauthorized");
         }
 
-        // Use the receipt number sent by the frontend (same as collectAssignmentFee).
-        // The frontend generates a timestamped receipt; we validate uniqueness here.
-        String receiptNumber = str(body, "receiptNumber", null);
-        if (receiptNumber == null || receiptNumber.isBlank()) return ApiResponse.error("Receipt number is required");
-        receiptNumber = receiptNumber.trim();
-        if (feePaymentRepository.existsByReceiptNumber(receiptNumber))
-            return ApiResponse.error("Duplicate receipt number: " + receiptNumber + ". Please try again.");
+        // Always generate a fresh server-side receipt — never trust the frontend value.
+        // This prevents any stale-state or double-click duplicate from reaching the DB.
+        String receiptNumber = generateUniqueReceiptNumber();
 
         String paidDateStr = str(body, "paidDate", null);
         LocalDate paymentDate = LocalDate.now();
@@ -2271,7 +2283,11 @@ public class AdminService {
             ? "Payment recorded for " + installment.getTermName()
             : "Partial payment recorded. ₹" + shortage.setScale(0, java.math.RoundingMode.HALF_UP)
               + " carried over to the next term.";
-        return ApiResponse.success(msg, savedInst);
+
+        Map<String, Object> responseData = new LinkedHashMap<>();
+        responseData.put("installment", savedInst);
+        responseData.put("receiptNumber", receiptNumber);
+        return ApiResponse.success(msg, responseData);
     }
 
     /**

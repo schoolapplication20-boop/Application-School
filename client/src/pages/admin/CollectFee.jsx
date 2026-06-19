@@ -66,7 +66,8 @@ export default function CollectFee() {
   /* receipt modal */
   const [receiptData, setReceiptData]   = useState(null);
 
-  const searchRef                       = useRef(null);
+  const searchRef  = useRef(null);
+  const payingRef  = useRef(false); // synchronous guard against double-submit
 
   const showToast = useToast();
 
@@ -204,6 +205,7 @@ export default function CollectFee() {
 
   /* ── collect payment (installment-level) ── */
   const handleCollect = async () => {
+    if (payingRef.current) return; // synchronous guard — prevents double-click race
     if (!assignment) { showToast('No fee assignment found for this student', 'error'); return; }
     if (!selectedInstallment) { showToast('Please select an installment to pay', 'error'); return; }
 
@@ -214,17 +216,21 @@ export default function CollectFee() {
       showToast(`Amount ₹${fmt(amt)} exceeds the due amount ₹${fmt(maxDue)} for this term`, 'error'); return;
     }
 
+    payingRef.current = true;
     setPaying(true);
     try {
+      // receiptNumber is generated server-side — do not send from frontend
       const res = await adminAPI.collectInstallmentFee(selectedInstallment.id, {
-        amountPaid:    amt,
-        paidDate:      payDate,
-        paymentMode:   paymentMode,
-        receiptNumber: receiptNo,
-        receivedBy:    user?.name || user?.email || 'Admin',
-        term:          selectedInstallment.termName || null,
+        amountPaid:   amt,
+        paidDate:     payDate,
+        paymentMode:  paymentMode,
+        receivedBy:   user?.name || user?.email || 'Admin',
+        term:         selectedInstallment.termName || null,
         remarks,
       });
+
+      // Server returns the authoritative receipt number in response data
+      const serverReceiptNo = res.data?.data?.receiptNumber || genReceipt();
 
       // refresh assignment summary
       const aRes = await adminAPI.getStudentFeeAssignment(student.id);
@@ -235,7 +241,7 @@ export default function CollectFee() {
       const newDue  = Number(updatedAssignment?.totalFee || 0) - newPaid;
 
       setReceiptData({
-        receiptNo,
+        receiptNo:   serverReceiptNo,
         date:        payDate,
         studentName: student.name,
         rollNo:      student.rollNumber,
@@ -255,13 +261,17 @@ export default function CollectFee() {
       setSelectedInstallment(null);
       setAmount('');
       setPaymentMode('Cash');
-      setReceiptNo(genReceipt());
+      setReceiptNo(genReceipt()); // reset preview for next payment
       setRemarks('');
       showToast('Payment recorded successfully');
     } catch (err) {
-      showToast(err?.response?.data?.message || 'Payment failed', 'error');
-      setReceiptNo(genReceipt()); // fresh receipt so admin can retry without hitting duplicate
-    } finally { setPaying(false); }
+      // Show exact backend message; fall back to generic only if none
+      showToast(err?.response?.data?.message || 'Payment failed. Please try again.', 'error');
+      setReceiptNo(genReceipt()); // reset preview so next attempt is fresh
+    } finally {
+      payingRef.current = false;
+      setPaying(false);
+    }
   };
 
   /* ── print receipt ── */
@@ -739,9 +749,9 @@ export default function CollectFee() {
                     </select>
                   </div>
                   <div style={{ marginBottom: 12 }}>
-                    <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Receipt No.</label>
-                    <input value={receiptNo} readOnly
-                      style={{ width: '100%', padding: '9px 12px', border: '1.5px solid var(--border-strong)', borderRadius: 8, fontSize: 12, fontFamily: 'monospace', background: 'var(--surface-alt)', boxSizing: 'border-box' }} />
+                    <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Receipt No. <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(auto-generated)</span></label>
+                    <input value="Will be assigned by server" readOnly
+                      style={{ width: '100%', padding: '9px 12px', border: '1.5px solid var(--border-strong)', borderRadius: 8, fontSize: 12, fontFamily: 'monospace', background: 'var(--surface-alt)', color: 'var(--text-muted)', boxSizing: 'border-box' }} />
                   </div>
                   <div style={{ marginBottom: 16 }}>
                     <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Remarks</label>
