@@ -312,6 +312,7 @@ public class TeacherService {
 
     // ── Attendance ─────────────────────────────────────────────────────────────
 
+    @Transactional(rollbackFor = Exception.class)
     public ApiResponse<String> markAttendance(Long teacherId, List<Map<String, Object>> attendanceList, Long markedBy) {
         if (attendanceList == null || attendanceList.isEmpty()) {
             return ApiResponse.error("Attendance list cannot be empty");

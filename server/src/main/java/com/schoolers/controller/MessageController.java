@@ -2,6 +2,7 @@ package com.schoolers.controller;
 
 import com.schoolers.dto.ApiResponse;
 import com.schoolers.model.Message;
+import com.schoolers.security.CurrentUserUtil;
 import com.schoolers.service.MessageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +19,7 @@ import java.util.Map;
 public class MessageController {
 
     @Autowired private MessageService messageService;
+    @Autowired private CurrentUserUtil currentUserUtil;
 
     @SuppressWarnings("unchecked")
     private boolean isOwnerOrAdmin(Long userId, Authentication auth) {
@@ -48,7 +50,7 @@ public class MessageController {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (!isOwnerOrAdmin(userId, auth))
             return ResponseEntity.status(403).body(ApiResponse.error("Access denied."));
-        return ResponseEntity.ok(messageService.getMessagesForUser(userId));
+        return ResponseEntity.ok(messageService.getMessagesForUser(userId, currentUserUtil.getCurrentSchoolId(auth)));
     }
 
     @GetMapping("/conversation")
@@ -57,7 +59,7 @@ public class MessageController {
             @RequestParam Long u1, @RequestParam Long u2, Authentication auth) {
         if (!isOwnerOrAdmin(u1, auth) && !isOwnerOrAdmin(u2, auth))
             return ResponseEntity.status(403).body(ApiResponse.error("Access denied"));
-        return ResponseEntity.ok(messageService.getConversation(u1, u2));
+        return ResponseEntity.ok(messageService.getConversation(u1, u2, currentUserUtil.getCurrentSchoolId(auth)));
     }
 
     @PostMapping

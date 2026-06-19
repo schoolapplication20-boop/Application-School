@@ -25,6 +25,9 @@ public class AesEncryptionUtil {
     private final byte[] keyBytes;
 
     public AesEncryptionUtil(@Value("${encryption.key:my-skoolz-local-dev-key}") String encryptionKey) {
+        if (encryptionKey == null || encryptionKey.isBlank() || encryptionKey.equals("my-skoolz-local-dev-key")) {
+            throw new IllegalStateException("ENCRYPTION_KEY environment variable must be set to a secure value before starting the application");
+        }
         try {
             this.keyBytes = MessageDigest.getInstance("SHA-256")
                     .digest(encryptionKey.getBytes(StandardCharsets.UTF_8));

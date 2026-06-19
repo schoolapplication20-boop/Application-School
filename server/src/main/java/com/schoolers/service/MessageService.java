@@ -9,6 +9,7 @@ import com.schoolers.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
@@ -30,14 +31,28 @@ public class MessageService {
     @Autowired private StudentRepository studentRepository;
     @Autowired private TeacherRepository teacherRepository;
     @Autowired private ExpoPushService expoPushService;
+    @Autowired private JdbcTemplate jdbcTemplate;
 
     // ── Existing 1-to-1 message methods ──────────────────────────────────────
 
-    public ApiResponse<List<Message>> getMessagesForUser(Long userId) {
+    public ApiResponse<List<Message>> getMessagesForUser(Long userId, Long callerSchoolId) {
+        // Verify the requested user belongs to the caller's school
+        User targetUser = userRepository.findById(userId).orElse(null);
+        if (targetUser == null || (callerSchoolId != null && !callerSchoolId.equals(targetUser.getSchoolId()))) {
+            return ApiResponse.error("User not found");
+        }
         return ApiResponse.success(messageRepository.findAllByUserId(userId, MESSAGE_RESULTS_PAGE));
     }
 
-    public ApiResponse<List<Message>> getConversation(Long u1, Long u2) {
+    public ApiResponse<List<Message>> getConversation(Long u1, Long u2, Long callerSchoolId) {
+        // Verify both participants belong to the caller's school
+        User user1 = userRepository.findById(u1).orElse(null);
+        User user2 = userRepository.findById(u2).orElse(null);
+        if (user1 == null || user2 == null) return ApiResponse.error("User not found");
+        if (callerSchoolId != null
+                && (!callerSchoolId.equals(user1.getSchoolId()) || !callerSchoolId.equals(user2.getSchoolId()))) {
+            return ApiResponse.error("Access denied");
+        }
         // Fetch the most recent messages (newest first) and reverse to chronological order
         List<Message> recent = messageRepository.findConversationDesc(u1, u2, MESSAGE_RESULTS_PAGE);
         Collections.reverse(recent);
@@ -145,7 +160,14 @@ public class MessageService {
         User user = resolveUser(auth);
         if (user == null) return ApiResponse.error("Unauthorized");
 
+        Optional<Student> studentOpt = studentRepository.findByStudentUserId(user.getId());
+        Student student = studentOpt.orElse(null);
+
         return messageRepository.findById(messageId).map(msg -> {
+            // Verify the message belongs to the same school as the student
+            if (msg.getSchoolId() != null && student != null && !msg.getSchoolId().equals(student.getSchoolId())) {
+                return ApiResponse.<String>error("Message not found");
+            }
             if (!isReadByUser(msg, user.getId())) {
                 String existing = msg.getReadByUserIds();
                 String updated = (existing == null || existing.isBlank())
@@ -187,11 +209,22 @@ public class MessageService {
                 return ApiResponse.error("Student not found");
         }
 
-        // Teachers can only send to their own class
+        // Teachers can only send to their own assigned class sections
         if ("TEACHER".equals(sender.getRole().name())) {
             Optional<Teacher> teacherOpt = teacherRepository.findByUserId(sender.getId());
             if (teacherOpt.isEmpty()) return ApiResponse.error("Teacher profile not found");
-            // Allow if classSection matches or if they override (admin will validate)
+            Teacher teacher = teacherOpt.get();
+            // If targeting a specific class section, verify teacher has an assignment for it
+            if (!Boolean.TRUE.equals(isSchoolWide) && classSection != null && !classSection.isBlank()) {
+                Long teacherId = teacher.getId();
+                String finalClassSection = classSection;
+                Integer count = jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM teacher_class_assignments WHERE teacher_id = ? AND class_section = ?",
+                        Integer.class, teacherId, finalClassSection);
+                if (count == null || count == 0) {
+                    return ApiResponse.error("You are not assigned to class section: " + classSection);
+                }
+            }
         }
 
         Message msg = Message.builder()

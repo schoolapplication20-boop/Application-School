@@ -380,7 +380,7 @@ ADM002,Mathematics,92,100`;
     } finally {
       setLoadingMarks(false);
     }
-  }, []);
+  }, [showToast]);
 
   useEffect(() => { if (classes.length) loadAllData(classes); }, [classes, loadAllData]);
 

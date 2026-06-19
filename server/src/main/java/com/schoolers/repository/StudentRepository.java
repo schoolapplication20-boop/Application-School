@@ -59,6 +59,16 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
                                    @Param("className") String className,
                                    @Param("section") String section);
 
+    /**
+     * Batch enrollment count for all classes in a school — returns [LOWER(className), LOWER(COALESCE(section,'')), count] rows.
+     * Used by getClasses() to replace N per-class queries with a single query.
+     */
+    @Query("SELECT LOWER(s.className), LOWER(COALESCE(s.section, '')), COUNT(s) " +
+           "FROM Student s WHERE s.schoolId = :schoolId " +
+           "AND (s.isActive IS NULL OR s.isActive = true) " +
+           "GROUP BY LOWER(s.className), LOWER(COALESCE(s.section, ''))")
+    List<Object[]> countEnrolledByClassForSchool(@Param("schoolId") Long schoolId);
+
     @Query("SELECT s FROM Student s WHERE s.schoolId = :schoolId AND s.isActive = true AND (LOWER(s.name) LIKE LOWER(CONCAT('%',:search,'%')) OR LOWER(s.rollNumber) LIKE LOWER(CONCAT('%',:search,'%')))")
     Page<Student> searchStudentsBySchool(@Param("schoolId") Long schoolId, @Param("search") String search, Pageable pageable);
 

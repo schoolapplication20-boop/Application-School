@@ -129,15 +129,22 @@ export default function CollectFee() {
   useEffect(() => {
     if (filterClass) { setSuggestions([]); setShowDrop(false); return; }
     if (!query || query.length < 2) { setSuggestions([]); setShowDrop(false); return; }
+    const controller = new AbortController();
     const t = setTimeout(async () => {
       setSearching(true);
       try {
-        const res = await adminAPI.searchStudentsForFee(query, '');
-        setSuggestions(res.data?.data ?? []);
-        setShowDrop(true);
-      } catch { } finally { setSearching(false); }
+        const res = await adminAPI.searchStudentsForFee(query, '', { signal: controller.signal });
+        if (!controller.signal.aborted) {
+          setSuggestions(res.data?.data ?? []);
+          setShowDrop(true);
+        }
+      } catch (e) {
+        if (!controller.signal.aborted) { /* ignore */ }
+      } finally {
+        if (!controller.signal.aborted) setSearching(false);
+      }
     }, 300);
-    return () => clearTimeout(t);
+    return () => { clearTimeout(t); controller.abort(); };
   }, [query, filterClass]);
 
   /* ── reload installments & payments ── */
@@ -329,7 +336,7 @@ export default function CollectFee() {
       <div class="row"><span class="label">Previously Paid</span><span class="value">₹${fmt(Number(d.paidSoFar) - Number(d.amountPaid))}</span></div>
       <div class="watermark">${String(d.status || '').toUpperCase() === 'PAID' ? 'PAID' : ''}</div>
       <div class="amount-box">
-        <div class="amount-label">Amount Received (Cash)</div>
+        <div class="amount-label">Amount Received (${escHtml(d.paymentMode)})</div>
         <div class="amount-value">₹${fmt(d.amountPaid)}</div>
       </div>
       <div class="row"><span class="label">Total Paid to Date</span><span class="value">₹${fmt(d.paidSoFar)}</span></div>

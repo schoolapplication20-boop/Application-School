@@ -124,8 +124,8 @@ public class ExaminationController {
 
     @GetMapping("/certificates/verify/{certId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER')")
-    public ResponseEntity<ApiResponse<Certificate>> findByCertId(@PathVariable String certId) {
-        return ResponseEntity.ok(examinationService.findByCertificateId(certId));
+    public ResponseEntity<ApiResponse<Certificate>> findByCertId(@PathVariable String certId, Authentication auth) {
+        return ResponseEntity.ok(examinationService.findByCertificateId(certId, currentUserUtil.getCurrentSchoolId(auth)));
     }
 
     @PostMapping("/certificates")

@@ -8,7 +8,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -27,33 +26,64 @@ public class AppNotificationController {
     @Autowired
     private com.schoolers.repository.UserRepository userRepository;
 
-    private boolean isOwnerOrAdmin(Long userId, Authentication auth) {
-        if (auth == null) return false;
-        var userOpt = userRepository.findByEmailIgnoreCase(auth.getName());
-        if (userOpt.isEmpty()) return false;
-        var u = userOpt.get();
-        return u.getId().equals(userId) || u.getRole().name().equals("SUPER_ADMIN") || u.getRole().name().equals("ADMIN");
+    /** Resolve the caller's User entity from the JWT principal. Returns null if not found. */
+    private com.schoolers.model.User resolveCallerUser(Authentication auth) {
+        if (auth == null) return null;
+        return userRepository.findByEmailIgnoreCase(auth.getName()).orElse(null);
+    }
+
+    /** Returns true if the caller is APPLICATION_OWNER or SUPER_ADMIN. */
+    private boolean isPlatformOrSuperAdmin(com.schoolers.model.User caller) {
+        if (caller == null) return false;
+        String role = caller.getRole().name();
+        return "APPLICATION_OWNER".equals(role) || "SUPER_ADMIN".equals(role);
+    }
+
+    /** For privileged callers, verify the target userId belongs to the same school the caller manages. */
+    private boolean isSameSchool(com.schoolers.model.User caller, Long targetUserId) {
+        return userRepository.findById(targetUserId)
+                .map(target -> target.getSchoolId() != null && target.getSchoolId().equals(caller.getSchoolId()))
+                .orElse(false);
     }
 
     /** Fetch all notifications for a user (newest first). */
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER')")
-    public ResponseEntity<ApiResponse<List<AppNotification>>> getForUser(@RequestParam Long userId) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (!isOwnerOrAdmin(userId, auth)) {
+    public ResponseEntity<ApiResponse<List<AppNotification>>> getForUser(
+            @RequestParam(required = false) Long userId,
+            Authentication auth) {
+        com.schoolers.model.User caller = resolveCallerUser(auth);
+        if (caller == null) {
             return ResponseEntity.status(403).body(ApiResponse.error("Access denied."));
         }
-        return ResponseEntity.ok(notificationService.getForUser(userId));
+        // Privileged callers may supply an explicit userId (must be in their school)
+        if (userId != null && isPlatformOrSuperAdmin(caller)) {
+            if (!isSameSchool(caller, userId)) {
+                return ResponseEntity.status(403).body(ApiResponse.error("Access denied."));
+            }
+            return ResponseEntity.ok(notificationService.getForUser(userId));
+        }
+        // All other callers use their own userId derived from the JWT
+        return ResponseEntity.ok(notificationService.getForUser(caller.getId()));
     }
 
     /** Unread count badge. */
     @GetMapping("/unread-count")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER')")
-    public ResponseEntity<?> getUnreadCount(@RequestParam Long userId, Authentication auth) {
-        if (!isOwnerOrAdmin(userId, auth)) {
+    public ResponseEntity<?> getUnreadCount(
+            @RequestParam(required = false) Long userId,
+            Authentication auth) {
+        com.schoolers.model.User caller = resolveCallerUser(auth);
+        if (caller == null) {
             return ResponseEntity.status(403).body(ApiResponse.error("Access denied."));
         }
-        return ResponseEntity.ok(Map.of("count", notificationService.getUnreadCount(userId)));
+        if (userId != null && isPlatformOrSuperAdmin(caller)) {
+            if (!isSameSchool(caller, userId)) {
+                return ResponseEntity.status(403).body(ApiResponse.error("Access denied."));
+            }
+            return ResponseEntity.ok(Map.of("count", notificationService.getUnreadCount(userId)));
+        }
+        return ResponseEntity.ok(Map.of("count", notificationService.getUnreadCount(caller.getId())));
     }
 
     /** Mark a single notification as read. */
@@ -62,7 +92,14 @@ public class AppNotificationController {
     public ResponseEntity<?> markRead(@PathVariable Long id, Authentication auth) {
         AppNotification notification = notificationRepository.findById(id).orElse(null);
         if (notification == null) return ResponseEntity.notFound().build();
-        if (!isOwnerOrAdmin(notification.getUserId(), auth)) {
+        com.schoolers.model.User caller = resolveCallerUser(auth);
+        if (caller == null) {
+            return ResponseEntity.status(403).body(ApiResponse.error("Access denied."));
+        }
+        // Allow: owner of the notification, or privileged caller in the same school
+        boolean allowed = caller.getId().equals(notification.getUserId())
+                || (isPlatformOrSuperAdmin(caller) && isSameSchool(caller, notification.getUserId()));
+        if (!allowed) {
             return ResponseEntity.status(403).body(ApiResponse.error("Access denied."));
         }
         var result = notificationService.markRead(id);
@@ -72,12 +109,20 @@ public class AppNotificationController {
     /** Mark all notifications for a user as read. */
     @PatchMapping("/read-all")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER')")
-    public ResponseEntity<ApiResponse<String>> markAllRead(@RequestParam Long userId) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (!isOwnerOrAdmin(userId, auth)) {
+    public ResponseEntity<ApiResponse<String>> markAllRead(
+            @RequestParam(required = false) Long userId,
+            Authentication auth) {
+        com.schoolers.model.User caller = resolveCallerUser(auth);
+        if (caller == null) {
             return ResponseEntity.status(403).body(ApiResponse.error("Access denied."));
         }
-        return ResponseEntity.ok(notificationService.markAllRead(userId));
+        if (userId != null && isPlatformOrSuperAdmin(caller)) {
+            if (!isSameSchool(caller, userId)) {
+                return ResponseEntity.status(403).body(ApiResponse.error("Access denied."));
+            }
+            return ResponseEntity.ok(notificationService.markAllRead(userId));
+        }
+        return ResponseEntity.ok(notificationService.markAllRead(caller.getId()));
     }
 
     /** Delete a single notification. */
@@ -86,7 +131,13 @@ public class AppNotificationController {
     public ResponseEntity<?> delete(@PathVariable Long id, Authentication auth) {
         AppNotification notification = notificationRepository.findById(id).orElse(null);
         if (notification == null) return ResponseEntity.notFound().build();
-        if (!isOwnerOrAdmin(notification.getUserId(), auth)) {
+        com.schoolers.model.User caller = resolveCallerUser(auth);
+        if (caller == null) {
+            return ResponseEntity.status(403).body(ApiResponse.error("Access denied."));
+        }
+        boolean allowed = caller.getId().equals(notification.getUserId())
+                || (isPlatformOrSuperAdmin(caller) && isSameSchool(caller, notification.getUserId()));
+        if (!allowed) {
             return ResponseEntity.status(403).body(ApiResponse.error("Access denied."));
         }
         var result = notificationService.delete(id);

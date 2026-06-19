@@ -301,10 +301,14 @@ public class ExaminationService {
         return ApiResponse.success("Certificate verified", certificateRepository.save(cert));
     }
 
-    public ApiResponse<Certificate> findByCertificateId(String certId) {
-        return certificateRepository.findByCertificateId(certId)
-                .map(c -> ApiResponse.success("Certificate found", c))
-                .orElse(ApiResponse.error("Certificate not found"));
+    public ApiResponse<Certificate> findByCertificateId(String certId, Long callerSchoolId) {
+        Certificate cert = certificateRepository.findByCertificateId(certId).orElse(null);
+        if (cert == null) return ApiResponse.error("Certificate not found");
+        // School check — callerSchoolId is null for APPLICATION_OWNER (allowed)
+        if (callerSchoolId != null && !callerSchoolId.equals(cert.getSchoolId())) {
+            return ApiResponse.error("Certificate not found");
+        }
+        return ApiResponse.success("Certificate found", cert);
     }
 
     public ApiResponse<Void> deleteCertificate(Long id, Long schoolId) {

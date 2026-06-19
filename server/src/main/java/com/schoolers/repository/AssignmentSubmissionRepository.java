@@ -21,5 +21,8 @@ public interface AssignmentSubmissionRepository extends JpaRepository<Assignment
     @Modifying @Transactional
     void deleteByStudentIdIn(List<Long> studentIds);
 
+    @Modifying @Transactional
+    void deleteByAssignmentIdIn(List<Long> assignmentIds);
+
     long countByAssignmentId(Long assignmentId);
 }

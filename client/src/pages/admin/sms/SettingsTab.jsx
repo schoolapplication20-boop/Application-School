@@ -77,10 +77,14 @@ export default function SettingsTab({ showToast }) {
         countryCode: form.countryCode,
       });
       if (res.data?.success) {
-        const s = res.data.data;
-        setSettings(s);
-        setForm(f => ({ ...f, authKey: s.authKeyMasked || '' }));
-        showToast(s.configured ? 'SMS provider configured successfully' : 'Settings saved (add Auth Key + Sender ID to activate)', 'success');
+        const s = res.data?.data;
+        if (!s) {
+          showToast('Settings saved', 'success');
+        } else {
+          setSettings(s);
+          setForm(f => ({ ...f, authKey: s.authKeyMasked || '' }));
+          showToast(s.configured ? 'SMS provider configured successfully' : 'Settings saved (add Auth Key + Sender ID to activate)', 'success');
+        }
       } else {
         showToast(res.data?.message || 'Failed to save settings', 'error');
       }

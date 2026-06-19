@@ -2,6 +2,7 @@ package com.schoolers.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -34,6 +35,13 @@ public class WhatsAppCloudService {
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper mapper = new ObjectMapper();
+
+    @PostConstruct
+    public void validateConfig() {
+        if (verifyToken == null || verifyToken.isBlank() || verifyToken.equals("myskoolz2026")) {
+            log.warning("[WhatsApp] WHATSAPP_VERIFY_TOKEN is not configured or uses the default value — webhook verification will fail");
+        }
+    }
 
     public boolean isConfigured() {
         return accessToken != null && !accessToken.isBlank()

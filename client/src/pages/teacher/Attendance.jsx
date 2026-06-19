@@ -100,7 +100,7 @@ export default function Attendance() {
       })
       .catch(() => showToast('Failed to load class data', 'error'))
       .finally(() => setLoadingStudents(false));
-  }, [selectedClass, selectedDate]);
+  }, [selectedClass, selectedDate, showToast]);
 
   // ── Load history dates when switching to history tab ──────────────────────
   useEffect(() => {

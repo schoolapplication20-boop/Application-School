@@ -217,9 +217,13 @@ export default function Examination() {
 
   const handleDeleteSchedule = async (id) => {
     if (!window.confirm('Delete this exam schedule?')) return;
-    try { await examinationAPI.deleteSchedule(id); } catch { /* offline */ }
-    setSchedules(prev => prev.filter(s => s.id !== id));
-    showToast('Schedule deleted');
+    try {
+      await examinationAPI.deleteSchedule(id);
+      setSchedules(prev => prev.filter(s => s.id !== id));
+      showToast('Schedule deleted');
+    } catch (err) {
+      showToast(err?.response?.data?.message || 'Delete failed. Please try again.', 'error');
+    }
   };
 
   // ─── Hall Ticket CRUD ───────────────────────────────────────────────────────
@@ -317,9 +321,13 @@ export default function Examination() {
 
   const handleDeleteTicket = async (id) => {
     if (!window.confirm('Delete this hall ticket?')) return;
-    try { await examinationAPI.deleteHallTicket(id); } catch { /* offline */ }
-    setHallTickets(prev => prev.filter(t => t.id !== id));
-    showToast('Hall ticket deleted');
+    try {
+      await examinationAPI.deleteHallTicket(id);
+      setHallTickets(prev => prev.filter(t => t.id !== id));
+      showToast('Hall ticket deleted');
+    } catch (err) {
+      showToast(err?.response?.data?.message || 'Delete failed. Please try again.', 'error');
+    }
   };
 
   // ─── Certificate CRUD ────────────────────────────────────────────────────────
@@ -361,9 +369,13 @@ export default function Examination() {
 
   const handleDeleteCertificate = async (id) => {
     if (!window.confirm('Delete this certificate?')) return;
-    try { await examinationAPI.deleteCertificate(id); } catch { /* offline */ }
-    setCertificates(prev => prev.filter(c => c.id !== id));
-    showToast('Certificate deleted');
+    try {
+      await examinationAPI.deleteCertificate(id);
+      setCertificates(prev => prev.filter(c => c.id !== id));
+      showToast('Certificate deleted');
+    } catch (err) {
+      showToast(err?.response?.data?.message || 'Delete failed. Please try again.', 'error');
+    }
   };
 
   const handlePreview = (item, type) => {

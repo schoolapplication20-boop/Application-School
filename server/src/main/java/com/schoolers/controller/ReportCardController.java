@@ -3,6 +3,7 @@ package com.schoolers.controller;
 import com.schoolers.dto.ApiResponse;
 import com.schoolers.model.*;
 import com.schoolers.repository.*;
+import com.schoolers.security.CurrentUserUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -16,7 +17,7 @@ import java.util.stream.Collectors;
 @RestController
 public class ReportCardController {
 
-    @Autowired private UserRepository       userRepository;
+    @Autowired private CurrentUserUtil       currentUserUtil;
     @Autowired private StudentRepository    studentRepository;
     @Autowired private MarksRepository      marksRepository;
     @Autowired private AttendanceRepository attendanceRepository;
@@ -28,9 +29,9 @@ public class ReportCardController {
     @GetMapping("/api/student/report-card/filters")
     @PreAuthorize("hasRole('STUDENT')")
     public ResponseEntity<?> getMyFilters(Authentication auth) {
-        var userOpt = userRepository.findByEmailIgnoreCase(auth.getName());
-        if (userOpt.isEmpty()) return ResponseEntity.status(403).body(ApiResponse.error("User not found"));
-        var studentOpt = studentRepository.findByStudentUserId(userOpt.get().getId());
+        Long currentUserId = currentUserUtil.getCurrentUserId(auth);
+        if (currentUserId == null) return ResponseEntity.status(403).body(ApiResponse.error("User not found"));
+        var studentOpt = studentRepository.findByStudentUserId(currentUserId);
         if (studentOpt.isEmpty()) return ResponseEntity.ok(ApiResponse.success(Map.of("examTypes", List.of())));
         Student student = studentOpt.get();
         // Merge schoolId-scoped + fallback (null schoolId = pre-fix records) to ensure all exam types appear
@@ -47,9 +48,9 @@ public class ReportCardController {
     public ResponseEntity<?> getMyReportCard(
             @RequestParam(required = false) String examType,
             Authentication auth) {
-        var userOpt = userRepository.findByEmailIgnoreCase(auth.getName());
-        if (userOpt.isEmpty()) return ResponseEntity.status(403).body(ApiResponse.error("User not found"));
-        var studentOpt = studentRepository.findByStudentUserId(userOpt.get().getId());
+        Long currentUserId = currentUserUtil.getCurrentUserId(auth);
+        if (currentUserId == null) return ResponseEntity.status(403).body(ApiResponse.error("User not found"));
+        var studentOpt = studentRepository.findByStudentUserId(currentUserId);
         if (studentOpt.isEmpty()) return ResponseEntity.status(403).body(ApiResponse.error("Student profile not found"));
         return ResponseEntity.ok(buildReportCard(studentOpt.get(), examType));
     }
@@ -59,7 +60,7 @@ public class ReportCardController {
     @GetMapping("/api/report-cards/filters")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER')")
     public ResponseEntity<?> getSchoolFilters(Authentication auth) {
-        Long schoolId = userRepository.findByEmailIgnoreCase(auth.getName()).map(User::getSchoolId).orElse(null);
+        Long schoolId = currentUserUtil.getCurrentSchoolId(auth);
         if (schoolId == null) return ResponseEntity.ok(ApiResponse.success(Map.of("examTypes", List.of())));
         List<String> examTypes = marksRepository.findDistinctExamTypesBySchoolId(schoolId);
         return ResponseEntity.ok(ApiResponse.success(Map.of("examTypes", examTypes)));
@@ -74,7 +75,7 @@ public class ReportCardController {
             @RequestParam(required = false) String section,
             @RequestParam(required = false) String examType,
             Authentication auth) {
-        Long schoolId = userRepository.findByEmailIgnoreCase(auth.getName()).map(User::getSchoolId).orElse(null);
+        Long schoolId = currentUserUtil.getCurrentSchoolId(auth);
         if (schoolId == null) return ResponseEntity.status(403).body(ApiResponse.error("School not found"));
         if (className == null || className.isBlank())
             return ResponseEntity.badRequest().body(ApiResponse.error("className is required"));
@@ -126,7 +127,7 @@ public class ReportCardController {
             @PathVariable Long studentId,
             @RequestParam(required = false) String examType,
             Authentication auth) {
-        Long schoolId = userRepository.findByEmailIgnoreCase(auth.getName()).map(User::getSchoolId).orElse(null);
+        Long schoolId = currentUserUtil.getCurrentSchoolId(auth);
         Student student = studentRepository.findById(studentId).orElse(null);
         if (student == null) return ResponseEntity.status(404).body(ApiResponse.error("Student not found"));
         if (schoolId != null && !schoolId.equals(student.getSchoolId()))
@@ -141,16 +142,15 @@ public class ReportCardController {
     public ResponseEntity<?> bulkImportMarksCsv(
             @org.springframework.web.bind.annotation.RequestBody Map<String, Object> body,
             Authentication auth) {
-        User caller = userRepository.findByEmailIgnoreCase(auth.getName()).orElse(null);
-        if (caller == null) return ResponseEntity.status(403).body(ApiResponse.error("User not found"));
-        Long schoolId = caller.getSchoolId();
-        Long teacherId = caller.getId();
+        Long schoolId = currentUserUtil.getCurrentSchoolId(auth);
+        Long teacherId = currentUserUtil.getCurrentUserId(auth);
+        if (teacherId == null) return ResponseEntity.status(403).body(ApiResponse.error("User not found"));
         if (schoolId == null) return ResponseEntity.status(403).body(ApiResponse.error("School not found"));
 
         // For TEACHER role: enforce class-teacher-only restriction and scope to their assigned class
         String allowedClassName = null;
         String allowedSection   = null;
-        if (caller.getRole() == User.Role.TEACHER) {
+        if (auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_TEACHER"))) {
             com.schoolers.model.Teacher teacher = teacherRepository.findByUserId(teacherId).orElse(null);
             if (teacher == null) return ResponseEntity.status(403).body(ApiResponse.error("Teacher profile not found"));
             String type = teacher.getTeacherType() != null ? teacher.getTeacherType() : "SUBJECT_TEACHER";
@@ -243,8 +243,7 @@ public class ReportCardController {
             @PathVariable Long studentId,
             @RequestParam(required = false) String examType,
             Authentication auth) {
-        Long adminSchoolId = userRepository.findByEmailIgnoreCase(auth.getName())
-                .map(User::getSchoolId).orElse(null);
+        Long adminSchoolId = currentUserUtil.getCurrentSchoolId(auth);
         Student student = studentRepository.findById(studentId).orElse(null);
         if (student == null) return ResponseEntity.status(404).body(ApiResponse.error("Student not found"));
         if (adminSchoolId != null && !adminSchoolId.equals(student.getSchoolId()))

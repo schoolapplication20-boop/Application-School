@@ -19,10 +19,12 @@ export default function HistoryTab({ showToast }) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
+      const toISTParam = (dateStr, endOfDay = false) =>
+        dateStr ? `${dateStr}T${endOfDay ? '23:59:59' : '00:00:00'}+05:30` : undefined;
       const params = { page, size: 20 };
       if (status) params.status = status;
-      if (from) params.from = `${from}T00:00:00`;
-      if (to) params.to = `${to}T23:59:59`;
+      if (from) params.from = toISTParam(from);
+      if (to) params.to = toISTParam(to, true);
       if (search) params.search = search;
       const res = await smsAPI.getHistory(params);
       const data = res.data?.data;

@@ -16,6 +16,7 @@ import java.util.Optional;
 public interface StudentFeeAssignmentRepository extends JpaRepository<StudentFeeAssignment, Long> {
     Optional<StudentFeeAssignment> findByStudentIdAndAcademicYear(Long studentId, String academicYear);
     Optional<StudentFeeAssignment> findFirstByStudentIdOrderByCreatedAtDesc(Long studentId);
+    List<StudentFeeAssignment> findByStudentIdOrderByCreatedAtDesc(Long studentId);
     List<StudentFeeAssignment> findByStudentId(Long studentId);
     List<StudentFeeAssignment> findByStudentIdIn(List<Long> studentIds);
     List<StudentFeeAssignment> findAllByOrderByCreatedAtDesc();
@@ -51,6 +52,8 @@ public interface StudentFeeAssignmentRepository extends JpaRepository<StudentFee
            "FROM StudentFeeAssignment s WHERE s.schoolId = :schoolId " +
            "GROUP BY s.academicYear ORDER BY s.academicYear DESC")
     List<Object[]> feeSummaryByYear(@Param("schoolId") Long schoolId);
+
+    long countBySchoolIdAndAcademicYear(Long schoolId, String academicYear);
 
     @org.springframework.data.jpa.repository.Modifying
     @org.springframework.transaction.annotation.Transactional

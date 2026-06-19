@@ -1070,8 +1070,11 @@ public class AdminService {
         // ── Step 1: Timetable, homework, assignments (with submissions), marks ──
         timetableRepository.deleteByTeacherId(id);
         // Delete submissions before assignments to avoid orphaned records
-        assignmentRepository.findByTeacherIdAndSchoolId(id, teacher.getSchoolId())
-                .forEach(a -> assignmentSubmissionRepository.deleteByAssignmentId(a.getId()));
+        List<Long> teacherAssignmentIds = assignmentRepository.findByTeacherIdAndSchoolId(id, teacher.getSchoolId())
+                .stream().map(com.schoolers.model.Assignment::getId).collect(Collectors.toList());
+        if (!teacherAssignmentIds.isEmpty()) {
+            assignmentSubmissionRepository.deleteByAssignmentIdIn(teacherAssignmentIds);
+        }
         assignmentRepository.deleteByTeacherId(id);
         marksRepository.deleteByTeacherId(id);
         classDiaryRepository.deleteByTeacherId(id);
@@ -1153,11 +1156,18 @@ public class AdminService {
         if (schoolId == null) return ApiResponse.success(java.util.List.of());
         List<ClassRoom> rooms = classRoomRepository.findBySchoolId(schoolId);
 
+        // PERF-01: batch enrollment count — one query instead of N per-class queries
+        Map<String, Long> enrolledByClassSection = new java.util.HashMap<>();
+        List<Object[]> batchCounts = studentRepository.countEnrolledByClassForSchool(schoolId);
+        for (Object[] row : batchCounts) {
+            String key = row[0].toString() + "|" + row[1].toString();
+            enrolledByClassSection.put(key, ((Number) row[2]).longValue());
+        }
+
         List<Map<String, Object>> result = rooms.stream().map(room -> {
-            Long sid = schoolId != null ? schoolId : room.getSchoolId();
-            long enrolled = (sid != null)
-                    ? studentRepository.countEnrolledForCapacity(sid, room.getName(), room.getSection() != null ? room.getSection() : "")
-                    : studentRepository.countByClassNameIgnoreCaseAndSectionIgnoreCase(room.getName(), room.getSection() != null ? room.getSection() : "");
+            String classKey = room.getName() != null ? room.getName().toLowerCase() : "";
+            String sectionKey = room.getSection() != null ? room.getSection().toLowerCase() : "";
+            long enrolled = enrolledByClassSection.getOrDefault(classKey + "|" + sectionKey, 0L);
             Map<String, Object> dto = new java.util.LinkedHashMap<>();
             dto.put("id",          room.getId());
             dto.put("name",        room.getName());
@@ -1394,6 +1404,8 @@ public class AdminService {
         });
 
         // ── Step 4: Delete the classroom row ──────────────────────────────────
+        auditLogService.log(null, "SYSTEM", "ADMIN", classSchoolId, "DELETE", "ClassRoom", id,
+                "Deleted class id=" + id + " (" + classSection + ") with cascade of " + students.size() + " student(s)", null);
         classRoomRepository.deleteById(id);
         log.info("[deleteClass] COMPLETE — classId=" + id + " (" + classSection + ")");
         return ApiResponse.success("Class and all related data deleted", "Deleted");
@@ -1570,7 +1582,10 @@ public class AdminService {
                     String paidDateStr = str(body, "paidDate", null);
                     LocalDate paymentDate = LocalDate.now();
                     if (paidDateStr != null) {
-                        try { fee.setPaidDate(LocalDate.parse(paidDateStr)); } catch (Exception ignored) {}
+                        try { fee.setPaidDate(LocalDate.parse(paidDateStr)); }
+                        catch (Exception e) {
+                            return ApiResponse.<Fee>error("Invalid payment date format. Use YYYY-MM-DD.");
+                        }
                         if (fee.getPaidDate() != null) paymentDate = fee.getPaidDate();
                     } else {
                         fee.setPaidDate(paymentDate);
@@ -1603,7 +1618,7 @@ public class AdminService {
 
                     return ApiResponse.success("Cash payment recorded", savedFee);
                 })
-                .orElse(ApiResponse.error("Fee record not found"));
+                .orElse(ApiResponse.<Fee>error("Fee record not found"));
     }
 
     @Transactional
@@ -1630,6 +1645,8 @@ public class AdminService {
                             fee.setStatus(Fee.Status.PAID);
                         } else if (paid.compareTo(BigDecimal.ZERO) > 0) {
                             fee.setStatus(Fee.Status.PARTIAL);
+                        } else {
+                            fee.setStatus(Fee.Status.PENDING);
                         }
                     }
                     if (body.containsKey("status")) {
@@ -1664,6 +1681,8 @@ public class AdminService {
         if (fee == null) return ApiResponse.error("Fee record not found");
         if (schoolMismatch(schoolId, fee.getSchoolId()))
             return ApiResponse.error("Fee record not found");
+        auditLogService.log(null, "SYSTEM", "ADMIN", schoolId, "DELETE", "Fee", id,
+                "Deleted fee record id=" + id, null);
         feeRepository.deleteById(id);
         return ApiResponse.success("Fee record deleted", "Deleted");
     }
@@ -1755,8 +1774,8 @@ public class AdminService {
                 entry.put("amount", amount);
                 termFees.add(entry);
             }
-            if (!termFees.isEmpty() && termTotal.compareTo(annualTotal) > 0) {
-                return ApiResponse.error("Term-wise fee total (₹" + termTotal + ") cannot exceed the Total Annual Fee (₹" + annualTotal + ")");
+            if (!termFees.isEmpty() && termTotal.compareTo(annualTotal) != 0) {
+                return ApiResponse.error("Term fees must sum exactly to the annual total fee of ₹" + annualTotal);
             }
         }
         cfs.setTermFees(termFees);
@@ -1793,9 +1812,7 @@ public class AdminService {
                 assignment.setTotalFee(totalFee);
 
                 BigDecimal paid = assignment.getPaidAmount() != null ? assignment.getPaidAmount() : BigDecimal.ZERO;
-                if (paid.compareTo(totalFee) >= 0)             assignment.setStatus(StudentFeeAssignment.Status.PAID);
-                else if (paid.compareTo(BigDecimal.ZERO) > 0)  assignment.setStatus(StudentFeeAssignment.Status.PARTIAL);
-                else                                            assignment.setStatus(StudentFeeAssignment.Status.PENDING);
+                assignment.setStatus(deriveFeeStatus(paid, totalFee));
 
                 toSave.add(assignment);
             }
@@ -1821,6 +1838,15 @@ public class AdminService {
         if (cfs == null) return ApiResponse.error("Fee structure not found");
         if (schoolMismatch(schoolId, cfs.getSchoolId()))
             return ApiResponse.error("Fee structure not found");
+        long assignmentCount = studentFeeAssignmentRepository.countBySchoolIdAndAcademicYear(
+                cfs.getSchoolId(), cfs.getAcademicYear());
+        if (assignmentCount > 0) {
+            return ApiResponse.error("Cannot delete fee structure — " + assignmentCount +
+                    " student(s) have active fee assignments for this class/year. Remove or reassign those fees first.");
+        }
+        auditLogService.log(null, "SYSTEM", "ADMIN", cfs.getSchoolId(), "DELETE", "ClassFeeStructure", id,
+                "Deleted class fee structure id=" + id + " class=" + cfs.getClassName()
+                        + " year=" + cfs.getAcademicYear(), null);
         classFeeStructureRepository.deleteById(id);
         return ApiResponse.success("Fee structure deleted", "Deleted");
     }
@@ -1910,6 +1936,10 @@ public class AdminService {
             if (student == null || schoolMismatch(schoolId, student.getSchoolId()))
                 return ApiResponse.error("Unauthorized");
         }
+        auditLogService.log(null, "SYSTEM", "ADMIN", assignment.getSchoolId(), "DELETE", "StudentFeeAssignment", id,
+                "Deleted fee assignment id=" + id + " studentId=" + assignment.getStudentId(), null);
+        feeInstallmentRepository.deleteByAssignmentId(id);
+        feePaymentRepository.deleteByAssignmentId(id);
         studentFeeAssignmentRepository.deleteById(id);
         return ApiResponse.success("Fee assignment deleted successfully");
     }
@@ -1948,8 +1978,12 @@ public class AdminService {
             String academicYear = str(body, "academicYear", currentAcademicYear());
             if (academicYear == null || academicYear.isBlank()) academicYear = currentAcademicYear();
 
-            StudentFeeAssignment assignment = studentFeeAssignmentRepository
-                    .findByStudentIdAndAcademicYear(studentId, academicYear)
+            Long assignSchoolId = student.getSchoolId();
+            StudentFeeAssignment assignment = (assignSchoolId != null
+                    ? studentFeeAssignmentRepository
+                            .findByStudentIdAndAcademicYearAndSchoolId(studentId, academicYear, assignSchoolId)
+                    : studentFeeAssignmentRepository
+                            .findByStudentIdAndAcademicYear(studentId, academicYear))
                     .orElse(StudentFeeAssignment.builder()
                             .studentId(studentId)
                             .academicYear(academicYear)
@@ -1988,9 +2022,7 @@ public class AdminService {
 
             // Recalculate status
             BigDecimal paid = assignment.getPaidAmount() != null ? assignment.getPaidAmount() : BigDecimal.ZERO;
-            if (paid.compareTo(totalFee) >= 0) assignment.setStatus(StudentFeeAssignment.Status.PAID);
-            else if (paid.compareTo(BigDecimal.ZERO) > 0) assignment.setStatus(StudentFeeAssignment.Status.PARTIAL);
-            else assignment.setStatus(StudentFeeAssignment.Status.PENDING);
+            assignment.setStatus(deriveFeeStatus(paid, totalFee));
 
             StudentFeeAssignment saved = studentFeeAssignmentRepository.save(assignment);
 
@@ -2090,8 +2122,7 @@ public class AdminService {
 
         BigDecimal newPaid = currentPaid.add(amountPaid);
         assignment.setPaidAmount(newPaid);
-        if (newPaid.compareTo(assignment.getTotalFee()) >= 0) assignment.setStatus(StudentFeeAssignment.Status.PAID);
-        else assignment.setStatus(StudentFeeAssignment.Status.PARTIAL);
+        assignment.setStatus(deriveFeeStatus(newPaid, assignment.getTotalFee()));
 
         StudentFeeAssignment saved = studentFeeAssignmentRepository.save(assignment);
 
@@ -2256,8 +2287,7 @@ public class AdminService {
         BigDecimal currentPaid = assignment.getPaidAmount() != null ? assignment.getPaidAmount() : BigDecimal.ZERO;
         BigDecimal newPaid = currentPaid.add(amountPaid);
         assignment.setPaidAmount(newPaid);
-        if (newPaid.compareTo(assignment.getTotalFee()) >= 0) assignment.setStatus(StudentFeeAssignment.Status.PAID);
-        else assignment.setStatus(StudentFeeAssignment.Status.PARTIAL);
+        assignment.setStatus(deriveFeeStatus(newPaid, assignment.getTotalFee()));
         studentFeeAssignmentRepository.save(assignment);
 
         // Record in fee_payments table
@@ -2297,8 +2327,14 @@ public class AdminService {
     public ApiResponse<Map<String, Object>> getStudentFeeData(Long studentId) {
         Map<String, Object> result = new LinkedHashMap<>();
 
+        int _yr = LocalDate.now().getMonthValue() >= 4 ? LocalDate.now().getYear() : LocalDate.now().getYear() - 1;
+        String _currentAcYear = _yr + "-" + String.valueOf(_yr + 1).substring(2);
         StudentFeeAssignment assignment = studentFeeAssignmentRepository
-                .findFirstByStudentIdOrderByCreatedAtDesc(studentId).orElse(null);
+                .findByStudentIdOrderByCreatedAtDesc(studentId)
+                .stream()
+                .filter(a -> _currentAcYear.equals(a.getAcademicYear()))
+                .findFirst()
+                .orElse(null);
 
         // Read-only endpoint — no auto-creation; admin must explicitly assign fees
 
@@ -2634,6 +2670,17 @@ public class AdminService {
     }
 
     /**
+     * Derives the three-way PAID/PARTIAL/PENDING status from paid vs. total amounts.
+     * Centralised here to avoid the same inline triple-branch being repeated everywhere.
+     */
+    private StudentFeeAssignment.Status deriveFeeStatus(BigDecimal paid, BigDecimal total) {
+        if (paid == null) paid = BigDecimal.ZERO;
+        if (paid.compareTo(total) >= 0) return StudentFeeAssignment.Status.PAID;
+        if (paid.compareTo(BigDecimal.ZERO) > 0) return StudentFeeAssignment.Status.PARTIAL;
+        return StudentFeeAssignment.Status.PENDING;
+    }
+
+    /**
      * Creates FeeInstallment rows for a freshly-synced assignment from a class-level
      * term-wise breakup ([{termName, amount}, ...]). No-ops if the breakup is empty
      * or the assignment already has installments, so existing payment history (and
@@ -2642,6 +2689,7 @@ public class AdminService {
     private void applyTermInstallments(StudentFeeAssignment assignment, List<Map<String, Object>> termFees) {
         if (termFees == null || termFees.isEmpty()) return;
         if (feeInstallmentRepository.countByAssignmentId(assignment.getId()) > 0) return;
+        List<FeeInstallment> installments = new ArrayList<>();
         for (Map<String, Object> term : termFees) {
             Object nameObj = term.get("termName");
             Object amtObj  = term.get("amount");
@@ -2651,13 +2699,16 @@ public class AdminService {
             BigDecimal amount;
             try { amount = new BigDecimal(amtObj.toString()); } catch (Exception e) { continue; }
             if (amount.compareTo(BigDecimal.ZERO) <= 0) continue;
-            feeInstallmentRepository.save(FeeInstallment.builder()
+            installments.add(FeeInstallment.builder()
                     .assignmentId(assignment.getId())
                     .termName(termName)
                     .amount(amount)
                     .status(FeeInstallment.Status.PENDING)
                     .schoolId(assignment.getSchoolId())
                     .build());
+        }
+        if (!installments.isEmpty()) {
+            feeInstallmentRepository.saveAll(installments);
         }
     }
 
@@ -2684,6 +2735,9 @@ public class AdminService {
                 case "ABSENT"  -> counts[1] += count;
                 case "LEAVE"   -> counts[2] += count;
                 case "OTHERS"  -> counts[3] += count;
+                case "LATE"    -> counts[0] += count;  // count LATE as present
+                case "HOLIDAY" -> {}                    // skip holidays from counts
+                default        -> {}                    // ignore unrecognised statuses
             }
         }
 

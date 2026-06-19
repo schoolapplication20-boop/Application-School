@@ -103,7 +103,9 @@ public class SmsTemplateService {
         StringBuilder result = new StringBuilder();
         while (matcher.find()) {
             Object value = variables.get(matcher.group(1));
-            String replacement = value != null ? value.toString() : matcher.group(0);
+            String replacement = value != null
+                    ? value.toString().replaceAll("[\\r\\n\\t]", " ").trim()
+                    : matcher.group(0);
             matcher.appendReplacement(result, Matcher.quoteReplacement(replacement));
         }
         matcher.appendTail(result);
