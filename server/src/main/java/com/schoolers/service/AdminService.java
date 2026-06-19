@@ -1898,19 +1898,28 @@ public class AdminService {
                 .findBySchoolIdAndClassNameNormalizedAndAcademicYear(schoolId, className, academicYear)
                 .filter(cfs -> cfs.getTotalFee() != null && cfs.getTotalFee().compareTo(BigDecimal.ZERO) > 0)
                 .map(cfs -> {
-                    StudentFeeAssignment saved = studentFeeAssignmentRepository.save(StudentFeeAssignment.builder()
-                            .studentId(student.getId())
-                            .studentName(student.getName())
-                            .rollNumber(student.getRollNumber())
-                            .className(className)
-                            .academicYear(academicYear)
-                            .schoolId(schoolId)
-                            .totalFee(cfs.getTotalFee())
-                            .paidAmount(BigDecimal.ZERO)
-                            .status(StudentFeeAssignment.Status.PENDING)
-                            .build());
-                    applyTermInstallments(saved, cfs.getTermFees());
-                    return saved;
+                    try {
+                        StudentFeeAssignment saved = studentFeeAssignmentRepository.save(StudentFeeAssignment.builder()
+                                .studentId(student.getId())
+                                .studentName(student.getName())
+                                .rollNumber(student.getRollNumber())
+                                .className(className)
+                                .academicYear(academicYear)
+                                .schoolId(schoolId)
+                                .totalFee(cfs.getTotalFee())
+                                .paidAmount(BigDecimal.ZERO)
+                                .status(StudentFeeAssignment.Status.PENDING)
+                                .build());
+                        applyTermInstallments(saved, cfs.getTermFees());
+                        return saved;
+                    } catch (org.springframework.dao.DataIntegrityViolationException e) {
+                        // Another concurrent request already created the assignment — return the existing one.
+                        log.info("[syncClassFeeAssignment] Concurrent insert detected; loading existing assignment for student {} year {}",
+                                student.getId(), academicYear);
+                        return studentFeeAssignmentRepository
+                                .findByStudentIdAndAcademicYearAndSchoolId(student.getId(), academicYear, schoolId)
+                                .orElseThrow(() -> e);
+                    }
                 });
     }
 
@@ -2290,24 +2299,35 @@ public class AdminService {
         assignment.setStatus(deriveFeeStatus(newPaid, assignment.getTotalFee()));
         studentFeeAssignmentRepository.save(assignment);
 
-        // Record in fee_payments table
-        feePaymentRepository.save(FeePayment.builder()
-                .feeId(0L)
-                .assignmentId(assignment.getId())
-                .studentId(assignment.getStudentId())
-                .schoolId(assignment.getSchoolId())
-                .studentName(assignment.getStudentName())
-                .rollNumber(assignment.getRollNumber())
-                .className(assignment.getClassName())
-                .feeType("Fee Payment")
-                .term(installment.getTermName())
-                .amountPaid(amountPaid)
-                .paymentDate(paymentDate)
-                .paymentMode(str(body, "paymentMode", "CASH"))
-                .receiptNumber(receiptNumber)
-                .receivedBy(str(body, "receivedBy", null))
-                .remarks(str(body, "remarks", null))
-                .build());
+        // Record in fee_payments table — catch any residual DB constraint and surface it clearly
+        try {
+            feePaymentRepository.save(FeePayment.builder()
+                    .feeId(0L)
+                    .assignmentId(assignment.getId())
+                    .studentId(assignment.getStudentId())
+                    .schoolId(assignment.getSchoolId())
+                    .studentName(assignment.getStudentName())
+                    .rollNumber(assignment.getRollNumber())
+                    .className(assignment.getClassName())
+                    .feeType("Fee Payment")
+                    .term(installment.getTermName())
+                    .amountPaid(amountPaid)
+                    .paymentDate(paymentDate)
+                    .paymentMode(str(body, "paymentMode", "CASH"))
+                    .receiptNumber(receiptNumber)
+                    .receivedBy(str(body, "receivedBy", null))
+                    .remarks(str(body, "remarks", null))
+                    .build());
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            String detail = e.getMostSpecificCause() != null ? e.getMostSpecificCause().getMessage() : e.getMessage();
+            log.error("[collectInstallmentFee] DB constraint violated saving FeePayment — constraint detail: {}", detail);
+            // Rollback will be triggered by @Transactional automatically.
+            // Return a clear message instead of the generic global handler message.
+            if (detail != null && detail.toLowerCase().contains("receipt_number")) {
+                return ApiResponse.error("Receipt number conflict — a new receipt number was assigned. Please click Collect again.");
+            }
+            return ApiResponse.error("Payment could not be saved due to a database constraint (" + extractConstraintName(detail) + "). Contact support if this persists.");
+        }
 
         String msg = fullyCovered
             ? "Payment recorded for " + installment.getTermName()
@@ -2637,6 +2657,15 @@ public class AdminService {
     }
 
     // ── Helper ─────────────────────────────────────────────────────────────
+
+    /** Extracts the short constraint name from a Postgres error message for clear user messaging. */
+    private String extractConstraintName(String detail) {
+        if (detail == null) return "unknown constraint";
+        java.util.regex.Matcher m = java.util.regex.Pattern
+                .compile("constraint \"([^\"]+)\"")
+                .matcher(detail);
+        return m.find() ? m.group(1) : "unknown constraint";
+    }
 
     private String currentAcademicYear() {
         int year = LocalDate.now().getYear();
