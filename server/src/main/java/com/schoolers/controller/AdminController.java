@@ -32,6 +32,7 @@ public class AdminController {
     @Autowired private EmailVerificationRepository emailVerificationRepository;
     @Autowired private com.schoolers.repository.StudentFeeAssignmentRepository feeAssignmentRepository;
     @Autowired private com.schoolers.repository.SchoolRepository schoolRepository;
+    @Autowired private com.schoolers.repository.StudentRepository studentRepository;
 
     private static final java.util.regex.Pattern EMAIL_RE =
             java.util.regex.Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
@@ -269,6 +270,28 @@ public class AdminController {
     @GetMapping("/classes")
     public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getClasses(Authentication auth) {
         return ResponseEntity.ok(adminService.getClasses(getCurrentSchoolId(auth)));
+    }
+
+    /**
+     * Returns distinct class names from the students table.
+     * Used as a fallback when no ClassRoom entities are configured — ensures
+     * the Report Card class dropdown is always populated as long as students exist.
+     */
+    @GetMapping("/students/distinct-classes")
+    public ResponseEntity<?> getDistinctStudentClasses(Authentication auth) {
+        Long schoolId = getCurrentSchoolId(auth);
+        if (schoolId == null) return ResponseEntity.ok(ApiResponse.success(List.of()));
+        List<Object[]> rows = studentRepository.findDistinctClassNamesBySchoolId(schoolId);
+        List<Map<String, Object>> result = rows.stream()
+            .filter(r -> r[0] != null)
+            .map(r -> {
+                Map<String, Object> m = new java.util.LinkedHashMap<>();
+                m.put("name",    r[0].toString());
+                m.put("section", r[1] != null ? r[1].toString() : null);
+                return m;
+            })
+            .collect(java.util.stream.Collectors.toList());
+        return ResponseEntity.ok(ApiResponse.success(result));
     }
 
     @GetMapping("/classes/capacity-check")

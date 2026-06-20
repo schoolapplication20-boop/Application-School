@@ -18,6 +18,16 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
 
     // ── School-scoped queries (multi-tenant) ──────────────────────────────────
 
+    /**
+     * Returns distinct (className, section) pairs for a school.
+     * Used to populate class dropdowns when no ClassRoom entities are configured.
+     * Each element is Object[]{className, section} — section may be null.
+     */
+    @Query("SELECT DISTINCT s.className, s.section FROM Student s " +
+           "WHERE s.schoolId = :schoolId AND s.className IS NOT NULL " +
+           "ORDER BY s.className, s.section")
+    List<Object[]> findDistinctClassNamesBySchoolId(@Param("schoolId") Long schoolId);
+
     Page<Student> findBySchoolId(Long schoolId, Pageable pageable);
 
     List<Student> findBySchoolId(Long schoolId);

@@ -160,10 +160,27 @@ export default function ReportCardHub() {
         })
         .catch(() => { setIsClassTeacher(false); setClasses([]); });
     } else {
-      // Admin / Super Admin: load all classes
+      // Admin / Super Admin: load classrooms; fall back to distinct student class names
+      // if no classrooms have been configured yet.
       setIsClassTeacher(false);
       adminAPI.getClasses()
-        .then(res => setClasses((res.data?.data ?? []).slice().sort(sortClasses)))
+        .then(res => {
+          const rooms = res.data?.data ?? [];
+          if (rooms.length > 0) {
+            setClasses(rooms.slice().sort(sortClasses));
+          } else {
+            // No classrooms configured — derive class list from enrolled students
+            return adminAPI.getDistinctStudentClasses()
+              .then(r2 => {
+                const fromStudents = (r2.data?.data ?? []).map((c, i) => ({
+                  id:      `${c.name}||${c.section || ''}`,  // synthetic id
+                  name:    c.name,
+                  section: c.section || null,
+                }));
+                setClasses(fromStudents.sort(sortClasses));
+              });
+          }
+        })
         .catch(() => {});
     }
     reportCardAPI.getSchoolFilters()
@@ -174,7 +191,8 @@ export default function ReportCardHub() {
   // Load students when class filter changes
   const loadClassStudents = useCallback(async () => {
     if (!filterClass) { setClassStudents([]); return; }
-    const cls = classes.find(c => c.id === Number(filterClass));
+    // Support both numeric classroom IDs and synthetic string IDs from student-derived classes
+    const cls = classes.find(c => String(c.id) === String(filterClass));
     if (!cls) return;
     setLoadingClass(true);
     try {

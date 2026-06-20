@@ -188,6 +188,7 @@ export const adminAPI = {
 
   // Classes
   getClasses: () => api.get('/api/admin/classes'),
+  getDistinctStudentClasses: () => api.get('/api/admin/students/distinct-classes'),
   createClass: (data) => api.post('/api/admin/classes', data),
   updateClass: (id, data) => api.put(`/api/admin/classes/${id}`, data),
   deleteClass: (id) => api.delete(`/api/admin/classes/${id}`),
