@@ -218,6 +218,7 @@ export const adminAPI = {
   // Fee Installments
   getInstallments: (assignmentId) => api.get(`/api/admin/student-fee-assignments/${assignmentId}/installments`),
   collectInstallmentFee: (installmentId, data) => api.post(`/api/admin/fee-installments/${installmentId}/pay`, data),
+  updateCondonation: (assignmentId, data) => api.patch(`/api/admin/student-fee-assignments/${assignmentId}/condonation`, data),
 
   // Student search for fee collection
   searchStudentsForFee: (q, className, section) => api.get('/api/admin/students/search', { params: { q: q || undefined, className: className || undefined, section: section || undefined } }),

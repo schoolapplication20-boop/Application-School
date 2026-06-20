@@ -298,11 +298,12 @@ export default function Fees() {
         const existing = res.data?.data ?? [];
         if (existing.length > 0) {
           setInstallments(existing.map(i => ({
-            id:       i.id ?? crypto.randomUUID(),
-            termName: i.termName,
-            amount:   String(i.amount),
-            dueDate:  i.dueDate || '',
-            status:   i.status,
+            id:          i.id ?? crypto.randomUUID(),
+            termName:    i.termName,
+            amount:      String(i.amount),
+            dueDate:     i.dueDate || '',
+            status:      i.status,
+            condonation: i.condonationAmount > 0 ? String(i.condonationAmount) : '',
           })));
         } else {
           setInstallments([{ id: crypto.randomUUID(), termName: 'Term 1', amount: '', dueDate: '' }]);
@@ -368,7 +369,12 @@ export default function Fees() {
     // Validate installments: if any are filled, their total must match assignTotal
     const filledInstallments = installments
       .filter(i => i.termName?.trim() && i.amount && Number(i.amount) > 0)
-      .map(i => ({ termName: i.termName.trim(), amount: i.amount, dueDate: i.dueDate || null }));
+      .map(i => ({
+        termName:   i.termName.trim(),
+        amount:     i.amount,
+        dueDate:    i.dueDate || null,
+        condonation: i.condonation ? String(Number(i.condonation) || 0) : '0',
+      }));
 
     if (filledInstallments.length > 0) {
       const instTotal = filledInstallments.reduce((s, i) => s + Number(i.amount || 0), 0);
@@ -557,9 +563,11 @@ export default function Fees() {
                     'Roll No':        a.rollNumber || '—',
                     'Class':          a.className,
                     'Academic Year':  a.academicYear,
-                    'Total Fee (₹)':  Number(a.totalFee || 0).toFixed(2),
-                    'Paid (₹)':       Number(a.paidAmount || 0).toFixed(2),
-                    'Due (₹)':        Math.max(0, Number(a.totalFee || 0) - Number(a.paidAmount || 0)).toFixed(2),
+                    'Total Fee (₹)':       Number(a.totalFee || 0).toFixed(2),
+                    'Condonation (₹)':     Number(a.condonationAmount || 0).toFixed(2),
+                    'Net Payable (₹)':     Math.max(0, Number(a.totalFee || 0) - Number(a.condonationAmount || 0)).toFixed(2),
+                    'Paid (₹)':            Number(a.paidAmount || 0).toFixed(2),
+                    'Due (₹)':             Math.max(0, Math.max(0, Number(a.totalFee || 0) - Number(a.condonationAmount || 0)) - Number(a.paidAmount || 0)).toFixed(2),
                     'Status':         a.status || 'PENDING',
                     'Due Date':       a.dueDate || '—',
                     'Remarks':        a.remarks || '',
@@ -592,20 +600,24 @@ export default function Fees() {
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                     <thead>
                       <tr style={{ background: 'var(--surface-alt)' }}>
-                        {['Student','Roll No','Class','Total Fee','Paid','Due Amount','Status','Actions'].map(h => (
-                          <th key={h} style={{ padding: '10px 14px', textAlign: ['Total Fee','Paid','Due Amount'].includes(h) ? 'right' : 'left', fontWeight: 700, color: 'var(--text-secondary)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '1px solid var(--border-strong)', whiteSpace: 'nowrap' }}>{h}</th>
+                        {['Student','Roll No','Class','Original Fee','Condonation','Net Payable','Paid','Balance Due','Status','Actions'].map(h => (
+                          <th key={h} style={{ padding: '10px 14px', textAlign: ['Original Fee','Condonation','Net Payable','Paid','Balance Due'].includes(h) ? 'right' : 'left', fontWeight: 700, color: 'var(--text-secondary)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '1px solid var(--border-strong)', whiteSpace: 'nowrap' }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
                       {filteredAssignments.map(a => {
-                        const due = Number(a.totalFee || 0) - Number(a.paidAmount || 0);
+                        const cond       = Number(a.condonationAmount || 0);
+                        const netPayable = Math.max(0, Number(a.totalFee || 0) - cond);
+                        const due        = Math.max(0, netPayable - Number(a.paidAmount || 0));
                         return (
                           <tr key={a.id} style={{ borderBottom: '1px solid var(--border)' }}>
                             <td style={{ padding: '12px 14px', fontWeight: 700, color: 'var(--text-primary)' }}>{a.studentName}</td>
                             <td style={{ padding: '12px 14px', fontFamily: 'monospace', fontSize: 12, color: 'var(--text-secondary)' }}>{a.rollNumber || '—'}</td>
                             <td style={{ padding: '12px 14px', color: 'var(--text-secondary)' }}>{a.className}</td>
-                            <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: 'var(--text-primary)' }}>₹{fmt(a.totalFee)}</td>
+                            <td style={{ padding: '12px 14px', textAlign: 'right', color: cond > 0 ? 'var(--text-muted)' : 'var(--text-primary)', fontWeight: 700, textDecoration: cond > 0 ? 'line-through' : 'none' }}>₹{fmt(a.totalFee)}</td>
+                            <td style={{ padding: '12px 14px', textAlign: 'right', color: cond > 0 ? '#b45309' : 'var(--text-muted)', fontWeight: cond > 0 ? 700 : 400 }}>{cond > 0 ? `−₹${fmt(cond)}` : '—'}</td>
+                            <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 800, color: 'var(--text-primary)' }}>₹{fmt(netPayable)}</td>
                             <td style={{ padding: '12px 14px', textAlign: 'right', color: '#276749', fontWeight: 600 }}>₹{fmt(a.paidAmount)}</td>
                             <td style={{ padding: '12px 14px', textAlign: 'right', color: due > 0 ? '#e53e3e' : '#276749', fontWeight: 700 }}>₹{fmt(due)}</td>
                             <td style={{ padding: '12px 14px' }}><StatusBadge status={a.status} /></td>
@@ -865,42 +877,53 @@ export default function Fees() {
                   </button>
                 </div>
 
-                {installments.map((inst, idx) => (
-                  <div key={inst.id ?? idx} style={{ display: 'grid', gridTemplateColumns: '1fr 100px 120px 30px', gap: 6, alignItems: 'end', marginBottom: 8 }}>
+                {installments.map((inst, idx) => {
+                  const isPaid = String(inst.status || '').toUpperCase() === 'PAID';
+                  const baseAmt = Number(inst.amount || 0);
+                  const cond    = Number(inst.condonation || 0);
+                  const netPayable = Math.max(0, baseAmt - cond);
+                  return (
+                  <div key={inst.id ?? idx} style={{ display: 'grid', gridTemplateColumns: '1fr 90px 90px 110px 30px', gap: 6, alignItems: 'end', marginBottom: 8 }}>
                     <div>
                       {idx === 0 && <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 3 }}>Term Name</label>}
                       <input
                         value={inst.termName}
                         onChange={e => updateInstallment(idx, 'termName', e.target.value)}
                         placeholder="e.g. Term 1"
-                        style={{ width: '100%', padding: '7px 10px', border: `1.5px solid ${String(inst.status || '').toUpperCase() === 'PAID' ? '#68d391' : 'var(--border-strong)'}`, borderRadius: 7, fontSize: 13, outline: 'none', boxSizing: 'border-box', background: String(inst.status || '').toUpperCase() === 'PAID' ? '#f0fff4' : 'var(--surface)' }}
+                        style={{ width: '100%', padding: '7px 10px', border: `1.5px solid ${isPaid ? '#68d391' : 'var(--border-strong)'}`, borderRadius: 7, fontSize: 13, outline: 'none', boxSizing: 'border-box', background: isPaid ? '#f0fff4' : 'var(--surface)' }}
                       />
                     </div>
                     <div>
                       {idx === 0 && <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 3 }}>Amount (₹)</label>}
-                      <input
-                        type="number" min="0"
-                        value={inst.amount}
+                      <input type="number" min="0" value={inst.amount}
                         onChange={e => updateInstallment(idx, 'amount', e.target.value)}
-                        placeholder="0"
-                        disabled={String(inst.status || '').toUpperCase() === 'PAID'}
-                        style={{ width: '100%', padding: '7px 10px', border: '1.5px solid var(--border-strong)', borderRadius: 7, fontSize: 13, outline: 'none', boxSizing: 'border-box', background: String(inst.status || '').toUpperCase() === 'PAID' ? 'var(--surface-alt)' : 'var(--surface)' }}
+                        placeholder="0" disabled={isPaid}
+                        style={{ width: '100%', padding: '7px 10px', border: '1.5px solid var(--border-strong)', borderRadius: 7, fontSize: 13, outline: 'none', boxSizing: 'border-box', background: isPaid ? 'var(--surface-alt)' : 'var(--surface)' }}
                       />
                     </div>
                     <div>
+                      {idx === 0 && <label style={{ fontSize: 11, fontWeight: 600, color: '#b45309', display: 'block', marginBottom: 3 }}>Condonation (₹)</label>}
+                      <input type="number" min="0" max={baseAmt} value={inst.condonation || ''}
+                        onChange={e => updateInstallment(idx, 'condonation', e.target.value)}
+                        placeholder="0"
+                        style={{ width: '100%', padding: '7px 10px', border: `1.5px solid ${cond > 0 ? '#d69e2e' : 'var(--border-strong)'}`, borderRadius: 7, fontSize: 13, outline: 'none', boxSizing: 'border-box', background: cond > 0 ? '#fffbeb' : 'var(--surface)' }}
+                      />
+                      {cond > 0 && baseAmt > 0 && (
+                        <div style={{ fontSize: 10, color: '#b45309', marginTop: 2 }}>Net: ₹{fmt(netPayable)}</div>
+                      )}
+                    </div>
+                    <div>
                       {idx === 0 && <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 3 }}>Due Date</label>}
-                      <input
-                        type="date"
-                        value={inst.dueDate}
+                      <input type="date" value={inst.dueDate}
                         min={new Date().toISOString().split('T')[0]}
                         onChange={e => updateInstallment(idx, 'dueDate', e.target.value)}
-                        disabled={String(inst.status || '').toUpperCase() === 'PAID'}
-                        style={{ width: '100%', padding: '7px 8px', border: '1.5px solid var(--border-strong)', borderRadius: 7, fontSize: 12, outline: 'none', boxSizing: 'border-box', background: String(inst.status || '').toUpperCase() === 'PAID' ? 'var(--surface-alt)' : 'var(--surface)' }}
+                        disabled={isPaid}
+                        style={{ width: '100%', padding: '7px 8px', border: '1.5px solid var(--border-strong)', borderRadius: 7, fontSize: 12, outline: 'none', boxSizing: 'border-box', background: isPaid ? 'var(--surface-alt)' : 'var(--surface)' }}
                       />
                     </div>
                     <div>
                       {idx === 0 && <div style={{ height: 20 }} />}
-                      {String(inst.status || '').toUpperCase() === 'PAID' ? (
+                      {isPaid ? (
                         <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 32, fontSize: 16 }} title="Paid">✅</span>
                       ) : (
                         <button type="button" onClick={() => removeInstallment(idx)}
@@ -908,17 +931,23 @@ export default function Fees() {
                       )}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
 
-                {installments.some(i => i.amount && Number(i.amount) > 0) && (
-                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 6, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                    <span>Installment total: ₹{fmt(installments.reduce((s, i) => s + Number(i.amount || 0), 0))}</span>
-                    {assignTotal > 0 &&
-                     Math.abs(Math.round(installments.reduce((s, i) => s + Number(i.amount || 0), 0) * 100) - Math.round(assignTotal * 100)) > 0 && (
-                      <span style={{ color: '#e53e3e' }}>⚠ Does not match total fee (₹{fmt(assignTotal)})</span>
-                    )}
-                  </div>
-                )}
+                {installments.some(i => i.amount && Number(i.amount) > 0) && (() => {
+                  const instTotal = installments.reduce((s, i) => s + Number(i.amount || 0), 0);
+                  const condTotal = installments.reduce((s, i) => s + Number(i.condonation || 0), 0);
+                  const netTotal  = Math.max(0, instTotal - condTotal);
+                  return (
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 6, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                      <span>Installment total: ₹{fmt(instTotal)}</span>
+                      {condTotal > 0 && <span style={{ color: '#b45309' }}>Condonation: −₹{fmt(condTotal)} → Net payable: ₹{fmt(netTotal)}</span>}
+                      {assignTotal > 0 && Math.abs(Math.round(instTotal * 100) - Math.round(assignTotal * 100)) > 0 && (
+                        <span style={{ color: '#e53e3e' }}>⚠ Does not match total fee (₹{fmt(assignTotal)})</span>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 

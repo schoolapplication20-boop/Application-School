@@ -54,12 +54,17 @@ public class FeeInstallment {
 
     /**
      * Shortage rolled over from the previous term.
-     * effectiveDue = amount + carryOver
+     * effectiveDue = (amount - condonationAmount) + carryOver
      * If parent pays less than effectiveDue, the new shortage rolls to the next term.
      */
     @Column(name = "carry_over", precision = 10, scale = 2)
     @Builder.Default
     private BigDecimal carryOver = BigDecimal.ZERO;
+
+    /** Fee concession/waiver for this specific term. Reduces the payable amount for this installment. */
+    @Column(name = "condonation_amount", precision = 10, scale = 2)
+    @Builder.Default
+    private BigDecimal condonationAmount = BigDecimal.ZERO;
 
     /** Multi-tenancy */
     @Column(name = "school_id")
@@ -79,13 +84,22 @@ public class FeeInstallment {
     @Builder.Default
     private Long version = 0L;
 
-    /** Total amount actually due for this term (base + any rollover from previous term). */
+    /** Net payable for this term = (amount - condonation) + carryOver - paidAmount. */
     @Transient
     public BigDecimal getEffectiveDue() {
-        BigDecimal base  = amount    != null ? amount    : BigDecimal.ZERO;
-        BigDecimal carry = carryOver != null ? carryOver : BigDecimal.ZERO;
-        BigDecimal paid  = paidAmount != null ? paidAmount : BigDecimal.ZERO;
-        return base.add(carry).subtract(paid).max(BigDecimal.ZERO);
+        BigDecimal base  = amount             != null ? amount             : BigDecimal.ZERO;
+        BigDecimal cond  = condonationAmount  != null ? condonationAmount  : BigDecimal.ZERO;
+        BigDecimal carry = carryOver          != null ? carryOver          : BigDecimal.ZERO;
+        BigDecimal paid  = paidAmount         != null ? paidAmount         : BigDecimal.ZERO;
+        return base.subtract(cond).max(BigDecimal.ZERO).add(carry).subtract(paid).max(BigDecimal.ZERO);
+    }
+
+    /** Original amount before condonation (for reports). */
+    @Transient
+    public BigDecimal getNetPayable() {
+        BigDecimal base = amount            != null ? amount            : BigDecimal.ZERO;
+        BigDecimal cond = condonationAmount != null ? condonationAmount : BigDecimal.ZERO;
+        return base.subtract(cond).max(BigDecimal.ZERO);
     }
 
     public enum Status {

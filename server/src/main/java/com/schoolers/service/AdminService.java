@@ -2031,7 +2031,7 @@ public class AdminService {
 
             // Recalculate status
             BigDecimal paid = assignment.getPaidAmount() != null ? assignment.getPaidAmount() : BigDecimal.ZERO;
-            assignment.setStatus(deriveFeeStatus(paid, totalFee));
+            assignment.setStatus(deriveFeeStatus(paid, assignment.getNetPayable()));
 
             StudentFeeAssignment saved = studentFeeAssignmentRepository.save(assignment);
 
@@ -2070,6 +2070,13 @@ public class AdminService {
                     if (instMap.get("dueDate") != null && !instMap.get("dueDate").toString().isBlank()) {
                         try { instDue = LocalDate.parse(instMap.get("dueDate").toString()); } catch (Exception ignored2) {}
                     }
+                    // Parse per-installment condonation (optional)
+                    BigDecimal instCondonation = BigDecimal.ZERO;
+                    if (instMap.get("condonation") != null && !instMap.get("condonation").toString().isBlank()) {
+                        try {
+                            instCondonation = new BigDecimal(instMap.get("condonation").toString()).max(BigDecimal.ZERO);
+                        } catch (Exception ignored3) {}
+                    }
                     // Apply any carry-over from deleted pending installments to the first new installment (F-03)
                     BigDecimal initialCarry = (firstInst && carryToApply.compareTo(BigDecimal.ZERO) > 0)
                             ? carryToApply : null;
@@ -2080,9 +2087,29 @@ public class AdminService {
                             .dueDate(instDue)
                             .status(FeeInstallment.Status.PENDING)
                             .carryOver(initialCarry)
+                            .condonationAmount(instCondonation)
                             .schoolId(saved.getSchoolId())
                             .build());
                     firstInst = false;
+                }
+
+                // Sum all installment condonations → update assignment-level total condonation
+                List<FeeInstallment> freshInsts = feeInstallmentRepository.findByAssignmentIdOrderByCreatedAtAsc(saved.getId());
+                BigDecimal totalCondonation = freshInsts.stream()
+                        .map(i -> i.getCondonationAmount() != null ? i.getCondonationAmount() : BigDecimal.ZERO)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                saved.setCondonationAmount(totalCondonation);
+                saved = studentFeeAssignmentRepository.save(saved);
+            } else {
+                // No installments — accept assignment-level condonation from body
+                BigDecimal directCondonation = BigDecimal.ZERO;
+                if (body.get("condonationAmount") != null && !body.get("condonationAmount").toString().isBlank()) {
+                    try { directCondonation = new BigDecimal(body.get("condonationAmount").toString()).max(BigDecimal.ZERO); }
+                    catch (Exception ignored) {}
+                }
+                if (directCondonation.compareTo(saved.getCondonationAmount() != null ? saved.getCondonationAmount() : BigDecimal.ZERO) != 0) {
+                    saved.setCondonationAmount(directCondonation);
+                    saved = studentFeeAssignmentRepository.save(saved);
                 }
             }
 
@@ -2113,7 +2140,7 @@ public class AdminService {
 
         BigDecimal currentPaid = assignment.getPaidAmount() != null ? assignment.getPaidAmount() : BigDecimal.ZERO;
         if (assignment.getTotalFee() == null) return ApiResponse.error("Fee assignment is incomplete — no total fee set.");
-        BigDecimal due = assignment.getTotalFee().subtract(currentPaid);
+        BigDecimal due = assignment.getNetPayable().subtract(currentPaid).max(BigDecimal.ZERO);
         if (amountPaid.compareTo(due) > 0) return ApiResponse.error("Amount exceeds due balance of ₹" + due);
 
         // Always generate server-side receipt — never trust the frontend value.
@@ -2131,7 +2158,7 @@ public class AdminService {
 
         BigDecimal newPaid = currentPaid.add(amountPaid);
         assignment.setPaidAmount(newPaid);
-        assignment.setStatus(deriveFeeStatus(newPaid, assignment.getTotalFee()));
+        assignment.setStatus(deriveFeeStatus(newPaid, assignment.getNetPayable()));
 
         StudentFeeAssignment saved = studentFeeAssignmentRepository.save(assignment);
 
@@ -2179,6 +2206,68 @@ public class AdminService {
         }
         return ApiResponse.success(
                 feeInstallmentRepository.findByAssignmentIdOrderByDueDateAsc(assignmentId));
+    }
+
+    /**
+     * Update condonation on an existing fee assignment.
+     * Per-installment condonation is accepted via installments list;
+     * the assignment's total condonation is recalculated from the sum.
+     * If no installments, a direct assignment-level amount is accepted.
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public ApiResponse<StudentFeeAssignment> updateCondonation(Long assignmentId, Map<String, Object> body, Long schoolId) {
+        StudentFeeAssignment assignment = studentFeeAssignmentRepository.findById(assignmentId).orElse(null);
+        if (assignment == null) return ApiResponse.error("Fee assignment not found");
+        if (schoolId != null) {
+            Student tenantCheck = studentRepository.findById(assignment.getStudentId()).orElse(null);
+            if (tenantCheck == null || schoolMismatch(schoolId, tenantCheck.getSchoolId()))
+                return ApiResponse.error("Unauthorized");
+        }
+
+        Object instObj = body.get("installments");
+        if (instObj instanceof java.util.List<?> rawList && !rawList.isEmpty()) {
+            // Per-installment condonation update
+            List<FeeInstallment> existing = feeInstallmentRepository.findByAssignmentIdOrderByCreatedAtAsc(assignmentId);
+            for (Object rawInst : rawList) {
+                if (!(rawInst instanceof Map<?, ?> instMap)) continue;
+                Object idObj = instMap.get("id");
+                if (idObj == null) continue;
+                Long instId;
+                try { instId = Long.parseLong(idObj.toString()); } catch (Exception e) { continue; }
+                BigDecimal cond = BigDecimal.ZERO;
+                if (instMap.get("condonation") != null && !instMap.get("condonation").toString().isBlank()) {
+                    try { cond = new BigDecimal(instMap.get("condonation").toString()).max(BigDecimal.ZERO); }
+                    catch (Exception ignored) {}
+                }
+                final BigDecimal finalCond = cond;
+                existing.stream().filter(i -> i.getId().equals(instId)).findFirst()
+                    .ifPresent(inst -> {
+                        inst.setCondonationAmount(finalCond);
+                        feeInstallmentRepository.save(inst);
+                    });
+            }
+            // Recalculate assignment total from fresh installment sums
+            List<FeeInstallment> fresh = feeInstallmentRepository.findByAssignmentIdOrderByCreatedAtAsc(assignmentId);
+            BigDecimal totalCond = fresh.stream()
+                    .map(i -> i.getCondonationAmount() != null ? i.getCondonationAmount() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            assignment.setCondonationAmount(totalCond);
+        } else {
+            // Assignment-level direct condonation
+            BigDecimal cond = BigDecimal.ZERO;
+            if (body.get("condonationAmount") != null && !body.get("condonationAmount").toString().isBlank()) {
+                try { cond = new BigDecimal(body.get("condonationAmount").toString()).max(BigDecimal.ZERO); }
+                catch (Exception ignored) {}
+            }
+            if (cond.compareTo(assignment.getTotalFee() != null ? assignment.getTotalFee() : BigDecimal.ZERO) > 0)
+                return ApiResponse.error("Condonation cannot exceed total fee");
+            assignment.setCondonationAmount(cond);
+        }
+        // Re-derive status with updated netPayable
+        BigDecimal paid = assignment.getPaidAmount() != null ? assignment.getPaidAmount() : BigDecimal.ZERO;
+        assignment.setStatus(deriveFeeStatus(paid, assignment.getNetPayable()));
+        StudentFeeAssignment saved = studentFeeAssignmentRepository.save(assignment);
+        return ApiResponse.success("Condonation updated", saved);
     }
 
     /**
@@ -2240,8 +2329,10 @@ public class AdminService {
         }
         if (amountPaid.compareTo(BigDecimal.ZERO) <= 0) return ApiResponse.error("Amount must be greater than zero");
 
-        // Effective amount due = base installment amount + any carry-over from previous term
-        BigDecimal base      = installment.getAmount()   != null ? installment.getAmount()   : BigDecimal.ZERO;
+        // Effective amount due = (base - condonation) + carry-over - already paid
+        BigDecimal condonation = installment.getCondonationAmount() != null ? installment.getCondonationAmount() : BigDecimal.ZERO;
+        BigDecimal base      = (installment.getAmount() != null ? installment.getAmount() : BigDecimal.ZERO)
+                               .subtract(condonation).max(BigDecimal.ZERO);
         BigDecimal carryOver = installment.getCarryOver() != null ? installment.getCarryOver() : BigDecimal.ZERO;
         BigDecimal prevPaid  = installment.getPaidAmount() != null ? installment.getPaidAmount() : BigDecimal.ZERO;
         BigDecimal effectiveDue = base.add(carryOver).subtract(prevPaid);
@@ -2292,11 +2383,11 @@ public class AdminService {
         }
         FeeInstallment savedInst = feeInstallmentRepository.save(installment);
 
-        // Update assignment totals with actual amount paid
+        // Update assignment totals — derive status against netPayable (fee after condonation)
         BigDecimal currentPaid = assignment.getPaidAmount() != null ? assignment.getPaidAmount() : BigDecimal.ZERO;
         BigDecimal newPaid = currentPaid.add(amountPaid);
         assignment.setPaidAmount(newPaid);
-        assignment.setStatus(deriveFeeStatus(newPaid, assignment.getTotalFee()));
+        assignment.setStatus(deriveFeeStatus(newPaid, assignment.getNetPayable()));
         studentFeeAssignmentRepository.save(assignment);
 
         feePaymentRepository.save(FeePayment.builder()

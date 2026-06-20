@@ -183,12 +183,13 @@ export default function CollectFee() {
     } finally { setLoadingFee(false); }
   }, [reloadFeeData]);
 
-  /* ── effective due for an installment (base + carry-over − already paid) ── */
+  /* ── effective due for an installment (base − condonation + carry-over − already paid) ── */
   const effectiveDue = (inst) => {
-    const base  = Number(inst.amount    || 0);
-    const carry = Number(inst.carryOver || 0);
-    const paid  = Number(inst.paidAmount || 0);
-    return Math.max(0, base + carry - paid);
+    const base  = Number(inst.amount             || 0);
+    const cond  = Number(inst.condonationAmount  || 0);
+    const carry = Number(inst.carryOver          || 0);
+    const paid  = Number(inst.paidAmount         || 0);
+    return Math.max(0, base - cond + carry - paid);
   };
 
   /* ── select an installment for payment ── */
@@ -244,22 +245,26 @@ export default function CollectFee() {
       const updatedAssignment = aRes.data?.data;
       setAssignment(updatedAssignment);
 
-      const newPaid = Number(updatedAssignment?.paidAmount || 0);
-      const newDue  = Number(updatedAssignment?.totalFee || 0) - newPaid;
+      const newPaid     = Number(updatedAssignment?.paidAmount        || 0);
+      const condonation = Number(updatedAssignment?.condonationAmount || 0);
+      const netPayable  = Math.max(0, Number(updatedAssignment?.totalFee || 0) - condonation);
+      const newDue      = Math.max(0, netPayable - newPaid);
 
       setReceiptData({
-        receiptNo:   serverReceiptNo,
-        date:        payDate,
-        studentName: student.name,
-        rollNo:      student.rollNumber,
-        className:   student.className,
-        totalFee:    updatedAssignment?.totalFee,
-        amountPaid:  amt,
-        paidSoFar:   newPaid,
-        dueAmount:   newDue,
-        status:      updatedAssignment?.status,
-        receivedBy:  user?.name || user?.email || 'Admin',
-        term:        selectedInstallment.termName || null,
+        receiptNo:    serverReceiptNo,
+        date:         payDate,
+        studentName:  student.name,
+        rollNo:       student.rollNumber,
+        className:    student.className,
+        totalFee:     updatedAssignment?.totalFee,
+        condonation,
+        netPayable,
+        amountPaid:   amt,
+        paidSoFar:    newPaid,
+        dueAmount:    newDue,
+        status:       updatedAssignment?.status,
+        receivedBy:   user?.name || user?.email || 'Admin',
+        term:         selectedInstallment.termName || null,
         paymentMode,
         remarks,
       });
@@ -332,7 +337,8 @@ export default function CollectFee() {
       <div class="row"><span class="label">Roll Number</span><span class="value">${escHtml(d.rollNo || '—')}</span></div>
       <div class="row"><span class="label">Class</span><span class="value">${escHtml(d.className)}</span></div>
       <hr class="dashed"/>
-      <div class="row"><span class="label">Total Assigned Fee</span><span class="value">₹${fmt(d.totalFee)}</span></div>
+      <div class="row"><span class="label">Original Fee</span><span class="value">${Number(d.condonation) > 0 ? `<span style="text-decoration:line-through;color:#999">₹${fmt(d.totalFee)}</span>` : `₹${fmt(d.totalFee)}`}</span></div>
+      ${Number(d.condonation) > 0 ? `<div class="row"><span class="label" style="color:#b45309">Condonation</span><span class="value" style="color:#b45309;font-weight:700">− ₹${fmt(d.condonation)}</span></div><div class="row"><span class="label" style="font-weight:700">Net Payable Fee</span><span class="value" style="font-weight:800">₹${fmt(d.netPayable)}</span></div>` : ''}
       <div class="row"><span class="label">Previously Paid</span><span class="value">₹${fmt(Number(d.paidSoFar) - Number(d.amountPaid))}</span></div>
       <div class="watermark">${String(d.status || '').toUpperCase() === 'PAID' ? 'PAID' : ''}</div>
       <div class="amount-box">
@@ -622,6 +628,7 @@ export default function CollectFee() {
                       const overdue   = !isPaid && isOverdue(inst.dueDate);
                       const selected  = selectedInstallment?.id === inst.id;
                       const carry     = Number(inst.carryOver || 0);
+                      const cond      = Number(inst.condonationAmount || 0);
                       const instPaid  = Number(inst.paidAmount || 0);
                       const effDue    = effectiveDue(inst);
                       return (
@@ -646,6 +653,13 @@ export default function CollectFee() {
                               Due: {inst.dueDate || '—'}
                               {overdue && <span style={{ marginLeft: 4, fontWeight: 700 }}>· OVERDUE</span>}
                             </div>
+                            {/* Condonation badge */}
+                            {cond > 0 && (
+                              <div style={{ marginTop: 4, display: 'inline-flex', alignItems: 'center', gap: 4, background: '#fffbeb', border: '1px solid #f6e05e', borderRadius: 6, padding: '2px 7px' }}>
+                                <span className="material-icons" style={{ fontSize: 11, color: '#b45309' }}>local_offer</span>
+                                <span style={{ fontSize: 10, color: '#b45309', fontWeight: 700 }}>₹{fmt(cond)} condonation applied</span>
+                              </div>
+                            )}
                             {/* Carry-over badge */}
                             {carry > 0 && (
                               <div style={{ marginTop: 4, display: 'inline-flex', alignItems: 'center', gap: 4, background: '#fff5f5', border: '1px solid #fed7d7', borderRadius: 6, padding: '2px 7px' }}>
@@ -699,15 +713,21 @@ export default function CollectFee() {
 
                   {/* Effective due breakdown */}
                   {(() => {
-                    const carry   = Number(selectedInstallment.carryOver  || 0);
-                    const base    = Number(selectedInstallment.amount      || 0);
-                    const alrPaid = Number(selectedInstallment.paidAmount  || 0);
+                    const carry   = Number(selectedInstallment.carryOver         || 0);
+                    const base    = Number(selectedInstallment.amount             || 0);
+                    const cond    = Number(selectedInstallment.condonationAmount  || 0);
+                    const alrPaid = Number(selectedInstallment.paidAmount         || 0);
                     const effDue  = effectiveDue(selectedInstallment);
                     return (
                       <div style={{ background: 'var(--surface-alt)', borderRadius: 8, padding: '10px 12px', marginBottom: 14, fontSize: 12 }}>
-                        {carry > 0 && (
+                        {(cond > 0 || carry > 0) && (
                           <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)', marginBottom: 3 }}>
-                            <span>Base amount</span><span>₹{fmt(base)}</span>
+                            <span>Original fee</span><span>₹{fmt(base)}</span>
+                          </div>
+                        )}
+                        {cond > 0 && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#b45309', marginBottom: 3, fontWeight: 700 }}>
+                            <span>🏷 Condonation</span><span>− ₹{fmt(cond)}</span>
                           </div>
                         )}
                         {carry > 0 && (
@@ -803,6 +823,11 @@ export default function CollectFee() {
                       ['Student', receiptData.studentName],
                       ['Class', receiptData.className],
                       ...(receiptData.term ? [['Term / Installment', receiptData.term]] : []),
+                      ...(receiptData.condonation > 0 ? [
+                        ['Original Fee', `₹${fmt(receiptData.totalFee)}`],
+                        ['Condonation', `− ₹${fmt(receiptData.condonation)}`],
+                        ['Net Payable', `₹${fmt(receiptData.netPayable)}`],
+                      ] : []),
                       ['Amount Paid', `₹${fmt(receiptData.amountPaid)}`],
                       ['Total Paid', `₹${fmt(receiptData.paidSoFar)}`],
                       ['Balance Due', receiptData.dueAmount > 0 ? `₹${fmt(receiptData.dueAmount)}` : 'NIL'],

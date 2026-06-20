@@ -479,6 +479,15 @@ public class AdminController {
         return ResponseEntity.ok(adminService.getInstallments(assignmentId, getCurrentSchoolId(auth)));
     }
 
+    @PatchMapping("/student-fee-assignments/{assignmentId}/condonation")
+    public ResponseEntity<?> updateCondonation(
+            @PathVariable Long assignmentId,
+            @RequestBody Map<String, Object> body,
+            Authentication auth) {
+        var response = adminService.updateCondonation(assignmentId, body, getCurrentSchoolId(auth));
+        return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
+    }
+
     @PostMapping("/fee-installments/{installmentId}/pay")
     public ResponseEntity<?> collectInstallmentFee(
             @PathVariable Long installmentId,
