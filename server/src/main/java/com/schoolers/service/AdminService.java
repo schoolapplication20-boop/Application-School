@@ -2035,9 +2035,22 @@ public class AdminService {
 
             StudentFeeAssignment saved = studentFeeAssignmentRepository.save(assignment);
 
+            // ── Concession (form-level) ───────────────────────────────────────────
+            // condonationAmount from the form is the single student-level concession.
+            // If installments exist, the concession is distributed proportionally so
+            // each term's effectiveDue = (amount - proportionalConcession) + carryOver - paid.
+            BigDecimal formCondonation = BigDecimal.ZERO;
+            if (body.get("condonationAmount") != null && !body.get("condonationAmount").toString().isBlank()) {
+                try { formCondonation = new BigDecimal(body.get("condonationAmount").toString()).max(BigDecimal.ZERO); }
+                catch (Exception ignored) {}
+            }
+            if (formCondonation.compareTo(totalFee) > 0) formCondonation = totalFee; // cap at totalFee
+            saved.setCondonationAmount(formCondonation);
+            saved = studentFeeAssignmentRepository.save(saved);
+
             // ── Installments ──────────────────────────────────────────────────────
             // Accept a JSON array: [{termName, amount, dueDate}, ...]
-            // On every save we replace all installments so admin can fully re-configure.
+            // On every save we replace all PENDING installments so admin can re-configure.
             // Only replace if a non-empty installments list is actually sent.
             Object instObj = body.get("installments");
             if (instObj instanceof java.util.List<?> rawList && !rawList.isEmpty()) {
@@ -2055,29 +2068,46 @@ public class AdminService {
                         .filter(i -> i.getStatus() == FeeInstallment.Status.PENDING)
                         .forEach(i -> feeInstallmentRepository.deleteById(i.getId()));
 
-                boolean firstInst = true;
+                // Pre-pass: sum valid installment amounts for proportional concession distribution
+                BigDecimal totalInstAmt = BigDecimal.ZERO;
+                java.util.List<Object[]> validInsts = new java.util.ArrayList<>();
                 for (Object rawInst : rawList) {
                     if (!(rawInst instanceof Map<?, ?> instMap)) continue;
-                    String termName = instMap.get("termName") != null ? instMap.get("termName").toString().trim() : "Term";
-                    if (termName.isBlank()) continue;
-                    if (instMap.get("amount") == null || instMap.get("amount").toString().isBlank()) continue;
-                    BigDecimal instAmt;
-                    try { instAmt = new BigDecimal(instMap.get("amount").toString()); }
-                    catch (Exception e) { continue; }
-                    if (instAmt.compareTo(BigDecimal.ZERO) <= 0) continue;
+                    String tn = instMap.get("termName") != null ? instMap.get("termName").toString().trim() : "";
+                    if (tn.isBlank() || instMap.get("amount") == null || instMap.get("amount").toString().isBlank()) continue;
+                    try {
+                        BigDecimal amt = new BigDecimal(instMap.get("amount").toString());
+                        if (amt.compareTo(BigDecimal.ZERO) <= 0) continue;
+                        totalInstAmt = totalInstAmt.add(amt);
+                        validInsts.add(new Object[]{instMap, tn, amt});
+                    } catch (Exception e) { /* skip bad rows */ }
+                }
+
+                BigDecimal condonationRemaining = formCondonation;
+                boolean firstInst = true;
+                for (int vi = 0; vi < validInsts.size(); vi++) {
+                    Map<?, ?> instMap = (Map<?, ?>) validInsts.get(vi)[0];
+                    String termName   = (String)     validInsts.get(vi)[1];
+                    BigDecimal instAmt = (BigDecimal) validInsts.get(vi)[2];
+
+                    // Distribute concession proportionally; last installment gets the remainder
+                    BigDecimal instCondonation;
+                    if (vi == validInsts.size() - 1) {
+                        instCondonation = condonationRemaining.max(BigDecimal.ZERO);
+                    } else if (totalInstAmt.compareTo(BigDecimal.ZERO) > 0) {
+                        instCondonation = formCondonation
+                            .multiply(instAmt)
+                            .divide(totalInstAmt, 2, java.math.RoundingMode.HALF_DOWN)
+                            .min(instAmt);
+                        condonationRemaining = condonationRemaining.subtract(instCondonation);
+                    } else {
+                        instCondonation = BigDecimal.ZERO;
+                    }
 
                     LocalDate instDue = null;
                     if (instMap.get("dueDate") != null && !instMap.get("dueDate").toString().isBlank()) {
                         try { instDue = LocalDate.parse(instMap.get("dueDate").toString()); } catch (Exception ignored2) {}
                     }
-                    // Parse per-installment condonation (optional)
-                    BigDecimal instCondonation = BigDecimal.ZERO;
-                    if (instMap.get("condonation") != null && !instMap.get("condonation").toString().isBlank()) {
-                        try {
-                            instCondonation = new BigDecimal(instMap.get("condonation").toString()).max(BigDecimal.ZERO);
-                        } catch (Exception ignored3) {}
-                    }
-                    // Apply any carry-over from deleted pending installments to the first new installment (F-03)
                     BigDecimal initialCarry = (firstInst && carryToApply.compareTo(BigDecimal.ZERO) > 0)
                             ? carryToApply : null;
                     feeInstallmentRepository.save(FeeInstallment.builder()
@@ -2091,25 +2121,6 @@ public class AdminService {
                             .schoolId(saved.getSchoolId())
                             .build());
                     firstInst = false;
-                }
-
-                // Sum all installment condonations → update assignment-level total condonation
-                List<FeeInstallment> freshInsts = feeInstallmentRepository.findByAssignmentIdOrderByCreatedAtAsc(saved.getId());
-                BigDecimal totalCondonation = freshInsts.stream()
-                        .map(i -> i.getCondonationAmount() != null ? i.getCondonationAmount() : BigDecimal.ZERO)
-                        .reduce(BigDecimal.ZERO, BigDecimal::add);
-                saved.setCondonationAmount(totalCondonation);
-                saved = studentFeeAssignmentRepository.save(saved);
-            } else {
-                // No installments — accept assignment-level condonation from body
-                BigDecimal directCondonation = BigDecimal.ZERO;
-                if (body.get("condonationAmount") != null && !body.get("condonationAmount").toString().isBlank()) {
-                    try { directCondonation = new BigDecimal(body.get("condonationAmount").toString()).max(BigDecimal.ZERO); }
-                    catch (Exception ignored) {}
-                }
-                if (directCondonation.compareTo(saved.getCondonationAmount() != null ? saved.getCondonationAmount() : BigDecimal.ZERO) != 0) {
-                    saved.setCondonationAmount(directCondonation);
-                    saved = studentFeeAssignmentRepository.save(saved);
                 }
             }
 
