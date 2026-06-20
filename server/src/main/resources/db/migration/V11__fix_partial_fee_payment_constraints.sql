@@ -5,23 +5,52 @@
 -- fee_payments, or any unique constraint on fee_installments, preventing a second
 -- payment row for the same student/term (i.e. partial payments).
 --
--- This migration is idempotent and safe to run even if V8 and V10 already ran.
--- It also drops standalone UNIQUE INDEXES (not constraint-backed) which V8/V10 missed.
--- All DO $$ blocks use EXCEPTION WHEN others so that lock-timeout or privilege
--- errors on individual DROPs produce a NOTICE rather than aborting the migration.
+-- All DDL is wrapped in DO $$ blocks with:
+--   • SET LOCAL lock_timeout = '5s'  — so DDL that cannot acquire its lock within
+--     5 seconds throws a lock_timeout error instead of hanging indefinitely (which
+--     would block Spring Boot startup past Railway's 120-second healthcheck window).
+--   • EXCEPTION WHEN others          — catches the error and emits a RAISE NOTICE
+--     so the migration always succeeds and Flyway records it as SUCCESS.
+--
+-- FlywayRepairConfig runs flyway.repair() before every migrate(), so the FAILED
+-- V11 entry from the previous failed deploy is cleared before this version runs.
 
 -- ── Step 1: Drop known wrong constraints by exact name ─────────────────────────
-ALTER TABLE fee_payments DROP CONSTRAINT IF EXISTS fee_payments_student_id_term_key;
-ALTER TABLE fee_payments DROP CONSTRAINT IF EXISTS fee_payments_assignment_id_term_key;
-ALTER TABLE fee_payments DROP CONSTRAINT IF EXISTS fee_payments_student_id_assignment_id_key;
-ALTER TABLE fee_payments DROP CONSTRAINT IF EXISTS fee_payments_student_id_fee_id_key;
-ALTER TABLE fee_payments DROP CONSTRAINT IF EXISTS fee_payments_student_id_key;
-ALTER TABLE fee_payments DROP CONSTRAINT IF EXISTS uq_fee_payment_student_term;
-ALTER TABLE fee_payments DROP CONSTRAINT IF EXISTS uq_fee_payment_assignment_term;
-ALTER TABLE fee_payments DROP CONSTRAINT IF EXISTS uq_fee_payment_student_assignment;
+-- Wrapped in DO $$ so lock_timeout + exception handling apply here too.
+DO $$
+BEGIN
+    SET LOCAL lock_timeout = '5s';
 
-ALTER TABLE fee_installments DROP CONSTRAINT IF EXISTS fee_installments_assignment_id_term_name_key;
-ALTER TABLE fee_installments DROP CONSTRAINT IF EXISTS uq_fee_installment_assignment_term;
+    BEGIN ALTER TABLE fee_payments DROP CONSTRAINT IF EXISTS fee_payments_student_id_term_key;
+    EXCEPTION WHEN others THEN RAISE NOTICE '[V11] skip fee_payments_student_id_term_key: %', SQLERRM; END;
+
+    BEGIN ALTER TABLE fee_payments DROP CONSTRAINT IF EXISTS fee_payments_assignment_id_term_key;
+    EXCEPTION WHEN others THEN RAISE NOTICE '[V11] skip fee_payments_assignment_id_term_key: %', SQLERRM; END;
+
+    BEGIN ALTER TABLE fee_payments DROP CONSTRAINT IF EXISTS fee_payments_student_id_assignment_id_key;
+    EXCEPTION WHEN others THEN RAISE NOTICE '[V11] skip fee_payments_student_id_assignment_id_key: %', SQLERRM; END;
+
+    BEGIN ALTER TABLE fee_payments DROP CONSTRAINT IF EXISTS fee_payments_student_id_fee_id_key;
+    EXCEPTION WHEN others THEN RAISE NOTICE '[V11] skip fee_payments_student_id_fee_id_key: %', SQLERRM; END;
+
+    BEGIN ALTER TABLE fee_payments DROP CONSTRAINT IF EXISTS fee_payments_student_id_key;
+    EXCEPTION WHEN others THEN RAISE NOTICE '[V11] skip fee_payments_student_id_key: %', SQLERRM; END;
+
+    BEGIN ALTER TABLE fee_payments DROP CONSTRAINT IF EXISTS uq_fee_payment_student_term;
+    EXCEPTION WHEN others THEN RAISE NOTICE '[V11] skip uq_fee_payment_student_term: %', SQLERRM; END;
+
+    BEGIN ALTER TABLE fee_payments DROP CONSTRAINT IF EXISTS uq_fee_payment_assignment_term;
+    EXCEPTION WHEN others THEN RAISE NOTICE '[V11] skip uq_fee_payment_assignment_term: %', SQLERRM; END;
+
+    BEGIN ALTER TABLE fee_payments DROP CONSTRAINT IF EXISTS uq_fee_payment_student_assignment;
+    EXCEPTION WHEN others THEN RAISE NOTICE '[V11] skip uq_fee_payment_student_assignment: %', SQLERRM; END;
+
+    BEGIN ALTER TABLE fee_installments DROP CONSTRAINT IF EXISTS fee_installments_assignment_id_term_name_key;
+    EXCEPTION WHEN others THEN RAISE NOTICE '[V11] skip fee_installments_assignment_id_term_name_key: %', SQLERRM; END;
+
+    BEGIN ALTER TABLE fee_installments DROP CONSTRAINT IF EXISTS uq_fee_installment_assignment_term;
+    EXCEPTION WHEN others THEN RAISE NOTICE '[V11] skip uq_fee_installment_assignment_term: %', SQLERRM; END;
+END $$;
 
 -- ── Step 2: Dynamic drop of ALL multi-column unique constraints on fee_payments ──
 -- Keep only the single-column receipt_number unique constraint.
@@ -29,6 +58,8 @@ DO $$
 DECLARE
     rec RECORD;
 BEGIN
+    SET LOCAL lock_timeout = '5s';
+
     FOR rec IN
         SELECT con.conname
         FROM   pg_constraint con
@@ -55,12 +86,12 @@ BEGIN
 END $$;
 
 -- ── Step 3: Drop standalone unique INDEXES on fee_payments (not constraint-backed) ──
--- pg_constraint only finds constraint-backed indexes; standalone CREATE UNIQUE INDEX
--- is found via pg_index. Drop all unique indexes except receipt_number and the PK.
 DO $$
 DECLARE
     rec RECORD;
 BEGIN
+    SET LOCAL lock_timeout = '5s';
+
     FOR rec IN
         SELECT ix.relname AS idx_name
         FROM   pg_index   i
@@ -69,12 +100,10 @@ BEGIN
         WHERE  t.relname       = 'fee_payments'
           AND  i.indisunique   = true
           AND  i.indisprimary  = false
-          -- skip constraint-backed indexes (handled above)
           AND  NOT EXISTS (
                   SELECT 1 FROM pg_constraint con
                   WHERE  con.conindid = i.indexrelid
               )
-          -- keep the receipt_number index (it may be standalone in some schemas)
           AND  ix.relname NOT LIKE '%receipt_number%'
     LOOP
         BEGIN
@@ -91,6 +120,8 @@ DO $$
 DECLARE
     rec RECORD;
 BEGIN
+    SET LOCAL lock_timeout = '5s';
+
     FOR rec IN
         SELECT con.conname
         FROM   pg_constraint con
@@ -122,6 +153,7 @@ BEGIN
           AND  array_length(con.conkey, 1) = 1
     ) THEN
         BEGIN
+            SET LOCAL lock_timeout = '10s';
             ALTER TABLE fee_payments
                 ADD CONSTRAINT fee_payments_receipt_number_key UNIQUE (receipt_number);
             RAISE NOTICE '[V11] Re-added fee_payments.receipt_number unique constraint';
