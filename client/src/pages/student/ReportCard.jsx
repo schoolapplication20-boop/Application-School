@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import Layout from '../../components/Layout';
-import { reportCardAPI } from '../../services/api';
+import { reportCardAPI, gradeScaleAPI } from '../../services/api';
 import { BASE_URL } from '../../services/api';
 
 const GRADE_COLOR = {
@@ -9,6 +9,23 @@ const GRADE_COLOR = {
 };
 
 const pct = (m, max) => (max > 0 ? Math.round((m / max) * 100) : 0);
+
+/** Derive overall grade from a percentage using a sorted grade scale array. */
+const overallGradeFromPct = (percentage, scale) => {
+  const sorted = [...(scale || [])].sort((a, b) => b.minPercentage - a.minPercentage);
+  if (!sorted.length) {
+    if (percentage >= 90) return 'O';
+    if (percentage >= 80) return 'A+';
+    if (percentage >= 70) return 'A';
+    if (percentage >= 60) return 'B+';
+    if (percentage >= 50) return 'B';
+    if (percentage >= 40) return 'B-';
+    if (percentage >= 33) return 'C';
+    return 'F';
+  }
+  const entry = sorted.find(s => percentage >= Number(s.minPercentage));
+  return entry ? entry.grade : sorted[sorted.length - 1]?.grade || 'F';
+};
 
 const handlePrint = () => {
   document.body.classList.add('printing-report-card');
@@ -27,6 +44,11 @@ export default function ReportCard() {
   const [examTypes,     setExamTypes]     = useState([]);
   const [selected,      setSelected]      = useState(null); // null = not yet resolved
   const [filtersLoaded, setFiltersLoaded] = useState(false);
+  const [gradeScale,    setGradeScale]    = useState([]);
+
+  useEffect(() => {
+    gradeScaleAPI.forStudent().then(r => setGradeScale(r.data?.data || [])).catch(() => {});
+  }, []);
 
   // Load available exam types first
   useEffect(() => {
@@ -185,12 +207,19 @@ export default function ReportCard() {
             </div>
           ) : (
             Object.entries(marksByExam).map(([examType, rows]) => {
-              const total = rows.reduce((s, r) => s + (r.marks || 0), 0);
-              const max   = rows.reduce((s, r) => s + (r.maxMarks || 0), 0);
+              const total      = rows.reduce((s, r) => s + (r.marks    || 0), 0);
+              const max        = rows.reduce((s, r) => s + (r.maxMarks || 0), 0);
+              const overallPct = pct(total, max);
+              const hasFail    = rows.some(r => r.grade === 'F' || (r.maxMarks > 0 && pct(r.marks, r.maxMarks) < 33));
+              const result     = hasFail ? 'FAIL' : 'PASS';
+              const oGrade     = overallGradeFromPct(overallPct, gradeScale);
               return (
                 <div key={examType} style={{ marginBottom: 24 }}>
-                  <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)', marginBottom: 8, borderBottom: '1px solid var(--border-strong)', paddingBottom: 4 }}>
-                    {examType.replace(/_/g, ' ')}
+                  <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)', marginBottom: 8, borderBottom: '1px solid var(--border-strong)', paddingBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>{examType.replace(/_/g, ' ')}</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 12, background: result === 'PASS' ? '#f0fff4' : '#fff5f5', color: result === 'PASS' ? '#276749' : '#c53030', border: `1px solid ${result === 'PASS' ? '#68d391' : '#fc8181'}` }}>
+                      {result}
+                    </span>
                   </div>
                   <div style={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
@@ -204,22 +233,24 @@ export default function ReportCard() {
                       <tbody>
                         {rows.map((r, i) => {
                           const p = pct(r.marks, r.maxMarks);
+                          const isFail = r.grade === 'F' || (r.maxMarks > 0 && p < 33);
                           return (
-                            <tr key={i}>
+                            <tr key={i} style={{ background: isFail ? '#fff5f5' : undefined }}>
                               <td style={{ padding: '6px 10px', border: '1px solid var(--border-strong)' }}>{r.subject}</td>
                               <td style={{ padding: '6px 10px', border: '1px solid var(--border-strong)', fontWeight: 600 }}>{r.marks ?? '—'}</td>
                               <td style={{ padding: '6px 10px', border: '1px solid var(--border-strong)', color: 'var(--text-secondary)' }}>{r.maxMarks ?? '—'}</td>
-                              <td style={{ padding: '6px 10px', border: '1px solid var(--border-strong)' }}>{r.maxMarks ? `${p}%` : '—'}</td>
+                              <td style={{ padding: '6px 10px', border: '1px solid var(--border-strong)', color: isFail ? '#c53030' : 'inherit' }}>{r.maxMarks ? `${p}%` : '—'}</td>
                               <td style={{ padding: '6px 10px', border: '1px solid var(--border-strong)', fontWeight: 700, color: GRADE_COLOR[r.grade] || '#2d3748' }}>{r.grade || '—'}</td>
                             </tr>
                           );
                         })}
+                        {/* Totals row */}
                         <tr style={{ background: 'var(--surface-alt)', fontWeight: 700 }}>
                           <td style={{ padding: '6px 10px', border: '1px solid var(--border-strong)' }}>Total</td>
                           <td style={{ padding: '6px 10px', border: '1px solid var(--border-strong)' }}>{total}</td>
                           <td style={{ padding: '6px 10px', border: '1px solid var(--border-strong)', color: 'var(--text-secondary)' }}>{max}</td>
-                          <td style={{ padding: '6px 10px', border: '1px solid var(--border-strong)', color: pct(total,max) >= 75 ? '#276749' : '#c53030' }}>{pct(total,max)}%</td>
-                          <td style={{ padding: '6px 10px', border: '1px solid var(--border-strong)' }} />
+                          <td style={{ padding: '6px 10px', border: '1px solid var(--border-strong)', color: overallPct >= 33 ? '#276749' : '#c53030' }}>{overallPct}%</td>
+                          <td style={{ padding: '6px 10px', border: '1px solid var(--border-strong)', fontWeight: 700, color: GRADE_COLOR[oGrade] || '#2d3748' }}>{oGrade}</td>
                         </tr>
                       </tbody>
                     </table>

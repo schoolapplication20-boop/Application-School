@@ -27,6 +27,9 @@ public class TeacherService {
     private MarksRepository marksRepository;
 
     @Autowired
+    private GradeScaleRepository gradeScaleRepository;
+
+    @Autowired
     private StudentRepository studentRepository;
 
     @Autowired
@@ -716,6 +719,29 @@ public class TeacherService {
         return ApiResponse.success(marksRepository.findByStudentId(studentId));
     }
 
+    /** Compute grade using the school's GradeScale; falls back to a fixed default scale. */
+    private String computeGrade(int marks, int maxMarks, Long schoolId) {
+        if (maxMarks <= 0) return "F";
+        double pct = (marks * 100.0) / maxMarks;
+        java.util.List<GradeScale> scales = schoolId != null
+            ? gradeScaleRepository.findBySchoolIdOrderByMinPercentageDesc(schoolId)
+            : java.util.List.of();
+        if (!scales.isEmpty()) {
+            for (GradeScale gs : scales) {
+                if (pct >= gs.getMinPercentage().doubleValue()) return gs.getGrade();
+            }
+            return scales.get(scales.size() - 1).getGrade();
+        }
+        if (pct >= 90) return "O";
+        if (pct >= 80) return "A+";
+        if (pct >= 70) return "A";
+        if (pct >= 60) return "B+";
+        if (pct >= 50) return "B";
+        if (pct >= 40) return "B-";
+        if (pct >= 33) return "C";
+        return "F";
+    }
+
     public ApiResponse<Marks> addMarks(Marks marks, Long authSchoolId) {
         // Validate marks range
         if (marks.getMarks() == null || marks.getMaxMarks() == null)
@@ -742,6 +768,9 @@ public class TeacherService {
                 return ApiResponse.error("Student not found");
         }
 
+        // Always calculate grade server-side using the school's GradeScale
+        marks.setGrade(computeGrade(marks.getMarks(), marks.getMaxMarks(), marks.getSchoolId()));
+
         Marks saved = marksRepository.save(marks);
         return ApiResponse.success("Marks saved", saved);
     }
@@ -763,9 +792,12 @@ public class TeacherService {
                     if (authSchoolId != null && m.getSchoolId() != null
                             && !authSchoolId.equals(m.getSchoolId()))
                         return ApiResponse.<Marks>error("Marks record not found");
-                    if (updated.getMarks() != null)    m.setMarks(updated.getMarks());
-                    if (updated.getMaxMarks() != null) m.setMaxMarks(updated.getMaxMarks());
-                    if (updated.getGrade() != null)    m.setGrade(updated.getGrade());
+                    boolean marksChanged = false;
+                    if (updated.getMarks() != null)    { m.setMarks(updated.getMarks());       marksChanged = true; }
+                    if (updated.getMaxMarks() != null) { m.setMaxMarks(updated.getMaxMarks()); marksChanged = true; }
+                    // Recalculate grade from school's GradeScale whenever marks change
+                    if (marksChanged) m.setGrade(computeGrade(m.getMarks(), m.getMaxMarks(), m.getSchoolId()));
+                    else if (updated.getGrade() != null) m.setGrade(updated.getGrade());
                     return ApiResponse.success(marksRepository.save(m));
                 })
                 .orElse(ApiResponse.error("Marks record not found"));

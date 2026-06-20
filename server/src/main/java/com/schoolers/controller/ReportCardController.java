@@ -24,6 +24,29 @@ public class ReportCardController {
     @Autowired private SchoolRepository     schoolRepository;
     @Autowired private com.schoolers.repository.TeacherRepository    teacherRepository;
     @Autowired private com.schoolers.repository.ClassRoomRepository  classRoomRepository;
+    @Autowired private com.schoolers.repository.GradeScaleRepository gradeScaleRepository;
+
+    /** Compute grade using the school's configured GradeScale; falls back to defaults. */
+    private String computeGrade(double pct, Long schoolId) {
+        List<GradeScale> scales = schoolId != null
+            ? gradeScaleRepository.findBySchoolIdOrderByMinPercentageDesc(schoolId)
+            : List.of();
+        if (!scales.isEmpty()) {
+            for (GradeScale gs : scales) {
+                if (pct >= gs.getMinPercentage().doubleValue()) return gs.getGrade();
+            }
+            return scales.get(scales.size() - 1).getGrade();
+        }
+        // Default fallback
+        if (pct >= 90) return "O";
+        if (pct >= 80) return "A+";
+        if (pct >= 70) return "A";
+        if (pct >= 60) return "B+";
+        if (pct >= 50) return "B";
+        if (pct >= 40) return "B-";
+        if (pct >= 33) return "C";
+        return "F";
+    }
 
     /** Student fetches available exam filters (distinct exam types from their marks) */
     @GetMapping("/api/student/report-card/filters")
@@ -220,7 +243,7 @@ public class ReportCardController {
             if (marksVal > maxVal) { res.put("status", "error"); res.put("message", "marks (" + marksVal + ") cannot exceed maxMarks (" + maxVal + ")"); results.add(res); continue; }
 
             double pctVal = (marksVal / maxVal) * 100;
-            String grade = pctVal >= 90 ? "O" : pctVal >= 80 ? "A+" : pctVal >= 70 ? "A" : pctVal >= 60 ? "B+" : pctVal >= 50 ? "B" : pctVal >= 40 ? "B-" : pctVal >= 33 ? "C" : "F";
+            String grade = computeGrade(pctVal, schoolId);
 
             com.schoolers.model.Marks m = com.schoolers.model.Marks.builder()
                 .studentId(student.getId()).studentName(student.getName())

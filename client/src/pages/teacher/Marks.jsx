@@ -123,6 +123,14 @@ export default function Marks() {
   // grid[studentId][subject] = marks string value
   const [grid, setGrid]                       = useState({});
   const [saving, setSaving]                   = useState(false);
+  // ── Custom subject support ────────────────────────────────────────────────────
+  const [customSubjects, setCustomSubjects]   = useState([]); // school-added subjects
+  const [newSubjectInput, setNewSubjectInput] = useState('');
+  // ── Edit marks state ─────────────────────────────────────────────────────────
+  const [editingMark, setEditingMark]         = useState(null); // { id, marks, maxMarks, subject, examType }
+  const [editMarks, setEditMarks]             = useState('');
+  const [editMaxMarks, setEditMaxMarks]       = useState('');
+  const [editSaving, setEditSaving]           = useState(false);
 
   // ── CSV Import state ────────────────────────────────────────────────────────
   const [showCsvModal,  setShowCsvModal]  = useState(false);
@@ -405,8 +413,54 @@ ADM002,Mathematics,92,100`;
   }, [bulkClassId, classes]);
 
   // ── Helpers ───────────────────────────────────────────────────────────────────
+  // Merged subject list: standard + any custom subjects added by teacher
+  const allSubjects = [...SUBJECTS, ...customSubjects.filter(s => !SUBJECTS.includes(s))];
+
   const toggleSubject = (sub) =>
     setBulkSubjects(prev => prev.includes(sub) ? prev.filter(s => s !== sub) : [...prev, sub]);
+
+  const addCustomSubject = () => {
+    const trimmed = newSubjectInput.trim();
+    if (!trimmed) return;
+    const normalized = trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+    if (allSubjects.some(s => s.toLowerCase() === normalized.toLowerCase())) {
+      // Already exists — just select it
+      if (!bulkSubjects.includes(normalized)) setBulkSubjects(prev => [...prev, normalized]);
+    } else {
+      setCustomSubjects(prev => [...prev, normalized]);
+      setBulkSubjects(prev => [...prev, normalized]);
+    }
+    setNewSubjectInput('');
+  };
+
+  // ── Edit marks handlers ───────────────────────────────────────────────────────
+  const openEdit = (m) => {
+    setEditingMark(m);
+    setEditMarks(String(m.marks));
+    setEditMaxMarks(String(m.maxMarks));
+  };
+
+  const saveEdit = async () => {
+    if (!editingMark) return;
+    const marksNum   = parseFloat(editMarks);
+    const maxNum     = parseFloat(editMaxMarks);
+    if (isNaN(marksNum) || marksNum < 0)          { showToast('Enter valid marks',     'error'); return; }
+    if (isNaN(maxNum)   || maxNum   <= 0)          { showToast('Enter valid max marks', 'error'); return; }
+    if (marksNum > maxNum)                         { showToast('Marks exceed max marks','error'); return; }
+    setEditSaving(true);
+    try {
+      const res = await teacherAPI.updateMarks(editingMark.id, { marks: marksNum, maxMarks: maxNum });
+      const updated = res?.data?.data;
+      if (updated) {
+        setAllMarks(prev => prev.map(m => m.id === editingMark.id
+          ? { ...m, marks: updated.marks, maxMarks: updated.maxMarks, grade: updated.grade }
+          : m));
+        showToast('Marks updated');
+      }
+      setEditingMark(null);
+    } catch { showToast('Failed to update marks', 'error'); }
+    finally   { setEditSaving(false); }
+  };
 
   const updateCell = (studentId, subject, value) =>
     setGrid(prev => ({ ...prev, [studentId]: { ...prev[studentId], [subject]: value } }));
@@ -428,7 +482,8 @@ ADM002,Mathematics,92,100`;
     setBulkExamType(examTypes[0] || '');
     setBulkDate('');
     setBulkMaxMarks('100');
-    setBulkSubjects([SUBJECTS[0]]);
+    setBulkSubjects([allSubjects[0] || SUBJECTS[0]]);
+    setNewSubjectInput('');
     setGrid({});
     setShowModal(true);
   };
@@ -734,6 +789,10 @@ ADM002,Mathematics,92,100`;
                             </td>
                             <td>
                               <div className="action-btns">
+                                <button title="Edit marks" onClick={() => openEdit(m)}
+                                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 8, border: 'none', background: '#eff6ff', cursor: 'pointer' }}>
+                                  <span className="material-icons" style={{ fontSize: 16, color: '#2563eb' }}>edit</span>
+                                </button>
                                 <Button variant="delete" onClick={() => handleDelete(m.id)} />
                               </div>
                             </td>
@@ -811,20 +870,36 @@ ADM002,Mathematics,92,100`;
                 Select Subjects * &nbsp;
                 <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>({bulkSubjects.length} selected)</span>
                 &nbsp;
-                <button type="button" onClick={() => setBulkSubjects([...SUBJECTS])} style={{ fontSize: 10, color: '#4361ee', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 600, padding: 0 }}>Select All</button>
+                <button type="button" onClick={() => setBulkSubjects([...allSubjects])} style={{ fontSize: 10, color: '#4361ee', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 600, padding: 0 }}>Select All</button>
                 &nbsp;·&nbsp;
                 <button type="button" onClick={() => setBulkSubjects([])} style={{ fontSize: 10, color: '#e53e3e', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 600, padding: 0 }}>Clear</button>
               </label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-                {SUBJECTS.map(sub => {
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginBottom: 8 }}>
+                {allSubjects.map(sub => {
                   const checked = bulkSubjects.includes(sub);
+                  const isCustom = !SUBJECTS.includes(sub);
                   return (
-                    <label key={sub} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 20, border: `1.5px solid ${checked ? '#0de1e8' : 'var(--border-strong)'}`, background: checked ? '#f0fff4' : 'var(--surface)', cursor: 'pointer', fontSize: 12, fontWeight: checked ? 700 : 400, color: checked ? '#276749' : 'var(--text-secondary)', userSelect: 'none', transition: 'all 0.15s' }}>
+                    <label key={sub} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 20, border: `1.5px solid ${checked ? '#0de1e8' : isCustom ? '#d69e2e' : 'var(--border-strong)'}`, background: checked ? '#f0fff4' : isCustom ? '#fffbeb' : 'var(--surface)', cursor: 'pointer', fontSize: 12, fontWeight: checked ? 700 : 400, color: checked ? '#276749' : isCustom ? '#b45309' : 'var(--text-secondary)', userSelect: 'none', transition: 'all 0.15s' }}>
                       <input type="checkbox" checked={checked} onChange={() => toggleSubject(sub)} style={{ accentColor: '#0de1e8', cursor: 'pointer', width: 13, height: 13 }} />
-                      {sub}
+                      {sub}{isCustom && <span style={{ fontSize: 9, marginLeft: 2 }}>✦</span>}
                     </label>
                   );
                 })}
+              </div>
+              {/* Add custom/new subject */}
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <input
+                  value={newSubjectInput}
+                  onChange={e => setNewSubjectInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomSubject(); } }}
+                  placeholder="Add custom subject (e.g. Sanskrit, Drawing)…"
+                  style={{ flex: 1, padding: '6px 10px', border: '1.5px dashed #d69e2e', borderRadius: 7, fontSize: 12, outline: 'none', background: '#fffbeb' }}
+                />
+                <button type="button" onClick={addCustomSubject}
+                  disabled={!newSubjectInput.trim()}
+                  style={{ padding: '6px 14px', background: newSubjectInput.trim() ? '#b45309' : '#e2e8f0', color: newSubjectInput.trim() ? '#fff' : '#a0aec0', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: newSubjectInput.trim() ? 'pointer' : 'default' }}>
+                  + Add
+                </button>
               </div>
             </div>
 
@@ -985,16 +1060,19 @@ ADM002,Mathematics,92,100`;
                 The CSV will have <strong>one row per student per subject</strong>. Select the subjects taught in this class.
               </p>
 
-              {/* Subject checkboxes */}
+              {/* Subject checkboxes — standard + custom */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 8, marginBottom: 16 }}>
-                {SUBJECTS.map(sub => (
-                  <label key={sub} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '6px 10px', borderRadius: 8, border: `1.5px solid ${draftSubjects.includes(sub) ? '#4f46e5' : 'var(--border-strong)'}`, background: draftSubjects.includes(sub) ? '#eef2ff' : 'var(--surface)', fontSize: 13 }}>
-                    <input type="checkbox" checked={draftSubjects.includes(sub)}
-                      onChange={e => setDraftSubjects(prev => e.target.checked ? [...prev, sub] : prev.filter(s => s !== sub))}
-                      style={{ accentColor: '#4f46e5' }} />
-                    {sub}
-                  </label>
-                ))}
+                {allSubjects.map(sub => {
+                  const isCustom = !SUBJECTS.includes(sub);
+                  return (
+                    <label key={sub} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '6px 10px', borderRadius: 8, border: `1.5px solid ${draftSubjects.includes(sub) ? '#4f46e5' : isCustom ? '#d69e2e' : 'var(--border-strong)'}`, background: draftSubjects.includes(sub) ? '#eef2ff' : isCustom ? '#fffbeb' : 'var(--surface)', fontSize: 13 }}>
+                      <input type="checkbox" checked={draftSubjects.includes(sub)}
+                        onChange={e => setDraftSubjects(prev => e.target.checked ? [...prev, sub] : prev.filter(s => s !== sub))}
+                        style={{ accentColor: '#4f46e5' }} />
+                      {sub}{isCustom && <span style={{ fontSize: 9, color: '#b45309', marginLeft: 2 }}>✦</span>}
+                    </label>
+                  );
+                })}
               </div>
 
               {/* Add custom subject */}
@@ -1024,7 +1102,7 @@ ADM002,Mathematics,92,100`;
             </div>
             <div className="modal-footer">
               <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={() => setDraftSubjects([...SUBJECTS])} style={{ padding: '8px 14px', border: '1px solid var(--border-strong)', borderRadius: 8, background: 'var(--surface-alt)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Select All</button>
+                <button onClick={() => setDraftSubjects([...allSubjects])} style={{ padding: '8px 14px', border: '1px solid var(--border-strong)', borderRadius: 8, background: 'var(--surface-alt)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Select All</button>
                 <button onClick={() => setDraftSubjects([])} style={{ padding: '8px 14px', border: '1px solid var(--border-strong)', borderRadius: 8, background: 'var(--surface)', fontSize: 12, color: 'var(--text-muted)', cursor: 'pointer' }}>Clear</button>
               </div>
               <button onClick={downloadClassDraftCsv} disabled={!draftSubjects.length}
@@ -1144,6 +1222,51 @@ ADM002,Mathematics,92,100`;
                   {csvImporting ? 'Importing…' : `Import ${csvRows.length} Rows`}
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Edit Marks Modal ── */}
+      {editingMark && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && !editSaving && setEditingMark(null)}>
+          <div className="modal-container" style={{ maxWidth: 400 }}>
+            <div className="modal-header">
+              <h3 className="modal-title">Edit Marks — {editingMark.subject}</h3>
+              <button onClick={() => !editSaving && setEditingMark(null)} className="modal-close">✕</button>
+            </div>
+            <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                {editingMark.examType} · {editingMark.studentName || ''}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Marks Obtained</label>
+                  <input type="number" min="0" max={editMaxMarks} value={editMarks}
+                    onChange={e => setEditMarks(e.target.value)}
+                    style={{ width: '100%', padding: '9px 12px', border: '1.5px solid var(--border-strong)', borderRadius: 8, fontSize: 15, fontWeight: 700, outline: 'none', boxSizing: 'border-box' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Max Marks</label>
+                  <input type="number" min="1" value={editMaxMarks}
+                    onChange={e => setEditMaxMarks(e.target.value)}
+                    style={{ width: '100%', padding: '9px 12px', border: '1.5px solid var(--border-strong)', borderRadius: 8, fontSize: 15, fontWeight: 700, outline: 'none', boxSizing: 'border-box' }} />
+                </div>
+              </div>
+              {editMarks && editMaxMarks && Number(editMaxMarks) > 0 && (
+                <div style={{ background: 'var(--surface-alt)', borderRadius: 8, padding: '8px 12px', fontSize: 13, color: 'var(--text-secondary)' }}>
+                  Percentage: <strong>{Math.round((Number(editMarks) / Number(editMaxMarks)) * 100)}%</strong>
+                  &nbsp;· Grade will recalculate automatically
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
+                <button onClick={() => setEditingMark(null)} disabled={editSaving}
+                  style={{ padding: '9px 20px', border: '1px solid var(--border-strong)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>Cancel</button>
+                <button onClick={saveEdit} disabled={editSaving}
+                  style={{ padding: '9px 22px', background: '#4361ee', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: editSaving ? 0.7 : 1 }}>
+                  {editSaving ? 'Saving…' : 'Save Changes'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
