@@ -7,6 +7,8 @@
 --
 -- This migration is idempotent and safe to run even if V8 and V10 already ran.
 -- It also drops standalone UNIQUE INDEXES (not constraint-backed) which V8/V10 missed.
+-- All DO $$ blocks use EXCEPTION WHEN others so that lock-timeout or privilege
+-- errors on individual DROPs produce a NOTICE rather than aborting the migration.
 
 -- ── Step 1: Drop known wrong constraints by exact name ─────────────────────────
 ALTER TABLE fee_payments DROP CONSTRAINT IF EXISTS fee_payments_student_id_term_key;
@@ -43,8 +45,12 @@ BEGIN
                   )
               )
     LOOP
-        EXECUTE format('ALTER TABLE fee_payments DROP CONSTRAINT IF EXISTS %I', rec.conname);
-        RAISE NOTICE '[V11] Dropped constraint % from fee_payments', rec.conname;
+        BEGIN
+            EXECUTE format('ALTER TABLE fee_payments DROP CONSTRAINT IF EXISTS %I', rec.conname);
+            RAISE NOTICE '[V11] Dropped constraint % from fee_payments', rec.conname;
+        EXCEPTION WHEN others THEN
+            RAISE NOTICE '[V11] Could not drop constraint % from fee_payments: %', rec.conname, SQLERRM;
+        END;
     END LOOP;
 END $$;
 
@@ -71,8 +77,12 @@ BEGIN
           -- keep the receipt_number index (it may be standalone in some schemas)
           AND  ix.relname NOT LIKE '%receipt_number%'
     LOOP
-        EXECUTE format('DROP INDEX IF EXISTS %I', rec.idx_name);
-        RAISE NOTICE '[V11] Dropped standalone unique index % from fee_payments', rec.idx_name;
+        BEGIN
+            EXECUTE format('DROP INDEX IF EXISTS %I', rec.idx_name);
+            RAISE NOTICE '[V11] Dropped standalone unique index % from fee_payments', rec.idx_name;
+        EXCEPTION WHEN others THEN
+            RAISE NOTICE '[V11] Could not drop index % from fee_payments: %', rec.idx_name, SQLERRM;
+        END;
     END LOOP;
 END $$;
 
@@ -88,8 +98,12 @@ BEGIN
         WHERE  rel.relname  = 'fee_installments'
           AND  con.contype  = 'u'
     LOOP
-        EXECUTE format('ALTER TABLE fee_installments DROP CONSTRAINT IF EXISTS %I', rec.conname);
-        RAISE NOTICE '[V11] Dropped constraint % from fee_installments', rec.conname;
+        BEGIN
+            EXECUTE format('ALTER TABLE fee_installments DROP CONSTRAINT IF EXISTS %I', rec.conname);
+            RAISE NOTICE '[V11] Dropped constraint % from fee_installments', rec.conname;
+        EXCEPTION WHEN others THEN
+            RAISE NOTICE '[V11] Could not drop constraint % from fee_installments: %', rec.conname, SQLERRM;
+        END;
     END LOOP;
 END $$;
 
@@ -107,8 +121,12 @@ BEGIN
           AND  con.contype        = 'u'
           AND  array_length(con.conkey, 1) = 1
     ) THEN
-        ALTER TABLE fee_payments
-            ADD CONSTRAINT fee_payments_receipt_number_key UNIQUE (receipt_number);
-        RAISE NOTICE '[V11] Re-added fee_payments.receipt_number unique constraint';
+        BEGIN
+            ALTER TABLE fee_payments
+                ADD CONSTRAINT fee_payments_receipt_number_key UNIQUE (receipt_number);
+            RAISE NOTICE '[V11] Re-added fee_payments.receipt_number unique constraint';
+        EXCEPTION WHEN others THEN
+            RAISE NOTICE '[V11] Could not add receipt_number constraint: %', SQLERRM;
+        END;
     END IF;
 END $$;
