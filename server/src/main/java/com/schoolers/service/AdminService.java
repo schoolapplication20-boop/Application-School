@@ -2137,7 +2137,7 @@ public class AdminService {
 
         String term = str(body, "term", null);
         feePaymentRepository.save(FeePayment.builder()
-                .feeId(0L)
+                .feeId(null)
                 .assignmentId(saved.getId())
                 .studentId(saved.getStudentId())
                 .schoolId(schoolId)
@@ -2200,7 +2200,7 @@ public class AdminService {
      * Record a cash payment for a specific installment.
      * Marks the installment PAID/PARTIAL and updates the parent assignment's paidAmount.
      */
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public ApiResponse<Map<String, Object>> collectInstallmentFee(Long installmentId, Map<String, Object> body, Long schoolId) {
         FeeInstallment installment = feeInstallmentRepository.findById(installmentId).orElse(null);
         if (installment == null) return ApiResponse.error("Installment not found");
@@ -2299,35 +2299,23 @@ public class AdminService {
         assignment.setStatus(deriveFeeStatus(newPaid, assignment.getTotalFee()));
         studentFeeAssignmentRepository.save(assignment);
 
-        // Record in fee_payments table — catch any residual DB constraint and surface it clearly
-        try {
-            feePaymentRepository.save(FeePayment.builder()
-                    .feeId(0L)
-                    .assignmentId(assignment.getId())
-                    .studentId(assignment.getStudentId())
-                    .schoolId(assignment.getSchoolId())
-                    .studentName(assignment.getStudentName())
-                    .rollNumber(assignment.getRollNumber())
-                    .className(assignment.getClassName())
-                    .feeType("Fee Payment")
-                    .term(installment.getTermName())
-                    .amountPaid(amountPaid)
-                    .paymentDate(paymentDate)
-                    .paymentMode(str(body, "paymentMode", "CASH"))
-                    .receiptNumber(receiptNumber)
-                    .receivedBy(str(body, "receivedBy", null))
-                    .remarks(str(body, "remarks", null))
-                    .build());
-        } catch (org.springframework.dao.DataIntegrityViolationException e) {
-            String detail = e.getMostSpecificCause() != null ? e.getMostSpecificCause().getMessage() : e.getMessage();
-            log.error("[collectInstallmentFee] DB constraint violated saving FeePayment — constraint detail: {}", detail);
-            // Rollback will be triggered by @Transactional automatically.
-            // Return a clear message instead of the generic global handler message.
-            if (detail != null && detail.toLowerCase().contains("receipt_number")) {
-                return ApiResponse.error("Receipt number conflict — a new receipt number was assigned. Please click Collect again.");
-            }
-            return ApiResponse.error("Payment could not be saved due to a database constraint (" + extractConstraintName(detail) + "). Contact support if this persists.");
-        }
+        feePaymentRepository.save(FeePayment.builder()
+                .feeId(null)
+                .assignmentId(assignment.getId())
+                .studentId(assignment.getStudentId())
+                .schoolId(assignment.getSchoolId())
+                .studentName(assignment.getStudentName())
+                .rollNumber(assignment.getRollNumber())
+                .className(assignment.getClassName())
+                .feeType("Fee Payment")
+                .term(installment.getTermName())
+                .amountPaid(amountPaid)
+                .paymentDate(paymentDate)
+                .paymentMode(str(body, "paymentMode", "CASH"))
+                .receiptNumber(receiptNumber)
+                .receivedBy(str(body, "receivedBy", null))
+                .remarks(str(body, "remarks", null))
+                .build());
 
         String msg = fullyCovered
             ? "Payment recorded for " + installment.getTermName()

@@ -36,9 +36,13 @@ public class GlobalExceptionHandler {
                 } else if (lower.contains("uk_users_email") || lower.contains("users_email")) {
                     msg = "An account with this email already exists.";
                 } else if (lower.contains("receipt_number") || lower.contains("fee_payments_receipt")) {
-                    msg = "This receipt number is already used. A new receipt number has been generated — please try again.";
+                    msg = "Receipt number conflict. Please click Collect again to generate a new receipt.";
+                } else if (lower.contains("fee_payments") || lower.contains("fee_installments")
+                        || lower.contains("fee_payment") || lower.contains("payment")
+                        || (lower.contains("assignment_id") && lower.contains("student_id"))
+                        || (lower.contains("student_id") && lower.contains("term"))) {
+                    msg = "Payment could not be recorded — a database constraint was violated. Please try again or contact support.";
                 }
-                // Log the full detail internally but never send it to the client
                 log.warn("[DataIntegrity] {}", detail);
             }
         }
