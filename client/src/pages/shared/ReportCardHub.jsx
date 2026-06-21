@@ -1,119 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '../../components/Layout';
-import { reportCardAPI, adminAPI, teacherAPI } from '../../services/api';
+import ProfessionalReportCard from '../../components/ProfessionalReportCard';
+import { reportCardAPI, adminAPI, teacherAPI, gradeScaleAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { BASE_URL } from '../../services/api';
 import { sortClasses } from '../../utils/classOrder';
 
-const pct = (m, max) => (max > 0 ? Math.round((m / max) * 100) : 0);
-const fmt = (n) => Number(n || 0).toFixed(1);
-const GRADE_COLOR = {
-  O: '#276749', 'A+': '#2b6cb0', A: '#3b5bdb',
-  'B+': '#c05621', B: '#975a16', 'B-': '#92400e', C: '#c53030', F: '#9b2335',
-};
-
-// ── Reusable report card renderer ─────────────────────────────────────────────
-function ReportCardView({ data, onPrint }) {
-  if (!data) return null;
-  const { student, school, marksByExam, attendance } = data;
-  const logoSrc = school?.logoUrl
-    ? (school.logoUrl.startsWith('http') ? school.logoUrl : `${BASE_URL}${school.logoUrl}`)
-    : null;
-
-  const allExams = Object.entries(marksByExam || {});
-  const grandMarks = allExams.flatMap(([, rows]) => rows).reduce((s, r) => s + Number(r.marks || 0), 0);
-  const grandMax   = allExams.flatMap(([, rows]) => rows).reduce((s, r) => s + Number(r.maxMarks || 0), 0);
-  const overallPct = grandMax > 0 ? Math.round((grandMarks / grandMax) * 100) : 0;
-
-  return (
-    <div style={{ background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--border-strong)', overflow: 'hidden' }}>
-      {/* School header */}
-      <div style={{ background: 'linear-gradient(135deg,#1e1b4b,#4f46e5)', padding: '20px 24px', color: '#fff', display: 'flex', alignItems: 'center', gap: 16 }}>
-        {logoSrc && <img src={logoSrc} alt="" style={{ width: 56, height: 56, borderRadius: 10, objectFit: 'contain', background: '#fff', padding: 4 }} onError={e => e.target.style.display='none'} />}
-        <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 900, fontSize: 20 }}>{school?.name || 'School Management System'}</div>
-          <div style={{ fontSize: 12, opacity: 0.75 }}>{[school?.address, school?.board, school?.academicYear].filter(Boolean).join(' · ')}</div>
-        </div>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: 11, opacity: 0.7 }}>Overall</div>
-          <div style={{ fontSize: 28, fontWeight: 900, color: overallPct >= 80 ? '#6ee7b7' : overallPct >= 50 ? '#fde68a' : '#fca5a5' }}>{overallPct}%</div>
-        </div>
-        {onPrint && (
-          <button onClick={onPrint} style={{ padding: '8px 14px', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 8, color: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
-            <span className="material-icons" style={{ fontSize: 16 }}>print</span>Print
-          </button>
-        )}
-      </div>
-
-      {/* Student info */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 0, borderBottom: '1px solid var(--border-strong)' }}>
-        {[
-          ['Name', student?.name],
-          ['Roll No.', student?.rollNumber],
-          ['Admission No.', student?.admissionNumber],
-          ['Class', `${student?.className || ''}${student?.section ? ' - ' + student.section : ''}`],
-          ['Parent', student?.parentName],
-          ['Attendance', `${attendance?.presentDays || 0}/${attendance?.totalDays || 0} days (${fmt(attendance?.percentage)}%)`],
-        ].map(([label, val], i) => (
-          <div key={i} style={{ padding: '10px 16px', borderRight: i % 3 < 2 ? '1px solid #f1f5f9' : 'none', borderBottom: i < 3 ? '1px solid #f1f5f9' : 'none' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '.05em' }}>{label}</div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginTop: 2 }}>{val || '—'}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Marks by exam */}
-      {allExams.length === 0 ? (
-        <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>No marks recorded for this filter.</div>
-      ) : allExams.map(([examType, rows]) => {
-        const etTotal = rows.reduce((s, r) => s + Number(r.marks || 0), 0);
-        const etMax   = rows.reduce((s, r) => s + Number(r.maxMarks || 0), 0);
-        const etPct   = etMax > 0 ? Math.round((etTotal / etMax) * 100) : 0;
-        return (
-          <div key={examType} style={{ borderBottom: '1px solid #f1f5f9' }}>
-            <div style={{ padding: '10px 16px', background: '#f8faff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontWeight: 700, fontSize: 13, color: '#4f46e5' }}>{examType}</span>
-              <span style={{ fontSize: 12, fontWeight: 700, color: etPct >= 80 ? '#16a34a' : etPct >= 50 ? '#f59e0b' : '#dc2626' }}>
-                {etTotal}/{etMax} ({etPct}%)
-              </span>
-            </div>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-              <thead>
-                <tr style={{ background: '#fafcff' }}>
-                  {['Subject', 'Marks', 'Max', '%', 'Grade', 'Date'].map(h => (
-                    <th key={h} style={{ padding: '7px 14px', textAlign: h === 'Subject' ? 'left' : 'center', color: 'var(--text-secondary)', fontWeight: 700, fontSize: 11, textTransform: 'uppercase', borderBottom: '1px solid #f1f5f9' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r, i) => {
-                  const p = pct(r.marks, r.maxMarks);
-                  return (
-                    <tr key={i} style={{ borderBottom: '1px solid #f9fafb' }}>
-                      <td style={{ padding: '8px 14px', fontWeight: 600, color: 'var(--text-primary)' }}>{r.subject}</td>
-                      <td style={{ padding: '8px 14px', textAlign: 'center', fontWeight: 700 }}>{r.marks}</td>
-                      <td style={{ padding: '8px 14px', textAlign: 'center', color: 'var(--text-secondary)' }}>{r.maxMarks}</td>
-                      <td style={{ padding: '8px 14px', textAlign: 'center' }}>
-                        <div style={{ background: '#f1f5f9', borderRadius: 20, height: 6, width: 60, margin: '0 auto 3px', overflow: 'hidden' }}>
-                          <div style={{ width: `${p}%`, height: '100%', background: p >= 80 ? '#16a34a' : p >= 50 ? '#f59e0b' : '#dc2626', borderRadius: 20 }} />
-                        </div>
-                        <span style={{ fontSize: 11 }}>{p}%</span>
-                      </td>
-                      <td style={{ padding: '8px 14px', textAlign: 'center' }}>
-                        <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 800, background: (GRADE_COLOR[r.grade] || '#64748b') + '18', color: GRADE_COLOR[r.grade] || '#64748b' }}>{r.grade || '—'}</span>
-                      </td>
-                      <td style={{ padding: '8px 14px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 11 }}>{r.examDate || '—'}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
+const _pct = (m, max) => (max > 0 ? Math.round((m / max) * 100) : 0);
 
 // ── Main page ──────────────────────────────────────────────────────────────────
 export default function ReportCardHub() {
@@ -135,6 +28,14 @@ export default function ReportCardHub() {
   const [searching,  setSearching]  = useState(false);
   const [printingAll,setPrintingAll] = useState(false);
   const [isClassTeacher, setIsClassTeacher] = useState(null); // null = loading, true/false = resolved
+  const [gradeScale,     setGradeScale]     = useState([]);
+
+  // Load grade scale once
+  useEffect(() => {
+    gradeScaleAPI.list()
+      .then(r => setGradeScale(r.data?.data || []))
+      .catch(() => {});
+  }, []);
 
   // Load class list and exam types on mount
   useEffect(() => {
@@ -267,67 +168,190 @@ export default function ReportCardHub() {
       );
 
       const w = window.open('', '_blank');
-      const buildCard = (data) => {
-        if (!data) return '<div class="page"><p style="color:#999">No data</p></div>';
-        const { student, school, marksByExam, attendance } = data;
-        const allExams = Object.entries(marksByExam || {});
-        const gTotal = allExams.flatMap(([,r])=>r).reduce((s,r)=>s+Number(r.marks||0),0);
-        const gMax   = allExams.flatMap(([,r])=>r).reduce((s,r)=>s+Number(r.maxMarks||0),0);
-        const overallPct = gMax > 0 ? Math.round((gTotal/gMax)*100) : 0;
-        const pctBar = (p) => `<div style="background:#f1f5f9;border-radius:4px;height:5px;width:60px;display:inline-block;vertical-align:middle;margin-left:4px"><div style="width:${p}%;height:100%;background:${p>=80?'#16a34a':p>=50?'#f59e0b':'#dc2626'};border-radius:4px"></div></div>`;
-        const logoSrc = school?.logoUrl ? (school.logoUrl.startsWith('http') ? school.logoUrl : `${window.location.origin}${school.logoUrl}`) : null;
-        const examsHtml = allExams.map(([et, rows]) => {
-          const tot = rows.reduce((s,r)=>s+Number(r.marks||0),0);
-          const mx  = rows.reduce((s,r)=>s+Number(r.maxMarks||0),0);
-          const p   = mx > 0 ? Math.round((tot/mx)*100) : 0;
+
+      const gradeStyle = {
+        O:  'background:#dcfce7;color:#14532d',  'A+': 'background:#dbeafe;color:#1e3a8a',
+        A:  'background:#e0f2fe;color:#1e40af',  'B+': 'background:#fef3c7;color:#78350f',
+        B:  'background:#ffedd5;color:#7c2d12',  'B-': 'background:#ede9fe;color:#4c1d95',
+        C:  'background:#fff7ed;color:#9a3412',  D:   'background:#fef9c3;color:#713f12',
+        F:  'background:#fee2e2;color:#7f1d1d',
+      };
+      const gradeFromPctH = (p) => {
+        if (p >= 91) return 'O'; if (p >= 81) return 'A+'; if (p >= 71) return 'A';
+        if (p >= 61) return 'B+'; if (p >= 51) return 'B'; if (p >= 41) return 'C';
+        if (p >= 35) return 'D'; return 'F';
+      };
+      const failingH = (r) => r.grade === 'F' || (r.maxMarks > 0 && Math.round((r.marks / r.maxMarks) * 100) < 35);
+      const gradeChip = (g) => `<span style="display:inline-block;padding:1px 8px;border-radius:3px;font-weight:800;font-size:11px;${gradeStyle[g]||'background:#f3f4f6;color:#374151'}">${g||'—'}</span>`;
+      const pass = (fail) => `<span style="font-weight:700;color:${fail?'#dc2626':'#16a34a'}">${fail?'FAIL':'PASS'}</span>`;
+
+      const buildCard = (data, examLabel = '') => {
+        if (!data) return '<div class="page"><p style="color:#999;padding:20px">No data</p></div>';
+        const { student = {}, school = {}, marksByExam = {}, attendance = {} } = data;
+        const logoSrc = school.logoUrl ? (school.logoUrl.startsWith('http') ? school.logoUrl : `${window.location.origin}${school.logoUrl}`) : null;
+        const allExamEntries = Object.entries(marksByExam);
+        const allRows  = allExamEntries.flatMap(([,r]) => r);
+        const gTotal   = allRows.reduce((s,r) => s + Number(r.marks || 0), 0);
+        const gMax     = allRows.reduce((s,r) => s + Number(r.maxMarks || 0), 0);
+        const oPct     = gMax > 0 ? Math.round((gTotal / gMax) * 100) : 0;
+        const oGrade   = gradeFromPctH(oPct);
+        const oFail    = allRows.some(failingH);
+        const absent   = Number(attendance.totalDays||0) - Number(attendance.presentDays||0);
+
+        const examsHtml = allExamEntries.map(([et, rows]) => {
+          const tot = rows.reduce((s,r) => s + Number(r.marks||0), 0);
+          const mx  = rows.reduce((s,r) => s + Number(r.maxMarks||0), 0);
+          const ep  = mx > 0 ? Math.round((tot / mx) * 100) : 0;
+          const eg  = gradeFromPctH(ep);
+          const ef  = rows.some(failingH);
           return `<div class="exam-section">
-            <div class="exam-header"><span>${et}</span><span>${tot}/${mx} (${p}%)</span></div>
-            <table class="marks-table"><thead><tr><th>Subject</th><th>Marks</th><th>Max</th><th>%</th><th>Grade</th><th>Date</th></tr></thead><tbody>
-            ${rows.map(r=>`<tr><td>${r.subject||''}</td><td style="text-align:center;font-weight:700">${r.marks??''}</td><td style="text-align:center;color:#64748b">${r.maxMarks??''}</td><td style="text-align:center">${r.maxMarks>0?Math.round((r.marks/r.maxMarks)*100):'—'}%</td><td style="text-align:center;font-weight:700;color:${p>=80?'#16a34a':p>=50?'#f59e0b':'#dc2626'}">${r.grade||'—'}</td><td style="text-align:center;color:#94a3b8;font-size:10px">${r.examDate||'—'}</td></tr>`).join('')}
+            <div class="exam-header">
+              <span>Subject-wise Marks — ${et}</span>
+              <span style="font-weight:800;padding:2px 12px;border-radius:20px;background:${ef?'#dc2626':'#16a34a'};color:#fff;font-size:10px">${ef?'FAIL':'PASS'}</span>
+            </div>
+            <table class="mtbl"><thead><tr>
+              <th style="width:28px">S.No.</th><th style="text-align:left">Subject</th>
+              <th>Marks</th><th>Max</th><th>%</th><th>Grade</th><th>Result</th>
+            </tr></thead><tbody>
+            ${rows.map((r,i)=>{
+              const sp = r.maxMarks > 0 ? Math.round((r.marks/r.maxMarks)*100) : 0;
+              const sf = failingH(r);
+              return `<tr style="${sf?'background:#fef2f2':i%2===0?'':'background:#f8faff'}">
+                <td style="text-align:center;color:#9ca3af">${i+1}</td>
+                <td style="font-weight:600;color:${sf?'#991b1b':'#111827'}">${r.subject||''}</td>
+                <td style="text-align:center;font-weight:800;color:#1e3a8a;font-size:13px">${r.marks??'—'}</td>
+                <td style="text-align:center;color:#4b5563">${r.maxMarks??'—'}</td>
+                <td style="text-align:center;font-weight:700;color:${sf?'#dc2626':sp>=75?'#16a34a':'#374151'}">${r.maxMarks>0?sp+'%':'—'}</td>
+                <td style="text-align:center">${gradeChip(r.grade)}</td>
+                <td style="text-align:center">${r.maxMarks > 0 ? pass(sf) : '—'}</td>
+              </tr>`;
+            }).join('')}
+            <tr style="background:#dbeafe;font-weight:900">
+              <td colspan="2" style="padding:6px 8px;color:#1e3a8a">TOTAL</td>
+              <td style="text-align:center;color:#1e3a8a;font-size:13px">${tot}</td>
+              <td style="text-align:center;color:#374151">${mx}</td>
+              <td style="text-align:center;font-weight:900;color:${ef?'#dc2626':'#16a34a'}">${ep}%</td>
+              <td style="text-align:center">${gradeChip(eg)}</td>
+              <td style="text-align:center">${pass(ef)}</td>
+            </tr>
             </tbody></table></div>`;
         }).join('');
 
         return `<div class="page">
-          <div class="school-header">
-            ${logoSrc ? `<img src="${logoSrc}" class="logo" onerror="this.style.display='none'">` : ''}
-            <div class="school-name">${school?.name||'School'}</div>
-            <div class="school-sub">${[school?.address,school?.board,school?.academicYear].filter(Boolean).join(' · ')}</div>
-            <div class="report-title">ACADEMIC REPORT CARD <span class="overall-badge">${overallPct}%</span></div>
+          <div class="hdr">
+            <div style="display:flex;align-items:center;gap:16px">
+              ${logoSrc ? `<img src="${logoSrc}" class="logo" onerror="this.style.display='none'">` : `<div class="logo-ph">${school.name?.charAt(0)||'S'}</div>`}
+              <div style="flex:1;text-align:center">
+                <div class="school-name">${school.name||'School'}</div>
+                ${school.board ? `<div class="school-board">${school.board} Affiliated</div>` : ''}
+                ${school.address ? `<div class="school-det">${school.address}</div>` : ''}
+                <div class="school-det">${[school.phone&&`Ph: ${school.phone}`,school.email].filter(Boolean).join('  •  ')}</div>
+              </div>
+              <div class="yr-box"><div class="yr-lbl">Acad. Year</div><div class="yr-val">${school.academicYear||'—'}</div></div>
+            </div>
+            <div class="title-row">
+              <div class="rc-title">PROGRESS REPORT CARD</div>
+              ${examLabel ? `<div class="rc-exam">${examLabel}</div>` : ''}
+            </div>
           </div>
-          <div class="student-grid">
-            ${[['Name',student?.name],['Roll No.',student?.rollNumber],['Admission No.',student?.admissionNumber||'—'],['Class',`${student?.className||''}${student?.section?' - '+student.section:''}`],['Parent',student?.parentName||'—'],['Attendance',`${attendance?.presentDays||0}/${attendance?.totalDays||0} (${Number(attendance?.percentage||0).toFixed(1)}%)`]].map(([l,v])=>`<div class="info-cell"><div class="info-label">${l}</div><div class="info-val">${v||'—'}</div></div>`).join('')}
+
+          <div class="si-box">
+            <div class="si-hdr">Student Information</div>
+            <div class="si-grid">
+              ${[['Student Name',student.name],['Admission No.',student.admissionNumber||'—'],['Roll Number',student.rollNumber||'—'],['Date of Birth',student.dateOfBirth||'—'],['Class & Section',`${student.className||'—'}${student.section?' – '+student.section:''}`],['Parent / Guardian',student.parentName||'—']].map(([l,v])=>`<div class="si-cell"><div class="si-lbl">${l}:</div><div class="si-val">${v||'—'}</div></div>`).join('')}
+            </div>
           </div>
-          ${examsHtml || '<div style="padding:20px;text-align:center;color:#94a3b8;font-size:13px">No marks recorded</div>'}
-          <div class="signature-row"><div class="sig-line">Class Teacher</div><div class="sig-line">Principal</div><div class="sig-line">Parent / Guardian</div></div>
+
+          <div class="att-box">
+            <div class="si-hdr">Attendance Summary</div>
+            <table class="att-tbl"><thead><tr><th>Total Working Days</th><th>Present Days</th><th>Absent Days</th><th>Attendance %</th></tr></thead>
+            <tbody><tr>
+              <td>${attendance.totalDays??'—'}</td>
+              <td style="color:#16a34a;font-weight:700">${attendance.presentDays??'—'}</td>
+              <td style="color:#dc2626;font-weight:700">${absent||'—'}</td>
+              <td><span style="font-weight:900;font-size:14px;color:${Number(attendance.percentage||0)>=75?'#16a34a':'#dc2626'}">${Number(attendance.percentage||0).toFixed(1)}%</span></td>
+            </tr></tbody></table>
+          </div>
+
+          ${examsHtml || '<div style="padding:16px;text-align:center;color:#9ca3af;font-size:12px;border:1px dashed #d1d5db;border-radius:6px;margin-bottom:8px">No marks recorded</div>'}
+
+          ${gMax > 0 ? `<div class="sum-box">
+            <div class="si-hdr">Academic Summary</div>
+            <div class="sum-grid">
+              <div class="sum-cell"><div class="sum-lbl">Total Marks</div><div class="sum-val" style="color:#1e3a8a">${gTotal}</div></div>
+              <div class="sum-cell"><div class="sum-lbl">Maximum Marks</div><div class="sum-val" style="color:#374151">${gMax}</div></div>
+              <div class="sum-cell"><div class="sum-lbl">Percentage</div><div class="sum-val" style="color:${oFail?'#dc2626':'#16a34a'}">${oPct}%</div></div>
+              <div class="sum-cell"><div class="sum-lbl">Overall Grade</div><div class="sum-val">${gradeChip(oGrade)}</div></div>
+              <div class="sum-cell" style="background:${oFail?'#fef2f2':'#f0fdf4'}"><div class="sum-lbl">Final Result</div><div class="sum-val" style="color:${oFail?'#dc2626':'#16a34a'}">${oFail?'FAIL':'PASS'}</div></div>
+            </div>
+          </div>` : ''}
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+            <div style="border:1.5px solid #bfdbfe;border-radius:6px;overflow:hidden">
+              <div class="si-hdr">Grading Scale</div>
+              <table style="width:100%;border-collapse:collapse;font-size:10px">
+                <thead><tr style="background:#eff6ff"><th style="padding:4px;text-align:center;color:#1e3a8a;border-bottom:1px solid #bfdbfe">%</th><th style="padding:4px;text-align:center;color:#1e3a8a;border-bottom:1px solid #bfdbfe">Grade</th><th style="padding:4px;text-align:left;color:#1e3a8a;border-bottom:1px solid #bfdbfe">Performance</th></tr></thead>
+                <tbody>
+                  ${[['91–100','O','Outstanding'],['81–90','A+','Excellent'],['71–80','A','Very Good'],['61–70','B+','Good'],['51–60','B','Above Average'],['41–50','C','Average'],['35–40','D','Below Average'],['< 35','F','Fail']].map(([r,g,l],i)=>`<tr style="${i%2===0?'':'background:#f8faff'}"><td style="padding:3px 6px;text-align:center;color:#374151">${r}</td><td style="padding:3px 6px;text-align:center">${gradeChip(g)}</td><td style="padding:3px 6px;color:#4b5563">${l}</td></tr>`).join('')}
+                </tbody>
+              </table>
+            </div>
+            <div style="border:1.5px solid #bfdbfe;border-radius:6px;overflow:hidden">
+              <div class="si-hdr">Class Teacher Remarks</div>
+              <div style="padding:10px 12px;background:#fafbfc">
+                ${[0,1,2,3].map(()=>'<div style="border-bottom:1px solid #d1d5db;margin-bottom:18px;min-height:18px"></div>').join('')}
+              </div>
+            </div>
+          </div>
+
+          <div style="border:1.5px solid #bfdbfe;border-radius:6px;padding:12px 20px">
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+              ${['Class Teacher','Principal','Parent / Guardian'].map(s=>`<div style="text-align:center"><div style="height:40px;border-bottom:1.5px solid #374151;margin:0 16px 6px"></div><div style="font-size:11px;font-weight:700;color:#1e293b">${s}</div><div style="font-size:10px;color:#9ca3af;margin-top:1px">Signature &amp; Seal</div></div>`).join('')}
+            </div>
+          </div>
         </div>`;
       };
 
       w.document.write(`<!DOCTYPE html><html><head><title>Class Report Cards</title>
       <style>
-        @page{size:A4 portrait;margin:15mm}
-        *{margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif}
-        body{background:#fff;font-size:12px}
-        .page{page-break-after:always;min-height:267mm;padding:0;display:flex;flex-direction:column;gap:8px}
+        @page{size:A4 portrait;margin:8mm 10mm}
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{background:#fff;font-family:"Segoe UI",Arial,sans-serif;font-size:12px}
+        .page{page-break-after:always;padding:0;display:flex;flex-direction:column;gap:8px}
         .page:last-child{page-break-after:avoid}
-        .school-header{text-align:center;border-bottom:2px solid #1e1b4b;padding-bottom:10px;margin-bottom:10px}
-        .logo{width:52px;height:52px;object-fit:contain;display:block;margin:0 auto 6px}
-        .school-name{font-size:18px;font-weight:900;color:#1e1b4b}
-        .school-sub{font-size:10px;color:#718096;margin:3px 0}
-        .report-title{font-size:12px;font-weight:700;color:#4f46e5;letter-spacing:.05em;margin-top:6px;text-transform:uppercase}
-        .overall-badge{background:#eef2ff;color:#4f46e5;border-radius:12px;padding:2px 8px;font-size:11px;margin-left:8px}
-        .student-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px 8px;border:1px solid #e2e8f0;border-radius:6px;padding:8px}
-        .info-cell{padding:4px 6px}
-        .info-label{font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.04em}
-        .info-val{font-size:12px;font-weight:600;color:#1e293b;margin-top:1px}
-        .exam-section{border:1px solid #e2e8f0;border-radius:6px;overflow:hidden;margin-bottom:6px}
-        .exam-header{display:flex;justify-content:space-between;background:#f8faff;padding:5px 10px;font-size:11px;font-weight:700;color:#4f46e5;border-bottom:1px solid #e2e8f0}
-        .marks-table{width:100%;border-collapse:collapse;font-size:11px}
-        .marks-table th{padding:4px 8px;background:#fafcff;color:#64748b;font-weight:700;font-size:10px;text-transform:uppercase;border-bottom:1px solid #f1f5f9}
-        .marks-table td{padding:4px 8px;border-bottom:1px solid #f9fafb}
-        .signature-row{display:flex;justify-content:space-between;margin-top:auto;padding-top:24px}
-        .sig-line{width:28%;border-top:1px solid #2d3748;padding-top:4px;text-align:center;font-size:10px;color:#718096}
+        .hdr{border:2px solid #1d4ed8;border-radius:6px;padding:12px 16px 10px;margin-bottom:8px}
+        .logo{width:72px;height:72px;object-fit:contain}
+        .logo-ph{width:72px;height:72px;background:#dbeafe;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#1d4ed8;font-weight:900;font-size:22px;flex-shrink:0}
+        .school-name{font-size:19px;font-weight:900;color:#1e3a8a;letter-spacing:.5px}
+        .school-board{font-size:10px;color:#2563eb;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-top:2px}
+        .school-det{font-size:10px;color:#4b5563;margin-top:2px}
+        .yr-box{border:2px solid #1d4ed8;border-radius:5px;padding:6px 12px;text-align:center;min-width:80px;background:#eff6ff}
+        .yr-lbl{font-size:8px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px}
+        .yr-val{font-size:13px;font-weight:900;color:#1e3a8a;margin-top:2px}
+        .title-row{text-align:center;margin-top:10px;padding-top:8px;border-top:1.5px solid #bfdbfe}
+        .rc-title{font-size:14px;font-weight:900;letter-spacing:3px;color:#1e3a8a;text-transform:uppercase}
+        .rc-exam{font-size:11px;color:#2563eb;font-weight:700;margin-top:3px;letter-spacing:1px}
+        .si-box,.att-box,.sum-box{border:1.5px solid #bfdbfe;border-radius:6px;overflow:hidden;margin-bottom:8px}
+        .si-hdr{background:#1d4ed8;padding:4px 12px;font-size:10px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:1px}
+        .si-grid{display:grid;grid-template-columns:1fr 1fr;padding:8px 12px;gap:6px 20px}
+        .si-cell{display:flex;align-items:flex-start;gap:5px}
+        .si-lbl{font-size:10px;font-weight:700;color:#4b5563;min-width:115px;flex-shrink:0}
+        .si-val{font-size:11px;font-weight:600;color:#111827}
+        .att-tbl{width:100%;border-collapse:collapse;font-size:11px}
+        .att-tbl th{padding:5px 10px;text-align:center;font-weight:700;color:#1e3a8a;background:#eff6ff;border-bottom:1px solid #bfdbfe}
+        .att-tbl td{padding:6px 10px;text-align:center;font-weight:600}
+        .exam-section{border:1.5px solid #bfdbfe;border-radius:6px;overflow:hidden;margin-bottom:8px}
+        .exam-header{background:#1d4ed8;padding:4px 12px;display:flex;justify-content:space-between;align-items:center;font-size:10px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:1px}
+        .mtbl{width:100%;border-collapse:collapse;font-size:11px}
+        .mtbl th{padding:5px 7px;background:#eff6ff;color:#1e3a8a;font-weight:700;font-size:10px;text-align:center;border-bottom:1.5px solid #bfdbfe}
+        .mtbl td{padding:5px 7px;border-bottom:1px solid #e5e7eb}
+        .sum-grid{display:grid;grid-template-columns:repeat(5,1fr)}
+        .sum-cell{padding:10px 6px;text-align:center;border-right:1px solid #bfdbfe}
+        .sum-cell:last-child{border-right:none}
+        .sum-lbl{font-size:8px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+        .sum-val{font-size:16px;font-weight:900}
         @media print{.page{page-break-after:always}}
-      </style></head><body>${cards.map(c=>buildCard(c.data)).join('')}</body></html>`);
+      </style></head><body>${cards.map(c => buildCard(c.data, filterExam)).join('')}</body></html>`);
       w.document.close();
       setTimeout(() => { w.focus(); w.print(); }, 600);
     } finally { setPrintingAll(false); }
@@ -483,7 +507,7 @@ export default function ReportCardHub() {
           {loading ? (
             <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Loading report card…</div>
           ) : (
-            <ReportCardView data={cardData} onPrint={handlePrint} />
+            <ProfessionalReportCard data={cardData} gradeScale={gradeScale} examFilter={filterExam} onPrint={handlePrint} />
           )}
         </div>
       )}

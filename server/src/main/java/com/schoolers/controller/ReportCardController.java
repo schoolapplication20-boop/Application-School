@@ -338,14 +338,15 @@ public class ReportCardController {
         }
 
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("student", Map.of(
-            "name", student.getName(),
-            "rollNumber", student.getRollNumber(),
-            "admissionNumber", student.getAdmissionNumber() != null ? student.getAdmissionNumber() : "",
-            "className", student.getClassName(),
-            "section", student.getSection() != null ? student.getSection() : "",
-            "parentName", student.getParentName() != null ? student.getParentName() : ""
-        ));
+        Map<String, Object> studentInfo = new LinkedHashMap<>();
+        studentInfo.put("name",            student.getName());
+        studentInfo.put("rollNumber",      student.getRollNumber());
+        studentInfo.put("admissionNumber", student.getAdmissionNumber() != null ? student.getAdmissionNumber() : "");
+        studentInfo.put("className",       student.getClassName());
+        studentInfo.put("section",         student.getSection() != null ? student.getSection() : "");
+        studentInfo.put("parentName",      student.getParentName() != null ? student.getParentName() : "");
+        studentInfo.put("dateOfBirth",     student.getDateOfBirth() != null ? student.getDateOfBirth().toString() : "");
+        result.put("student", studentInfo);
         result.put("school", schoolInfo);
         result.put("marksByExam", byExam);
         result.put("attendance", Map.of(
