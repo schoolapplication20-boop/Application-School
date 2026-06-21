@@ -182,8 +182,9 @@ export default function ReportCardHub() {
         if (p >= 35) return 'D'; return 'F';
       };
       const failingH = (r) => r.grade === 'F' || (r.maxMarks > 0 && Math.round((r.marks / r.maxMarks) * 100) < 35);
-      const gradeChip = (g) => `<span style="display:inline-block;padding:1px 8px;border-radius:3px;font-weight:800;font-size:11px;${gradeStyle[g]||'background:#f3f4f6;color:#374151'}">${g||'—'}</span>`;
-      const pass = (fail) => `<span style="font-weight:700;color:${fail?'#dc2626':'#16a34a'}">${fail?'FAIL':'PASS'}</span>`;
+      const gradeChip = (g) => `<span style="display:inline-block;padding:2px 10px;border-radius:4px;font-weight:800;font-size:11px;${gradeStyle[g]||'background:#f3f4f6;color:#374151'}">${g||'—'}</span>`;
+      const passLabel = (fail) => `<span style="font-weight:700;color:${fail?'#dc2626':'#16a34a'}">${fail?'FAIL':'PASS'}</span>`;
+      const B = '#bfdbfe'; // border color
 
       const buildCard = (data, examLabel = '') => {
         if (!data) return '<div class="page"><p style="color:#999;padding:20px">No data</p></div>';
@@ -196,7 +197,6 @@ export default function ReportCardHub() {
         const oPct     = gMax > 0 ? Math.round((gTotal / gMax) * 100) : 0;
         const oGrade   = gradeFromPctH(oPct);
         const oFail    = allRows.some(failingH);
-        const absent   = Number(attendance.totalDays||0) - Number(attendance.presentDays||0);
 
         const examsHtml = allExamEntries.map(([et, rows]) => {
           const tot = rows.reduce((s,r) => s + Number(r.marks||0), 0);
@@ -204,109 +204,156 @@ export default function ReportCardHub() {
           const ep  = mx > 0 ? Math.round((tot / mx) * 100) : 0;
           const eg  = gradeFromPctH(ep);
           const ef  = rows.some(failingH);
+          const gs  = gradeStyle[eg] || 'background:#f3f4f6;color:#374151';
           return `<div class="exam-section">
-            <div class="exam-header">
-              <span>Subject-wise Marks — ${et}</span>
+            <div class="sec-hdr" style="justify-content:space-between">
+              <span>${et}</span>
               <span style="font-weight:800;padding:2px 12px;border-radius:20px;background:${ef?'#dc2626':'#16a34a'};color:#fff;font-size:10px">${ef?'FAIL':'PASS'}</span>
             </div>
             <table class="mtbl"><thead><tr>
-              <th style="width:28px">S.No.</th><th style="text-align:left">Subject</th>
-              <th>Marks</th><th>Max</th><th>%</th><th>Grade</th><th>Result</th>
+              <th style="width:32px">S.NO.</th><th style="text-align:left">SUBJECT</th>
+              <th>MARKS OBTAINED</th><th>MAXIMUM MARKS</th><th>PERCENTAGE (%)</th><th>GRADE</th><th>RESULT</th>
             </tr></thead><tbody>
             ${rows.map((r,i)=>{
               const sp = r.maxMarks > 0 ? Math.round((r.marks/r.maxMarks)*100) : 0;
               const sf = failingH(r);
               return `<tr style="${sf?'background:#fef2f2':i%2===0?'':'background:#f8faff'}">
-                <td style="text-align:center;color:#9ca3af">${i+1}</td>
-                <td style="font-weight:600;color:${sf?'#991b1b':'#111827'}">${r.subject||''}</td>
-                <td style="text-align:center;font-weight:800;color:#1e3a8a;font-size:13px">${r.marks??'—'}</td>
-                <td style="text-align:center;color:#4b5563">${r.maxMarks??'—'}</td>
-                <td style="text-align:center;font-weight:700;color:${sf?'#dc2626':sp>=75?'#16a34a':'#374151'}">${r.maxMarks>0?sp+'%':'—'}</td>
-                <td style="text-align:center">${gradeChip(r.grade)}</td>
-                <td style="text-align:center">${r.maxMarks > 0 ? pass(sf) : '—'}</td>
+                <td style="text-align:center;color:#6b7280;border-right:1px solid ${B}">${i+1}</td>
+                <td style="font-weight:600;color:${sf?'#991b1b':'#111827'};border-right:1px solid ${B}">${r.subject||''}</td>
+                <td style="text-align:center;font-weight:800;color:#1e3a8a;font-size:13px;border-right:1px solid ${B}">${r.marks??'—'}</td>
+                <td style="text-align:center;color:#4b5563;border-right:1px solid ${B}">${r.maxMarks??'—'}</td>
+                <td style="text-align:center;font-weight:700;color:${sf?'#dc2626':sp>=75?'#16a34a':'#374151'};border-right:1px solid ${B}">${r.maxMarks>0?sp+'%':'—'}</td>
+                <td style="text-align:center;border-right:1px solid ${B}">${gradeChip(r.grade)}</td>
+                <td style="text-align:center">${r.maxMarks > 0 ? passLabel(sf) : '—'}</td>
               </tr>`;
             }).join('')}
-            <tr style="background:#dbeafe;font-weight:900">
-              <td colspan="2" style="padding:6px 8px;color:#1e3a8a">TOTAL</td>
-              <td style="text-align:center;color:#1e3a8a;font-size:13px">${tot}</td>
-              <td style="text-align:center;color:#374151">${mx}</td>
-              <td style="text-align:center;font-weight:900;color:${ef?'#dc2626':'#16a34a'}">${ep}%</td>
-              <td style="text-align:center">${gradeChip(eg)}</td>
-              <td style="text-align:center">${pass(ef)}</td>
+            <tr style="background:#dbeafe;border-top:2px solid #1d4ed8;font-weight:900">
+              <td colspan="2" style="padding:6px 12px;color:#1e3a8a;border-right:1px solid ${B}">TOTAL</td>
+              <td style="text-align:center;color:#1e3a8a;font-size:13px;border-right:1px solid ${B}">${tot}</td>
+              <td style="text-align:center;color:#374151;border-right:1px solid ${B}">${mx}</td>
+              <td style="text-align:center;font-weight:900;color:${ef?'#dc2626':'#16a34a'};border-right:1px solid ${B}">${ep}%</td>
+              <td style="text-align:center;border-right:1px solid ${B}">${gradeChip(eg)}</td>
+              <td style="text-align:center;font-weight:900;color:${ef?'#dc2626':'#16a34a'}">${ef?'FAIL':'PASS'}</td>
             </tr>
             </tbody></table></div>`;
         }).join('');
 
+        const gradePairs = [
+          ['91 - 100','O','51 - 60','B'],['81 - 90','A+','41 - 50','C'],
+          ['71 - 80','A','35 - 40','D'],['61 - 70','B+','Below 35','F'],
+        ];
+
         return `<div class="page">
+          <!-- HEADER -->
           <div class="hdr">
-            <div style="display:flex;align-items:center;gap:16px">
+            <div style="display:flex;align-items:flex-start;gap:16px">
               ${logoSrc ? `<img src="${logoSrc}" class="logo" onerror="this.style.display='none'">` : `<div class="logo-ph">${school.name?.charAt(0)||'S'}</div>`}
               <div style="flex:1;text-align:center">
                 <div class="school-name">${school.name||'School'}</div>
-                ${school.board ? `<div class="school-board">${school.board} Affiliated</div>` : ''}
-                ${school.address ? `<div class="school-det">${school.address}</div>` : ''}
-                <div class="school-det">${[school.phone&&`Ph: ${school.phone}`,school.email].filter(Boolean).join('  •  ')}</div>
+                ${school.affiliationNumber ? `<div style="font-size:11px;color:#374151;margin-top:3px;font-weight:600">${school.board?school.board+' ':''}Affiliation No: ${school.affiliationNumber}</div>` : (school.board ? `<div class="school-board">${school.board} Affiliated</div>` : '')}
+                ${school.address ? `<div class="school-det">${school.address}${school.phone?` | Ph: ${school.phone}`:''}</div>` : ''}
+                ${(school.email||school.website) ? `<div class="school-det">${[school.email&&`Email: ${school.email}`,school.website&&`Website: ${school.website}`].filter(Boolean).join(' | ')}</div>` : ''}
               </div>
-              <div class="yr-box"><div class="yr-lbl">Acad. Year</div><div class="yr-val">${school.academicYear||'—'}</div></div>
+              <div class="yr-box"><div class="yr-lbl">Academic Year</div><div class="yr-val">${school.academicYear||'—'}</div></div>
             </div>
             <div class="title-row">
-              <div class="rc-title">PROGRESS REPORT CARD</div>
-              ${examLabel ? `<div class="rc-exam">${examLabel}</div>` : ''}
+              <div style="display:flex;align-items:center;gap:14px">
+                <div style="height:2px;flex:1;background:linear-gradient(to right,transparent,#1d4ed8);border-radius:1px"></div>
+                <div class="rc-title">Progress Report Card</div>
+                <div style="height:2px;flex:1;background:linear-gradient(to left,transparent,#1d4ed8);border-radius:1px"></div>
+              </div>
+              ${examLabel ? `<div style="margin-top:8px;text-align:center"><span style="display:inline-block;background:#1e3a8a;color:#fff;padding:5px 28px;border-radius:4px;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase">Examination: ${examLabel}</span></div>` : ''}
             </div>
           </div>
 
-          <div class="si-box">
-            <div class="si-hdr">Student Information</div>
-            <div class="si-grid">
-              ${[['Student Name',student.name],['Admission No.',student.admissionNumber||'—'],['Roll Number',student.rollNumber||'—'],['Date of Birth',student.dateOfBirth||'—'],['Class & Section',`${student.className||'—'}${student.section?' – '+student.section:''}`],['Parent / Guardian',student.parentName||'—']].map(([l,v])=>`<div class="si-cell"><div class="si-lbl">${l}:</div><div class="si-val">${v||'—'}</div></div>`).join('')}
-            </div>
-          </div>
+          <!-- STUDENT INFO -->
+          <table class="si-tbl">
+            <tbody>
+              <tr style="border-bottom:1px solid ${B}">
+                <td style="width:50%;padding:8px 14px;border-right:1px solid ${B}"><span class="si-lbl">Student Name</span><span style="color:#6b7280"> : </span><span class="si-val">${student.name||'—'}</span></td>
+                <td style="width:50%;padding:8px 14px"><span class="si-lbl">Roll Number</span><span style="color:#6b7280"> : </span><span class="si-val">${student.rollNumber||'—'}</span></td>
+              </tr>
+              <tr style="border-bottom:1px solid ${B}">
+                <td style="padding:8px 14px;border-right:1px solid ${B}"><span class="si-lbl">Admission No.</span><span style="color:#6b7280"> : </span><span class="si-val">${student.admissionNumber||'—'}</span></td>
+                <td style="padding:8px 14px"><span class="si-lbl">Date of Birth</span><span style="color:#6b7280"> : </span><span class="si-val">${student.dateOfBirth||'—'}</span></td>
+              </tr>
+              <tr>
+                <td style="padding:8px 14px;border-right:1px solid ${B}"><span class="si-lbl">Class &amp; Section</span><span style="color:#6b7280"> : </span><span class="si-val">${student.className||'—'}${student.section?' - '+student.section:''}</span></td>
+                <td style="padding:8px 14px"><span class="si-lbl">Parent / Guardian</span><span style="color:#6b7280"> : </span><span class="si-val">${student.parentName||'—'}</span></td>
+              </tr>
+            </tbody>
+          </table>
 
-          <div class="att-box">
-            <div class="si-hdr">Attendance Summary</div>
-            <table class="att-tbl"><thead><tr><th>Total Working Days</th><th>Present Days</th><th>Absent Days</th><th>Attendance %</th></tr></thead>
+          <!-- ATTENDANCE -->
+          <div class="box">
+            <div class="sec-hdr">Attendance Summary</div>
+            <table class="att-tbl"><thead><tr>
+              <th>TOTAL WORKING DAYS</th><th>PRESENT DAYS</th><th>ATTENDANCE %</th>
+            </tr></thead>
             <tbody><tr>
-              <td>${attendance.totalDays??'—'}</td>
-              <td style="color:#16a34a;font-weight:700">${attendance.presentDays??'—'}</td>
-              <td style="color:#dc2626;font-weight:700">${absent||'—'}</td>
+              <td style="border-right:1px solid ${B}">${attendance.totalDays??0}</td>
+              <td style="color:#16a34a;font-weight:700;border-right:1px solid ${B}">${attendance.presentDays??0}</td>
               <td><span style="font-weight:900;font-size:14px;color:${Number(attendance.percentage||0)>=75?'#16a34a':'#dc2626'}">${Number(attendance.percentage||0).toFixed(1)}%</span></td>
             </tr></tbody></table>
           </div>
 
-          ${examsHtml || '<div style="padding:16px;text-align:center;color:#9ca3af;font-size:12px;border:1px dashed #d1d5db;border-radius:6px;margin-bottom:8px">No marks recorded</div>'}
+          ${examsHtml || '<div style="padding:16px;text-align:center;color:#9ca3af;font-size:12px;border:1px dashed #d1d5db;border-radius:4px;margin-bottom:8px">No marks recorded</div>'}
 
-          ${gMax > 0 ? `<div class="sum-box">
-            <div class="si-hdr">Academic Summary</div>
-            <div class="sum-grid">
-              <div class="sum-cell"><div class="sum-lbl">Total Marks</div><div class="sum-val" style="color:#1e3a8a">${gTotal}</div></div>
-              <div class="sum-cell"><div class="sum-lbl">Maximum Marks</div><div class="sum-val" style="color:#374151">${gMax}</div></div>
-              <div class="sum-cell"><div class="sum-lbl">Percentage</div><div class="sum-val" style="color:${oFail?'#dc2626':'#16a34a'}">${oPct}%</div></div>
-              <div class="sum-cell"><div class="sum-lbl">Overall Grade</div><div class="sum-val">${gradeChip(oGrade)}</div></div>
-              <div class="sum-cell" style="background:${oFail?'#fef2f2':'#f0fdf4'}"><div class="sum-lbl">Final Result</div><div class="sum-val" style="color:${oFail?'#dc2626':'#16a34a'}">${oFail?'FAIL':'PASS'}</div></div>
-            </div>
+          ${gMax > 0 ? `<div class="box">
+            <div class="sec-hdr">Academic Summary</div>
+            <table style="width:100%;border-collapse:collapse;font-size:12px">
+              <thead><tr style="background:#eff6ff">
+                <th style="padding:7px 8px;text-align:center;font-weight:700;color:#1e3a8a;border-bottom:1px solid ${B};border-right:1px solid ${B};font-size:11px">TOTAL MARKS</th>
+                <th style="padding:7px 8px;text-align:center;font-weight:700;color:#1e3a8a;border-bottom:1px solid ${B};border-right:1px solid ${B};font-size:11px">MAXIMUM MARKS</th>
+                <th style="padding:7px 8px;text-align:center;font-weight:700;color:#1e3a8a;border-bottom:1px solid ${B};border-right:1px solid ${B};font-size:11px">PERCENTAGE (%)</th>
+                <th style="padding:7px 8px;text-align:center;font-weight:700;color:#1e3a8a;border-bottom:1px solid ${B};border-right:1px solid ${B};font-size:11px">OVERALL GRADE</th>
+                <th style="padding:7px 8px;text-align:center;font-weight:700;color:#1e3a8a;border-bottom:1px solid ${B};font-size:11px">RESULT</th>
+              </tr></thead>
+              <tbody><tr>
+                <td style="padding:10px 8px;text-align:center;font-weight:900;font-size:16px;color:#1e3a8a;border-right:1px solid ${B}">${gTotal}</td>
+                <td style="padding:10px 8px;text-align:center;font-weight:700;color:#374151;border-right:1px solid ${B}">${gMax}</td>
+                <td style="padding:10px 8px;text-align:center;font-weight:900;font-size:16px;color:${oFail?'#dc2626':'#16a34a'};border-right:1px solid ${B}">${oPct}%</td>
+                <td style="padding:10px 8px;text-align:center;border-right:1px solid ${B}">${gradeChip(oGrade)}</td>
+                <td style="padding:10px 8px;text-align:center;font-weight:900;font-size:14px;color:${oFail?'#dc2626':'#16a34a'};background:${oFail?'#fef2f2':'#f0fdf4'}">${oFail?'FAIL':'PASS'}</td>
+              </tr></tbody>
+            </table>
           </div>` : ''}
 
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-            <div style="border:1.5px solid #bfdbfe;border-radius:6px;overflow:hidden">
-              <div class="si-hdr">Grading Scale</div>
-              <table style="width:100%;border-collapse:collapse;font-size:10px">
-                <thead><tr style="background:#eff6ff"><th style="padding:4px;text-align:center;color:#1e3a8a;border-bottom:1px solid #bfdbfe">%</th><th style="padding:4px;text-align:center;color:#1e3a8a;border-bottom:1px solid #bfdbfe">Grade</th><th style="padding:4px;text-align:left;color:#1e3a8a;border-bottom:1px solid #bfdbfe">Performance</th></tr></thead>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+            <div class="box">
+              <div class="sec-hdr">Class Teacher's Remarks</div>
+              <div style="padding:10px 14px;background:#fafbfc;min-height:110px">
+                ${[0,1,2].map(()=>'<div style="border-bottom:1px solid #d1d5db;margin-bottom:22px;min-height:20px"></div>').join('')}
+              </div>
+            </div>
+            <div class="box">
+              <div class="sec-hdr">Grading Scale</div>
+              <table style="width:100%;border-collapse:collapse;font-size:11px">
+                <thead><tr style="background:#eff6ff">
+                  <th style="padding:5px 8px;text-align:center;color:#1e3a8a;border-bottom:1px solid ${B};border-right:1px solid ${B}">PERCENTAGE RANGE</th>
+                  <th style="padding:5px 8px;text-align:center;color:#1e3a8a;border-bottom:1px solid ${B};border-right:1px solid ${B}">GRADE</th>
+                  <th style="padding:5px 8px;text-align:center;color:#1e3a8a;border-bottom:1px solid ${B};border-right:1px solid ${B}">PERCENTAGE RANGE</th>
+                  <th style="padding:5px 8px;text-align:center;color:#1e3a8a;border-bottom:1px solid ${B}">GRADE</th>
+                </tr></thead>
                 <tbody>
-                  ${[['91–100','O','Outstanding'],['81–90','A+','Excellent'],['71–80','A','Very Good'],['61–70','B+','Good'],['51–60','B','Above Average'],['41–50','C','Average'],['35–40','D','Below Average'],['< 35','F','Fail']].map(([r,g,l],i)=>`<tr style="${i%2===0?'':'background:#f8faff'}"><td style="padding:3px 6px;text-align:center;color:#374151">${r}</td><td style="padding:3px 6px;text-align:center">${gradeChip(g)}</td><td style="padding:3px 6px;color:#4b5563">${l}</td></tr>`).join('')}
+                  ${gradePairs.map(([r1,g1,r2,g2],i)=>`<tr style="${i%2===0?'':'background:#f8faff'};border-bottom:1px solid ${B}">
+                    <td style="padding:4px 8px;text-align:center;color:#374151;border-right:1px solid ${B}">${r1}</td>
+                    <td style="padding:4px 8px;text-align:center;border-right:1px solid ${B}">${gradeChip(g1)}</td>
+                    <td style="padding:4px 8px;text-align:center;color:#374151;border-right:1px solid ${B}">${r2}</td>
+                    <td style="padding:4px 8px;text-align:center">${gradeChip(g2)}</td>
+                  </tr>`).join('')}
                 </tbody>
               </table>
             </div>
-            <div style="border:1.5px solid #bfdbfe;border-radius:6px;overflow:hidden">
-              <div class="si-hdr">Class Teacher Remarks</div>
-              <div style="padding:10px 12px;background:#fafbfc">
-                ${[0,1,2,3].map(()=>'<div style="border-bottom:1px solid #d1d5db;margin-bottom:18px;min-height:18px"></div>').join('')}
-              </div>
-            </div>
           </div>
 
-          <div style="border:1.5px solid #bfdbfe;border-radius:6px;padding:12px 20px">
+          <div style="font-size:10px;color:#6b7280;font-style:italic;margin-bottom:14px;padding-left:2px">
+            Note: Co-scholastic areas like Work Education, Art Education, Health &amp; Physical Education and Discipline are assessed on a 3-point scale (A: Excellent, B: Good, C: Needs Improvement).
+          </div>
+
+          <div style="border:1.5px solid ${B};border-radius:4px;padding:16px 20px 10px">
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
-              ${['Class Teacher','Principal','Parent / Guardian'].map(s=>`<div style="text-align:center"><div style="height:40px;border-bottom:1.5px solid #374151;margin:0 16px 6px"></div><div style="font-size:11px;font-weight:700;color:#1e293b">${s}</div><div style="font-size:10px;color:#9ca3af;margin-top:1px">Signature &amp; Seal</div></div>`).join('')}
+              ${['CLASS TEACHER','PRINCIPAL','PARENT / GUARDIAN'].map(s=>`<div style="text-align:center"><div style="height:44px;border-bottom:1.5px solid #374151;margin:0 16px 8px"></div><div style="font-size:12px;font-weight:700;color:#1e293b">${s}</div><div style="font-size:10px;color:#9ca3af;margin-top:2px">Signature</div></div>`).join('')}
             </div>
           </div>
         </div>`;
@@ -316,40 +363,32 @@ export default function ReportCardHub() {
       <style>
         @page{size:A4 portrait;margin:8mm 10mm}
         *{margin:0;padding:0;box-sizing:border-box}
-        body{background:#fff;font-family:"Segoe UI",Arial,sans-serif;font-size:12px}
+        body{background:#fff;font-family:"Segoe UI",Arial,sans-serif;font-size:12px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
         .page{page-break-after:always;padding:0;display:flex;flex-direction:column;gap:8px}
         .page:last-child{page-break-after:avoid}
-        .hdr{border:2px solid #1d4ed8;border-radius:6px;padding:12px 16px 10px;margin-bottom:8px}
-        .logo{width:72px;height:72px;object-fit:contain}
-        .logo-ph{width:72px;height:72px;background:#dbeafe;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#1d4ed8;font-weight:900;font-size:22px;flex-shrink:0}
-        .school-name{font-size:19px;font-weight:900;color:#1e3a8a;letter-spacing:.5px}
-        .school-board{font-size:10px;color:#2563eb;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-top:2px}
-        .school-det{font-size:10px;color:#4b5563;margin-top:2px}
-        .yr-box{border:2px solid #1d4ed8;border-radius:5px;padding:6px 12px;text-align:center;min-width:80px;background:#eff6ff}
-        .yr-lbl{font-size:8px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px}
-        .yr-val{font-size:13px;font-weight:900;color:#1e3a8a;margin-top:2px}
-        .title-row{text-align:center;margin-top:10px;padding-top:8px;border-top:1.5px solid #bfdbfe}
-        .rc-title{font-size:14px;font-weight:900;letter-spacing:3px;color:#1e3a8a;text-transform:uppercase}
-        .rc-exam{font-size:11px;color:#2563eb;font-weight:700;margin-top:3px;letter-spacing:1px}
-        .si-box,.att-box,.sum-box{border:1.5px solid #bfdbfe;border-radius:6px;overflow:hidden;margin-bottom:8px}
-        .si-hdr{background:#1d4ed8;padding:4px 12px;font-size:10px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:1px}
-        .si-grid{display:grid;grid-template-columns:1fr 1fr;padding:8px 12px;gap:6px 20px}
-        .si-cell{display:flex;align-items:flex-start;gap:5px}
-        .si-lbl{font-size:10px;font-weight:700;color:#4b5563;min-width:115px;flex-shrink:0}
-        .si-val{font-size:11px;font-weight:600;color:#111827}
-        .att-tbl{width:100%;border-collapse:collapse;font-size:11px}
-        .att-tbl th{padding:5px 10px;text-align:center;font-weight:700;color:#1e3a8a;background:#eff6ff;border-bottom:1px solid #bfdbfe}
-        .att-tbl td{padding:6px 10px;text-align:center;font-weight:600}
-        .exam-section{border:1.5px solid #bfdbfe;border-radius:6px;overflow:hidden;margin-bottom:8px}
-        .exam-header{background:#1d4ed8;padding:4px 12px;display:flex;justify-content:space-between;align-items:center;font-size:10px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:1px}
+        .hdr{border:2px solid #1d4ed8;border-radius:6px;padding:14px 18px 12px;margin-bottom:8px}
+        .logo{width:80px;height:80px;object-fit:contain;flex-shrink:0}
+        .logo-ph{width:80px;height:80px;background:#eff6ff;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#1d4ed8;font-weight:900;font-size:26px;border:2px solid #bfdbfe;flex-shrink:0}
+        .school-name{font-size:20px;font-weight:900;color:#1e3a8a;letter-spacing:1px;text-transform:uppercase}
+        .school-board{font-size:11px;color:#374151;font-weight:600;margin-top:3px}
+        .school-det{font-size:11px;color:#374151;margin-top:3px}
+        .yr-box{border:2px solid #1e3a8a;border-radius:4px;padding:7px 13px;text-align:center;min-width:96px;background:#eff6ff;flex-shrink:0}
+        .yr-lbl{font-size:9px;font-weight:700;color:#1e3a8a;text-transform:uppercase;letter-spacing:.5px}
+        .yr-val{font-size:15px;font-weight:900;color:#1e3a8a;margin-top:3px}
+        .title-row{margin-top:13px;padding-top:11px;border-top:1.5px solid #bfdbfe}
+        .rc-title{font-size:15px;font-weight:900;letter-spacing:4px;color:#1e3a8a;text-transform:uppercase;white-space:nowrap}
+        .box{border:1.5px solid #bfdbfe;border-radius:4px;overflow:hidden;margin-bottom:8px}
+        .sec-hdr{background:#1e3a8a;padding:5px 14px;font-size:11px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:1px;display:flex;align-items:center}
+        .si-tbl{width:100%;border-collapse:collapse;border:1.5px solid #bfdbfe;margin-bottom:8px;font-size:12px}
+        .si-lbl{font-size:11px;font-weight:700;color:#4b5563}
+        .si-val{font-size:12px;font-weight:600;color:#111827}
+        .att-tbl{width:100%;border-collapse:collapse;font-size:12px}
+        .att-tbl th{padding:7px 10px;text-align:center;font-weight:700;color:#1e3a8a;background:#eff6ff;border-bottom:1px solid #bfdbfe;border-right:1px solid #bfdbfe;font-size:11px}
+        .att-tbl td{padding:8px 10px;text-align:center;font-weight:700}
+        .exam-section{border:1.5px solid #bfdbfe;border-radius:4px;overflow:hidden;margin-bottom:8px}
         .mtbl{width:100%;border-collapse:collapse;font-size:11px}
-        .mtbl th{padding:5px 7px;background:#eff6ff;color:#1e3a8a;font-weight:700;font-size:10px;text-align:center;border-bottom:1.5px solid #bfdbfe}
+        .mtbl th{padding:7px 8px;background:#1e3a8a;color:#fff;font-weight:700;font-size:10px;text-align:center;border-right:1px solid #2d4d8c;border-bottom:1px solid #2d4d8c}
         .mtbl td{padding:5px 7px;border-bottom:1px solid #e5e7eb}
-        .sum-grid{display:grid;grid-template-columns:repeat(5,1fr)}
-        .sum-cell{padding:10px 6px;text-align:center;border-right:1px solid #bfdbfe}
-        .sum-cell:last-child{border-right:none}
-        .sum-lbl{font-size:8px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
-        .sum-val{font-size:16px;font-weight:900}
         @media print{.page{page-break-after:always}}
       </style></head><body>${cards.map(c => buildCard(c.data, filterExam)).join('')}</body></html>`);
       w.document.close();
