@@ -116,20 +116,27 @@ export default function Marks() {
   const [bulkClassId, setBulkClassId]         = useState('');
   const [bulkExamType, setBulkExamType]       = useState('');
   const [bulkDate, setBulkDate]               = useState('');
-  const [bulkMaxMarks, setBulkMaxMarks]       = useState('100');
+  // subjectMaxMarks[subject] = string — per-subject configurable maximum marks
+  const [subjectMaxMarks, setSubjectMaxMarks] = useState({});
   const [bulkSubjects, setBulkSubjects]       = useState([SUBJECTS[0]]);
   const [bulkStudents, setBulkStudents]       = useState([]);
   const [loadingBulkStudents, setLoadingBulkStudents] = useState(false);
   // grid[studentId][subject] = marks string value
   const [grid, setGrid]                       = useState({});
   const [saving, setSaving]                   = useState(false);
-  // ── Custom subject support ────────────────────────────────────────────────────
-  const [customSubjects, setCustomSubjects]   = useState([]); // school-added subjects
+  // ── Custom subject support (persisted per school in localStorage) ─────────────
+  const [customSubjects, setCustomSubjects]   = useState(() => {
+    try { return JSON.parse(localStorage.getItem(`custom_subjects_${user?.schoolId || 'default'}`) || '[]'); }
+    catch { return []; }
+  });
   const [newSubjectInput, setNewSubjectInput] = useState('');
   // ── Edit marks state ─────────────────────────────────────────────────────────
-  const [editingMark, setEditingMark]         = useState(null); // { id, marks, maxMarks, subject, examType }
+  const [editingMark, setEditingMark]         = useState(null);
+  const [editSubject, setEditSubject]         = useState('');
   const [editMarks, setEditMarks]             = useState('');
   const [editMaxMarks, setEditMaxMarks]       = useState('');
+  const [editSubjectCustomInput, setEditSubjectCustomInput] = useState('');
+  const [editShowAddSubject, setEditShowAddSubject]         = useState(false);
   const [editSaving, setEditSaving]           = useState(false);
 
   // ── CSV Import state ────────────────────────────────────────────────────────
@@ -413,22 +420,36 @@ ADM002,Mathematics,92,100`;
   }, [bulkClassId, classes]);
 
   // ── Helpers ───────────────────────────────────────────────────────────────────
-  // Merged subject list: standard + any custom subjects added by teacher
   const allSubjects = [...SUBJECTS, ...customSubjects.filter(s => !SUBJECTS.includes(s))];
 
-  const toggleSubject = (sub) =>
-    setBulkSubjects(prev => prev.includes(sub) ? prev.filter(s => s !== sub) : [...prev, sub]);
+  const persistCustomSubjects = (list) => {
+    try { localStorage.setItem(`custom_subjects_${user?.schoolId || 'default'}`, JSON.stringify(list)); } catch {}
+  };
+
+  const toggleSubject = (sub) => {
+    setBulkSubjects(prev => {
+      if (prev.includes(sub)) return prev.filter(s => s !== sub);
+      // Ensure subjectMaxMarks has an entry for this subject
+      setSubjectMaxMarks(sm => sm[sub] !== undefined ? sm : { ...sm, [sub]: '100' });
+      return [...prev, sub];
+    });
+  };
 
   const addCustomSubject = () => {
     const trimmed = newSubjectInput.trim();
     if (!trimmed) return;
     const normalized = trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
     if (allSubjects.some(s => s.toLowerCase() === normalized.toLowerCase())) {
-      // Already exists — just select it
-      if (!bulkSubjects.includes(normalized)) setBulkSubjects(prev => [...prev, normalized]);
+      if (!bulkSubjects.includes(normalized)) {
+        setBulkSubjects(prev => [...prev, normalized]);
+        setSubjectMaxMarks(sm => sm[normalized] !== undefined ? sm : { ...sm, [normalized]: '100' });
+      }
     } else {
-      setCustomSubjects(prev => [...prev, normalized]);
+      const next = [...customSubjects, normalized];
+      setCustomSubjects(next);
+      persistCustomSubjects(next);
       setBulkSubjects(prev => [...prev, normalized]);
+      setSubjectMaxMarks(sm => ({ ...sm, [normalized]: '100' }));
     }
     setNewSubjectInput('');
   };
@@ -436,24 +457,45 @@ ADM002,Mathematics,92,100`;
   // ── Edit marks handlers ───────────────────────────────────────────────────────
   const openEdit = (m) => {
     setEditingMark(m);
+    setEditSubject(m.subject);
     setEditMarks(String(m.marks));
     setEditMaxMarks(String(m.maxMarks));
+    setEditSubjectCustomInput('');
+    setEditShowAddSubject(false);
   };
 
   const saveEdit = async () => {
     if (!editingMark) return;
-    const marksNum   = parseFloat(editMarks);
-    const maxNum     = parseFloat(editMaxMarks);
-    if (isNaN(marksNum) || marksNum < 0)          { showToast('Enter valid marks',     'error'); return; }
-    if (isNaN(maxNum)   || maxNum   <= 0)          { showToast('Enter valid max marks', 'error'); return; }
-    if (marksNum > maxNum)                         { showToast('Marks exceed max marks','error'); return; }
+    const subjectTrimmed = editSubject.trim();
+    const marksNum       = parseFloat(editMarks);
+    const maxNum         = parseFloat(editMaxMarks);
+    if (!subjectTrimmed)                           { showToast('Enter a subject name',  'error'); return; }
+    if (isNaN(marksNum) || marksNum < 0)           { showToast('Enter valid marks',     'error'); return; }
+    if (isNaN(maxNum)   || maxNum   <= 0)           { showToast('Enter valid max marks', 'error'); return; }
+    if (marksNum > maxNum)                          { showToast('Marks exceed max marks','error'); return; }
+    // Duplicate check: same student + same subject + same examType (excluding the current record)
+    const duplicate = allMarks.find(m =>
+      m.id !== editingMark.id &&
+      String(m.studentId) === String(editingMark.studentId) &&
+      m.examType === editingMark.examType &&
+      m.subject.toLowerCase() === subjectTrimmed.toLowerCase()
+    );
+    if (duplicate) { showToast(`${subjectTrimmed} already recorded for this exam`, 'error'); return; }
+
+    // If it's a brand-new custom subject, persist it
+    if (!allSubjects.some(s => s.toLowerCase() === subjectTrimmed.toLowerCase())) {
+      const next = [...customSubjects, subjectTrimmed];
+      setCustomSubjects(next);
+      persistCustomSubjects(next);
+    }
+
     setEditSaving(true);
     try {
-      const res = await teacherAPI.updateMarks(editingMark.id, { marks: marksNum, maxMarks: maxNum });
+      const res = await teacherAPI.updateMarks(editingMark.id, { subject: subjectTrimmed, marks: marksNum, maxMarks: maxNum });
       const updated = res?.data?.data;
       if (updated) {
         setAllMarks(prev => prev.map(m => m.id === editingMark.id
-          ? { ...m, marks: updated.marks, maxMarks: updated.maxMarks, grade: updated.grade }
+          ? { ...m, subject: updated.subject || subjectTrimmed, marks: updated.marks, maxMarks: updated.maxMarks, grade: updated.grade }
           : m));
         showToast('Marks updated');
       }
@@ -478,11 +520,12 @@ ADM002,Mathematics,92,100`;
 
   // ── Open modal ────────────────────────────────────────────────────────────────
   const openModal = () => {
+    const initialSubject = allSubjects[0] || SUBJECTS[0];
     setBulkClassId(filterClassId || (classes[0] ? String(classes[0].id) : ''));
     setBulkExamType(examTypes[0] || '');
     setBulkDate('');
-    setBulkMaxMarks('100');
-    setBulkSubjects([allSubjects[0] || SUBJECTS[0]]);
+    setBulkSubjects([initialSubject]);
+    setSubjectMaxMarks({ [initialSubject]: '100' });
     setNewSubjectInput('');
     setGrid({});
     setShowModal(true);
@@ -492,18 +535,22 @@ ADM002,Mathematics,92,100`;
   const handleBulkSave = async () => {
     if (!bulkClassId) { showToast('Select a class', 'error'); return; }
     if (bulkSubjects.length === 0) { showToast('Select at least one subject', 'error'); return; }
-    const maxNum = parseFloat(bulkMaxMarks);
-    if (isNaN(maxNum) || maxNum <= 0) { showToast('Enter valid max marks', 'error'); return; }
+    // Validate per-subject max marks
+    for (const sub of bulkSubjects) {
+      const mx = parseFloat(subjectMaxMarks[sub] || '');
+      if (isNaN(mx) || mx <= 0) { showToast(`Enter valid max marks for ${sub}`, 'error'); return; }
+    }
 
-    const date = bulkDate || new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }); // IST YYYY-MM-DD
+    const date = bulkDate || new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
     const cls  = classes.find(c => String(c.id) === bulkClassId);
 
     const entries = [];
     for (const student of bulkStudents) {
       for (const subject of bulkSubjects) {
-        const val = grid[student.id]?.[subject];
+        const val    = grid[student.id]?.[subject];
         if (val === undefined || val === '') continue;
         const marksNum = parseFloat(val);
+        const maxNum   = parseFloat(subjectMaxMarks[subject] || '100');
         if (isNaN(marksNum) || marksNum < 0 || marksNum > maxNum) continue;
         entries.push({
           studentId:   student.id,
@@ -561,9 +608,15 @@ ADM002,Mathematics,92,100`;
     }
   };
 
-  // ── Count filled cells ────────────────────────────────────────────────────────
+  // ── Count valid (filled and within max) cells ─────────────────────────────────
   const filledCount = bulkStudents.reduce((acc, s) =>
-    acc + bulkSubjects.filter(sub => (grid[s.id]?.[sub] ?? '') !== '').length, 0);
+    acc + bulkSubjects.filter(sub => {
+      const val = grid[s.id]?.[sub] ?? '';
+      if (val === '') return false;
+      const num = parseFloat(val);
+      const max = parseFloat(subjectMaxMarks[sub] || '100');
+      return !isNaN(num) && num >= 0 && num <= max;
+    }).length, 0);
 
   // ── Expanded students in grouped view ────────────────────────────────────────
   const [expandedStudents, setExpandedStudents] = useState(new Set());
@@ -701,10 +754,10 @@ ADM002,Mathematics,92,100`;
               </thead>
               <tbody>
                 {groupedByStudent.map((group, idx) => {
-                  const isExpanded = expandedStudents.has(group.studentId);
-                  const avgPctGroup = Math.round(
-                    group.rows.reduce((a, m) => a + (m.marks / m.maxMarks) * 100, 0) / group.rows.length
-                  );
+                  const isExpanded   = expandedStudents.has(group.studentId);
+                  const totalObt     = group.rows.reduce((a, m) => a + Number(m.marks),    0);
+                  const totalMax     = group.rows.reduce((a, m) => a + Number(m.maxMarks), 0);
+                  const avgPctGroup  = totalMax > 0 ? Math.round((totalObt / totalMax) * 100) : 0;
                   const overallGrade = getGrade(avgPctGroup, 100);
                   return (
                     <React.Fragment key={group.studentId}>
@@ -858,10 +911,6 @@ ADM002,Mathematics,92,100`;
                 <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Exam Date</label>
                 <input type="date" value={bulkDate} onChange={e => setBulkDate(e.target.value)} style={sel({ width: 155 })} />
               </div>
-              <div>
-                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Max Marks (per subject)</label>
-                <input type="number" min="1" placeholder="100" value={bulkMaxMarks} onChange={e => setBulkMaxMarks(e.target.value)} style={sel({ width: 110 })} />
-              </div>
             </div>
 
             {/* ── Subject selector ── */}
@@ -901,6 +950,28 @@ ADM002,Mathematics,92,100`;
                   + Add
                 </button>
               </div>
+
+              {/* Per-subject maximum marks */}
+              {bulkSubjects.length > 0 && (
+                <div style={{ marginTop: 12, padding: '10px 14px', background: '#f0f9ff', border: '1.5px solid #bae6fd', borderRadius: 8 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#0369a1', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Maximum Marks per Subject
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                    {bulkSubjects.map(sub => (
+                      <div key={sub} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{sub}:</span>
+                        <input
+                          type="number" min="1"
+                          value={subjectMaxMarks[sub] ?? '100'}
+                          onChange={e => setSubjectMaxMarks(prev => ({ ...prev, [sub]: e.target.value }))}
+                          style={{ width: 68, padding: '4px 7px', fontSize: 12, fontWeight: 700, border: '1.5px solid #7dd3fc', borderRadius: 6, outline: 'none', textAlign: 'center', background: '#fff' }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* ── Entry grid ── */}
@@ -937,7 +1008,7 @@ ADM002,Mathematics,92,100`;
                           <th key={sub} style={{ padding: '10px 10px', textAlign: 'center', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '2px solid var(--border-strong)', whiteSpace: 'nowrap', minWidth: 115 }}>
                             {sub}
                             <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 400, marginTop: 2, textTransform: 'none', letterSpacing: 0 }}>
-                              out of {bulkMaxMarks}
+                              out of {subjectMaxMarks[sub] || '100'}
                             </div>
                           </th>
                         ))}
@@ -963,7 +1034,7 @@ ADM002,Mathematics,92,100`;
                           {bulkSubjects.map(sub => {
                             const val    = grid[student.id]?.[sub] ?? '';
                             const numVal = parseFloat(val);
-                            const maxNum = parseFloat(bulkMaxMarks);
+                            const maxNum = parseFloat(subjectMaxMarks[sub] || '100');
                             const isOver = val !== '' && !isNaN(numVal) && numVal > maxNum;
                             const grade  = val !== '' && !isNaN(numVal) && !isOver ? getGrade(numVal, maxNum) : '';
                             return (
@@ -971,7 +1042,7 @@ ADM002,Mathematics,92,100`;
                                 <input
                                   type="number"
                                   min="0"
-                                  max={bulkMaxMarks}
+                                  max={subjectMaxMarks[sub] || '100'}
                                   placeholder="—"
                                   value={val}
                                   onChange={e => updateCell(student.id, sub, e.target.value)}
@@ -1230,15 +1301,51 @@ ADM002,Mathematics,92,100`;
       {/* ── Edit Marks Modal ── */}
       {editingMark && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && !editSaving && setEditingMark(null)}>
-          <div className="modal-container" style={{ maxWidth: 400 }}>
+          <div className="modal-container" style={{ maxWidth: 440 }}>
             <div className="modal-header">
-              <h3 className="modal-title">Edit Marks — {editingMark.subject}</h3>
+              <h3 className="modal-title">Edit Marks</h3>
               <button onClick={() => !editSaving && setEditingMark(null)} className="modal-close">✕</button>
             </div>
             <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                 {editingMark.examType} · {editingMark.studentName || ''}
               </div>
+
+              {/* Subject */}
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Subject</label>
+                {!editShowAddSubject ? (
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <select value={editSubject} onChange={e => {
+                      if (e.target.value === '__add__') { setEditShowAddSubject(true); setEditSubjectCustomInput(''); }
+                      else setEditSubject(e.target.value);
+                    }} style={{ flex: 1, padding: '9px 12px', border: '1.5px solid var(--border-strong)', borderRadius: 8, fontSize: 13, fontWeight: 600, outline: 'none', background: 'var(--surface)', boxSizing: 'border-box' }}>
+                      {allSubjects.map(s => <option key={s} value={s}>{s}</option>)}
+                      <option value="__add__">＋ Add New Subject…</option>
+                    </select>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <input autoFocus value={editSubjectCustomInput}
+                      onChange={e => setEditSubjectCustomInput(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter' && editSubjectCustomInput.trim()) { setEditSubject(editSubjectCustomInput.trim()); setEditShowAddSubject(false); } }}
+                      placeholder="Type new subject name…"
+                      style={{ flex: 1, padding: '9px 12px', border: '1.5px solid #d69e2e', borderRadius: 8, fontSize: 13, fontWeight: 600, outline: 'none', background: '#fffbeb', boxSizing: 'border-box' }} />
+                    <button type="button"
+                      disabled={!editSubjectCustomInput.trim()}
+                      onClick={() => { setEditSubject(editSubjectCustomInput.trim()); setEditShowAddSubject(false); }}
+                      style={{ padding: '9px 14px', background: editSubjectCustomInput.trim() ? '#b45309' : '#e2e8f0', color: editSubjectCustomInput.trim() ? '#fff' : '#a0aec0', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 12, cursor: editSubjectCustomInput.trim() ? 'pointer' : 'default' }}>
+                      Use
+                    </button>
+                    <button type="button" onClick={() => setEditShowAddSubject(false)}
+                      style={{ padding: '9px 14px', border: '1px solid var(--border-strong)', borderRadius: 8, background: 'var(--surface)', fontSize: 12, cursor: 'pointer' }}>
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Marks + Max Marks */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
                   <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Marks Obtained</label>
@@ -1253,12 +1360,22 @@ ADM002,Mathematics,92,100`;
                     style={{ width: '100%', padding: '9px 12px', border: '1.5px solid var(--border-strong)', borderRadius: 8, fontSize: 15, fontWeight: 700, outline: 'none', boxSizing: 'border-box' }} />
                 </div>
               </div>
+
+              {/* Live preview */}
               {editMarks && editMaxMarks && Number(editMaxMarks) > 0 && (
                 <div style={{ background: 'var(--surface-alt)', borderRadius: 8, padding: '8px 12px', fontSize: 13, color: 'var(--text-secondary)' }}>
-                  Percentage: <strong>{Math.round((Number(editMarks) / Number(editMaxMarks)) * 100)}%</strong>
-                  &nbsp;· Grade will recalculate automatically
+                  {editSubject && <span style={{ fontWeight: 700, color: 'var(--text-primary)', marginRight: 6 }}>{editSubject}</span>}
+                  {Number(editMarks)}/{Number(editMaxMarks)} →{' '}
+                  <strong>{Math.round((Number(editMarks) / Number(editMaxMarks)) * 100)}%</strong>
+                  {Number(editMarks) > Number(editMaxMarks) && (
+                    <span style={{ color: '#dc2626', marginLeft: 8 }}>⚠ Marks exceed max</span>
+                  )}
+                  {Number(editMarks) <= Number(editMaxMarks) && (
+                    <span style={{ color: '#6b7280' }}> · Grade recalculates on save</span>
+                  )}
                 </div>
               )}
+
               <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
                 <button onClick={() => setEditingMark(null)} disabled={editSaving}
                   style={{ padding: '9px 20px', border: '1px solid var(--border-strong)', borderRadius: 8, background: 'var(--surface)', color: 'var(--text-secondary)', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>Cancel</button>
