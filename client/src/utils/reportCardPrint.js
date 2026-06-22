@@ -387,10 +387,28 @@ export function openPrintWindow(cardsHtml) {
   <title>Report Card</title>
   <style>${PRINT_STYLES}</style>
 </head>
-<body>${cardsHtml}</body>
+<body>
+${cardsHtml}
+<script>
+// Scale each card to fit exactly one A4 page before printing.
+// Uses CSS zoom (layout-aware, unlike transform:scale) so the browser
+// never generates a second page for a card that is slightly too tall.
+window.addEventListener('load', function () {
+  var PX_PER_MM = 96 / 25.4;
+  var topMm = 8, botMm = 10;          // must match @page margin
+  var availH = Math.floor((297 - topMm - botMm) * PX_PER_MM);
+  document.querySelectorAll('.page').forEach(function (page) {
+    var h = page.scrollHeight;
+    if (h > availH) {
+      page.style.zoom = (availH / h).toFixed(5);
+    }
+  });
+  window.print();
+});
+<\/script>
+</body>
 </html>`);
   w.document.close();
-  setTimeout(() => { w.focus(); w.print(); }, 600);
 }
 
 // ── Convenience: print a single student's card ───────────────────────────────
