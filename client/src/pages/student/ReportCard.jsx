@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import Layout from '../../components/Layout';
 import ProfessionalReportCard from '../../components/ProfessionalReportCard';
 import { reportCardAPI, gradeScaleAPI } from '../../services/api';
+import { printSingleCard } from '../../utils/reportCardPrint';
 
 export default function ReportCard() {
   const [data,          setData]          = useState(null);
@@ -37,14 +38,9 @@ export default function ReportCard() {
       .finally(() => setLoading(false));
   }, [selected, filtersLoaded]);
 
+  // Open a dedicated print window — identical output to every other portal
   const handlePrint = () => {
-    document.body.classList.add('printing-report-card');
-    window.print();
-    const cleanup = () => {
-      document.body.classList.remove('printing-report-card');
-      window.removeEventListener('afterprint', cleanup);
-    };
-    window.addEventListener('afterprint', cleanup);
+    if (data) printSingleCard(data, selected || '');
   };
 
   if (loading) return (
@@ -67,16 +63,6 @@ export default function ReportCard() {
 
   return (
     <Layout pageTitle="Report Card">
-      <style>{`
-        @media print {
-          body.printing-report-card > *              { visibility: hidden; }
-          body.printing-report-card #rc-student-page,
-          body.printing-report-card #rc-student-page * { visibility: visible !important; }
-          body.printing-report-card #rc-student-page {
-            position: fixed; top: 0; left: 0; right: 0;
-          }
-        }
-      `}</style>
       <div style={{ maxWidth: 860, margin: '0 auto', padding: '16px 16px 40px' }}>
 
         {/* Exam selector */}
@@ -94,15 +80,12 @@ export default function ReportCard() {
           </div>
         </div>
 
-        <div id="rc-student-page">
-          <ProfessionalReportCard
-            data={data}
-            gradeScale={gradeScale}
-            examFilter={selected}
-            onPrint={handlePrint}
-            printId="rc-student-page"
-          />
-        </div>
+        <ProfessionalReportCard
+          data={data}
+          gradeScale={gradeScale}
+          examFilter={selected}
+          onPrint={handlePrint}
+        />
       </div>
     </Layout>
   );
