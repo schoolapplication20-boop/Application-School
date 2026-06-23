@@ -1,9 +1,9 @@
--- Fee Edit Requests — approval workflow for Admin-initiated fee modifications
+-- V14: Fee Edit Requests — approval workflow for Admin-initiated fee modifications.
 -- Admins submit requests; Super Admins approve or reject.
--- Records are never deleted (full audit trail).
+-- Records are never deleted (complete audit trail).
 
 CREATE TABLE IF NOT EXISTS fee_edit_requests (
-    id                      BIGINT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    id                      BIGSERIAL       PRIMARY KEY,
     request_id              VARCHAR(36)     NOT NULL UNIQUE,
     school_id               BIGINT          NOT NULL,
     requested_by_user_id    BIGINT          NOT NULL,
@@ -20,10 +20,10 @@ CREATE TABLE IF NOT EXISTS fee_edit_requests (
     approved_by_name        VARCHAR(150),
     approval_notes          TEXT,
     pending_payload         TEXT,
-    requested_at            DATETIME(6)     NOT NULL,
-    actioned_at             DATETIME(6),
-
-    INDEX idx_fer_school_status  (school_id, status),
-    INDEX idx_fer_requested_by   (requested_by_user_id),
-    INDEX idx_fer_requested_at   (requested_at)
+    requested_at            TIMESTAMP       NOT NULL,
+    actioned_at             TIMESTAMP
 );
+
+CREATE INDEX IF NOT EXISTS idx_fer_school_status  ON fee_edit_requests (school_id, status);
+CREATE INDEX IF NOT EXISTS idx_fer_requested_by   ON fee_edit_requests (requested_by_user_id);
+CREATE INDEX IF NOT EXISTS idx_fer_requested_at   ON fee_edit_requests (requested_at);
