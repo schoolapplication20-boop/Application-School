@@ -87,10 +87,14 @@ const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
 
   const canChangeLogo = (user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN') && school?.schoolId != null;
 
-  // Live badge for fee approval requests
+  // Live badge: Super Admin sees all school pending requests; Admin sees own pending requests.
+  // #10: always return a cleanup fn so React Strict Mode double-invocation never leaks an interval.
   const [feeApprovalCount, setFeeApprovalCount] = useState(0);
   useEffect(() => {
-    if (user?.role !== 'SUPER_ADMIN' && user?.role !== 'ADMIN') return;
+    if (user?.role !== 'SUPER_ADMIN' && user?.role !== 'ADMIN') {
+      setFeeApprovalCount(0);
+      return () => {};          // always return cleanup to satisfy strict-mode double-invocation
+    }
     let cancelled = false;
     const fetch = () => {
       adminAPI.getFeeApprovalBadge()
@@ -98,7 +102,7 @@ const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
         .catch(() => {});
     };
     fetch();
-    const interval = setInterval(fetch, 60000); // refresh every minute
+    const interval = setInterval(fetch, 60000);
     return () => { cancelled = true; clearInterval(interval); };
   }, [user?.role]);
 

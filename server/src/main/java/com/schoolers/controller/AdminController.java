@@ -380,6 +380,7 @@ public class AdminController {
     }
 
     @PostMapping("/class-fees")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<?> saveClassFeeStructure(@RequestBody Map<String, Object> body, Authentication auth) {
         body.put("schoolId", getCurrentSchoolId(auth));
         var response = adminService.saveClassFeeStructure(body);
@@ -387,6 +388,7 @@ public class AdminController {
     }
 
     @DeleteMapping("/class-fees/{id}")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<?> deleteClassFeeStructure(@PathVariable Long id, Authentication auth) {
         var response = adminService.deleteClassFeeStructure(id, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
@@ -473,12 +475,14 @@ public class AdminController {
     }
 
     @DeleteMapping("/student-fee-assignments/{id}")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<?> deleteStudentFeeAssignment(@PathVariable Long id, Authentication auth) {
         var response = adminService.deleteStudentFeeAssignment(id, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
     @PostMapping("/student-fee-assignments")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<?> assignStudentFee(@RequestBody Map<String, Object> body, Authentication auth) {
         body.put("schoolId", getCurrentSchoolId(auth));
         var response = adminService.assignStudentFee(body);
@@ -503,6 +507,7 @@ public class AdminController {
     }
 
     @PatchMapping("/student-fee-assignments/{assignmentId}/condonation")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<?> updateCondonation(
             @PathVariable Long assignmentId,
             @RequestBody Map<String, Object> body,

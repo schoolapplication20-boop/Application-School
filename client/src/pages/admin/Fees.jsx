@@ -386,6 +386,9 @@ export default function Fees() {
   const saveAssignment = async () => {
     if (!assignStudent) { showToast('Select a student', 'error'); return; }
     if (!assignTotal)   { showToast('Enter fee amounts', 'error'); return; }
+    const condNum = Number(assignForm.condonationAmount || 0);
+    if (condNum < 0)           { showToast('Concession amount cannot be negative', 'error'); return; }
+    if (condNum > assignTotal) { showToast(`Concession (₹${fmt(condNum)}) cannot exceed total fee (₹${fmt(assignTotal)})`, 'error'); return; }
 
     const filledInstallments = installments
       .filter(i => i.termName?.trim() && i.amount && Number(i.amount) > 0)

@@ -22,13 +22,14 @@ const GRADE_STYLE = {
 };
 
 function gradeFromPct(pct) {
-  if (pct >= 91) return 'O';
-  if (pct >= 81) return 'A+';
-  if (pct >= 71) return 'A';
-  if (pct >= 61) return 'B+';
-  if (pct >= 51) return 'B';
-  if (pct >= 41) return 'C';
-  if (pct >= 35) return 'D';
+  // Thresholds match DEFAULT_SCALE in Marks.jsx and ProfessionalReportCard.jsx
+  if (pct >= 90) return 'O';
+  if (pct >= 80) return 'A+';
+  if (pct >= 70) return 'A';
+  if (pct >= 60) return 'B+';
+  if (pct >= 50) return 'B';
+  if (pct >= 40) return 'B-';
+  if (pct >= 33) return 'C';
   return 'F';
 }
 

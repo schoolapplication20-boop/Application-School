@@ -25,7 +25,8 @@ public class FeeApprovalService {
     // ── auth helpers ─────────────────────────────────────────────────────────
 
     private Long getSchoolId(Authentication auth) {
-        if (auth != null && auth.getDetails() instanceof Map<?, ?> d) {
+        if (auth == null) return null;                                 // #9: guard null auth first
+        if (auth.getDetails() instanceof Map<?, ?> d) {
             Object v = d.get("schoolId");
             if (v != null) { try { return Long.parseLong(v.toString()); } catch (NumberFormatException ignored) {} }
         }
@@ -34,7 +35,8 @@ public class FeeApprovalService {
     }
 
     private Long getUserId(Authentication auth) {
-        if (auth != null && auth.getDetails() instanceof Map<?, ?> d) {
+        if (auth == null) return null;                                 // #9: guard null auth first
+        if (auth.getDetails() instanceof Map<?, ?> d) {
             Object v = d.get("userId");
             if (v != null) { try { return Long.parseLong(v.toString()); } catch (NumberFormatException ignored) {} }
         }
@@ -43,12 +45,14 @@ public class FeeApprovalService {
     }
 
     private String getDisplayName(Authentication auth) {
+        if (auth == null) return "Unknown";
         return userRepository.findByEmailIgnoreCase(auth.getName())
                 .map(u -> u.getName() != null ? u.getName() : auth.getName())
                 .orElse(auth.getName());
     }
 
     private boolean isSuperAdmin(Authentication auth) {
+        if (auth == null) return false;
         return auth.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_SUPER_ADMIN"));
     }
@@ -70,9 +74,9 @@ public class FeeApprovalService {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("requestType is required"));
 
-        // Super Admins apply immediately — no approval queue
+        // Super Admins apply immediately — no approval queue (audit record still created inside)
         if (isSuperAdmin(auth))
-            return applyDirectly(requestType, body, schoolId);
+            return applyDirectly(requestType, body, schoolId, auth);
 
         // Build the request record
         FeeEditRequest req = new FeeEditRequest();
@@ -117,16 +121,42 @@ public class FeeApprovalService {
         return ResponseEntity.ok(ApiResponse.success("Request submitted successfully", result));
     }
 
-    // ── Super Admin direct-apply (bypasses queue) ────────────────────────────
+    // ── Super Admin direct-apply with audit trail (#6) ───────────────────────
 
     @SuppressWarnings("unchecked")
     private ResponseEntity<ApiResponse<Map<String, Object>>> applyDirectly(
-            String requestType, Map<String, Object> body, Long schoolId) {
+            String requestType, Map<String, Object> body, Long schoolId, Authentication auth) {
         try {
             Map<String, Object> payload = new HashMap<>(
                     (Map<String, Object>) body.getOrDefault("payload", body));
             payload.put("schoolId", schoolId);
             applyPayload(requestType, payload, schoolId);
+
+            // Create an audit record so Super Admin changes are visible in history (#6)
+            FeeEditRequest audit = new FeeEditRequest();
+            audit.setRequestId(UUID.randomUUID().toString());
+            audit.setSchoolId(schoolId);
+            audit.setRequestedByUserId(getUserId(auth));
+            audit.setRequestedByName(getDisplayName(auth));
+            audit.setRequestType(requestType);
+            audit.setStudentName(String.valueOf(body.getOrDefault("studentName", "")));
+            audit.setClassName(String.valueOf(body.getOrDefault("className", "")));
+            audit.setReason("Applied directly by Super Admin");
+            audit.setStatus("APPROVED");
+            audit.setApprovedByUserId(getUserId(auth));
+            audit.setApprovedByName(getDisplayName(auth));
+            audit.setApprovalNotes("Direct Super Admin action — no separate approval required");
+            audit.setRequestedAt(LocalDateTime.now());
+            audit.setActionedAt(LocalDateTime.now());
+            try {
+                audit.setExistingValues(body.get("existingValues") != null
+                        ? objectMapper.writeValueAsString(body.get("existingValues")) : null);
+                audit.setNewValues(body.get("newValues") != null
+                        ? objectMapper.writeValueAsString(body.get("newValues")) : null);
+                audit.setPendingPayload(objectMapper.writeValueAsString(payload));
+            } catch (Exception ignored) {}
+            requestRepo.save(audit);
+
             Map<String, Object> r = new LinkedHashMap<>();
             r.put("status",  "APPLIED");
             r.put("message", "Change applied directly by Super Admin.");
@@ -148,12 +178,19 @@ public class FeeApprovalService {
     }
 
     // ── Pending count for notification badge ─────────────────────────────────
+    // #10: Super Admin sees all school pending requests (things to action).
+    //      Admin sees only their own pending requests (things awaiting approval).
 
     public ResponseEntity<ApiResponse<Map<String, Long>>> pendingCount(Authentication auth) {
-        Long schoolId = getSchoolId(auth);
-        long count = requestRepo.countBySchoolIdAndStatus(schoolId, "PENDING");
-        Map<String, Long> result = Map.of("pendingCount", count);
-        return ResponseEntity.ok(ApiResponse.success(result));
+        long count;
+        if (isSuperAdmin(auth)) {
+            Long schoolId = getSchoolId(auth);
+            count = schoolId != null ? requestRepo.countBySchoolIdAndStatus(schoolId, "PENDING") : 0L;
+        } else {
+            Long userId = getUserId(auth);
+            count = userId != null ? requestRepo.countByRequestedByUserIdAndStatus(userId, "PENDING") : 0L;
+        }
+        return ResponseEntity.ok(ApiResponse.success(Map.of("pendingCount", count)));
     }
 
     // ── Approve ───────────────────────────────────────────────────────────────
@@ -163,7 +200,8 @@ public class FeeApprovalService {
     public ResponseEntity<ApiResponse<FeeEditRequest>> approve(
             Long id, Map<String, Object> body, Authentication auth) {
 
-        Optional<FeeEditRequest> opt = requestRepo.findById(id);
+        // #5: Pessimistic write lock prevents two concurrent approvals on the same request
+        Optional<FeeEditRequest> opt = requestRepo.findByIdForUpdate(id);
         if (opt.isEmpty()) return ResponseEntity.notFound().build();
 
         FeeEditRequest req = opt.get();
@@ -195,7 +233,8 @@ public class FeeApprovalService {
     public ResponseEntity<ApiResponse<FeeEditRequest>> reject(
             Long id, Map<String, Object> body, Authentication auth) {
 
-        Optional<FeeEditRequest> opt = requestRepo.findById(id);
+        // #5: Pessimistic write lock prevents concurrent reject + approve race
+        Optional<FeeEditRequest> opt = requestRepo.findByIdForUpdate(id);
         if (opt.isEmpty()) return ResponseEntity.notFound().build();
 
         FeeEditRequest req = opt.get();

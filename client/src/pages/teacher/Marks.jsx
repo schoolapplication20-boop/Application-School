@@ -125,10 +125,16 @@ export default function Marks() {
   const [grid, setGrid]                       = useState({});
   const [saving, setSaving]                   = useState(false);
   // ── Custom subject support (persisted per school in localStorage) ─────────────
-  const [customSubjects, setCustomSubjects]   = useState(() => {
-    try { return JSON.parse(localStorage.getItem(`custom_subjects_${user?.schoolId || 'default'}`) || '[]'); }
-    catch { return []; }
-  });
+  // Initialise to [] then load from localStorage only after schoolId is confirmed
+  // to prevent writing to a shared 'default' key during the auth-hydration gap.
+  const [customSubjects, setCustomSubjects]   = useState([]);
+  useEffect(() => {
+    if (!user?.schoolId) return;
+    try {
+      const stored = JSON.parse(localStorage.getItem(`custom_subjects_${user.schoolId}`) || '[]');
+      setCustomSubjects(stored);
+    } catch { /* ignore corrupt entries */ }
+  }, [user?.schoolId]);
   const [newSubjectInput, setNewSubjectInput] = useState('');
   // ── Edit marks state ─────────────────────────────────────────────────────────
   const [editingMark, setEditingMark]         = useState(null);
@@ -384,7 +390,7 @@ ADM002,Mathematics,92,100`;
                 ...m,
                 studentName: m.studentName || s.name || '',
                 rollNumber:  m.rollNumber  || s.rollNumber || '',
-                classLabel:  s.classLabel  || cls.section ? `${cls.name}-${cls.section}` : cls.name,
+                classLabel:  s.classLabel  || (cls.section ? `${cls.name}-${cls.section}` : cls.name),
                 classId:     s.classId     || cls.id,
               };
             }))
@@ -425,7 +431,8 @@ ADM002,Mathematics,92,100`;
   const allSubjects = [...SUBJECTS, ...customSubjects.filter(s => !SUBJECTS.includes(s))];
 
   const persistCustomSubjects = (list) => {
-    try { localStorage.setItem(`custom_subjects_${user?.schoolId || 'default'}`, JSON.stringify(list)); } catch {}
+    if (!user?.schoolId) return; // never write to the shared 'default' key
+    try { localStorage.setItem(`custom_subjects_${user.schoolId}`, JSON.stringify(list)); } catch {}
   };
 
   const toggleSubject = (sub) => {
@@ -940,7 +947,14 @@ ADM002,Mathematics,92,100`;
                 Select Subjects * &nbsp;
                 <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>({bulkSubjects.length} selected)</span>
                 &nbsp;
-                <button type="button" onClick={() => setBulkSubjects([...allSubjects])} style={{ fontSize: 10, color: '#4361ee', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 600, padding: 0 }}>Select All</button>
+                <button type="button" onClick={() => {
+                  setBulkSubjects([...allSubjects]);
+                  setSubjectMaxMarks(prev => {
+                    const next = { ...prev };
+                    allSubjects.forEach(sub => { if (next[sub] === undefined) next[sub] = '100'; });
+                    return next;
+                  });
+                }} style={{ fontSize: 10, color: '#4361ee', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 600, padding: 0 }}>Select All</button>
                 &nbsp;·&nbsp;
                 <button type="button" onClick={() => setBulkSubjects([])} style={{ fontSize: 10, color: '#e53e3e', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 600, padding: 0 }}>Clear</button>
               </label>
