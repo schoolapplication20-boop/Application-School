@@ -230,6 +230,13 @@ export const adminAPI = {
   // School fee summary (SUPER_ADMIN / ADMIN)
   getSchoolFeeSummary: () => api.get('/api/admin/fee-summary'),
 
+  // Fee approval workflow
+  submitFeeEditRequest:    (data)       => api.post('/api/admin/fee-edit-requests', data),
+  listFeeEditRequests:     ()           => api.get('/api/admin/fee-edit-requests'),
+  getFeeApprovalBadge:     ()           => api.get('/api/admin/fee-edit-requests/pending-count'),
+  approveFeeEditRequest:   (id, data)   => api.post(`/api/admin/fee-edit-requests/${id}/approve`, data || {}),
+  rejectFeeEditRequest:    (id, data)   => api.post(`/api/admin/fee-edit-requests/${id}/reject`,  data || {}),
+
   // Expenses
   getExpenses: (params) => api.get('/api/admin/expenses', { params }),
   getExpense: (id) => api.get(`/api/admin/expenses/${id}`),

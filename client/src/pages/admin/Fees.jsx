@@ -3,6 +3,7 @@ import Layout from '../../components/Layout';
 import { adminAPI } from '../../services/api';
 import { sortClassNames } from '../../utils/classOrder';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/AuthContext';
 
 /* ── helpers ── */
 const fmt = (n) => Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
@@ -108,7 +109,14 @@ export default function Fees() {
   const [deleteConfirm, setDeleteConfirm] = useState(null); // { id, studentName }
   const [deleting, setDeleting] = useState(false);
 
+  // ── Approval workflow state (ADMIN role) ──────────────────────────────────
+  const [approvalPending, setApprovalPending] = useState(null); // { requestType, payload, existingValues, newValues, studentName, className }
+  const [approvalReason,  setApprovalReason]  = useState('');
+  const [approvalSaving,  setApprovalSaving]  = useState(false);
+
   const showToast = useToast();
+  const { user }  = useAuth();
+  const isAdmin   = user?.role === 'ADMIN'; // SUPER_ADMIN bypasses approval queue
 
   /* ── loaders ── */
   const loadStructures = useCallback(async () => {
@@ -207,44 +215,56 @@ export default function Fees() {
 
   const saveFeeStructure = async () => {
     if (!feeForm.tuitionFee || Number(feeForm.tuitionFee) <= 0) {
-      showToast('Tuition Fee is required and must be greater than 0', 'error');
-      return;
+      showToast('Tuition Fee is required and must be greater than 0', 'error'); return;
     }
-
-    // Term-wise split is optional; validate amounts and total if provided.
     const filledTermFees = termFees.filter(t => t.termName?.trim() && t.amount !== '');
     for (const t of filledTermFees) {
       if (isNaN(Number(t.amount)) || Number(t.amount) < 0) {
-        showToast(`Invalid amount for "${t.termName}". Term fee must be a non-negative number.`, 'error');
-        return;
+        showToast(`Invalid amount for "${t.termName}". Term fee must be a non-negative number.`, 'error'); return;
       }
     }
     if (filledTermFees.length > 0) {
       const termTotal = filledTermFees.reduce((s, t) => s + Number(t.amount || 0), 0);
       if (Math.round(termTotal * 100) > Math.round(feeFormTotal * 100)) {
-        showToast(`Term-wise total ₹${fmt(termTotal)} cannot exceed the Total Annual Fee ₹${fmt(feeFormTotal)}.`, 'error');
-        return;
+        showToast(`Term-wise total ₹${fmt(termTotal)} cannot exceed the Total Annual Fee ₹${fmt(feeFormTotal)}.`, 'error'); return;
       }
     }
 
+    const payload = {
+      requestType:  'FEE_STRUCTURE_SAVE',
+      className:     feeModalClassName,
+      academicYear:  CURRENT_YEAR,
+      ...feeForm,
+      termFees: filledTermFees.map(t => ({ termName: t.termName.trim(), amount: Number(t.amount) })),
+    };
+
+    // ADMIN → queue for Super Admin approval
+    if (isAdmin) {
+      setApprovalPending({
+        requestType:    'FEE_STRUCTURE_SAVE',
+        payload,
+        existingValues: feeModalClass || null,
+        newValues:      { className: feeModalClassName, ...feeForm },
+        studentName:    '',
+        className:      feeModalClassName,
+      });
+      setApprovalReason('');
+      setShowFeeModal(false);
+      return;
+    }
+
+    // SUPER_ADMIN → apply directly
     setSaving(true);
     try {
-      const res = await adminAPI.saveClassFeeStructure({
-        className: feeModalClassName,
-        academicYear: CURRENT_YEAR,
-        ...feeForm,
-        termFees: filledTermFees.map(t => ({ termName: t.termName.trim(), amount: Number(t.amount) })),
-      });
+      const res = await adminAPI.saveClassFeeStructure(payload);
       showToast(res.data?.message || 'Fee structure saved');
       setShowFeeModal(false);
       setFeeModalClassName('');
       setFeeForm({ tuitionFee: '', transportFee: '', labFee: '', examFee: '', sportsFee: '', otherFee: '' });
       setTermFees([]);
-      loadStructures();
-      loadAssignments();
+      loadStructures(); loadAssignments();
     } catch (err) {
-      const msg = err?.response?.data?.message || 'Failed to save fee structure';
-      showToast(msg, 'error');
+      showToast(err?.response?.data?.message || 'Failed to save fee structure', 'error');
     } finally { setSaving(false); }
   };
 
@@ -365,9 +385,8 @@ export default function Fees() {
 
   const saveAssignment = async () => {
     if (!assignStudent) { showToast('Select a student', 'error'); return; }
-    if (!assignTotal) { showToast('Enter fee amounts', 'error'); return; }
+    if (!assignTotal)   { showToast('Enter fee amounts', 'error'); return; }
 
-    // Validate installments: if any are filled, their total must match assignTotal
     const filledInstallments = installments
       .filter(i => i.termName?.trim() && i.amount && Number(i.amount) > 0)
       .map(i => ({ termName: i.termName.trim(), amount: i.amount, dueDate: i.dueDate || null }));
@@ -375,36 +394,48 @@ export default function Fees() {
     if (filledInstallments.length > 0) {
       const instTotal = filledInstallments.reduce((s, i) => s + Number(i.amount || 0), 0);
       if (Math.abs(Math.round(instTotal * 100) - Math.round(assignTotal * 100)) > 0) {
-        showToast(
-          `Installment total ₹${fmt(instTotal)} does not match total fee ₹${fmt(assignTotal)}. Please correct before saving.`,
-          'error'
-        );
+        showToast(`Installment total ₹${fmt(instTotal)} does not match total fee ₹${fmt(assignTotal)}. Please correct before saving.`, 'error');
         return;
       }
     }
 
+    const payload = {
+      requestType:       'STUDENT_FEE_UPDATE',
+      studentId:          assignStudent.id,
+      ...assignForm,
+      totalFee:           assignTotal,
+      condonationAmount:  assignForm.condonationAmount ? String(Number(assignForm.condonationAmount) || 0) : '0',
+      installments:       filledInstallments.length > 0 ? filledInstallments : undefined,
+    };
+
+    // ADMIN editing existing assignment → requires approval
+    if (isAdmin && assignTarget) {
+      setApprovalPending({
+        requestType:    'STUDENT_FEE_UPDATE',
+        payload,
+        existingValues: assignTarget,
+        newValues:      { totalFee: assignTotal, condonationAmount: payload.condonationAmount },
+        studentName:    assignStudent.name,
+        className:      assignStudent.className || assignTarget?.className || '',
+      });
+      setApprovalReason('');
+      setShowAssignModal(false);
+      return;
+    }
+
+    // New assignment (no assignTarget) or SUPER_ADMIN → apply directly
     setSaving(true);
     try {
-      await adminAPI.assignStudentFee({
-        studentId: assignStudent.id,
-        ...assignForm,
-        totalFee:          assignTotal,
-        condonationAmount: assignForm.condonationAmount ? String(Number(assignForm.condonationAmount) || 0) : '0',
-        installments:      filledInstallments.length > 0 ? filledInstallments : undefined,
-      });
+      await adminAPI.assignStudentFee(payload);
       showToast(assignTarget ? 'Fee updated' : 'Fee assigned');
       setShowAssignModal(false);
-      // Reset form so next open starts clean
-      setAssignTarget(null);
-      setAssignStudent(null);
+      setAssignTarget(null); setAssignStudent(null);
       setAssignForm({ tuitionFee: '', transportFee: '', labFee: '', examFee: '', sportsFee: '', otherFee: '', dueDate: '', remarks: '', academicYear: CURRENT_YEAR, condonationAmount: '' });
-      setAssignStudentSearch('');
-      setAssignStudentResults([]);
+      setAssignStudentSearch(''); setAssignStudentResults([]);
       setInstallments([{ id: crypto.randomUUID(), termName: 'Term 1', amount: '', dueDate: '' }, { id: crypto.randomUUID(), termName: 'Term 2', amount: '', dueDate: '' }, { id: crypto.randomUUID(), termName: 'Term 3', amount: '', dueDate: '' }]);
       loadAssignments();
     } catch (err) {
-      const msg = err?.response?.data?.message || err?.response?.data?.error || 'Failed to save assignment';
-      showToast(msg, 'error');
+      showToast(err?.response?.data?.message || err?.response?.data?.error || 'Failed to save assignment', 'error');
     } finally { setSaving(false); }
   };
 
@@ -413,6 +444,23 @@ export default function Fees() {
 
   const deleteAssignment = async () => {
     if (!deleteConfirm) return;
+
+    // ADMIN → queue delete request for Super Admin approval
+    if (isAdmin) {
+      setApprovalPending({
+        requestType:    'ASSIGNMENT_DELETE',
+        payload:        { requestType: 'ASSIGNMENT_DELETE', assignmentId: deleteConfirm.id },
+        existingValues: { studentName: deleteConfirm.studentName, id: deleteConfirm.id },
+        newValues:      { action: 'DELETE' },
+        studentName:    deleteConfirm.studentName,
+        className:      '',
+      });
+      setApprovalReason('');
+      setDeleteConfirm(null);
+      return;
+    }
+
+    // SUPER_ADMIN → delete directly
     setDeleting(true);
     try {
       await adminAPI.deleteStudentFeeAssignment(deleteConfirm.id);
@@ -420,9 +468,31 @@ export default function Fees() {
       setDeleteConfirm(null);
       loadAssignments();
     } catch (err) {
-      const msg = err?.response?.data?.message || 'Failed to delete assignment';
-      showToast(msg, 'error');
+      showToast(err?.response?.data?.message || 'Failed to delete assignment', 'error');
     } finally { setDeleting(false); }
+  };
+
+  // ── Submit the queued approval request to the backend ─────────────────────
+  const submitApprovalRequest = async () => {
+    if (!approvalPending) return;
+    if (!approvalReason.trim()) { showToast('Please provide a reason for this change', 'error'); return; }
+    setApprovalSaving(true);
+    try {
+      await adminAPI.submitFeeEditRequest({
+        ...approvalPending.payload,
+        requestType:    approvalPending.requestType,
+        existingValues: approvalPending.existingValues,
+        newValues:      approvalPending.newValues,
+        studentName:    approvalPending.studentName || '',
+        className:      approvalPending.className   || '',
+        reason:         approvalReason.trim(),
+      });
+      showToast('Change request submitted — awaiting Super Admin approval');
+      setApprovalPending(null);
+      setApprovalReason('');
+    } catch (err) {
+      showToast(err?.response?.data?.message || 'Failed to submit request', 'error');
+    } finally { setApprovalSaving(false); }
   };
 
   /* ── tab bar ── */
@@ -1001,6 +1071,71 @@ export default function Fees() {
           </div>
         </div>
       )}
+
+      {/* ── Approval Request Modal (shown when ADMIN triggers a restricted action) ── */}
+      {approvalPending && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && !approvalSaving && setApprovalPending(null)}>
+          <div className="modal-container" style={{ maxWidth: 480 }}>
+            <div className="modal-header">
+              <div>
+                <h3 className="modal-title" style={{ margin: 0 }}>Request Approval</h3>
+                <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>
+                  This change requires Super Admin approval before it is applied.
+                </p>
+              </div>
+              <button className="modal-close" onClick={() => setApprovalPending(null)} disabled={approvalSaving}>✕</button>
+            </div>
+            <div style={{ padding: '18px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {/* What is being changed */}
+              <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 8, padding: '10px 14px' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#0369a1', textTransform: 'uppercase', marginBottom: 6 }}>Change Summary</div>
+                <div style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 600 }}>
+                  {{
+                    FEE_STRUCTURE_SAVE:   'Modify fee structure',
+                    STUDENT_FEE_UPDATE:   'Update student fee assignment',
+                    ASSIGNMENT_DELETE:    'Delete fee assignment',
+                    CONDONATION_UPDATE:   'Update concession amount',
+                    FEE_STRUCTURE_DELETE: 'Delete fee structure',
+                  }[approvalPending.requestType] || approvalPending.requestType}
+                  {approvalPending.studentName && <span style={{ fontWeight: 400, color: 'var(--text-secondary)' }}> for {approvalPending.studentName}</span>}
+                  {approvalPending.className && <span style={{ fontWeight: 400, color: 'var(--text-secondary)' }}> — {approvalPending.className}</span>}
+                </div>
+              </div>
+
+              {/* Reason */}
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
+                  Reason for Change <span style={{ color: '#e53e3e' }}>*</span>
+                </label>
+                <textarea
+                  autoFocus
+                  rows={3}
+                  value={approvalReason}
+                  onChange={e => setApprovalReason(e.target.value)}
+                  placeholder="Explain why this change is needed…"
+                  style={{ width: '100%', padding: '8px 12px', border: '1.5px solid var(--border-strong)', borderRadius: 8, fontSize: 13, outline: 'none', resize: 'vertical', boxSizing: 'border-box' }}
+                />
+                <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
+                  The Super Admin will review this reason before approving or rejecting.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                <button onClick={() => setApprovalPending(null)} disabled={approvalSaving}
+                  style={{ padding: '9px 20px', border: '1px solid var(--border-strong)', borderRadius: 8, background: 'var(--surface)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+                  Cancel
+                </button>
+                <button onClick={submitApprovalRequest} disabled={approvalSaving || !approvalReason.trim()}
+                  style={{ padding: '9px 22px', background: !approvalReason.trim() ? '#a0aec0' : '#4361ee', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: !approvalReason.trim() ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span className="material-icons" style={{ fontSize: 16 }}>send</span>
+                  {approvalSaving ? 'Submitting…' : 'Submit Request'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </Layout>
   );
 }

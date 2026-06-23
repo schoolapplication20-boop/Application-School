@@ -40,6 +40,7 @@ const Fees = lazy(() => import('./pages/admin/Fees'));
 const Expenses = lazy(() => import('./pages/admin/Expenses'));
 const Applications = lazy(() => import('./pages/admin/Applications'));
 const CollectFee = lazy(() => import('./pages/admin/CollectFee'));
+const FeeApprovals = lazy(() => import('./pages/admin/FeeApprovals'));
 const Salaries = lazy(() => import('./pages/admin/Salaries'));
 const LeaveManagement = lazy(() => import('./pages/admin/LeaveManagement'));
 const Transport = lazy(() => import('./pages/admin/Transport'));
@@ -188,6 +189,7 @@ function App() {
             <Route path="/admin/teachers"          element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} permKey="teachers"><Teachers /></ProtectedRoute>} />
             <Route path="/admin/classes"           element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} permKey="classes"><Classes /></ProtectedRoute>} />
             <Route path="/admin/fees"              element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} permKey="fees"><Fees /></ProtectedRoute>} />
+            <Route path="/admin/fee-approvals"     element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} permKey="fees"><FeeApprovals /></ProtectedRoute>} />
             <Route path="/admin/expenses"          element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} permKey="expenses"><Expenses /></ProtectedRoute>} />
             <Route path="/admin/applications"      element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} permKey="applications"><Applications /></ProtectedRoute>} />
             <Route path="/admin/collect-fee"       element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} permKey="collectFee"><CollectFee /></ProtectedRoute>} />
