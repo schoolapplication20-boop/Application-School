@@ -58,18 +58,18 @@ export default function TeacherFormModal({
                 <input style={inputStyle(errors.name)} placeholder="e.g., Priya Sharma" value={form.name}
                   onChange={e => setForm({ ...form, name: e.target.value })} />
               </Field>
-              <Field label="Employee ID" required error={errors.empId}>
+              <Field label="Employee ID (Optional)" error={errors.empId}>
                 <input
                   style={inputStyle(errors.empId)}
-                  placeholder="e.g., T009"
+                  placeholder="e.g., T009 — leave blank to auto-generate"
                   value={form.empId}
                   onChange={e => setForm({ ...form, empId: e.target.value.trim() })}
                 />
-                {editTeacher && (
-                  <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '3px' }}>
-                    Must be unique within this school. Same ID can exist in other schools.
-                  </p>
-                )}
+                <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '3px' }}>
+                  {form.empId.trim()
+                    ? 'Must be unique within this school.'
+                    : 'Leave blank — a unique ID will be generated automatically.'}
+                </p>
               </Field>
               <Field label="Email (Login ID)" required error={errors.email || (!editTeacher && teacherOtp.error)}>
                 {editTeacher ? (
