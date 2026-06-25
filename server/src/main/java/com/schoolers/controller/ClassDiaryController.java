@@ -95,6 +95,11 @@ public class ClassDiaryController {
         Long schoolId = currentUserUtil.getCurrentSchoolId(auth);
         if (schoolId != null) body.put("schoolId", schoolId);
 
+        // Always inject currentUserId from JWT — never trust the client-supplied value.
+        // This is the value used by the COORDINATOR diary-mode check in ClassDiaryService.
+        Long callerUserId = currentUserUtil.getCurrentUserId(auth);
+        if (callerUserId != null) body.put("currentUserId", callerUserId);
+
         // Inject teacherId / teacherName from JWT so frontend cannot spoof them
         Optional<Teacher> teacherOpt = resolveTeacher(auth);
         if (teacherOpt.isPresent()) {

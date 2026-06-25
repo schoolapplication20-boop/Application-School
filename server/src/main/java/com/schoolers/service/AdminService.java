@@ -1164,6 +1164,39 @@ public class AdminService {
                 .orElse(ApiResponse.error("Teacher not found"));
     }
 
+    public ApiResponse<String> resetStudentPassword(Long studentId, String newPassword, Long schoolId) {
+        if (newPassword == null || newPassword.length() < 8)
+            return ApiResponse.error("Password must be at least 8 characters.");
+        if (!newPassword.matches(".*[A-Z].*"))
+            return ApiResponse.error("Password must contain at least one uppercase letter.");
+        if (!newPassword.matches(".*[0-9].*"))
+            return ApiResponse.error("Password must contain at least one number.");
+        if (!newPassword.matches(".*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?].*"))
+            return ApiResponse.error("Password must contain at least one special character.");
+        return studentRepository.findById(studentId)
+                .map(student -> {
+                    if (schoolMismatch(schoolId, student.getSchoolId()))
+                        return ApiResponse.<String>error("Student not found");
+                    if (student.getStudentUserId() == null)
+                        return ApiResponse.<String>error("Student has no login account yet. Use onboard student instead.");
+                    return userRepository.findById(student.getStudentUserId())
+                            .map(user -> {
+                                user.setPassword(passwordEncoder.encode(newPassword));
+                                user.setTempPassword(newPassword);   // kept so admin can share it
+                                user.setFirstLogin(true);
+                                user.setFailedLoginAttempts(0);
+                                user.setLockedUntil(null);
+                                userRepository.save(user);
+                                tokenBlacklistService.revokeUser(user.getId());
+                                auditLogService.log(null, "SYSTEM", "ADMIN", schoolId, "PASSWORD_RESET", "Student", studentId,
+                                        "Password reset for student id=" + studentId, null);
+                                return ApiResponse.success("Password reset successfully", newPassword);
+                            })
+                            .orElse(ApiResponse.<String>error("Student login account not found"));
+                })
+                .orElse(ApiResponse.error("Student not found"));
+    }
+
     // ── Classes ────────────────────────────────────────────────────────────
 
     public ApiResponse<List<Map<String, Object>>> getClasses(Long schoolId) {

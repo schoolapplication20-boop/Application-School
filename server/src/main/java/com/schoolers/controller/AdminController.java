@@ -262,6 +262,16 @@ public class AdminController {
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
+    @PutMapping("/students/{id}/reset-password")
+    public ResponseEntity<ApiResponse<String>> resetStudentPassword(
+            @PathVariable Long id, @RequestBody Map<String, String> body, Authentication auth) {
+        String newPassword = body.get("password");
+        if (newPassword == null || newPassword.isBlank())
+            return ResponseEntity.badRequest().body(ApiResponse.error("New password is required"));
+        ApiResponse<String> response = adminService.resetStudentPassword(id, newPassword, getCurrentSchoolId(auth));
+        return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
+    }
+
     @DeleteMapping("/teachers/{id}")
     public ResponseEntity<ApiResponse<String>> deleteTeacher(@PathVariable Long id, Authentication auth) {
         ApiResponse<String> response = adminService.deleteTeacher(id, getCurrentSchoolId(auth));

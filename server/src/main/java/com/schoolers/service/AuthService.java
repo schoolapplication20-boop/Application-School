@@ -8,6 +8,7 @@ import com.schoolers.model.Student;
 import com.schoolers.model.User;
 import com.schoolers.model.SchoolAuthConfig;
 import com.schoolers.repository.SchoolAuthConfigRepository;
+import com.schoolers.service.sms.SmsService;
 import com.schoolers.repository.SchoolRepository;
 import com.schoolers.repository.StudentRepository;
 import com.schoolers.repository.TeacherRepository;
@@ -34,15 +35,18 @@ public class AuthService {
 
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
-    @Autowired private UserRepository            userRepository;
-    @Autowired private StudentRepository         studentRepository;
-    @Autowired private SchoolRepository          schoolRepository;
-    @Autowired private TeacherRepository         teacherRepository;
+    @Autowired private UserRepository             userRepository;
+    @Autowired private StudentRepository          studentRepository;
+    @Autowired private SchoolRepository           schoolRepository;
+    @Autowired private TeacherRepository          teacherRepository;
     @Autowired private SchoolAuthConfigRepository schoolAuthConfigRepository;
-    @Autowired private JwtUtil               jwtUtil;
-    @Autowired private PasswordEncoder       passwordEncoder;
-    @Autowired private EmailService          emailService;
-    @Autowired private TokenBlacklistService tokenBlacklistService;
+    @Autowired private JwtUtil                    jwtUtil;
+    @Autowired private PasswordEncoder            passwordEncoder;
+    @Autowired private EmailService               emailService;
+    @Autowired private TokenBlacklistService      tokenBlacklistService;
+    @Autowired(required = false)
+    @org.springframework.context.annotation.Lazy
+    private SmsService smsService;
 
     private static final int MAX_LOGIN_ATTEMPTS = 5;
 
@@ -590,24 +594,67 @@ public class AuthService {
                 resolvedEmail = user.getEmail();
             }
 
-            if (resolvedEmail == null || resolvedEmail.isBlank()) {
+            // ── Determine OTP delivery method from school auth config ──────
+            // STUDENT role: respect school's forgotPasswordMethod setting.
+            // Other roles (ADMIN, TEACHER, SUPER_ADMIN): always use email.
+            String deliveryMethod = "EMAIL_OTP"; // default
+            if (user.getRole() == User.Role.STUDENT && user.getSchoolId() != null) {
+                SchoolAuthConfig authCfg = schoolAuthConfigRepository
+                        .findBySchoolId(user.getSchoolId()).orElse(null);
+                if (authCfg != null && authCfg.getForgotPasswordMethod() != null) {
+                    deliveryMethod = authCfg.getForgotPasswordMethod(); // EMAIL_OTP | MOBILE_OTP | BOTH
+                }
+            }
+
+            // For MOBILE_OTP, we need the user's registered mobile number
+            String resolvedMobile = user.getMobile();
+            boolean canEmail  = resolvedEmail != null && !resolvedEmail.isBlank()
+                    && !resolvedEmail.endsWith("@my-skoolz.com");
+            boolean canMobile = resolvedMobile != null && !resolvedMobile.isBlank();
+
+            if ("MOBILE_OTP".equals(deliveryMethod) && !canMobile) {
+                log.warn("[forgotPassword] MOBILE_OTP configured but no mobile on file for userId={}", user.getId());
+                return ApiResponse.success("If this account exists, an OTP has been sent.", null);
+            }
+            if ("EMAIL_OTP".equals(deliveryMethod) && !canEmail) {
                 log.warn("[forgotPassword] No email on file for identifier='{}' userId={}", identifier, user.getId());
-                // Still return opaque success — don't reveal account details
                 return ApiResponse.success("If this account exists, an OTP has been sent.", null);
             }
 
             String otp = String.format("%06d", new SecureRandom().nextInt(1_000_000));
             LocalDateTime expiry = LocalDateTime.now(ZoneOffset.UTC).plusMinutes(10);
-            // Hash uses the resolved email as salt (consistent for this user regardless of identifier format)
-            user.setResetOtp(hashOtp(otp, resolvedEmail.toLowerCase()));
+            // Hash salt = resolved email if available, else mobile (consistent across requests)
+            String otpSalt = (canEmail ? resolvedEmail : resolvedMobile).toLowerCase();
+            user.setResetOtp(hashOtp(otp, otpSalt));
             user.setOtpExpiry(expiry);
             userRepository.save(user);
 
             try {
-                emailService.sendOtpEmail(resolvedEmail.toLowerCase(), otp);
+                if ("MOBILE_OTP".equals(deliveryMethod)) {
+                    // Send OTP via SMS to parent/student mobile
+                    // SmsService is injected conditionally to avoid circular dependency on thin deployments
+                    if (smsService != null) {
+                        smsService.sendTransactionalOtp(resolvedMobile, otp, user.getName());
+                    } else {
+                        log.warn("[forgotPassword] SMS service not available for MOBILE_OTP delivery");
+                    }
+                } else if ("BOTH".equals(deliveryMethod)) {
+                    // Send via both channels — best-effort on each
+                    if (canEmail) {
+                        try { emailService.sendOtpEmail(resolvedEmail.toLowerCase(), otp); }
+                        catch (Exception ignored) {}
+                    }
+                    if (canMobile && smsService != null) {
+                        try { smsService.sendTransactionalOtp(resolvedMobile, otp, user.getName()); }
+                        catch (Exception ignored) {}
+                    }
+                } else {
+                    // Default: EMAIL_OTP
+                    emailService.sendOtpEmail(resolvedEmail.toLowerCase(), otp);
+                }
                 return ApiResponse.success("If this account exists, an OTP has been sent.", null);
-            } catch (Exception mailEx) {
-                log.error("[forgotPassword] Failed to send OTP email to {}: {}", resolvedEmail, mailEx.getMessage());
+            } catch (Exception ex) {
+                log.error("[forgotPassword] Failed to deliver OTP for userId={}: {}", user.getId(), ex.getMessage());
                 return ApiResponse.success("If this account exists, an OTP has been sent.", null);
             }
         } catch (Exception e) {
