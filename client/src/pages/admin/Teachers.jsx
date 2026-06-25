@@ -126,7 +126,7 @@ export default function Teachers() {
   const validate = () => {
     const e = {};
     if (!form.name.trim())    e.name    = 'Full name is required';
-    if (!form.empId.trim())   e.empId   = 'Employee ID is required';
+    // empId is optional — backend auto-generates one (EMP + timestamp) if left blank
     if (!form.subject.trim()) e.subject = 'Subject is required';
 
     if (!form.email.trim()) {

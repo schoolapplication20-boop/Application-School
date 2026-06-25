@@ -44,7 +44,14 @@ export const AuthProvider = ({ children }) => {
 
   // ── Listen for 401 fired by api.js interceptor ──────────────────────────
   useEffect(() => {
-    const onExpired = () => setSessionExpired(true);
+    const onExpired = () => {
+      // Clear the full session so page-refresh does not restore the expired token
+      // and cause an immediate 401 → restore → 401 infinite loop.
+      sessionStorage.removeItem(SESSION_KEY);
+      setUser(null);
+      setToken(null);
+      setSessionExpired(true);
+    };
     window.addEventListener('auth:session-expired', onExpired);
     return () => window.removeEventListener('auth:session-expired', onExpired);
   }, []);
@@ -88,6 +95,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = useCallback((userData, authToken) => {
     setAuthToken(authToken);
+    setSessionExpired(false); // always clear any stale expired-session state on fresh login
 
     // Parse permissions immediately if the login response includes them
     const permissions = parsePermissions(userData?.permissions);

@@ -18,6 +18,16 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
 
     // ── School-scoped queries (multi-tenant) ──────────────────────────────────
 
+    /**
+     * Returns distinct (className, section) pairs for a school.
+     * Used to populate class dropdowns when no ClassRoom entities are configured.
+     * Each element is Object[]{className, section} — section may be null.
+     */
+    @Query("SELECT DISTINCT s.className, s.section FROM Student s " +
+           "WHERE s.schoolId = :schoolId AND s.className IS NOT NULL " +
+           "ORDER BY s.className, s.section")
+    List<Object[]> findDistinctClassNamesBySchoolId(@Param("schoolId") Long schoolId);
+
     Page<Student> findBySchoolId(Long schoolId, Pageable pageable);
 
     List<Student> findBySchoolId(Long schoolId);
@@ -58,6 +68,16 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     long countEnrolledForCapacity(@Param("schoolId") Long schoolId,
                                    @Param("className") String className,
                                    @Param("section") String section);
+
+    /**
+     * Batch enrollment count for all classes in a school — returns [LOWER(className), LOWER(COALESCE(section,'')), count] rows.
+     * Used by getClasses() to replace N per-class queries with a single query.
+     */
+    @Query("SELECT LOWER(s.className), LOWER(COALESCE(s.section, '')), COUNT(s) " +
+           "FROM Student s WHERE s.schoolId = :schoolId " +
+           "AND (s.isActive IS NULL OR s.isActive = true) " +
+           "GROUP BY LOWER(s.className), LOWER(COALESCE(s.section, ''))")
+    List<Object[]> countEnrolledByClassForSchool(@Param("schoolId") Long schoolId);
 
     @Query("SELECT s FROM Student s WHERE s.schoolId = :schoolId AND s.isActive = true AND (LOWER(s.name) LIKE LOWER(CONCAT('%',:search,'%')) OR LOWER(s.rollNumber) LIKE LOWER(CONCAT('%',:search,'%')))")
     Page<Student> searchStudentsBySchool(@Param("schoolId") Long schoolId, @Param("search") String search, Pageable pageable);

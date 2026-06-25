@@ -485,53 +485,8 @@ select {
   }
 }
 
-/* ── Report card print isolation ─────────────────────────────────────────────
-   Adding .printing-report-card to <body> makes everything invisible except
-   #report-card (visibility, not display — see note below), then pins it to
-   the page via position:fixed so it prints regardless of where it sits in
-   the layout DOM. */
-body.printing-report-card * {
-  visibility: hidden;
-}
-body.printing-report-card #report-card,
-body.printing-report-card #report-card * {
-  visibility: visible;
-}
-body.printing-report-card #report-card {
-  position: fixed;
-  inset: 0;
-  margin: 0;
-  padding: 24px 32px;
-  z-index: 99999;
-  background: #fff;
-  overflow: auto;
-}
-
-@media print {
-  @page {
-    size: A4 portrait;
-    margin: 10mm 14mm;
-  }
-
-  /* NOTE: do NOT set display:none on body's direct children here — #report-card
-     is nested deep inside #root, and display:none on an ancestor removes the
-     whole subtree from the render tree (no descendant override can undo it),
-     which is what produced the blank print page. Visibility + position:fixed
-     above already isolates #report-card without touching ancestor display. */
-  body.printing-report-card #report-card {
-    box-shadow: none !important;
-    border-radius: 0 !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-    color-adjust: exact !important;
-  }
-
-  body.printing-report-card #report-card * {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-    color-adjust: exact !important;
-  }
-}
+/* Report cards now print via a dedicated new window (utils/reportCardPrint.js).
+   The old body.printing-report-card / #report-card approach has been removed. */
 
 /* ── Calendar responsive layout ──────────────────────────────────────────────
    Stack calendar + sidebar vertically on small screens */

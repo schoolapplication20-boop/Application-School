@@ -42,10 +42,15 @@ public class StudentFeeAssignment {
     @Column(name = "academic_year", length = 10)
     private String academicYear;
 
-    /** The negotiated/final fee assigned to this specific student */
+    /** The negotiated/final fee assigned to this specific student (before any condonation) */
     @NotNull
     @Column(name = "total_fee", nullable = false, precision = 10, scale = 2)
     private BigDecimal totalFee;
+
+    /** Total fee concession/waiver granted to this student. netPayable = totalFee - condonationAmount. */
+    @Column(name = "condonation_amount", precision = 10, scale = 2)
+    @Builder.Default
+    private BigDecimal condonationAmount = BigDecimal.ZERO;
 
     /** Cumulative amount paid across all transactions */
     @Column(name = "paid_amount", precision = 10, scale = 2)
@@ -91,11 +96,18 @@ public class StudentFeeAssignment {
     @Builder.Default
     private Long version = 0L;
 
-    /** Computed field: totalFee - paidAmount */
+    /** Net payable = totalFee - condonationAmount (for reports/display). */
+    @Transient
+    public BigDecimal getNetPayable() {
+        BigDecimal cond = condonationAmount != null ? condonationAmount : BigDecimal.ZERO;
+        return totalFee != null ? totalFee.subtract(cond).max(BigDecimal.ZERO) : BigDecimal.ZERO;
+    }
+
+    /** Balance due = netPayable - paidAmount. */
     @Transient
     public BigDecimal getDueAmount() {
         BigDecimal paid = paidAmount != null ? paidAmount : BigDecimal.ZERO;
-        return totalFee != null ? totalFee.subtract(paid).max(BigDecimal.ZERO) : BigDecimal.ZERO;
+        return getNetPayable().subtract(paid).max(BigDecimal.ZERO);
     }
 
     public enum Status {

@@ -1,8 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSchool } from '../context/SchoolContext';
-import { schoolAPI, BASE_URL } from '../services/api';
+import { schoolAPI, adminAPI, BASE_URL } from '../services/api';
 import ReportIssueModal from './ReportIssueModal';
 import '../styles/sidebar.css';
 
@@ -14,6 +14,7 @@ const adminNavItems = [
   { path: '/admin/classes',            icon: 'class',                   label: 'Classes',            permKey: 'classes' },
   { path: '/admin/collect-fee',        icon: 'point_of_sale',           label: 'Collect Fee',        permKey: 'collectFee' },
   { path: '/admin/fees',               icon: 'payments',                label: 'Fees & Payments',    permKey: 'fees' },
+  { path: '/admin/fee-approvals',      icon: 'approval',                label: 'Fee Approvals',      permKey: 'fees', _approvalBadge: true },
   { path: '/admin/salaries',           icon: 'account_balance_wallet',  label: 'Salaries',           permKey: 'salaries' },
   { path: '/admin/expenses',           icon: 'receipt_long',            label: 'Expenses',           permKey: 'expenses' },
   { path: '/admin/leave',              icon: 'event_busy',              label: 'Leave Management',   permKey: 'leave' },
@@ -86,6 +87,25 @@ const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
   const logoInputRef                        = useRef(null);
 
   const canChangeLogo = (user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN') && school?.schoolId != null;
+
+  // Live badge: Super Admin sees all school pending requests; Admin sees own pending requests.
+  // #10: always return a cleanup fn so React Strict Mode double-invocation never leaks an interval.
+  const [feeApprovalCount, setFeeApprovalCount] = useState(0);
+  useEffect(() => {
+    if (user?.role !== 'SUPER_ADMIN' && user?.role !== 'ADMIN') {
+      setFeeApprovalCount(0);
+      return () => {};          // always return cleanup to satisfy strict-mode double-invocation
+    }
+    let cancelled = false;
+    const fetch = () => {
+      adminAPI.getFeeApprovalBadge()
+        .then(r => { if (!cancelled) setFeeApprovalCount(r.data?.data?.pendingCount ?? 0); })
+        .catch(() => {});
+    };
+    fetch();
+    const interval = setInterval(fetch, 60000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [user?.role]);
 
   const handleLogoFileChange = async (e) => {
     const file = e.target.files?.[0];
@@ -306,6 +326,11 @@ const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
                 <span className="nav-label">{item.label}</span>
                 {item.badge && !collapsed && (
                   <span className="nav-badge">{item.badge}</span>
+                )}
+                {item._approvalBadge && feeApprovalCount > 0 && !collapsed && (
+                  <span className="nav-badge" style={{ background: '#e53e3e', color: '#fff' }}>
+                    {feeApprovalCount}
+                  </span>
                 )}
               </NavLink>
             ))}

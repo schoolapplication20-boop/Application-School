@@ -170,7 +170,7 @@ const Navbar = ({ onMenuToggle }) => {
             {unreadCount === 0 && <span className="notification-dot" />}
           </button>
           {showNotif && (
-            <div style={{
+            <div className="notif-dropdown" style={{
               position: 'absolute', right: 0, top: '50px', width: '340px', background: 'var(--surface)',
               borderRadius: '14px', boxShadow: 'var(--shadow-dropdown)', zIndex: 1000,
               border: '1px solid var(--border)', overflow: 'hidden', maxHeight: '420px', display: 'flex', flexDirection: 'column'
@@ -272,7 +272,7 @@ const Navbar = ({ onMenuToggle }) => {
           </div>
 
           {showDropdown && (
-            <div style={{
+            <div className="user-dropdown" style={{
               position: 'absolute', right: 0, top: '50px', width: '220px', background: 'var(--surface)',
               borderRadius: '14px', boxShadow: 'var(--shadow-dropdown)', zIndex: 1000,
               border: '1px solid var(--border)', overflow: 'hidden'
