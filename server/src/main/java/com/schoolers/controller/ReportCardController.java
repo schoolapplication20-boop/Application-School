@@ -3,6 +3,7 @@ package com.schoolers.controller;
 import com.schoolers.dto.ApiResponse;
 import com.schoolers.model.*;
 import com.schoolers.repository.*;
+import com.schoolers.security.CurrentUserUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -16,21 +17,47 @@ import java.util.stream.Collectors;
 @RestController
 public class ReportCardController {
 
-    @Autowired private UserRepository       userRepository;
+    @Autowired private CurrentUserUtil       currentUserUtil;
     @Autowired private StudentRepository    studentRepository;
     @Autowired private MarksRepository      marksRepository;
     @Autowired private AttendanceRepository attendanceRepository;
     @Autowired private SchoolRepository     schoolRepository;
     @Autowired private com.schoolers.repository.TeacherRepository    teacherRepository;
     @Autowired private com.schoolers.repository.ClassRoomRepository  classRoomRepository;
+    @Autowired private com.schoolers.repository.GradeScaleRepository gradeScaleRepository;
+
+    // Default grade scale — mirrors AdminService.DEFAULT_GRADE_SCALE, used when the
+    // school has not configured a custom scale yet.
+    private static final List<com.schoolers.model.GradeScale> DEFAULT_GRADE_SCALE = List.of(
+        com.schoolers.model.GradeScale.builder().grade("O")  .minPercentage(new java.math.BigDecimal("90.00")).displayOrder(1).build(),
+        com.schoolers.model.GradeScale.builder().grade("A+") .minPercentage(new java.math.BigDecimal("80.00")).displayOrder(2).build(),
+        com.schoolers.model.GradeScale.builder().grade("A")  .minPercentage(new java.math.BigDecimal("70.00")).displayOrder(3).build(),
+        com.schoolers.model.GradeScale.builder().grade("B+") .minPercentage(new java.math.BigDecimal("60.00")).displayOrder(4).build(),
+        com.schoolers.model.GradeScale.builder().grade("B")  .minPercentage(new java.math.BigDecimal("50.00")).displayOrder(5).build(),
+        com.schoolers.model.GradeScale.builder().grade("B-") .minPercentage(new java.math.BigDecimal("40.00")).displayOrder(6).build(),
+        com.schoolers.model.GradeScale.builder().grade("C")  .minPercentage(new java.math.BigDecimal("33.00")).displayOrder(7).build(),
+        com.schoolers.model.GradeScale.builder().grade("F")  .minPercentage(new java.math.BigDecimal("0.00")) .displayOrder(8).build()
+    );
+
+    /** Resolve a grade from a percentage using the provided scale (sorted desc by minPercentage). */
+    private static String computeGrade(double percentage, List<com.schoolers.model.GradeScale> scales) {
+        for (com.schoolers.model.GradeScale scale : scales) {
+            if (scale.getMinPercentage() != null &&
+                    percentage >= scale.getMinPercentage().doubleValue()) {
+                return scale.getGrade();
+            }
+        }
+        // Fallback: return the last entry's grade (lowest tier, e.g. "F") or a hard default.
+        return scales.isEmpty() ? "F" : scales.get(scales.size() - 1).getGrade();
+    }
 
     /** Student fetches available exam filters (distinct exam types from their marks) */
     @GetMapping("/api/student/report-card/filters")
     @PreAuthorize("hasRole('STUDENT')")
     public ResponseEntity<?> getMyFilters(Authentication auth) {
-        var userOpt = userRepository.findByEmailIgnoreCase(auth.getName());
-        if (userOpt.isEmpty()) return ResponseEntity.status(403).body(ApiResponse.error("User not found"));
-        var studentOpt = studentRepository.findByStudentUserId(userOpt.get().getId());
+        Long userId = currentUserUtil.getCurrentUserId(auth);
+        if (userId == null) return ResponseEntity.status(403).body(ApiResponse.error("User not found"));
+        var studentOpt = studentRepository.findByStudentUserId(userId);
         if (studentOpt.isEmpty()) return ResponseEntity.ok(ApiResponse.success(Map.of("examTypes", List.of())));
         Student student = studentOpt.get();
         // Merge schoolId-scoped + fallback (null schoolId = pre-fix records) to ensure all exam types appear
@@ -47,9 +74,9 @@ public class ReportCardController {
     public ResponseEntity<?> getMyReportCard(
             @RequestParam(required = false) String examType,
             Authentication auth) {
-        var userOpt = userRepository.findByEmailIgnoreCase(auth.getName());
-        if (userOpt.isEmpty()) return ResponseEntity.status(403).body(ApiResponse.error("User not found"));
-        var studentOpt = studentRepository.findByStudentUserId(userOpt.get().getId());
+        Long userId = currentUserUtil.getCurrentUserId(auth);
+        if (userId == null) return ResponseEntity.status(403).body(ApiResponse.error("User not found"));
+        var studentOpt = studentRepository.findByStudentUserId(userId);
         if (studentOpt.isEmpty()) return ResponseEntity.status(403).body(ApiResponse.error("Student profile not found"));
         return ResponseEntity.ok(buildReportCard(studentOpt.get(), examType));
     }
@@ -59,7 +86,7 @@ public class ReportCardController {
     @GetMapping("/api/report-cards/filters")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER')")
     public ResponseEntity<?> getSchoolFilters(Authentication auth) {
-        Long schoolId = userRepository.findByEmailIgnoreCase(auth.getName()).map(User::getSchoolId).orElse(null);
+        Long schoolId = currentUserUtil.getCurrentSchoolId(auth);
         if (schoolId == null) return ResponseEntity.ok(ApiResponse.success(Map.of("examTypes", List.of())));
         List<String> examTypes = marksRepository.findDistinctExamTypesBySchoolId(schoolId);
         return ResponseEntity.ok(ApiResponse.success(Map.of("examTypes", examTypes)));
@@ -74,7 +101,7 @@ public class ReportCardController {
             @RequestParam(required = false) String section,
             @RequestParam(required = false) String examType,
             Authentication auth) {
-        Long schoolId = userRepository.findByEmailIgnoreCase(auth.getName()).map(User::getSchoolId).orElse(null);
+        Long schoolId = currentUserUtil.getCurrentSchoolId(auth);
         if (schoolId == null) return ResponseEntity.status(403).body(ApiResponse.error("School not found"));
         if (className == null || className.isBlank())
             return ResponseEntity.badRequest().body(ApiResponse.error("className is required"));
@@ -126,7 +153,7 @@ public class ReportCardController {
             @PathVariable Long studentId,
             @RequestParam(required = false) String examType,
             Authentication auth) {
-        Long schoolId = userRepository.findByEmailIgnoreCase(auth.getName()).map(User::getSchoolId).orElse(null);
+        Long schoolId = currentUserUtil.getCurrentSchoolId(auth);
         Student student = studentRepository.findById(studentId).orElse(null);
         if (student == null) return ResponseEntity.status(404).body(ApiResponse.error("Student not found"));
         if (schoolId != null && !schoolId.equals(student.getSchoolId()))
@@ -141,16 +168,17 @@ public class ReportCardController {
     public ResponseEntity<?> bulkImportMarksCsv(
             @org.springframework.web.bind.annotation.RequestBody Map<String, Object> body,
             Authentication auth) {
-        User caller = userRepository.findByEmailIgnoreCase(auth.getName()).orElse(null);
-        if (caller == null) return ResponseEntity.status(403).body(ApiResponse.error("User not found"));
-        Long schoolId = caller.getSchoolId();
-        Long teacherId = caller.getId();
-        if (schoolId == null) return ResponseEntity.status(403).body(ApiResponse.error("School not found"));
+        Long schoolId  = currentUserUtil.getCurrentSchoolId(auth);
+        Long teacherId = currentUserUtil.getCurrentUserId(auth);
+        if (schoolId == null || teacherId == null)
+            return ResponseEntity.status(403).body(ApiResponse.error("User not found"));
 
         // For TEACHER role: enforce class-teacher-only restriction and scope to their assigned class
+        boolean isTeacher = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_TEACHER".equals(a.getAuthority()));
         String allowedClassName = null;
         String allowedSection   = null;
-        if (caller.getRole() == User.Role.TEACHER) {
+        if (isTeacher) {
             com.schoolers.model.Teacher teacher = teacherRepository.findByUserId(teacherId).orElse(null);
             if (teacher == null) return ResponseEntity.status(403).body(ApiResponse.error("Teacher profile not found"));
             String type = teacher.getTeacherType() != null ? teacher.getTeacherType() : "SUBJECT_TEACHER";
@@ -179,6 +207,11 @@ public class ReportCardController {
 
         java.time.LocalDate examDate = null;
         try { if (examDateStr != null) examDate = java.time.LocalDate.parse(examDateStr); } catch (Exception ignored) {}
+
+        // Load the school's configured grade scale; fall back to the default if none configured.
+        List<com.schoolers.model.GradeScale> gradeScales =
+                gradeScaleRepository.findBySchoolIdOrderByMinPercentageDesc(schoolId);
+        if (gradeScales.isEmpty()) gradeScales = DEFAULT_GRADE_SCALE;
 
         List<Map<String, Object>> results = new java.util.ArrayList<>();
         int saved = 0;
@@ -220,7 +253,7 @@ public class ReportCardController {
             if (marksVal > maxVal) { res.put("status", "error"); res.put("message", "marks (" + marksVal + ") cannot exceed maxMarks (" + maxVal + ")"); results.add(res); continue; }
 
             double pctVal = (marksVal / maxVal) * 100;
-            String grade = pctVal >= 90 ? "O" : pctVal >= 80 ? "A+" : pctVal >= 70 ? "A" : pctVal >= 60 ? "B+" : pctVal >= 50 ? "B" : pctVal >= 40 ? "B-" : pctVal >= 33 ? "C" : "F";
+            String grade = computeGrade(pctVal, gradeScales);
 
             com.schoolers.model.Marks m = com.schoolers.model.Marks.builder()
                 .studentId(student.getId()).studentName(student.getName())
@@ -243,8 +276,7 @@ public class ReportCardController {
             @PathVariable Long studentId,
             @RequestParam(required = false) String examType,
             Authentication auth) {
-        Long adminSchoolId = userRepository.findByEmailIgnoreCase(auth.getName())
-                .map(User::getSchoolId).orElse(null);
+        Long adminSchoolId = currentUserUtil.getCurrentSchoolId(auth);
         Student student = studentRepository.findById(studentId).orElse(null);
         if (student == null) return ResponseEntity.status(404).body(ApiResponse.error("Student not found"));
         if (adminSchoolId != null && !adminSchoolId.equals(student.getSchoolId()))

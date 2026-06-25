@@ -108,6 +108,9 @@ const SMS = lazy(() => import('./pages/admin/sms/SMS'));
 // School Settings
 const SchoolSettings = lazy(() => import('./pages/admin/SchoolSettings'));
 
+// Owner Pages
+const FeatureControlDashboard = lazy(() => import('./pages/owner/FeatureControlDashboard'));
+
 // 404
 const NotFound = lazy(() => import('./pages/NotFound'));
 
@@ -204,6 +207,11 @@ function App() {
             <Route path="/owner/dashboard" element={
               <ProtectedRoute allowedRoles={['APPLICATION_OWNER']}>
                 <SuperAdminDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/owner/feature-control" element={
+              <ProtectedRoute allowedRoles={['APPLICATION_OWNER']}>
+                <FeatureControlDashboard />
               </ProtectedRoute>
             } />
 

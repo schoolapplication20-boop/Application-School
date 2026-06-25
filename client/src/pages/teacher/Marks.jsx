@@ -334,7 +334,7 @@ ADM002,Mathematics,92,100`;
       })
       .catch(() => showToast('Failed to load classes', 'error'))
       .finally(() => setLoading(false));
-  }, [user.id]);
+  }, [user.id, showToast]);
 
   // ── Load all students + marks ─────────────────────────────────────────────────
   const loadAllData = useCallback(async (classList) => {
@@ -380,7 +380,7 @@ ADM002,Mathematics,92,100`;
     } finally {
       setLoadingMarks(false);
     }
-  }, []);
+  }, [showToast]);
 
   useEffect(() => { if (classes.length) loadAllData(classes); }, [classes, loadAllData]);
 

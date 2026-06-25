@@ -1,6 +1,7 @@
 package com.schoolers.dto.sms;
 
 import com.schoolers.model.sms.TargetType;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.time.LocalDate;
@@ -27,6 +28,7 @@ public class SmsBulkSendRequest {
     private List<Long> studentIds;
 
     /** Required for {@code CUSTOM}. */
+    @Size(max = 500, message = "Cannot send to more than 500 phone numbers at once")
     private List<String> customPhones;
 
     /** Attendance date for {@code ABSENTEES}; defaults to today if null. */

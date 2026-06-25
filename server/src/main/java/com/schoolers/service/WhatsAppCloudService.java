@@ -7,6 +7,7 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import jakarta.annotation.PostConstruct;
 import java.util.Map;
 import java.util.logging.Logger;
 
@@ -34,6 +35,13 @@ public class WhatsAppCloudService {
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper mapper = new ObjectMapper();
+
+    @PostConstruct
+    void init() {
+        if (verifyToken == null || verifyToken.isBlank() || verifyToken.equals("myskoolz2026")) {
+            log.warning("[WhatsAppCloud] WHATSAPP_VERIFY_TOKEN is using the insecure default. Set a unique value in environment.");
+        }
+    }
 
     public boolean isConfigured() {
         return accessToken != null && !accessToken.isBlank()

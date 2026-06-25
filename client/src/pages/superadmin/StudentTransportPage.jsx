@@ -258,7 +258,9 @@ export default function StudentTransportPage() {
       if (editId) {
         const res = await transportAPI.updateStudentTransport(editId, payload);
         const updated = res.data?.data;
-        setRecords(prev => prev.map(r => r.id === editId ? updated : r));
+        if (updated) {
+          setRecords(prev => prev.map(r => r.id === updated.id ? updated : r));
+        }
         showToast('Transport record updated successfully');
       } else {
         const res = await transportAPI.createStudentTransport(payload);

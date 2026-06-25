@@ -41,7 +41,8 @@ const superAdminOnlyItems = [
 // APPLICATION_OWNER manages schools & SUPER_ADMINs from their platform dashboard;
 // they do NOT navigate into school-level admin routes.
 const appOwnerNavItems = [
-  { path: '/owner/dashboard', icon: 'domain', label: 'Platform Dashboard', permKey: null },
+  { path: '/owner/dashboard',        icon: 'domain',     label: 'Platform Dashboard', permKey: null },
+  { path: '/owner/feature-control',  icon: 'toggle_on',  label: 'Feature Control',    permKey: null },
 ];
 
 const teacherNavItems = [

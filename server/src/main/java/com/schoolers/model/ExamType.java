@@ -32,6 +32,13 @@ public class ExamType {
     @Builder.Default
     private Boolean isActive = true;
 
+    @Column(name = "marks_locked_at")
+    private java.time.LocalDateTime marksLockedAt;
+
+    @Column(name = "marks_published", nullable = false)
+    @Builder.Default
+    private Boolean marksPublished = false;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

@@ -135,6 +135,7 @@ export default function Attendance() {
       className: classLabel(selectedClass),
       date:      selectedDate,
       status:    attendanceMap[s.id]?.status || 'PRESENT',
+      note:      attendanceMap[s.id]?.note   || '',
     }));
     try {
       await teacherAPI.markAttendance(payload);

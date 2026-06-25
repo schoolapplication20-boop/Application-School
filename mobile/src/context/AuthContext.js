@@ -12,19 +12,27 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     (async () => {
-      let storedUser = await getStoredUser();
-
-      // One-time migration for sessions saved before the switch to SecureStore.
-      if (!storedUser) {
+      // Migrate any legacy AsyncStorage tokens to SecureStore on every startup.
+      // This ensures users who never logged out (and therefore never hit the
+      // old login-time migration) also get their tokens moved to secure storage.
+      try {
         const [legacyToken, legacyUser] = await AsyncStorage.multiGet(['token', 'user']);
-        if (legacyToken[1] && legacyUser[1]) {
-          await setStoredToken(legacyToken[1]);
-          storedUser = JSON.parse(legacyUser[1]);
-          await setStoredUser(storedUser);
+        if (legacyToken[1] || legacyUser[1]) {
+          // Only overwrite SecureStore if SecureStore doesn't already hold a session,
+          // so a valid secure session is never replaced by a stale AsyncStorage value.
+          const existingUser = await getStoredUser();
+          if (!existingUser) {
+            if (legacyToken[1]) await setStoredToken(legacyToken[1]);
+            if (legacyUser[1]) await setStoredUser(JSON.parse(legacyUser[1]));
+            console.log('[Auth] Migrated session from AsyncStorage to SecureStore');
+          }
+          await AsyncStorage.multiRemove(['token', 'user']);
         }
-        await AsyncStorage.multiRemove(['token', 'user']);
+      } catch (e) {
+        console.warn('[Auth] Migration from AsyncStorage failed silently:', e);
       }
 
+      const storedUser = await getStoredUser();
       if (storedUser) { setUser(storedUser); syncPushToken(); }
       setLoading(false);
     })();

@@ -6,8 +6,11 @@ import { useToast } from '../../context/ToastContext';
 
 /* ── helpers ── */
 const fmt = (n) => Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-const currentYear = new Date().getFullYear();
-const CURRENT_YEAR = `${currentYear}-${String(currentYear + 1).slice(-2)}`;
+const _now = new Date();
+const _year = _now.getFullYear();
+const CURRENT_YEAR = _now.getMonth() >= 3  // April = month index 3
+  ? `${_year}-${(_year + 1).toString().slice(2)}`
+  : `${_year - 1}-${_year.toString().slice(2)}`;
 
 const StatusBadge = ({ status }) => {
   const map = {
@@ -78,12 +81,12 @@ export default function Fees() {
 
   // Installment schedule state
   const [installments, setInstallments] = useState([
-    { termName: 'Term 1', amount: '', dueDate: '' },
-    { termName: 'Term 2', amount: '', dueDate: '' },
-    { termName: 'Term 3', amount: '', dueDate: '' },
+    { _id: 'inst-1', termName: 'Term 1', amount: '', dueDate: '' },
+    { _id: 'inst-2', termName: 'Term 2', amount: '', dueDate: '' },
+    { _id: 'inst-3', termName: 'Term 3', amount: '', dueDate: '' },
   ]);
   const addInstallment = () =>
-    setInstallments(prev => [...prev, { termName: `Term ${prev.length + 1}`, amount: '', dueDate: '' }]);
+    setInstallments(prev => [...prev, { _id: `inst-${Date.now()}`, termName: `Term ${prev.length + 1}`, amount: '', dueDate: '' }]);
   const removeInstallment = (idx) =>
     setInstallments(prev => prev.filter((_, i) => i !== idx));
   const updateInstallment = (idx, field, value) =>
@@ -91,7 +94,7 @@ export default function Fees() {
 
   // Class-level term-wise fee split (Set Fee Structure modal)
   const addTermFee = () =>
-    setTermFees(prev => [...prev, { termName: `Term ${prev.length + 1}`, amount: '' }]);
+    setTermFees(prev => [...prev, { _id: `tf-${Date.now()}`, termName: `Term ${prev.length + 1}`, amount: '' }]);
   const removeTermFee = (idx) =>
     setTermFees(prev => prev.filter((_, i) => i !== idx));
   const updateTermFee = (idx, field, value) =>
@@ -183,7 +186,7 @@ export default function Fees() {
     });
     setTermFees(
       existing?.termFees?.length
-        ? existing.termFees.map(t => ({ termName: t.termName, amount: String(t.amount) }))
+        ? existing.termFees.map((t, idx) => ({ _id: `tf-db-${idx}`, termName: t.termName, amount: String(t.amount) }))
         : []
     );
     setShowFeeModal(true);
@@ -291,14 +294,15 @@ export default function Fees() {
         const res = await adminAPI.getInstallments(assignment.id);
         const existing = res.data?.data ?? [];
         if (existing.length > 0) {
-          setInstallments(existing.map(i => ({
+          setInstallments(existing.map((i, idx) => ({
+            _id:      i.id ? `inst-db-${i.id}` : `inst-${Date.now()}-${idx}`,
             termName: i.termName,
             amount:   String(i.amount),
             dueDate:  i.dueDate || '',
             status:   i.status,
           })));
         } else {
-          setInstallments([{ termName: 'Term 1', amount: '', dueDate: '' }]);
+          setInstallments([{ _id: `inst-${Date.now()}`, termName: 'Term 1', amount: '', dueDate: '' }]);
         }
       } catch {
         // Don't reset installments — keep modal closed and alert user
@@ -307,9 +311,9 @@ export default function Fees() {
       }
     } else {
       setInstallments([
-        { termName: 'Term 1', amount: '', dueDate: '' },
-        { termName: 'Term 2', amount: '', dueDate: '' },
-        { termName: 'Term 3', amount: '', dueDate: '' },
+        { _id: 'inst-new-1', termName: 'Term 1', amount: '', dueDate: '' },
+        { _id: 'inst-new-2', termName: 'Term 2', amount: '', dueDate: '' },
+        { _id: 'inst-new-3', termName: 'Term 3', amount: '', dueDate: '' },
       ]);
     }
     setShowAssignModal(true);
@@ -339,7 +343,7 @@ export default function Fees() {
         // but only if the admin hasn't already entered any installment amounts.
         const hasInstallmentAmounts = installments.some(i => i.amount && Number(i.amount) > 0);
         if (!hasInstallmentAmounts && cfs.termFees?.length > 0) {
-          setInstallments(cfs.termFees.map(t => ({ termName: t.termName, amount: String(t.amount), dueDate: '' })));
+          setInstallments(cfs.termFees.map((t, idx) => ({ _id: `inst-cfs-${idx}-${Date.now()}`, termName: t.termName, amount: String(t.amount), dueDate: '' })));
         }
       }
     }
@@ -703,7 +707,7 @@ export default function Fees() {
               </div>
 
               {termFees.map((t, idx) => (
-                <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 130px 30px', gap: 6, alignItems: 'end', marginBottom: 8 }}>
+                <div key={t._id} style={{ display: 'grid', gridTemplateColumns: '1fr 130px 30px', gap: 6, alignItems: 'end', marginBottom: 8 }}>
                   <div>
                     {idx === 0 && <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 3 }}>Term Name</label>}
                     <input
@@ -859,7 +863,7 @@ export default function Fees() {
                 </div>
 
                 {installments.map((inst, idx) => (
-                  <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 100px 120px 30px', gap: 6, alignItems: 'end', marginBottom: 8 }}>
+                  <div key={inst._id} style={{ display: 'grid', gridTemplateColumns: '1fr 100px 120px 30px', gap: 6, alignItems: 'end', marginBottom: 8 }}>
                     <div>
                       {idx === 0 && <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 3 }}>Term Name</label>}
                       <input

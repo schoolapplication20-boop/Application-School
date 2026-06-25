@@ -1,5 +1,6 @@
 package com.schoolers.utils;
 
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -21,15 +22,27 @@ public class AesEncryptionUtil {
     private static final String ALGORITHM = "AES/GCM/NoPadding";
     private static final int IV_LEN = 12;
     private static final int TAG_BITS = 128;
+    private static final String INSECURE_DEFAULT_KEY = "my-skoolz-local-dev-key";
 
     private final byte[] keyBytes;
+    private final String rawKey;
 
     public AesEncryptionUtil(@Value("${encryption.key:my-skoolz-local-dev-key}") String encryptionKey) {
+        this.rawKey = encryptionKey;
         try {
             this.keyBytes = MessageDigest.getInstance("SHA-256")
                     .digest(encryptionKey.getBytes(StandardCharsets.UTF_8));
         } catch (Exception e) {
             throw new RuntimeException("AesEncryptionUtil init failed", e);
+        }
+    }
+
+    @PostConstruct
+    public void validateKey() {
+        if (rawKey == null || rawKey.isBlank() || INSECURE_DEFAULT_KEY.equals(rawKey)) {
+            throw new IllegalStateException(
+                "SECURITY: encryption.key must be set to a strong secret via the ENCRYPTION_KEY " +
+                "environment variable. The hardcoded default key is not permitted in any environment.");
         }
     }
 

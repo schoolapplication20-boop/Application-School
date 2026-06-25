@@ -8,6 +8,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.*;
 
@@ -40,6 +41,12 @@ public class TeacherService {
 
     @Autowired
     private TokenBlacklistService tokenBlacklistService;
+
+    @Autowired
+    private ExamTypeRepository examTypeRepository;
+
+    @Autowired
+    private MarksAuditLogRepository marksAuditLogRepository;
 
     // ── Classes ────────────────────────────────────────────────────────────────
 
@@ -312,6 +319,7 @@ public class TeacherService {
 
     // ── Attendance ─────────────────────────────────────────────────────────────
 
+    @Transactional(rollbackFor = Exception.class)
     public ApiResponse<String> markAttendance(Long teacherId, List<Map<String, Object>> attendanceList, Long markedBy) {
         if (attendanceList == null || attendanceList.isEmpty()) {
             return ApiResponse.error("Attendance list cannot be empty");
@@ -741,7 +749,33 @@ public class TeacherService {
                 return ApiResponse.error("Student not found");
         }
 
+        // Block edit if marks are locked for this exam type
+        Long schoolId = marks.getSchoolId();
+        if (marks.getExamType() != null && schoolId != null) {
+            ExamType examType = examTypeRepository.findByNameIgnoreCaseAndSchoolId(marks.getExamType(), schoolId).orElse(null);
+            if (examType != null && examType.getMarksLockedAt() != null) {
+                return ApiResponse.error("Marks for this exam type are locked and cannot be edited.");
+            }
+        }
+
         Marks saved = marksRepository.save(marks);
+
+        // Audit log — CREATE
+        try {
+            MarksAuditLog log = new MarksAuditLog();
+            log.setMarksId(saved.getId());
+            log.setAction("CREATE");
+            log.setStudentId(saved.getStudentId());
+            log.setStudentName(saved.getStudentName());
+            log.setSubject(saved.getSubject());
+            log.setExamType(saved.getExamType());
+            log.setNewMarks(saved.getMarks() != null ? BigDecimal.valueOf(saved.getMarks()) : null);
+            log.setNewGrade(saved.getGrade());
+            log.setChangedBy(saved.getTeacherId());
+            log.setSchoolId(saved.getSchoolId());
+            marksAuditLogRepository.save(log);
+        } catch (Exception ignored) { /* audit must not break the main flow */ }
+
         return ApiResponse.success("Marks saved", saved);
     }
 
@@ -762,10 +796,44 @@ public class TeacherService {
                     if (authSchoolId != null && m.getSchoolId() != null
                             && !authSchoolId.equals(m.getSchoolId()))
                         return ApiResponse.<Marks>error("Marks record not found");
+
+                    // Block edit if marks are locked for this exam type
+                    Long schoolId = authSchoolId != null ? authSchoolId : m.getSchoolId();
+                    if (m.getExamType() != null && schoolId != null) {
+                        ExamType examType = examTypeRepository.findByNameIgnoreCaseAndSchoolId(m.getExamType(), schoolId).orElse(null);
+                        if (examType != null && examType.getMarksLockedAt() != null) {
+                            return ApiResponse.<Marks>error("Marks for this exam type are locked and cannot be edited.");
+                        }
+                    }
+
+                    // Capture old values for audit
+                    Integer oldMarksVal = m.getMarks();
+                    String oldGrade = m.getGrade();
+
                     if (updated.getMarks() != null)    m.setMarks(updated.getMarks());
                     if (updated.getMaxMarks() != null) m.setMaxMarks(updated.getMaxMarks());
                     if (updated.getGrade() != null)    m.setGrade(updated.getGrade());
-                    return ApiResponse.success(marksRepository.save(m));
+                    Marks saved = marksRepository.save(m);
+
+                    // Audit log — UPDATE
+                    try {
+                        MarksAuditLog log = new MarksAuditLog();
+                        log.setMarksId(saved.getId());
+                        log.setAction("UPDATE");
+                        log.setStudentId(saved.getStudentId());
+                        log.setStudentName(saved.getStudentName());
+                        log.setSubject(saved.getSubject());
+                        log.setExamType(saved.getExamType());
+                        log.setOldMarks(oldMarksVal != null ? BigDecimal.valueOf(oldMarksVal) : null);
+                        log.setNewMarks(saved.getMarks() != null ? BigDecimal.valueOf(saved.getMarks()) : null);
+                        log.setOldGrade(oldGrade);
+                        log.setNewGrade(saved.getGrade());
+                        log.setChangedBy(saved.getTeacherId());
+                        log.setSchoolId(saved.getSchoolId());
+                        marksAuditLogRepository.save(log);
+                    } catch (Exception ignored) { /* audit must not break the main flow */ }
+
+                    return ApiResponse.success(saved);
                 })
                 .orElse(ApiResponse.error("Marks record not found"));
     }
@@ -776,6 +844,32 @@ public class TeacherService {
         // Tenant isolation: prevent cross-school deletes
         if (authSchoolId != null && m.getSchoolId() != null && !authSchoolId.equals(m.getSchoolId()))
             return ApiResponse.error("Marks record not found");
+
+        // Block delete if marks are locked for this exam type
+        Long schoolId = authSchoolId != null ? authSchoolId : m.getSchoolId();
+        if (m.getExamType() != null && schoolId != null) {
+            ExamType examType = examTypeRepository.findByNameIgnoreCaseAndSchoolId(m.getExamType(), schoolId).orElse(null);
+            if (examType != null && examType.getMarksLockedAt() != null) {
+                return ApiResponse.error("Marks for this exam type are locked and cannot be deleted.");
+            }
+        }
+
+        // Audit log — DELETE (capture before deleting)
+        try {
+            MarksAuditLog log = new MarksAuditLog();
+            log.setMarksId(m.getId());
+            log.setAction("DELETE");
+            log.setStudentId(m.getStudentId());
+            log.setStudentName(m.getStudentName());
+            log.setSubject(m.getSubject());
+            log.setExamType(m.getExamType());
+            log.setOldMarks(m.getMarks() != null ? BigDecimal.valueOf(m.getMarks()) : null);
+            log.setOldGrade(m.getGrade());
+            log.setChangedBy(m.getTeacherId());
+            log.setSchoolId(m.getSchoolId());
+            marksAuditLogRepository.save(log);
+        } catch (Exception ignored) { /* audit must not break the main flow */ }
+
         marksRepository.deleteById(id);
         return ApiResponse.success("Marks deleted", "Deleted");
     }

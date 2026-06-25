@@ -7,7 +7,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -40,15 +39,29 @@ public class MessageController {
         return false;
     }
 
+    /** Extract schoolId from JWT claims — returns null for APPLICATION_OWNER or when claims are unavailable. */
+    @SuppressWarnings("unchecked")
+    private Long getSchoolIdFromAuth(Authentication auth) {
+        if (auth == null) return null;
+        if (auth.getDetails() instanceof java.util.Map) {
+            java.util.Map<?, ?> claims = (java.util.Map<?, ?>) auth.getDetails();
+            Object schoolId = claims.get("schoolId");
+            if (schoolId == null) return null;
+            try {
+                return schoolId instanceof Long ? (Long) schoolId : Long.parseLong(schoolId.toString());
+            } catch (NumberFormatException ignored) {}
+        }
+        return null;
+    }
+
     // ── Existing 1-to-1 endpoints ─────────────────────────────────────────────
 
     @GetMapping("/{userId}")
     @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','TEACHER','STUDENT')")
-    public ResponseEntity<ApiResponse<List<Message>>> getMessages(@PathVariable Long userId) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+    public ResponseEntity<ApiResponse<List<Message>>> getMessages(@PathVariable Long userId, Authentication auth) {
         if (!isOwnerOrAdmin(userId, auth))
             return ResponseEntity.status(403).body(ApiResponse.error("Access denied."));
-        return ResponseEntity.ok(messageService.getMessagesForUser(userId));
+        return ResponseEntity.ok(messageService.getMessagesForUser(userId, getSchoolIdFromAuth(auth)));
     }
 
     @GetMapping("/conversation")
@@ -57,7 +70,7 @@ public class MessageController {
             @RequestParam Long u1, @RequestParam Long u2, Authentication auth) {
         if (!isOwnerOrAdmin(u1, auth) && !isOwnerOrAdmin(u2, auth))
             return ResponseEntity.status(403).body(ApiResponse.error("Access denied"));
-        return ResponseEntity.ok(messageService.getConversation(u1, u2));
+        return ResponseEntity.ok(messageService.getConversation(u1, u2, getSchoolIdFromAuth(auth)));
     }
 
     @PostMapping
@@ -82,8 +95,7 @@ public class MessageController {
 
     @GetMapping("/unread/{userId}")
     @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','TEACHER','STUDENT')")
-    public ResponseEntity<ApiResponse<Long>> getUnreadCount(@PathVariable Long userId) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+    public ResponseEntity<ApiResponse<Long>> getUnreadCount(@PathVariable Long userId, Authentication auth) {
         if (!isOwnerOrAdmin(userId, auth))
             return ResponseEntity.status(403).body(ApiResponse.error("Access denied."));
         return ResponseEntity.ok(messageService.getUnreadCount(userId));

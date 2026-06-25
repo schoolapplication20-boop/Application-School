@@ -2,6 +2,7 @@ package com.schoolers.service;
 
 import com.schoolers.dto.ApiResponse;
 import com.schoolers.model.Message;
+import com.schoolers.model.MessageRead;
 import com.schoolers.model.Student;
 import com.schoolers.model.Teacher;
 import com.schoolers.model.User;
@@ -9,6 +10,7 @@ import com.schoolers.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
@@ -26,6 +28,7 @@ public class MessageService {
     private static final int PUSH_BODY_MAX_LENGTH = 120;
 
     @Autowired private MessageRepository messageRepository;
+    @Autowired private MessageReadRepository messageReadRepository;
     @Autowired private UserRepository userRepository;
     @Autowired private StudentRepository studentRepository;
     @Autowired private TeacherRepository teacherRepository;
@@ -33,13 +36,18 @@ public class MessageService {
 
     // ── Existing 1-to-1 message methods ──────────────────────────────────────
 
-    public ApiResponse<List<Message>> getMessagesForUser(Long userId) {
+    public ApiResponse<List<Message>> getMessagesForUser(Long userId, Long schoolId) {
+        if (schoolId != null) {
+            return ApiResponse.success(messageRepository.findAllByUserIdAndSchoolId(userId, schoolId, MESSAGE_RESULTS_PAGE));
+        }
         return ApiResponse.success(messageRepository.findAllByUserId(userId, MESSAGE_RESULTS_PAGE));
     }
 
-    public ApiResponse<List<Message>> getConversation(Long u1, Long u2) {
+    public ApiResponse<List<Message>> getConversation(Long u1, Long u2, Long schoolId) {
         // Fetch the most recent messages (newest first) and reverse to chronological order
-        List<Message> recent = messageRepository.findConversationDesc(u1, u2, MESSAGE_RESULTS_PAGE);
+        List<Message> recent = (schoolId != null)
+                ? messageRepository.findConversationDescBySchoolId(u1, u2, schoolId, MESSAGE_RESULTS_PAGE)
+                : messageRepository.findConversationDesc(u1, u2, MESSAGE_RESULTS_PAGE);
         Collections.reverse(recent);
         return ApiResponse.success(recent);
     }
@@ -145,7 +153,23 @@ public class MessageService {
         User user = resolveUser(auth);
         if (user == null) return ApiResponse.error("Unauthorized");
 
+        Optional<Student> studentOpt = studentRepository.findByStudentUserId(user.getId());
+        if (studentOpt.isEmpty()) return ApiResponse.error("Student profile not found");
+        Student student = studentOpt.get();
+
         return messageRepository.findById(messageId).map(msg -> {
+            // Verify the message belongs to the student's school before mutating
+            if (msg.getSchoolId() != null && !msg.getSchoolId().equals(student.getSchoolId())) {
+                return ApiResponse.<String>error("Message not found");
+            }
+            // Write to message_reads table (new path)
+            if (!messageReadRepository.existsByMessageIdAndUserId(msg.getId(), user.getId())) {
+                MessageRead mr = new MessageRead();
+                mr.setMessageId(msg.getId());
+                mr.setUserId(user.getId());
+                messageReadRepository.save(mr);
+            }
+            // Keep the legacy comma-string updated so existing clients continue to work
             if (!isReadByUser(msg, user.getId())) {
                 String existing = msg.getReadByUserIds();
                 String updated = (existing == null || existing.isBlank())
@@ -176,7 +200,16 @@ public class MessageService {
 
         Long schoolId = sender.getSchoolId();
         if (schoolId == null) {
-            schoolId = longVal(body, "schoolId", null);
+            // APPLICATION_OWNER has no school affiliation — they must explicitly supply a target schoolId.
+            // We accept the value from the request body but REQUIRE it to be non-null; the caller bears
+            // responsibility for ensuring the target school is valid (the student/school checks below
+            // enforce data integrity).  We do NOT silently fall back — an absent schoolId is rejected.
+            Long requestedSchoolId = longVal(body, "schoolId", null);
+            if (requestedSchoolId == null) {
+                throw new AccessDeniedException(
+                        "App owner must select a target school explicitly");
+            }
+            schoolId = requestedSchoolId;
         }
         if (schoolId == null) return ApiResponse.error("School context is required");
 
@@ -187,11 +220,23 @@ public class MessageService {
                 return ApiResponse.error("Student not found");
         }
 
-        // Teachers can only send to their own class
+        // Teachers can only broadcast to a class section they are assigned to
         if ("TEACHER".equals(sender.getRole().name())) {
             Optional<Teacher> teacherOpt = teacherRepository.findByUserId(sender.getId());
             if (teacherOpt.isEmpty()) return ApiResponse.error("Teacher profile not found");
-            // Allow if classSection matches or if they override (admin will validate)
+            Teacher teacher = teacherOpt.get();
+            // School-wide broadcasts are admin-only
+            if (Boolean.TRUE.equals(isSchoolWide)) {
+                return ApiResponse.error("Teachers are not permitted to send school-wide broadcasts");
+            }
+            // Class-section broadcasts must target a section the teacher is assigned to
+            if (classSection != null && !classSection.isBlank()) {
+                String teacherClasses = teacher.getClasses();
+                boolean assigned = teacherClasses != null && teacherClasses.contains(classSection);
+                if (!assigned) {
+                    return ApiResponse.error("You are not assigned to class section: " + classSection);
+                }
+            }
         }
 
         Message msg = Message.builder()
@@ -301,6 +346,9 @@ public class MessageService {
     }
 
     private boolean isReadByUser(Message m, Long userId) {
+        // Check the authoritative message_reads table first
+        if (messageReadRepository.existsByMessageIdAndUserId(m.getId(), userId)) return true;
+        // Fall back to the legacy comma-string for rows that pre-date the new table
         String ids = m.getReadByUserIds();
         if (ids == null || ids.isBlank()) return false;
         for (String id : ids.split(",")) {

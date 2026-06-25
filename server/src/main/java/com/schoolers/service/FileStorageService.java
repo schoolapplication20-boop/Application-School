@@ -35,6 +35,15 @@ public class FileStorageService {
         if (useCloudinary) {
             cloudinary = new Cloudinary(cloudinaryUrl);
             cloudinary.config.secure = true;
+        } else {
+            // In production (Railway), local disk storage is ephemeral — reject startup early.
+            boolean isProduction = System.getenv("RAILWAY_ENVIRONMENT") != null
+                    || "prod".equalsIgnoreCase(System.getenv("SPRING_PROFILES_ACTIVE"))
+                    || "production".equalsIgnoreCase(System.getenv("SPRING_PROFILES_ACTIVE"));
+            if (isProduction) {
+                throw new IllegalStateException(
+                        "CLOUDINARY_URL must be configured. Local disk storage is not supported on Railway.");
+            }
         }
     }
 

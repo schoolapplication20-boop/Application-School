@@ -22,14 +22,14 @@ public interface ExamScheduleRepository extends JpaRepository<ExamSchedule, Long
     List<ExamSchedule> findBySchoolIdOrderByExamDateAsc(Long schoolId);
     List<ExamSchedule> findByExamTypeAndSchoolIdOrderByExamDateAsc(String examType, Long schoolId);
 
-    // School-scoped with NULL fallback (for records created before school_id was added)
-    @Query("SELECT e FROM ExamSchedule e WHERE e.className = :className AND (e.schoolId = :schoolId OR e.schoolId IS NULL) ORDER BY e.examDate ASC")
+    // School-scoped strict queries
+    @Query("SELECT e FROM ExamSchedule e WHERE e.className = :className AND e.schoolId = :schoolId ORDER BY e.examDate ASC")
     List<ExamSchedule> findByClassNameAndSchoolIdOrNull(@Param("className") String className, @Param("schoolId") Long schoolId);
 
-    @Query("SELECT e FROM ExamSchedule e WHERE (e.schoolId = :schoolId OR e.schoolId IS NULL) ORDER BY e.examDate ASC")
+    @Query("SELECT e FROM ExamSchedule e WHERE e.schoolId = :schoolId ORDER BY e.examDate ASC")
     List<ExamSchedule> findBySchoolIdOrNull(@Param("schoolId") Long schoolId);
 
-    @Query("SELECT e FROM ExamSchedule e WHERE e.examType = :examType AND (e.schoolId = :schoolId OR e.schoolId IS NULL) ORDER BY e.examDate ASC")
+    @Query("SELECT e FROM ExamSchedule e WHERE e.examType = :examType AND e.schoolId = :schoolId ORDER BY e.examDate ASC")
     List<ExamSchedule> findByExamTypeAndSchoolIdOrNull(@Param("examType") String examType, @Param("schoolId") Long schoolId);
 
     @org.springframework.data.jpa.repository.Modifying

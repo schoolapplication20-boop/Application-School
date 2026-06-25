@@ -21,8 +21,8 @@ export default function HistoryTab({ showToast }) {
     try {
       const params = { page, size: 20 };
       if (status) params.status = status;
-      if (from) params.from = `${from}T00:00:00`;
-      if (to) params.to = `${to}T23:59:59`;
+      if (from) params.from = `${from}T00:00:00+05:30`;
+      if (to) params.to = `${to}T23:59:59+05:30`;
       if (search) params.search = search;
       const res = await smsAPI.getHistory(params);
       const data = res.data?.data;

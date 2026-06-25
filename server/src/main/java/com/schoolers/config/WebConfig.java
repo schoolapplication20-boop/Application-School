@@ -14,6 +14,7 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Autowired private RateLimitingInterceptor rateLimitingInterceptor;
     @Autowired private SubscriptionInterceptor subscriptionInterceptor;
+    @Autowired private FeatureFlagInterceptor featureFlagInterceptor;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
@@ -30,6 +31,18 @@ public class WebConfig implements WebMvcConfigurer {
                         "/api/marketing/**",
                         "/api/chatbot/**",
                         "/api/whatsapp/webhook",
+                        "/api/health"
+                );
+
+        // Feature flag gate — blocks access to disabled modules per school
+        registry.addInterceptor(featureFlagInterceptor)
+                .addPathPatterns("/api/**")
+                .excludePathPatterns(
+                        "/api/auth/**",
+                        "/api/applications",
+                        "/api/marketing/**",
+                        "/api/whatsapp/webhook",
+                        "/api/sms/webhook/**",
                         "/api/health"
                 );
     }

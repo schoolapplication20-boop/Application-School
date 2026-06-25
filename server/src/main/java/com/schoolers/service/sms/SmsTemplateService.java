@@ -103,7 +103,13 @@ public class SmsTemplateService {
         StringBuilder result = new StringBuilder();
         while (matcher.find()) {
             Object value = variables.get(matcher.group(1));
-            String replacement = value != null ? value.toString() : matcher.group(0);
+            String replacement;
+            if (value != null) {
+                // Strip control characters to prevent SMS header injection
+                replacement = value.toString().replaceAll("[\\r\\n\\t]", " ").trim();
+            } else {
+                replacement = matcher.group(0);
+            }
             matcher.appendReplacement(result, Matcher.quoteReplacement(replacement));
         }
         matcher.appendTail(result);

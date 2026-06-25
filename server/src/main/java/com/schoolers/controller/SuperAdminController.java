@@ -2,9 +2,13 @@ package com.schoolers.controller;
 
 import com.schoolers.dto.AdminCreatedResponse;
 import com.schoolers.dto.ApiResponse;
+import com.schoolers.model.SchoolFeature;
+import com.schoolers.model.SchoolFeatureId;
 import com.schoolers.model.User;
 import com.schoolers.repository.EmailVerificationRepository;
+import com.schoolers.repository.SchoolFeatureRepository;
 import com.schoolers.repository.UserRepository;
+import com.schoolers.security.CurrentUserUtil;
 import com.schoolers.service.SuperAdminService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -27,6 +31,8 @@ public class SuperAdminController {
     @Autowired private SuperAdminService superAdminService;
     @Autowired private UserRepository userRepository;
     @Autowired private EmailVerificationRepository emailVerificationRepository;
+    @Autowired private SchoolFeatureRepository schoolFeatureRepository;
+    @Autowired private CurrentUserUtil currentUserUtil;
 
     /**
      * Extracts the schoolId from JWT claims stored in auth details by JwtFilter.
@@ -231,5 +237,47 @@ public class SuperAdminController {
     public ResponseEntity<ApiResponse<String>> deleteSchool(@PathVariable Long id) {
         ApiResponse<String> response = superAdminService.deleteSchool(id);
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
+    }
+
+    // ── Feature Flag Management (APPLICATION_OWNER only) ──────────────────────
+
+    /** GET /api/superadmin/schools/{schoolId}/features — list all feature flags for a school. */
+    @GetMapping("/schools/{schoolId}/features")
+    @PreAuthorize("hasRole('APPLICATION_OWNER')")
+    public ResponseEntity<ApiResponse<List<SchoolFeature>>> getSchoolFeatures(@PathVariable Long schoolId) {
+        List<SchoolFeature> features = schoolFeatureRepository.findByIdSchoolId(schoolId);
+        return ResponseEntity.ok(ApiResponse.success("Features", features));
+    }
+
+    /** PUT /api/superadmin/schools/{schoolId}/features/{featureKey} — enable or disable a feature for a school. */
+    @PutMapping("/schools/{schoolId}/features/{featureKey}")
+    @PreAuthorize("hasRole('APPLICATION_OWNER')")
+    public ResponseEntity<ApiResponse<SchoolFeature>> setSchoolFeature(
+            @PathVariable Long schoolId,
+            @PathVariable String featureKey,
+            @RequestBody Map<String, Object> body,
+            Authentication auth) {
+
+        boolean enabled = Boolean.TRUE.equals(body.get("enabled"));
+        String notes = body.get("notes") instanceof String ? (String) body.get("notes") : "";
+        Long ownerUserId = currentUserUtil.getCurrentUserId(auth);
+
+        SchoolFeatureId id = new SchoolFeatureId();
+        id.setSchoolId(schoolId);
+        id.setFeatureKey(featureKey);
+
+        SchoolFeature feature = schoolFeatureRepository.findById(id).orElseGet(() -> {
+            SchoolFeature f = new SchoolFeature();
+            f.setId(id);
+            return f;
+        });
+        feature.setEnabled(enabled);
+        feature.setEnabledBy(ownerUserId);
+        feature.setEnabledAt(enabled ? java.time.LocalDateTime.now() : null);
+        feature.setNotes(notes);
+        schoolFeatureRepository.save(feature);
+
+        return ResponseEntity.ok(ApiResponse.success(
+                "Feature " + featureKey + " " + (enabled ? "enabled" : "disabled"), feature));
     }
 }

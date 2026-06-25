@@ -52,6 +52,9 @@ public interface FeePaymentRepository extends JpaRepository<FeePayment, Long> {
     List<Object[]> sumMonthlyBySchoolAndYear(@Param("schoolId") Long schoolId, @Param("year") int year);
 
     @Modifying @Transactional
+    void deleteByAssignmentId(Long assignmentId);
+
+    @Modifying @Transactional
     void deleteByStudentId(Long studentId);
 
     @Modifying @Transactional

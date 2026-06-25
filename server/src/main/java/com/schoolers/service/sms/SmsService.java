@@ -316,7 +316,14 @@ public class SmsService {
             }
         }
         Page<SmsLog> result = logRepository.findByFilters(schoolId, statusEnum, from, to, search != null ? search : "", PageRequest.of(page, size));
+        // Mask phone numbers before returning to caller
+        result.forEach(entry -> entry.setRecipientPhone(maskPhone(entry.getRecipientPhone())));
         return ApiResponse.success(result);
+    }
+
+    private String maskPhone(String phone) {
+        if (phone == null || phone.length() < 6) return "***";
+        return phone.substring(0, phone.length() - 6) + "XXXXXX";
     }
 
     /** Dashboard aggregates: today/month volumes, status breakdown, queue depth, recent campaigns. */

@@ -16,4 +16,8 @@ public interface ExamTypeRepository extends JpaRepository<ExamType, Long> {
     boolean existsBySchoolIdAndNameIgnoreCase(Long schoolId, String name);
 
     void deleteBySchoolId(Long schoolId);
+
+    java.util.Optional<ExamType> findByNameIgnoreCaseAndSchoolId(String name, Long schoolId);
+
+    java.util.Optional<ExamType> findByIdAndSchoolId(Long id, Long schoolId);
 }

@@ -104,22 +104,27 @@ public class User {
     @Column(name = "school_id")
     private Long schoolId;
 
+    @JsonIgnore
     @Column(name = "reset_otp", length = 64)
     private String resetOtp;
 
+    @JsonIgnore
     @Column(name = "otp_expiry")
     private LocalDateTime otpExpiry;
 
     /** Consecutive failed password attempts since last successful login. */
+    @JsonIgnore
     @Column(name = "failed_login_attempts")
     @Builder.Default
     private Integer failedLoginAttempts = 0;
 
     /** Account is locked until this timestamp (UTC). Null means not locked. */
+    @JsonIgnore
     @Column(name = "locked_until")
     private LocalDateTime lockedUntil;
 
     /** Expo push notification token for the mobile app. Null if not registered or unsubscribed. */
+    @JsonIgnore
     @Column(name = "push_token", length = 255)
     private String pushToken;
 

@@ -84,11 +84,28 @@ public class AdminService {
     /**
      * Returns true when a school-scoped admin is trying to access an entity
      * from a different school (or an entity with no school assigned at all).
-     * Platform-level SUPER_ADMINs (authSchoolId == null) always pass through.
+     * Platform-level APPLICATION_OWNERs (authSchoolId == null) always pass through
+     * but every such bypass is recorded in the audit log.
      */
     private boolean schoolMismatch(Long authSchoolId, Long entitySchoolId) {
-        if (authSchoolId == null) return false;
+        if (authSchoolId == null) {
+            // APPLICATION_OWNER cross-school operation — always audit, never block
+            auditLogService.log(null, "APPLICATION_OWNER", "APPLICATION_OWNER", entitySchoolId,
+                    "CROSS_SCHOOL_ACCESS", "Entity", entitySchoolId,
+                    "APPLICATION_OWNER bypassed school isolation to access entity in schoolId=" + entitySchoolId,
+                    null);
+            return false;
+        }
         return !authSchoolId.equals(entitySchoolId);
+    }
+
+    private StudentFeeAssignment.Status deriveStatus(BigDecimal paid, BigDecimal total) {
+        if (paid == null) paid = BigDecimal.ZERO;
+        if (total == null || total.compareTo(BigDecimal.ZERO) == 0) return StudentFeeAssignment.Status.PENDING;
+        int cmp = paid.compareTo(total);
+        if (cmp >= 0) return StudentFeeAssignment.Status.PAID;
+        if (paid.compareTo(BigDecimal.ZERO) > 0) return StudentFeeAssignment.Status.PARTIAL;
+        return StudentFeeAssignment.Status.PENDING;
     }
 
     private void cleanupOrphanUser(com.schoolers.model.User user) {
@@ -963,6 +980,7 @@ public class AdminService {
         }
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public ApiResponse<Teacher> updateTeacher(Long id, CreateTeacherRequest req) {
         return teacherRepository.findById(id)
                 .map(teacher -> {
@@ -1395,6 +1413,9 @@ public class AdminService {
         // ── Step 4: Delete the classroom row ──────────────────────────────────
         classRoomRepository.deleteById(id);
         log.info("[deleteClass] COMPLETE — classId=" + id + " (" + classSection + ")");
+        List<Long> deletedStudentIds = students.stream().map(Student::getId).collect(Collectors.toList());
+        auditLogService.log(null, "SYSTEM", "ADMIN", schoolId, "DELETE", "ClassRoom", id,
+                "Deleted class " + classSection + " with " + students.size() + " students: " + deletedStudentIds, null);
         return ApiResponse.success("Class and all related data deleted", "Deleted");
     }
 
@@ -1629,6 +1650,8 @@ public class AdminService {
                             fee.setStatus(Fee.Status.PAID);
                         } else if (paid.compareTo(BigDecimal.ZERO) > 0) {
                             fee.setStatus(Fee.Status.PARTIAL);
+                        } else {
+                            fee.setStatus(Fee.Status.PENDING);
                         }
                     }
                     if (body.containsKey("status")) {
@@ -1648,7 +1671,9 @@ public class AdminService {
                     }
                     if (body.containsKey("paidDate") && body.get("paidDate") != null) {
                         try { fee.setPaidDate(java.time.LocalDate.parse(str(body, "paidDate", null))); }
-                        catch (Exception ignored) {}
+                        catch (Exception e) {
+                            return ApiResponse.error("Invalid payment date format. Use YYYY-MM-DD.");
+                        }
                     }
                     if (body.containsKey("paymentMethod")) fee.setPaymentMethod(str(body, "paymentMethod", fee.getPaymentMethod()));
                     if (body.containsKey("transactionId")) fee.setTransactionId(str(body, "transactionId", fee.getTransactionId()));
@@ -1663,6 +1688,8 @@ public class AdminService {
         if (fee == null) return ApiResponse.error("Fee record not found");
         if (schoolMismatch(schoolId, fee.getSchoolId()))
             return ApiResponse.error("Fee record not found");
+        auditLogService.log(null, "SYSTEM", "ADMIN", schoolId, "DELETE", "Fee", id,
+                "Deleted fee record id=" + id, null);
         feeRepository.deleteById(id);
         return ApiResponse.success("Fee record deleted", "Deleted");
     }
@@ -1754,8 +1781,8 @@ public class AdminService {
                 entry.put("amount", amount);
                 termFees.add(entry);
             }
-            if (!termFees.isEmpty() && termTotal.compareTo(annualTotal) > 0) {
-                return ApiResponse.error("Term-wise fee total (₹" + termTotal + ") cannot exceed the Total Annual Fee (₹" + annualTotal + ")");
+            if (!termFees.isEmpty() && termTotal.compareTo(annualTotal) != 0) {
+                return ApiResponse.error("Term-wise fee total (₹" + termTotal + ") must equal the Total Annual Fee (₹" + annualTotal + ")");
             }
         }
         cfs.setTermFees(termFees);
@@ -1792,9 +1819,7 @@ public class AdminService {
                 assignment.setTotalFee(totalFee);
 
                 BigDecimal paid = assignment.getPaidAmount() != null ? assignment.getPaidAmount() : BigDecimal.ZERO;
-                if (paid.compareTo(totalFee) >= 0)             assignment.setStatus(StudentFeeAssignment.Status.PAID);
-                else if (paid.compareTo(BigDecimal.ZERO) > 0)  assignment.setStatus(StudentFeeAssignment.Status.PARTIAL);
-                else                                            assignment.setStatus(StudentFeeAssignment.Status.PENDING);
+                assignment.setStatus(deriveStatus(paid, totalFee));
 
                 toSave.add(assignment);
             }
@@ -1820,6 +1845,8 @@ public class AdminService {
         if (cfs == null) return ApiResponse.error("Fee structure not found");
         if (schoolMismatch(schoolId, cfs.getSchoolId()))
             return ApiResponse.error("Fee structure not found");
+        auditLogService.log(null, "SYSTEM", "ADMIN", schoolId, "DELETE", "ClassFeeStructure", id,
+                "Deleted fee structure id=" + id + " class=" + cfs.getClassName(), null);
         classFeeStructureRepository.deleteById(id);
         return ApiResponse.success("Fee structure deleted", "Deleted");
     }
@@ -1909,6 +1936,10 @@ public class AdminService {
             if (student == null || schoolMismatch(schoolId, student.getSchoolId()))
                 return ApiResponse.error("Unauthorized");
         }
+        auditLogService.log(null, "SYSTEM", "ADMIN", schoolId, "DELETE", "StudentFeeAssignment", id,
+                "Deleted fee assignment id=" + id + " studentId=" + assignment.getStudentId(), null);
+        feeInstallmentRepository.deleteByAssignmentId(id);
+        feePaymentRepository.deleteByAssignmentId(id);
         studentFeeAssignmentRepository.deleteById(id);
         return ApiResponse.success("Fee assignment deleted successfully");
     }
@@ -1948,7 +1979,7 @@ public class AdminService {
             if (academicYear == null || academicYear.isBlank()) academicYear = currentAcademicYear();
 
             StudentFeeAssignment assignment = studentFeeAssignmentRepository
-                    .findByStudentIdAndAcademicYear(studentId, academicYear)
+                    .findByStudentIdAndAcademicYearAndSchoolId(studentId, academicYear, student.getSchoolId())
                     .orElse(StudentFeeAssignment.builder()
                             .studentId(studentId)
                             .academicYear(academicYear)
@@ -1987,9 +2018,7 @@ public class AdminService {
 
             // Recalculate status
             BigDecimal paid = assignment.getPaidAmount() != null ? assignment.getPaidAmount() : BigDecimal.ZERO;
-            if (paid.compareTo(totalFee) >= 0) assignment.setStatus(StudentFeeAssignment.Status.PAID);
-            else if (paid.compareTo(BigDecimal.ZERO) > 0) assignment.setStatus(StudentFeeAssignment.Status.PARTIAL);
-            else assignment.setStatus(StudentFeeAssignment.Status.PENDING);
+            assignment.setStatus(deriveStatus(paid, totalFee));
 
             StudentFeeAssignment saved = studentFeeAssignmentRepository.save(assignment);
 
@@ -2092,8 +2121,7 @@ public class AdminService {
 
         BigDecimal newPaid = currentPaid.add(amountPaid);
         assignment.setPaidAmount(newPaid);
-        if (newPaid.compareTo(assignment.getTotalFee()) >= 0) assignment.setStatus(StudentFeeAssignment.Status.PAID);
-        else assignment.setStatus(StudentFeeAssignment.Status.PARTIAL);
+        assignment.setStatus(deriveStatus(newPaid, assignment.getTotalFee()));
 
         StudentFeeAssignment saved = studentFeeAssignmentRepository.save(assignment);
 
@@ -2231,8 +2259,7 @@ public class AdminService {
         BigDecimal currentPaid = assignment.getPaidAmount() != null ? assignment.getPaidAmount() : BigDecimal.ZERO;
         BigDecimal newPaid = currentPaid.add(amountPaid);
         assignment.setPaidAmount(newPaid);
-        if (newPaid.compareTo(assignment.getTotalFee()) >= 0) assignment.setStatus(StudentFeeAssignment.Status.PAID);
-        else assignment.setStatus(StudentFeeAssignment.Status.PARTIAL);
+        assignment.setStatus(deriveStatus(newPaid, assignment.getTotalFee()));
         studentFeeAssignmentRepository.save(assignment);
 
         // Record in fee_payments table
@@ -2268,8 +2295,10 @@ public class AdminService {
     public ApiResponse<Map<String, Object>> getStudentFeeData(Long studentId) {
         Map<String, Object> result = new LinkedHashMap<>();
 
+        String currentYear = currentAcademicYear();
         StudentFeeAssignment assignment = studentFeeAssignmentRepository
-                .findFirstByStudentIdOrderByCreatedAtDesc(studentId).orElse(null);
+                .findFirstByStudentIdAndAcademicYearOrderByCreatedAtDesc(studentId, currentYear)
+                .orElse(null);
 
         // Read-only endpoint — no auto-creation; admin must explicitly assign fees
 
@@ -2651,10 +2680,12 @@ public class AdminService {
             long count    = ((Number) row[2]).longValue();
             long[] counts = countsByClassId.computeIfAbsent(classId, k -> new long[4]);
             switch (status) {
-                case "PRESENT" -> counts[0] += count;
-                case "ABSENT"  -> counts[1] += count;
-                case "LEAVE"   -> counts[2] += count;
-                case "OTHERS"  -> counts[3] += count;
+                case "PRESENT"  -> counts[0] += count;
+                case "ABSENT"   -> counts[1] += count;
+                case "LEAVE"    -> counts[2] += count;
+                case "LATE"     -> counts[3] += count;
+                case "HOLIDAY"  -> counts[3] += count;
+                case "OTHERS"   -> counts[3] += count;
             }
         }
 
@@ -2700,10 +2731,12 @@ public class AdminService {
                         String status = row[0].toString();
                         long count    = ((Number) row[1]).longValue();
                         switch (status) {
-                            case "PRESENT" -> present += count;
-                            case "ABSENT"  -> absent  += count;
-                            case "LEAVE"   -> leave   += count;
-                            case "OTHERS"  -> others  += count;
+                            case "PRESENT"  -> present += count;
+                            case "ABSENT"   -> absent  += count;
+                            case "LEAVE"    -> leave   += count;
+                            case "LATE"     -> others  += count;
+                            case "HOLIDAY"  -> others  += count;
+                            case "OTHERS"   -> others  += count;
                         }
                     }
 

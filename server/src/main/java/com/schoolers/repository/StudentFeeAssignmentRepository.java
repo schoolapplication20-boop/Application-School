@@ -16,6 +16,7 @@ import java.util.Optional;
 public interface StudentFeeAssignmentRepository extends JpaRepository<StudentFeeAssignment, Long> {
     Optional<StudentFeeAssignment> findByStudentIdAndAcademicYear(Long studentId, String academicYear);
     Optional<StudentFeeAssignment> findFirstByStudentIdOrderByCreatedAtDesc(Long studentId);
+    Optional<StudentFeeAssignment> findFirstByStudentIdAndAcademicYearOrderByCreatedAtDesc(Long studentId, String academicYear);
     List<StudentFeeAssignment> findByStudentId(Long studentId);
     List<StudentFeeAssignment> findByStudentIdIn(List<Long> studentIds);
     List<StudentFeeAssignment> findAllByOrderByCreatedAtDesc();

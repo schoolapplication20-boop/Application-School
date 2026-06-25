@@ -5,6 +5,7 @@ import com.schoolers.dto.CreateTeacherRequest;
 import com.schoolers.model.*;
 import com.schoolers.repository.EmailVerificationRepository;
 import com.schoolers.repository.IdempotencyKeyRepository;
+import com.schoolers.repository.SchoolDiaryConfigRepository;
 import com.schoolers.repository.UserRepository;
 import com.schoolers.service.AdminService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -32,6 +33,8 @@ public class AdminController {
     @Autowired private EmailVerificationRepository emailVerificationRepository;
     @Autowired private com.schoolers.repository.StudentFeeAssignmentRepository feeAssignmentRepository;
     @Autowired private com.schoolers.repository.SchoolRepository schoolRepository;
+    @Autowired private SchoolDiaryConfigRepository schoolDiaryConfigRepository;
+    @Autowired private com.schoolers.repository.SchoolAuthConfigRepository schoolAuthConfigRepository;
 
     private static final java.util.regex.Pattern EMAIL_RE =
             java.util.regex.Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
@@ -563,6 +566,46 @@ public class AdminController {
         if (date == null) date = LocalDate.now();
         ApiResponse<Map<String, Object>> response = adminService.getClassAttendanceDetails(classId, date, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
+    }
+
+    // ===== Auth Config =====
+
+    @GetMapping("/auth-config")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','APPLICATION_OWNER')")
+    public ResponseEntity<?> getAuthConfig(Authentication auth) {
+        Long schoolId = getCurrentSchoolId(auth);
+        SchoolAuthConfig config = schoolAuthConfigRepository.findBySchoolId(schoolId)
+            .orElseGet(() -> { SchoolAuthConfig d = new SchoolAuthConfig(); d.setSchoolId(schoolId); return d; });
+        return ResponseEntity.ok(ApiResponse.success("Auth config retrieved", config));
+    }
+
+    @PutMapping("/auth-config")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPLICATION_OWNER')")
+    public ResponseEntity<?> updateAuthConfig(@RequestBody SchoolAuthConfig config, Authentication auth) {
+        Long schoolId = getCurrentSchoolId(auth);
+        config.setSchoolId(schoolId);
+        SchoolAuthConfig saved = schoolAuthConfigRepository.save(config);
+        return ResponseEntity.ok(ApiResponse.success("Auth config updated", saved));
+    }
+
+    // ===== Diary Config =====
+
+    @GetMapping("/diary-config")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','APPLICATION_OWNER')")
+    public ResponseEntity<?> getDiaryConfig(Authentication auth) {
+        Long schoolId = getCurrentSchoolId(auth);
+        SchoolDiaryConfig cfg = schoolDiaryConfigRepository.findBySchoolId(schoolId)
+            .orElseGet(() -> { SchoolDiaryConfig d = new SchoolDiaryConfig(); d.setSchoolId(schoolId); return d; });
+        return ResponseEntity.ok(ApiResponse.success("Diary config", cfg));
+    }
+
+    @PutMapping("/diary-config")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPLICATION_OWNER')")
+    public ResponseEntity<?> updateDiaryConfig(@RequestBody SchoolDiaryConfig config, Authentication auth) {
+        Long schoolId = getCurrentSchoolId(auth);
+        config.setSchoolId(schoolId);
+        SchoolDiaryConfig saved = schoolDiaryConfigRepository.save(config);
+        return ResponseEntity.ok(ApiResponse.success("Diary config updated", saved));
     }
 
 }

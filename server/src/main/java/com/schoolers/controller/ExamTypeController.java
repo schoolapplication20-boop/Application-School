@@ -11,6 +11,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -110,5 +111,42 @@ public class ExamTypeController {
         if (!et.getSchoolId().equals(sid)) return ResponseEntity.status(403).body(ApiResponse.error("Unauthorized"));
         examTypeRepository.delete(et);
         return ResponseEntity.ok(ApiResponse.success("Deleted"));
+    }
+
+    /** Lock marks for an exam type — prevents further edits */
+    @PostMapping("/api/admin/exam-types/{id}/lock")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
+    public ResponseEntity<?> lockMarks(@PathVariable Long id, Authentication auth) {
+        Long sid = schoolId(auth);
+        ExamType et = examTypeRepository.findByIdAndSchoolId(id, sid)
+            .orElseThrow(() -> new RuntimeException("Exam type not found"));
+        et.setMarksLockedAt(LocalDateTime.now());
+        examTypeRepository.save(et);
+        return ResponseEntity.ok(ApiResponse.success("Marks locked for " + et.getName(), null));
+    }
+
+    /** Unlock marks — audited action */
+    @PostMapping("/api/admin/exam-types/{id}/unlock")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
+    public ResponseEntity<?> unlockMarks(@PathVariable Long id, Authentication auth) {
+        Long sid = schoolId(auth);
+        ExamType et = examTypeRepository.findByIdAndSchoolId(id, sid)
+            .orElseThrow(() -> new RuntimeException("Exam type not found"));
+        et.setMarksLockedAt(null);
+        examTypeRepository.save(et);
+        return ResponseEntity.ok(ApiResponse.success("Marks unlocked for " + et.getName(), null));
+    }
+
+    /** Publish marks — students can now see results */
+    @PostMapping("/api/admin/exam-types/{id}/publish")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
+    public ResponseEntity<?> publishMarks(@PathVariable Long id, Authentication auth) {
+        Long sid = schoolId(auth);
+        ExamType et = examTypeRepository.findByIdAndSchoolId(id, sid)
+            .orElseThrow(() -> new RuntimeException("Exam type not found"));
+        et.setMarksPublished(true);
+        if (et.getMarksLockedAt() == null) et.setMarksLockedAt(LocalDateTime.now()); // auto-lock on publish
+        examTypeRepository.save(et);
+        return ResponseEntity.ok(ApiResponse.success("Marks published for " + et.getName(), null));
     }
 }

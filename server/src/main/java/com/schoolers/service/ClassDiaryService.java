@@ -2,8 +2,11 @@ package com.schoolers.service;
 
 import com.schoolers.dto.ApiResponse;
 import com.schoolers.model.ClassDiary;
+import com.schoolers.model.SchoolDiaryConfig;
 import com.schoolers.repository.ClassDiaryRepository;
+import com.schoolers.repository.SchoolDiaryConfigRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -16,6 +19,9 @@ public class ClassDiaryService {
 
     @Autowired
     private ClassDiaryRepository diaryRepository;
+
+    @Autowired
+    private SchoolDiaryConfigRepository schoolDiaryConfigRepository;
 
     public ApiResponse<List<ClassDiary>> getAll(String className, Long teacherId, String date, Long schoolId) {
         LocalDate parsedDate = parseDate(date);
@@ -87,6 +93,21 @@ public class ClassDiaryService {
         if (description != null && description.length() > 2000) return ApiResponse.error("Description cannot exceed 2000 characters");
 
         Long schoolId = longVal(body, "schoolId", null);
+        Long currentUserId = longVal(body, "currentUserId", null);
+
+        // Diary mode enforcement
+        SchoolDiaryConfig diaryCfg = (schoolId != null)
+            ? schoolDiaryConfigRepository.findBySchoolId(schoolId).orElseGet(SchoolDiaryConfig::new)
+            : new SchoolDiaryConfig();
+
+        String mode = diaryCfg.getDiaryMode();
+        if ("COORDINATOR".equals(mode)) {
+            Long coordinatorId = diaryCfg.getCoordinatorUserId();
+            if (coordinatorId == null || !coordinatorId.equals(currentUserId)) {
+                throw new AccessDeniedException("Only the designated Diary Coordinator can create diary entries for this school.");
+            }
+        }
+        // CLASS_TEACHER, SUBJECT_TEACHER, HYBRID: existing class-assignment validation continues
 
         // Duplicate check: same teacher + class + subject + date (school-scoped when available)
         boolean exists = (schoolId != null)

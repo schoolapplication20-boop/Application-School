@@ -8,7 +8,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -27,42 +26,45 @@ public class AppNotificationController {
     @Autowired
     private com.schoolers.repository.UserRepository userRepository;
 
-    private boolean isOwnerOrAdmin(Long userId, Authentication auth) {
-        if (auth == null) return false;
-        var userOpt = userRepository.findByEmailIgnoreCase(auth.getName());
-        if (userOpt.isEmpty()) return false;
-        var u = userOpt.get();
-        return u.getId().equals(userId) || u.getRole().name().equals("SUPER_ADMIN") || u.getRole().name().equals("ADMIN");
+    private com.schoolers.model.User resolveCallerUser(Authentication auth) {
+        if (auth == null) return null;
+        return userRepository.findByEmailIgnoreCase(auth.getName()).orElse(null);
+    }
+
+    private boolean isAdminRole(com.schoolers.model.User u) {
+        return u.getRole().name().equals("SUPER_ADMIN") || u.getRole().name().equals("ADMIN");
     }
 
     /** Fetch all notifications for a user (newest first). */
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER')")
-    public ResponseEntity<ApiResponse<List<AppNotification>>> getForUser(@RequestParam Long userId) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (!isOwnerOrAdmin(userId, auth)) {
-            return ResponseEntity.status(403).body(ApiResponse.error("Access denied."));
-        }
-        return ResponseEntity.ok(notificationService.getForUser(userId));
+    public ResponseEntity<ApiResponse<List<AppNotification>>> getForUser(Authentication auth) {
+        com.schoolers.model.User caller = resolveCallerUser(auth);
+        if (caller == null) return ResponseEntity.status(401).body(ApiResponse.error("Unauthorized."));
+        // userId is always derived from the JWT — callers cannot impersonate others
+        return ResponseEntity.ok(notificationService.getForUser(caller.getId()));
     }
 
     /** Unread count badge. */
     @GetMapping("/unread-count")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER')")
-    public ResponseEntity<?> getUnreadCount(@RequestParam Long userId, Authentication auth) {
-        if (!isOwnerOrAdmin(userId, auth)) {
-            return ResponseEntity.status(403).body(ApiResponse.error("Access denied."));
-        }
-        return ResponseEntity.ok(Map.of("count", notificationService.getUnreadCount(userId)));
+    public ResponseEntity<?> getUnreadCount(Authentication auth) {
+        com.schoolers.model.User caller = resolveCallerUser(auth);
+        if (caller == null) return ResponseEntity.status(401).body(ApiResponse.error("Unauthorized."));
+        // userId is always derived from the JWT — callers cannot impersonate others
+        return ResponseEntity.ok(Map.of("count", notificationService.getUnreadCount(caller.getId())));
     }
 
     /** Mark a single notification as read. */
     @PatchMapping("/{id}/read")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER')")
     public ResponseEntity<?> markRead(@PathVariable Long id, Authentication auth) {
+        com.schoolers.model.User caller = resolveCallerUser(auth);
+        if (caller == null) return ResponseEntity.status(401).body(ApiResponse.error("Unauthorized."));
         AppNotification notification = notificationRepository.findById(id).orElse(null);
         if (notification == null) return ResponseEntity.notFound().build();
-        if (!isOwnerOrAdmin(notification.getUserId(), auth)) {
+        // Only the owning user or an admin can mark a notification as read
+        if (!caller.getId().equals(notification.getUserId()) && !isAdminRole(caller)) {
             return ResponseEntity.status(403).body(ApiResponse.error("Access denied."));
         }
         var result = notificationService.markRead(id);
@@ -72,21 +74,23 @@ public class AppNotificationController {
     /** Mark all notifications for a user as read. */
     @PatchMapping("/read-all")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER')")
-    public ResponseEntity<ApiResponse<String>> markAllRead(@RequestParam Long userId) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (!isOwnerOrAdmin(userId, auth)) {
-            return ResponseEntity.status(403).body(ApiResponse.error("Access denied."));
-        }
-        return ResponseEntity.ok(notificationService.markAllRead(userId));
+    public ResponseEntity<ApiResponse<String>> markAllRead(Authentication auth) {
+        com.schoolers.model.User caller = resolveCallerUser(auth);
+        if (caller == null) return ResponseEntity.status(401).body(ApiResponse.error("Unauthorized."));
+        // userId is always derived from the JWT — callers cannot impersonate others
+        return ResponseEntity.ok(notificationService.markAllRead(caller.getId()));
     }
 
     /** Delete a single notification. */
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'TEACHER')")
     public ResponseEntity<?> delete(@PathVariable Long id, Authentication auth) {
+        com.schoolers.model.User caller = resolveCallerUser(auth);
+        if (caller == null) return ResponseEntity.status(401).body(ApiResponse.error("Unauthorized."));
         AppNotification notification = notificationRepository.findById(id).orElse(null);
         if (notification == null) return ResponseEntity.notFound().build();
-        if (!isOwnerOrAdmin(notification.getUserId(), auth)) {
+        // Only the owning user or an admin can delete a notification
+        if (!caller.getId().equals(notification.getUserId()) && !isAdminRole(caller)) {
             return ResponseEntity.status(403).body(ApiResponse.error("Access denied."));
         }
         var result = notificationService.delete(id);

@@ -301,7 +301,12 @@ public class ExaminationService {
         return ApiResponse.success("Certificate verified", certificateRepository.save(cert));
     }
 
-    public ApiResponse<Certificate> findByCertificateId(String certId) {
+    public ApiResponse<Certificate> findByCertificateId(String certId, Long schoolId) {
+        if (schoolId != null) {
+            return certificateRepository.findByCertificateIdAndSchoolId(certId, schoolId)
+                    .map(c -> ApiResponse.success("Certificate found", c))
+                    .orElse(ApiResponse.error("Certificate not found"));
+        }
         return certificateRepository.findByCertificateId(certId)
                 .map(c -> ApiResponse.success("Certificate found", c))
                 .orElse(ApiResponse.error("Certificate not found"));

@@ -4,7 +4,11 @@ import com.schoolers.dto.ApiResponse;
 import com.schoolers.dto.LoginRequest;
 import com.schoolers.dto.LoginResponse;
 import com.schoolers.model.EmailVerification;
+import com.schoolers.model.School;
+import com.schoolers.model.SchoolAuthConfig;
 import com.schoolers.repository.EmailVerificationRepository;
+import com.schoolers.repository.SchoolAuthConfigRepository;
+import com.schoolers.repository.SchoolRepository;
 import com.schoolers.repository.UserRepository;
 import com.schoolers.security.JwtUtil;
 import com.schoolers.service.AuthService;
@@ -36,6 +40,8 @@ public class AuthController {
     @Autowired private EmailService emailService;
     @Autowired private EmailVerificationRepository emailVerificationRepository;
     @Autowired private UserRepository userRepository;
+    @Autowired private SchoolRepository schoolRepository;
+    @Autowired private SchoolAuthConfigRepository schoolAuthConfigRepository;
 
     private static final Pattern EMAIL_RE =
             Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
@@ -298,5 +304,22 @@ public class AuthController {
         ApiResponse<String> response = authService.setFirstPassword(email, currentPassword, newPassword);
         if (response.isSuccess()) return ResponseEntity.ok(response);
         return ResponseEntity.status(400).body(response);
+    }
+
+    /** Public endpoint — returns auth configuration for a school by its code.
+     *  Used by the login page to determine available login methods before the user authenticates. */
+    @GetMapping("/school-config/{schoolCode}")
+    public ResponseEntity<?> getSchoolAuthConfig(@PathVariable String schoolCode) {
+        School school = schoolRepository.findByCode(schoolCode).orElse(null);
+        if (school == null) {
+            java.util.Map<String, Object> defaults = new java.util.HashMap<>();
+            defaults.put("studentLoginMethod", "EMAIL_OR_ADMISSION");
+            defaults.put("emailMandatoryStudents", true);
+            defaults.put("forgotPasswordMethod", "EMAIL_OTP");
+            return ResponseEntity.ok(ApiResponse.success("Default config", defaults));
+        }
+        SchoolAuthConfig config = schoolAuthConfigRepository.findBySchoolId(school.getId())
+            .orElseGet(() -> { SchoolAuthConfig d = new SchoolAuthConfig(); d.setSchoolId(school.getId()); return d; });
+        return ResponseEntity.ok(ApiResponse.success("School auth config", config));
     }
 }

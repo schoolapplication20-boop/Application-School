@@ -10,7 +10,6 @@ const todayStr = () => {
   const d = new Date();
   return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }); // en-CA gives YYYY-MM-DD
 };
-const escHtml = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');
 const fmt = (n) => Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const genReceipt = () => `RCP-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2,6).toUpperCase()}`;
 const isOverdue = (dueDateStr) => dueDateStr && new Date(dueDateStr) < new Date(todayStr());
@@ -67,6 +66,7 @@ export default function CollectFee() {
   const [receiptData, setReceiptData]   = useState(null);
 
   const searchRef                       = useRef(null);
+  const abortControllerRef             = useRef(null);
 
   const showToast = useToast();
 
@@ -129,12 +129,21 @@ export default function CollectFee() {
     if (filterClass) { setSuggestions([]); setShowDrop(false); return; }
     if (!query || query.length < 2) { setSuggestions([]); setShowDrop(false); return; }
     const t = setTimeout(async () => {
+      if (abortControllerRef.current) abortControllerRef.current.abort();
+      abortControllerRef.current = new AbortController();
+      const signal = abortControllerRef.current.signal;
       setSearching(true);
       try {
-        const res = await adminAPI.searchStudentsForFee(query, '');
+        const res = await adminAPI.searchStudentsForFee(query, '', undefined, { signal });
         setSuggestions(res.data?.data ?? []);
         setShowDrop(true);
-      } catch { } finally { setSearching(false); }
+      } catch (err) {
+        if (err.name !== 'AbortError' && err.name !== 'CanceledError') {
+          setSuggestions([]);
+        }
+      } finally {
+        if (!signal.aborted) setSearching(false);
+      }
     }, 300);
     return () => clearTimeout(t);
   }, [query, filterClass]);
@@ -266,77 +275,13 @@ export default function CollectFee() {
   /* ── print receipt ── */
   const printReceipt = () => {
     if (!receiptData) return;
-    const w = window.open('', '_blank');
-    const d = receiptData;
-    const schoolName = school?.name || 'School Management System';
-    const rawLogo    = school?.logoUrl;
-    const logoSrc    = rawLogo
-      ? (rawLogo.startsWith('http') ? rawLogo : `${BASE_URL}${rawLogo}`) + `?v=${logoVersion}`
-      : null;
-    const safeSchoolName = escHtml(schoolName);
-    const safeLogoSrc    = logoSrc ? escHtml(logoSrc) : null;
-    const headerHtml = safeLogoSrc
-      ? `<div class="school-header">
-           <img src="${safeLogoSrc}" class="school-logo" alt="${safeSchoolName}" onerror="this.style.display='none'" />
-           <div class="school-name">${safeSchoolName}</div>
-         </div>`
-      : `<div class="school-name">${safeSchoolName}</div>`;
-    w.document.write(`
-      <!DOCTYPE html><html><head><title>Fee Receipt</title>
-      <style>
-        * { margin:0;padding:0;box-sizing:border-box; }
-        body { font-family: 'Arial', sans-serif; padding: 30px; color: #1a202c; }
-        .school-header { display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:4px; }
-        .school-logo { width:52px; height:52px; object-fit:contain; }
-        .school-name { font-size:22px; font-weight:800; color:#276749; text-align:center; }
-        .receipt-title { font-size:15px; font-weight:600; text-align:center; color:#718096; margin:4px 0 20px; }
-        .divider { border:none; border-top:2px solid var(--border-strong); margin:14px 0; }
-        .dashed { border-top:1px dashed #a0aec0; margin:14px 0; }
-        .row { display:flex; justify-content:space-between; margin-bottom:8px; font-size:14px; }
-        .label { color:#718096; }
-        .value { font-weight:600; color:#1a202c; }
-        .amount-box { background:#f0fff4; border:2px solid #0de1e8; border-radius:8px; padding:14px 20px; margin:16px 0; text-align:center; }
-        .amount-label { font-size:12px; color:#276749; text-transform:uppercase; letter-spacing:0.05em; }
-        .amount-value { font-size:30px; font-weight:800; color:#276749; }
-        .watermark { font-size:50px; font-weight:900; color:#0de1e820; text-align:center; margin:10px 0; letter-spacing:8px; text-transform:uppercase; }
-        .footer { margin-top:30px; display:flex; justify-content:space-between; font-size:12px; color:#718096; }
-        .sig-line { border-top:1px solid #2d3748; padding-top:6px; width:180px; font-size:11px; color:#718096; }
-        @media print { body { padding: 20px; } }
-      </style>
-      </head><body>
-      ${headerHtml}
-      <div class="receipt-title">Fee Payment Receipt</div>
-      <hr class="divider"/>
-      <div class="row"><span class="label">Receipt No.</span><span class="value" style="font-family:monospace">${escHtml(d.receiptNo)}</span></div>
-      <div class="row"><span class="label">Date</span><span class="value">${escHtml(d.date)}</span></div>
-      <hr class="dashed"/>
-      <div class="row"><span class="label">Student Name</span><span class="value">${escHtml(d.studentName)}</span></div>
-      <div class="row"><span class="label">Roll Number</span><span class="value">${escHtml(d.rollNo || '—')}</span></div>
-      <div class="row"><span class="label">Class</span><span class="value">${escHtml(d.className)}</span></div>
-      <hr class="dashed"/>
-      <div class="row"><span class="label">Total Assigned Fee</span><span class="value">₹${fmt(d.totalFee)}</span></div>
-      <div class="row"><span class="label">Previously Paid</span><span class="value">₹${fmt(Number(d.paidSoFar) - Number(d.amountPaid))}</span></div>
-      <div class="watermark">${String(d.status || '').toUpperCase() === 'PAID' ? 'PAID' : ''}</div>
-      <div class="amount-box">
-        <div class="amount-label">Amount Received (Cash)</div>
-        <div class="amount-value">₹${fmt(d.amountPaid)}</div>
-      </div>
-      <div class="row"><span class="label">Total Paid to Date</span><span class="value">₹${fmt(d.paidSoFar)}</span></div>
-      <div class="row"><span class="label">Balance Due</span><span class="value" style="color:${d.dueAmount > 0 ? '#e53e3e':'#276749'}">${d.dueAmount > 0 ? '₹'+fmt(d.dueAmount) : 'NIL'}</span></div>
-      <div class="row"><span class="label">Payment Mode</span><span class="value">${escHtml(d.paymentMode || 'Cash')}</span></div>
-      ${d.term ? `<div class="row"><span class="label">Term / Installment</span><span class="value" style="color:#2b6cb0;font-weight:700">${escHtml(d.term)}</span></div>` : ''}
-      ${d.remarks ? `<div class="row"><span class="label">Remarks</span><span class="value">${escHtml(d.remarks)}</span></div>` : ''}
-      <div class="footer">
-        <span>Generated: ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</span>
-        <div>
-          <div class="sig-line">Received By: ${escHtml(d.receivedBy)}</div>
-        </div>
-      </div>
-      </body></html>
-    `);
+    const printContents = document.getElementById('receipt-print-area').innerHTML;
+    const w = window.open('', '_blank', 'width=400,height=600');
+    w.document.write('<html><head><title>Receipt</title><style>body{font-family:sans-serif;padding:20px}@media print{body{padding:0}}</style></head><body>' + printContents + '</body></html>');
     w.document.close();
     w.focus();
-    setTimeout(() => { w.print(); }, 400);
+    w.print();
+    w.close();
   };
 
   const due = assignment ? Math.max(0, Number(assignment.totalFee || 0) - Number(assignment.paidAmount || 0)) : 0;
@@ -838,6 +783,96 @@ export default function CollectFee() {
           </div>
         )}
       </div>
+
+      {/* Hidden receipt area — rendered as React JSX; innerHTML is copied into the print popup */}
+      {receiptData && (() => {
+        const d = receiptData;
+        const schoolName = school?.name || 'School Management System';
+        const rawLogo    = school?.logoUrl;
+        const logoSrc    = rawLogo
+          ? (rawLogo.startsWith('http') ? rawLogo : `${BASE_URL}${rawLogo}`) + `?v=${logoVersion}`
+          : null;
+        return (
+          <div id="receipt-print-area" style={{ display: 'none' }}>
+            {logoSrc
+              ? <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 4 }}>
+                  <img src={logoSrc} style={{ width: 52, height: 52, objectFit: 'contain' }} alt={schoolName} />
+                  <div style={{ fontSize: 22, fontWeight: 800, color: '#276749' }}>{schoolName}</div>
+                </div>
+              : <div style={{ fontSize: 22, fontWeight: 800, color: '#276749', textAlign: 'center' }}>{schoolName}</div>
+            }
+            <div style={{ fontSize: 15, fontWeight: 600, textAlign: 'center', color: '#718096', margin: '4px 0 20px' }}>Fee Payment Receipt</div>
+            <hr style={{ border: 'none', borderTop: '2px solid #e2e8f0', margin: '14px 0' }} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 14 }}>
+              <span style={{ color: '#718096' }}>Receipt No.</span>
+              <span style={{ fontWeight: 600, fontFamily: 'monospace' }}>{d.receiptNo}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 14 }}>
+              <span style={{ color: '#718096' }}>Date</span>
+              <span style={{ fontWeight: 600 }}>{d.date}</span>
+            </div>
+            <hr style={{ borderTop: '1px dashed #a0aec0', margin: '14px 0' }} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 14 }}>
+              <span style={{ color: '#718096' }}>Student Name</span>
+              <span style={{ fontWeight: 600 }}>{d.studentName}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 14 }}>
+              <span style={{ color: '#718096' }}>Roll Number</span>
+              <span style={{ fontWeight: 600 }}>{d.rollNo || '—'}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 14 }}>
+              <span style={{ color: '#718096' }}>Class</span>
+              <span style={{ fontWeight: 600 }}>{d.className}</span>
+            </div>
+            <hr style={{ borderTop: '1px dashed #a0aec0', margin: '14px 0' }} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 14 }}>
+              <span style={{ color: '#718096' }}>Total Assigned Fee</span>
+              <span style={{ fontWeight: 600 }}>₹{fmt(d.totalFee)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 14 }}>
+              <span style={{ color: '#718096' }}>Previously Paid</span>
+              <span style={{ fontWeight: 600 }}>₹{fmt(Number(d.paidSoFar) - Number(d.amountPaid))}</span>
+            </div>
+            {String(d.status || '').toUpperCase() === 'PAID' && (
+              <div style={{ fontSize: 50, fontWeight: 900, color: '#0de1e820', textAlign: 'center', margin: '10px 0', letterSpacing: 8, textTransform: 'uppercase' }}>PAID</div>
+            )}
+            <div style={{ background: '#f0fff4', border: '2px solid #0de1e8', borderRadius: 8, padding: '14px 20px', margin: '16px 0', textAlign: 'center' }}>
+              <div style={{ fontSize: 12, color: '#276749', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Amount Received ({d.paymentMode || 'Cash'})</div>
+              <div style={{ fontSize: 30, fontWeight: 800, color: '#276749' }}>₹{fmt(d.amountPaid)}</div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 14 }}>
+              <span style={{ color: '#718096' }}>Total Paid to Date</span>
+              <span style={{ fontWeight: 600 }}>₹{fmt(d.paidSoFar)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 14 }}>
+              <span style={{ color: '#718096' }}>Balance Due</span>
+              <span style={{ fontWeight: 600, color: d.dueAmount > 0 ? '#e53e3e' : '#276749' }}>{d.dueAmount > 0 ? `₹${fmt(d.dueAmount)}` : 'NIL'}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 14 }}>
+              <span style={{ color: '#718096' }}>Payment Mode</span>
+              <span style={{ fontWeight: 600 }}>{d.paymentMode || 'Cash'}</span>
+            </div>
+            {d.term && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 14 }}>
+                <span style={{ color: '#718096' }}>Term / Installment</span>
+                <span style={{ fontWeight: 700, color: '#2b6cb0' }}>{d.term}</span>
+              </div>
+            )}
+            {d.remarks && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 14 }}>
+                <span style={{ color: '#718096' }}>Remarks</span>
+                <span style={{ fontWeight: 600 }}>{d.remarks}</span>
+              </div>
+            )}
+            <div style={{ marginTop: 30, display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#718096' }}>
+              <span>Generated: {new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</span>
+              <div style={{ borderTop: '1px solid #2d3748', paddingTop: 6, width: 180, fontSize: 11, color: '#718096' }}>
+                Received By: {d.receivedBy}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </Layout>
   );
 }

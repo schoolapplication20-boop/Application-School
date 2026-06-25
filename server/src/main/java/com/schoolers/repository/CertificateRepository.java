@@ -12,6 +12,7 @@ import java.util.Optional;
 @Repository
 public interface CertificateRepository extends JpaRepository<Certificate, Long> {
     Optional<Certificate> findByCertificateId(String certificateId);
+    Optional<Certificate> findByCertificateIdAndSchoolId(String certificateId, Long schoolId);
     List<Certificate> findByStudentIdOrderByCreatedAtDesc(Long studentId);
     List<Certificate> findByCertificateTypeOrderByCreatedAtDesc(String certificateType);
     List<Certificate> findAllByOrderByCreatedAtDesc();

@@ -10,22 +10,8 @@ let _authToken = sessionStorage.getItem(SESSION_KEY) || null;
 export const setAuthToken   = (token) => { _authToken = token; sessionStorage.setItem(SESSION_KEY, token); };
 export const clearAuthToken = ()       => { _authToken = null; sessionStorage.removeItem(SESSION_KEY); };
 
-// ── Server wake-up retry (Render free plan cold starts) ──────────────────────
-let _isServerSleeping = false;
-let _retryAborted     = false;
-export const abortServerRetry = () => { _retryAborted = true; };
-
-const RETRY_DELAY_MS = 5000;
-const MAX_RETRIES    = 15;
-
-const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-
-const isNetworkError = (err) =>
-  !err.response && (
-    err.code === 'ERR_NETWORK' ||
-    err.code === 'ERR_CONNECTION_REFUSED' ||
-    err.message === 'Network Error'
-  );
+// No-op: was used for Render cold-start retry (migrated to Railway — no longer needed)
+export const abortServerRetry = () => {};
 
 // Create axios instance
 const api = axios.create({
@@ -48,17 +34,10 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response Interceptor - handle token expiry + server wake-up retry
+// Response Interceptor - handle token expiry
 api.interceptors.response.use(
-  (response) => {
-    // Server came back online — hide wake modal if it was showing
-    if (_isServerSleeping) {
-      _isServerSleeping = false;
-      window.dispatchEvent(new CustomEvent('server-awake'));
-    }
-    return response;
-  },
-  async (error) => {
+  (response) => response,
+  (error) => {
     const config = error.config;
 
     // 401: token expired (skip on auth endpoints to avoid redirect loops)
@@ -68,40 +47,6 @@ api.interceptors.response.use(
       // Fire a custom event so AuthContext can show a graceful "session expired" dialog
       // instead of hard-redirecting and losing any unsaved form data.
       window.dispatchEvent(new CustomEvent('auth:session-expired'));
-      return Promise.reject(error);
-    }
-
-    // Network error: server sleeping / cold start — retry with countdown
-    if (isNetworkError(error) && config) {
-      config._retryCount = (config._retryCount || 0) + 1;
-
-      if (config._retryCount > MAX_RETRIES || _retryAborted) {
-        // Give up
-        _retryAborted = false;
-        if (_isServerSleeping) {
-          _isServerSleeping = false;
-          window.dispatchEvent(new CustomEvent('server-awake'));
-        }
-        return Promise.reject(error);
-      }
-
-      // Notify UI
-      _isServerSleeping = true;
-      window.dispatchEvent(new CustomEvent('server-sleeping', {
-        detail: { retryIn: RETRY_DELAY_MS / 1000 },
-      }));
-
-      await sleep(RETRY_DELAY_MS);
-
-      // User pressed Cancel while sleeping
-      if (_retryAborted) {
-        _retryAborted     = false;
-        _isServerSleeping = false;
-        window.dispatchEvent(new CustomEvent('server-awake'));
-        return Promise.reject(new Error('Request cancelled — server still waking up.'));
-      }
-
-      return api(config); // retry — interceptors run again naturally
     }
 
     return Promise.reject(error);
@@ -775,6 +720,28 @@ export const smsAPI = {
 
   getProviderSettings:    ()     => api.get('/api/sms/provider-settings'),
   updateProviderSettings: (data) => api.put('/api/sms/provider-settings', data),
+};
+
+// ============================================
+// AUTH CONFIG APIs
+// ============================================
+
+export const authConfigAPI = {
+  // Admin / SuperAdmin / ApplicationOwner: read the school's auth config
+  get: () => api.get('/api/admin/auth-config'),
+  // SuperAdmin / ApplicationOwner only: update the school's auth config
+  update: (data) => api.put('/api/admin/auth-config', data),
+  // Public: fetch auth config by school code (for login page)
+  getBySchoolCode: (schoolCode) => api.get(`/api/auth/school-config/${schoolCode}`),
+};
+
+// ============================================
+// DIARY CONFIG APIs
+// ============================================
+
+export const diaryConfigAPI = {
+  get: () => api.get('/api/admin/diary-config'),
+  update: (data) => api.put('/api/admin/diary-config', data),
 };
 
 // ============================================

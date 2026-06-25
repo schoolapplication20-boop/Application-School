@@ -20,9 +20,17 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     @Query("SELECT m FROM Message m WHERE m.senderId = :uid OR m.receiverId = :uid ORDER BY m.createdAt DESC")
     List<Message> findAllByUserId(@Param("uid") Long userId, Pageable pageable);
 
+    /** Most recent messages involving this user scoped to a school, capped via Pageable */
+    @Query("SELECT m FROM Message m WHERE (m.senderId = :uid OR m.receiverId = :uid) AND m.schoolId = :schoolId ORDER BY m.createdAt DESC")
+    List<Message> findAllByUserIdAndSchoolId(@Param("uid") Long userId, @Param("schoolId") Long schoolId, Pageable pageable);
+
     /** Most recent messages of a 1-1 conversation, newest first, capped via Pageable; reverse in service for chronological order */
     @Query("SELECT m FROM Message m WHERE (m.senderId = :u1 AND m.receiverId = :u2) OR (m.senderId = :u2 AND m.receiverId = :u1) ORDER BY m.createdAt DESC")
     List<Message> findConversationDesc(@Param("u1") Long u1, @Param("u2") Long u2, Pageable pageable);
+
+    /** School-scoped 1-1 conversation, newest first, capped via Pageable */
+    @Query("SELECT m FROM Message m WHERE ((m.senderId = :u1 AND m.receiverId = :u2) OR (m.senderId = :u2 AND m.receiverId = :u1)) AND m.schoolId = :schoolId ORDER BY m.createdAt DESC")
+    List<Message> findConversationDescBySchoolId(@Param("u1") Long u1, @Param("u2") Long u2, @Param("schoolId") Long schoolId, Pageable pageable);
 
     long countByReceiverIdAndIsReadFalse(Long receiverId);
 

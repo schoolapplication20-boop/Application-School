@@ -77,7 +77,11 @@ export default function SettingsTab({ showToast }) {
         countryCode: form.countryCode,
       });
       if (res.data?.success) {
-        const s = res.data.data;
+        const s = res.data?.data;
+        if (!s) {
+          showToast('Settings saved successfully', 'success');
+          return;
+        }
         setSettings(s);
         setForm(f => ({ ...f, authKey: s.authKeyMasked || '' }));
         showToast(s.configured ? 'SMS provider configured successfully' : 'Settings saved (add Auth Key + Sender ID to activate)', 'success');

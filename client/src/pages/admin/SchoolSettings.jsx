@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useSchool } from '../../context/SchoolContext';
-import { schoolAPI, examTypeAPI, gradeScaleAPI, adminAPI, BASE_URL } from '../../services/api';
+import { schoolAPI, examTypeAPI, gradeScaleAPI, adminAPI, authConfigAPI, diaryConfigAPI, BASE_URL } from '../../services/api';
 import Layout from '../../components/Layout';
 
 const MAX_SIZE_MB = 5;
@@ -55,6 +55,105 @@ const SchoolSettings = () => {
   const inputRef = useRef(null);
 
   const canEdit = user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN';
+  const canEditAuthConfig = user?.role === 'SUPER_ADMIN' || user?.role === 'APPLICATION_OWNER';
+
+  // ── Auth config ──────────────────────────────────────────────────────────────
+  const AUTH_CONFIG_DEFAULTS = {
+    studentLoginMethod: 'EMAIL_OR_ADMISSION',
+    emailMandatoryStudents: true,
+    emailVerification: true,
+    forgotPasswordMethod: 'EMAIL_OTP',
+    allowSelfSignup: true,
+    sessionTimeoutMinutes: 60,
+    maxFailedAttempts: 5,
+  };
+
+  const [authConfig,    setAuthConfig]    = useState(AUTH_CONFIG_DEFAULTS);
+  const [acLoading,     setAcLoading]     = useState(false);
+  const [acSaving,      setAcSaving]      = useState(false);
+  const [acError,       setAcError]       = useState('');
+  const [acSuccess,     setAcSuccess]     = useState('');
+
+  const loadAuthConfig = useCallback(async () => {
+    setAcLoading(true);
+    try {
+      const r = await authConfigAPI.get();
+      const d = r.data?.data;
+      if (d) {
+        setAuthConfig({
+          studentLoginMethod:     d.studentLoginMethod     ?? AUTH_CONFIG_DEFAULTS.studentLoginMethod,
+          emailMandatoryStudents: d.emailMandatoryStudents ?? AUTH_CONFIG_DEFAULTS.emailMandatoryStudents,
+          emailVerification:      d.emailVerification      ?? AUTH_CONFIG_DEFAULTS.emailVerification,
+          forgotPasswordMethod:   d.forgotPasswordMethod   ?? AUTH_CONFIG_DEFAULTS.forgotPasswordMethod,
+          allowSelfSignup:        d.allowSelfSignup        ?? AUTH_CONFIG_DEFAULTS.allowSelfSignup,
+          sessionTimeoutMinutes:  d.sessionTimeoutMinutes  ?? AUTH_CONFIG_DEFAULTS.sessionTimeoutMinutes,
+          maxFailedAttempts:      d.maxFailedAttempts      ?? AUTH_CONFIG_DEFAULTS.maxFailedAttempts,
+        });
+      }
+    } catch { /* silently use defaults */ }
+    finally { setAcLoading(false); }
+  }, []); // eslint-disable-line
+
+  useEffect(() => { loadAuthConfig(); }, [loadAuthConfig]);
+
+  const handleSaveAuthConfig = async () => {
+    setAcError(''); setAcSuccess(''); setAcSaving(true);
+    try {
+      await authConfigAPI.update(authConfig);
+      setAcSuccess('Authentication settings saved successfully.');
+    } catch (err) {
+      setAcError(err.response?.data?.message || 'Failed to save authentication settings.');
+    } finally { setAcSaving(false); }
+  };
+
+  const updateAc = (field, value) => setAuthConfig(prev => ({ ...prev, [field]: value }));
+
+  // ── Diary config ─────────────────────────────────────────────────────────────
+  const DIARY_CONFIG_DEFAULTS = {
+    diaryMode: 'SUBJECT_TEACHER',
+    coordinatorUserId: '',
+    requiresAdminApproval: false,
+    notifyStudentsPush: false,
+    notifyParentsWhatsapp: false,
+  };
+
+  const [diaryConfig,    setDiaryConfig]    = useState(DIARY_CONFIG_DEFAULTS);
+  const [dcLoading,      setDcLoading]      = useState(false);
+  const [dcSaving,       setDcSaving]       = useState(false);
+  const [dcError,        setDcError]        = useState('');
+  const [dcSuccess,      setDcSuccess]      = useState('');
+
+  const loadDiaryConfig = useCallback(async () => {
+    setDcLoading(true);
+    try {
+      const r = await diaryConfigAPI.get();
+      const d = r.data?.data;
+      if (d) {
+        setDiaryConfig({
+          diaryMode:             d.diaryMode             ?? DIARY_CONFIG_DEFAULTS.diaryMode,
+          coordinatorUserId:     d.coordinatorUserId     ?? DIARY_CONFIG_DEFAULTS.coordinatorUserId,
+          requiresAdminApproval: d.requiresAdminApproval ?? DIARY_CONFIG_DEFAULTS.requiresAdminApproval,
+          notifyStudentsPush:    d.notifyStudentsPush    ?? DIARY_CONFIG_DEFAULTS.notifyStudentsPush,
+          notifyParentsWhatsapp: d.notifyParentsWhatsapp ?? DIARY_CONFIG_DEFAULTS.notifyParentsWhatsapp,
+        });
+      }
+    } catch { /* silently use defaults */ }
+    finally { setDcLoading(false); }
+  }, []); // eslint-disable-line
+
+  useEffect(() => { loadDiaryConfig(); }, [loadDiaryConfig]);
+
+  const handleSaveDiaryConfig = async () => {
+    setDcError(''); setDcSuccess(''); setDcSaving(true);
+    try {
+      await diaryConfigAPI.update(diaryConfig);
+      setDcSuccess('Diary configuration saved successfully.');
+    } catch (err) {
+      setDcError(err.response?.data?.message || 'Failed to save diary configuration.');
+    } finally { setDcSaving(false); }
+  };
+
+  const updateDc = (field, value) => setDiaryConfig(prev => ({ ...prev, [field]: value }));
 
   // ── Exam type management ─────────────────────────────────────────────────────
   const [examTypes,    setExamTypes]    = useState([]);
@@ -652,6 +751,369 @@ const SchoolSettings = () => {
             )}
           </div>
         )}
+
+        {/* ── Authentication Settings card ── */}
+        <div style={{ background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--border-strong)', padding: '24px 28px', marginTop: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+            <span className="material-icons" style={{ color: '#4f46e5', fontSize: 22 }}>lock</span>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Authentication Settings</h3>
+          </div>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20 }}>
+            Control how students and staff log in, reset passwords, and access the school portal.
+            {!canEditAuthConfig && <span style={{ color: '#d97706', fontWeight: 600 }}> (Read-only — SUPER_ADMIN or APPLICATION_OWNER required to save changes.)</span>}
+          </p>
+
+          {acError   && <div style={{ background: '#fff5f5', color: '#c53030', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: 13, border: '1px solid #fed7d7' }}>{acError}</div>}
+          {acSuccess && <div style={{ background: '#f0fff4', color: '#276749', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: 13, border: '1px solid #c6f6d5' }}>{acSuccess}</div>}
+
+          {acLoading ? (
+            <div style={{ color: 'var(--text-muted)', fontSize: 13, padding: '20px 0' }}>Loading…</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+
+              {/* Student Login Method */}
+              <div>
+                <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.04em', margin: '0 0 10px' }}>
+                  Student Login Method
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {[
+                    { value: 'EMAIL_ONLY',         label: 'Email Only',                  desc: 'Students must log in with their email address.' },
+                    { value: 'ADMISSION_ONLY',      label: 'Admission Number Only',       desc: 'Students log in using their admission number.' },
+                    { value: 'EMAIL_OR_ADMISSION',  label: 'Email or Admission Number',   desc: 'Students can use either their email or admission number.' },
+                  ].map(opt => (
+                    <label key={opt.value} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: canEditAuthConfig ? 'pointer' : 'default', padding: '10px 12px', borderRadius: 9, border: `1.5px solid ${authConfig.studentLoginMethod === opt.value ? '#4f46e5' : 'var(--border-strong)'}`, background: authConfig.studentLoginMethod === opt.value ? '#f5f3ff' : 'var(--surface-alt)' }}>
+                      <input
+                        type="radio"
+                        name="studentLoginMethod"
+                        value={opt.value}
+                        checked={authConfig.studentLoginMethod === opt.value}
+                        disabled={!canEditAuthConfig}
+                        onChange={() => updateAc('studentLoginMethod', opt.value)}
+                        style={{ marginTop: 2, accentColor: '#4f46e5', flexShrink: 0 }}
+                      />
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{opt.label}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{opt.desc}</div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Toggles row */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                {/* Email Mandatory */}
+                <div style={{ background: 'var(--surface-alt)', borderRadius: 10, padding: '14px 16px', border: '1px solid var(--border-strong)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Email Mandatory</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>Require email for student accounts</div>
+                    </div>
+                    <button
+                      onClick={() => canEditAuthConfig && authConfig.studentLoginMethod !== 'EMAIL_ONLY' && updateAc('emailMandatoryStudents', !authConfig.emailMandatoryStudents)}
+                      disabled={!canEditAuthConfig || authConfig.studentLoginMethod === 'EMAIL_ONLY'}
+                      style={{
+                        width: 44, height: 24, borderRadius: 12, border: 'none', cursor: (!canEditAuthConfig || authConfig.studentLoginMethod === 'EMAIL_ONLY') ? 'not-allowed' : 'pointer',
+                        background: authConfig.emailMandatoryStudents ? '#4f46e5' : '#cbd5e1',
+                        position: 'relative', transition: 'background 0.2s', flexShrink: 0, opacity: authConfig.studentLoginMethod === 'EMAIL_ONLY' ? 0.5 : 1,
+                      }}
+                    >
+                      <span style={{ position: 'absolute', top: 3, left: authConfig.emailMandatoryStudents ? 23 : 3, width: 18, height: 18, borderRadius: '50%', background: '#fff', transition: 'left 0.2s', display: 'block' }} />
+                    </button>
+                  </div>
+                  {authConfig.studentLoginMethod === 'EMAIL_ONLY' && (
+                    <div style={{ fontSize: 11, color: '#d97706', marginTop: 6 }}>Auto-enabled when Email Only is selected.</div>
+                  )}
+                </div>
+
+                {/* Email Verification */}
+                <div style={{ background: 'var(--surface-alt)', borderRadius: 10, padding: '14px 16px', border: '1px solid var(--border-strong)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Email Verification</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>Require OTP to verify email on signup</div>
+                    </div>
+                    <button
+                      onClick={() => canEditAuthConfig && updateAc('emailVerification', !authConfig.emailVerification)}
+                      disabled={!canEditAuthConfig}
+                      style={{
+                        width: 44, height: 24, borderRadius: 12, border: 'none', cursor: canEditAuthConfig ? 'pointer' : 'not-allowed',
+                        background: authConfig.emailVerification ? '#4f46e5' : '#cbd5e1',
+                        position: 'relative', transition: 'background 0.2s', flexShrink: 0,
+                      }}
+                    >
+                      <span style={{ position: 'absolute', top: 3, left: authConfig.emailVerification ? 23 : 3, width: 18, height: 18, borderRadius: '50%', background: '#fff', transition: 'left 0.2s', display: 'block' }} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Allow Self-Signup */}
+                <div style={{ background: 'var(--surface-alt)', borderRadius: 10, padding: '14px 16px', border: '1px solid var(--border-strong)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Allow Student Self-Signup</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>Students can create their own accounts</div>
+                    </div>
+                    <button
+                      onClick={() => canEditAuthConfig && updateAc('allowSelfSignup', !authConfig.allowSelfSignup)}
+                      disabled={!canEditAuthConfig}
+                      style={{
+                        width: 44, height: 24, borderRadius: 12, border: 'none', cursor: canEditAuthConfig ? 'pointer' : 'not-allowed',
+                        background: authConfig.allowSelfSignup ? '#4f46e5' : '#cbd5e1',
+                        position: 'relative', transition: 'background 0.2s', flexShrink: 0,
+                      }}
+                    >
+                      <span style={{ position: 'absolute', top: 3, left: authConfig.allowSelfSignup ? 23 : 3, width: 18, height: 18, borderRadius: '50%', background: '#fff', transition: 'left 0.2s', display: 'block' }} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Forgot Password Method */}
+              <div>
+                <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.04em', margin: '0 0 10px' }}>
+                  Forgot Password Method
+                </p>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  {[
+                    { value: 'EMAIL_OTP',  label: 'Email OTP' },
+                    { value: 'MOBILE_OTP', label: 'Mobile OTP' },
+                    { value: 'BOTH',       label: 'Both' },
+                  ].map(opt => (
+                    <label key={opt.value} style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: canEditAuthConfig ? 'pointer' : 'default', padding: '8px 14px', borderRadius: 8, border: `1.5px solid ${authConfig.forgotPasswordMethod === opt.value ? '#4f46e5' : 'var(--border-strong)'}`, background: authConfig.forgotPasswordMethod === opt.value ? '#f5f3ff' : 'var(--surface-alt)', fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
+                      <input
+                        type="radio"
+                        name="forgotPasswordMethod"
+                        value={opt.value}
+                        checked={authConfig.forgotPasswordMethod === opt.value}
+                        disabled={!canEditAuthConfig}
+                        onChange={() => updateAc('forgotPasswordMethod', opt.value)}
+                        style={{ accentColor: '#4f46e5' }}
+                      />
+                      {opt.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Number inputs */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', display: 'block', marginBottom: 6 }}>
+                    Session Timeout (minutes)
+                  </label>
+                  <input
+                    type="number"
+                    min="5" max="1440" step="5"
+                    value={authConfig.sessionTimeoutMinutes}
+                    disabled={!canEditAuthConfig}
+                    onChange={e => updateAc('sessionTimeoutMinutes', parseInt(e.target.value) || 60)}
+                    style={{ width: '100%', padding: '8px 10px', border: '1.5px solid var(--border-strong)', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box', background: canEditAuthConfig ? undefined : 'var(--surface-alt)', color: 'var(--text-primary)' }}
+                  />
+                  <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '4px 0 0' }}>5 – 1440 min (1 day max)</p>
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', display: 'block', marginBottom: 6 }}>
+                    Max Failed Login Attempts
+                  </label>
+                  <input
+                    type="number"
+                    min="1" max="20"
+                    value={authConfig.maxFailedAttempts}
+                    disabled={!canEditAuthConfig}
+                    onChange={e => updateAc('maxFailedAttempts', parseInt(e.target.value) || 5)}
+                    style={{ width: '100%', padding: '8px 10px', border: '1.5px solid var(--border-strong)', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box', background: canEditAuthConfig ? undefined : 'var(--surface-alt)', color: 'var(--text-primary)' }}
+                  />
+                  <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '4px 0 0' }}>Lockout after this many failed attempts</p>
+                </div>
+              </div>
+
+              {/* Save button — only for SUPER_ADMIN / APPLICATION_OWNER */}
+              {canEditAuthConfig && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
+                  <button
+                    onClick={handleSaveAuthConfig}
+                    disabled={acSaving}
+                    style={{ padding: '9px 24px', background: acSaving ? '#a0aec0' : '#4f46e5', color: '#fff', border: 'none', borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: acSaving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+                  >
+                    {acSaving ? (
+                      <>
+                        <span style={{ width: 13, height: 13, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} />
+                        Saving…
+                      </>
+                    ) : (
+                      <>
+                        <span className="material-icons" style={{ fontSize: 16 }}>save</span>
+                        Save Auth Settings
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ── Diary Configuration card ── */}
+        <div style={{ background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--border-strong)', padding: '24px 28px', marginTop: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+            <span className="material-icons" style={{ color: '#0369a1', fontSize: 22 }}>menu_book</span>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Diary Configuration</h3>
+          </div>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20 }}>
+            Control who can post diary entries and how students and parents are notified.
+            {!canEdit && <span style={{ color: '#d97706', fontWeight: 600 }}> (Read-only — SUPER_ADMIN or ADMIN required to save changes.)</span>}
+          </p>
+
+          {dcError   && <div style={{ background: '#fff5f5', color: '#c53030', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: 13, border: '1px solid #fed7d7' }}>{dcError}</div>}
+          {dcSuccess && <div style={{ background: '#f0fff4', color: '#276749', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: 13, border: '1px solid #c6f6d5' }}>{dcSuccess}</div>}
+
+          {dcLoading ? (
+            <div style={{ color: 'var(--text-muted)', fontSize: 13, padding: '20px 0' }}>Loading…</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+
+              {/* Diary Mode */}
+              <div>
+                <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.04em', margin: '0 0 10px' }}>
+                  Diary Mode
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {[
+                    { value: 'COORDINATOR',     label: 'School-wide Coordinator', desc: 'Only one designated user creates all diary entries for the school.' },
+                    { value: 'CLASS_TEACHER',   label: 'Class Teacher',           desc: 'The class teacher posts diary entries for their assigned class.' },
+                    { value: 'SUBJECT_TEACHER', label: 'Subject Teacher',         desc: 'Any teacher assigned to a subject can post entries for that class (current default).' },
+                    { value: 'HYBRID',          label: 'Hybrid',                  desc: 'Both class teachers and subject teachers can post diary entries.' },
+                  ].map(opt => (
+                    <label key={opt.value} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: canEdit ? 'pointer' : 'default', padding: '10px 12px', borderRadius: 9, border: `1.5px solid ${diaryConfig.diaryMode === opt.value ? '#0369a1' : 'var(--border-strong)'}`, background: diaryConfig.diaryMode === opt.value ? '#f0f9ff' : 'var(--surface-alt)' }}>
+                      <input
+                        type="radio"
+                        name="diaryMode"
+                        value={opt.value}
+                        checked={diaryConfig.diaryMode === opt.value}
+                        disabled={!canEdit}
+                        onChange={() => updateDc('diaryMode', opt.value)}
+                        style={{ marginTop: 2, accentColor: '#0369a1', flexShrink: 0 }}
+                      />
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{opt.label}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{opt.desc}</div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Coordinator User ID — visible only when COORDINATOR mode is selected */}
+              {diaryConfig.diaryMode === 'COORDINATOR' && (
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', display: 'block', marginBottom: 6 }}>
+                    Coordinator User ID
+                  </label>
+                  <input
+                    type="text"
+                    value={diaryConfig.coordinatorUserId}
+                    disabled={!canEdit}
+                    onChange={e => updateDc('coordinatorUserId', e.target.value)}
+                    placeholder="Enter the user ID of the coordinator"
+                    style={{ width: '100%', padding: '8px 10px', border: '1.5px solid var(--border-strong)', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box', background: canEdit ? undefined : 'var(--surface-alt)', color: 'var(--text-primary)' }}
+                  />
+                  <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '4px 0 0' }}>The user ID of the staff member responsible for posting all diary entries.</p>
+                </div>
+              )}
+
+              {/* Toggle switches */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                {/* Requires Admin Approval */}
+                <div style={{ background: 'var(--surface-alt)', borderRadius: 10, padding: '14px 16px', border: '1px solid var(--border-strong)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Requires Admin Approval</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>Entries must be approved before students can see them</div>
+                    </div>
+                    <button
+                      onClick={() => canEdit && updateDc('requiresAdminApproval', !diaryConfig.requiresAdminApproval)}
+                      disabled={!canEdit}
+                      style={{
+                        width: 44, height: 24, borderRadius: 12, border: 'none', cursor: canEdit ? 'pointer' : 'not-allowed',
+                        background: diaryConfig.requiresAdminApproval ? '#0369a1' : '#cbd5e1',
+                        position: 'relative', transition: 'background 0.2s', flexShrink: 0,
+                      }}
+                    >
+                      <span style={{ position: 'absolute', top: 3, left: diaryConfig.requiresAdminApproval ? 23 : 3, width: 18, height: 18, borderRadius: '50%', background: '#fff', transition: 'left 0.2s', display: 'block' }} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Notify Students via Push Notification */}
+                <div style={{ background: 'var(--surface-alt)', borderRadius: 10, padding: '14px 16px', border: '1px solid var(--border-strong)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Notify Students via Push</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>Send push notification to students when a new entry is posted</div>
+                    </div>
+                    <button
+                      onClick={() => canEdit && updateDc('notifyStudentsPush', !diaryConfig.notifyStudentsPush)}
+                      disabled={!canEdit}
+                      style={{
+                        width: 44, height: 24, borderRadius: 12, border: 'none', cursor: canEdit ? 'pointer' : 'not-allowed',
+                        background: diaryConfig.notifyStudentsPush ? '#0369a1' : '#cbd5e1',
+                        position: 'relative', transition: 'background 0.2s', flexShrink: 0,
+                      }}
+                    >
+                      <span style={{ position: 'absolute', top: 3, left: diaryConfig.notifyStudentsPush ? 23 : 3, width: 18, height: 18, borderRadius: '50%', background: '#fff', transition: 'left 0.2s', display: 'block' }} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Notify Parents via WhatsApp */}
+                <div style={{ background: 'var(--surface-alt)', borderRadius: 10, padding: '14px 16px', border: '1px solid var(--border-strong)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Notify Parents via WhatsApp</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>Send a WhatsApp message to parents when a new entry is posted</div>
+                    </div>
+                    <button
+                      onClick={() => canEdit && updateDc('notifyParentsWhatsapp', !diaryConfig.notifyParentsWhatsapp)}
+                      disabled={!canEdit}
+                      style={{
+                        width: 44, height: 24, borderRadius: 12, border: 'none', cursor: canEdit ? 'pointer' : 'not-allowed',
+                        background: diaryConfig.notifyParentsWhatsapp ? '#0369a1' : '#cbd5e1',
+                        position: 'relative', transition: 'background 0.2s', flexShrink: 0,
+                      }}
+                    >
+                      <span style={{ position: 'absolute', top: 3, left: diaryConfig.notifyParentsWhatsapp ? 23 : 3, width: 18, height: 18, borderRadius: '50%', background: '#fff', transition: 'left 0.2s', display: 'block' }} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Save button */}
+              {canEdit && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
+                  <button
+                    onClick={handleSaveDiaryConfig}
+                    disabled={dcSaving}
+                    style={{ padding: '9px 24px', background: dcSaving ? '#a0aec0' : '#0369a1', color: '#fff', border: 'none', borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: dcSaving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+                  >
+                    {dcSaving ? (
+                      <>
+                        <span style={{ width: 13, height: 13, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} />
+                        Saving…
+                      </>
+                    ) : (
+                      <>
+                        <span className="material-icons" style={{ fontSize: 16 }}>save</span>
+                        Save Diary Config
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* ── New Academic Year card ── */}
         {canEdit && (
