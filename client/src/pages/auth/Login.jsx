@@ -3,6 +3,7 @@ import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useSchool } from '../../context/SchoolContext';
 import { loginWithEmail as apiLoginWithEmail, verifyOwnerOtp as apiVerifyOwnerOtp } from '../../services/authService';
+import { authConfigAPI } from '../../services/api';
 import Logo from '../../components/Logo';
 import SEOMeta from '../../components/SEOMeta';
 import '../../styles/auth.css';
@@ -46,6 +47,9 @@ const Login = () => {
   const retryCountRef  = useRef(0);
   const attemptLoginFn = useRef(null);
 
+  // Per-school student login method: EMAIL_ONLY | ADMISSION_ONLY | EMAIL_OR_ADMISSION
+  const [studentLoginMethod, setStudentLoginMethod] = useState('EMAIL_OR_ADMISSION');
+
   // Owner 2FA OTP step
   const [ownerOtpStep,  setOwnerOtpStep]  = useState(false);
   const [ownerEmail,    setOwnerEmail]    = useState('');
@@ -61,6 +65,20 @@ const Login = () => {
     if (isAuthenticated) navigate(getDashboardPath(), { replace: true });
   }, [isAuthenticated, navigate, getDashboardPath]);
 
+  // Fetch school auth config when STUDENT role is selected and school context is available
+  useEffect(() => {
+    if (selectedRole !== 'STUDENT' || !school?.code) {
+      setStudentLoginMethod('EMAIL_OR_ADMISSION');
+      return;
+    }
+    authConfigAPI.getBySchoolCode(school.code)
+      .then(r => {
+        const method = r.data?.data?.studentLoginMethod || 'EMAIL_OR_ADMISSION';
+        setStudentLoginMethod(method);
+      })
+      .catch(() => setStudentLoginMethod('EMAIL_OR_ADMISSION'));
+  }, [selectedRole, school?.code]);
+
   // Reset form when role changes
   const handleRoleSelect = (roleKey) => {
     retryCountRef.current = 0;
@@ -73,9 +91,20 @@ const Login = () => {
     setOwnerOtp('');
   };
 
-  const isStudentRole  = selectedRole === 'STUDENT';
-  const inputLabel     = isStudentRole ? 'Email or Admission Number' : 'Email';
-  const inputPlaceholder = isStudentRole ? 'Enter your email or admission number' : 'Enter your email';
+  const isStudentRole = selectedRole === 'STUDENT';
+
+  // Derive input label and placeholder from per-school login method
+  const inputLabel = isStudentRole
+    ? studentLoginMethod === 'ADMISSION_ONLY' ? 'Admission Number'
+    : studentLoginMethod === 'EMAIL_ONLY'     ? 'Email'
+    :                                           'Email or Admission Number'
+    : 'Email';
+
+  const inputPlaceholder = isStudentRole
+    ? studentLoginMethod === 'ADMISSION_ONLY' ? 'Enter your admission number'
+    : studentLoginMethod === 'EMAIL_ONLY'     ? 'Enter your email address'
+    :                                           'Enter your email or admission number'
+    : 'Enter your email';
 
   const rolePathMap = {
     APPLICATION_OWNER: '/owner/dashboard',
@@ -181,7 +210,7 @@ const Login = () => {
     e.preventDefault();
     if (!selectedRole) { setError('Please select your role first.'); return; }
     if (!emailForm.email.trim()) {
-      setError(isStudentRole ? 'Please enter your admission number.' : 'Please enter your email.');
+      setError(`Please enter your ${inputLabel.toLowerCase()}.`);
       return;
     }
     if (!emailForm.password) { setError('Please enter your password.'); return; }

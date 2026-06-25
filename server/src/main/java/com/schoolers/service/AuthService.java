@@ -6,6 +6,8 @@ import com.schoolers.dto.LoginResponse;
 import com.schoolers.model.School;
 import com.schoolers.model.Student;
 import com.schoolers.model.User;
+import com.schoolers.model.SchoolAuthConfig;
+import com.schoolers.repository.SchoolAuthConfigRepository;
 import com.schoolers.repository.SchoolRepository;
 import com.schoolers.repository.StudentRepository;
 import com.schoolers.repository.TeacherRepository;
@@ -32,10 +34,11 @@ public class AuthService {
 
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
-    @Autowired private UserRepository        userRepository;
-    @Autowired private StudentRepository     studentRepository;
-    @Autowired private SchoolRepository      schoolRepository;
-    @Autowired private TeacherRepository     teacherRepository;
+    @Autowired private UserRepository            userRepository;
+    @Autowired private StudentRepository         studentRepository;
+    @Autowired private SchoolRepository          schoolRepository;
+    @Autowired private TeacherRepository         teacherRepository;
+    @Autowired private SchoolAuthConfigRepository schoolAuthConfigRepository;
     @Autowired private JwtUtil               jwtUtil;
     @Autowired private PasswordEncoder       passwordEncoder;
     @Autowired private EmailService          emailService;
@@ -85,6 +88,24 @@ public class AuthService {
                 }
                 if (user == null)
                     return ApiResponse.error("No account found with this email or admission number. Please contact admin.");
+            }
+
+            // ── Step 1b: School auth config enforcement ────────────────────
+            // Apply per-school login method rules for STUDENT role only.
+            if (user.getRole() == User.Role.STUDENT && user.getSchoolId() != null) {
+                SchoolAuthConfig authCfg = schoolAuthConfigRepository
+                        .findBySchoolId(user.getSchoolId())
+                        .orElse(null);
+                if (authCfg != null) {
+                    String method = authCfg.getStudentLoginMethod(); // EMAIL_ONLY | ADMISSION_ONLY | EMAIL_OR_ADMISSION
+                    boolean identifierIsEmail = request.getEmail() != null && request.getEmail().contains("@");
+                    if ("ADMISSION_ONLY".equals(method) && identifierIsEmail) {
+                        return ApiResponse.error("This school requires students to log in with their Admission Number only. Please use your Admission Number.");
+                    }
+                    if ("EMAIL_ONLY".equals(method) && !identifierIsEmail) {
+                        return ApiResponse.error("This school requires students to log in with their Email address only. Please use your email.");
+                    }
+                }
             }
 
             // ── Step 2: Status checks ──────────────────────────────────────
