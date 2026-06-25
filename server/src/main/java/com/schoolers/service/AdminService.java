@@ -1705,14 +1705,14 @@ public class AdminService {
                     if (body.containsKey("paidDate") && body.get("paidDate") != null) {
                         try { fee.setPaidDate(java.time.LocalDate.parse(str(body, "paidDate", null))); }
                         catch (Exception e) {
-                            return ApiResponse.error("Invalid payment date format. Use YYYY-MM-DD.");
+                            return ApiResponse.<Fee>error("Invalid payment date format. Use YYYY-MM-DD.");
                         }
                     }
                     if (body.containsKey("paymentMethod")) fee.setPaymentMethod(str(body, "paymentMethod", fee.getPaymentMethod()));
                     if (body.containsKey("transactionId")) fee.setTransactionId(str(body, "transactionId", fee.getTransactionId()));
                     return ApiResponse.success("Fee updated", feeRepository.save(fee));
                 })
-                .orElse(ApiResponse.error("Fee not found"));
+                .orElse(ApiResponse.<Fee>error("Fee not found"));
     }
 
     @Transactional
@@ -1958,6 +1958,30 @@ public class AdminService {
         }
         return ApiResponse.success(
                 feePaymentRepository.findByAssignmentIdOrderByPaymentDateDescCreatedAtDesc(assignmentId));
+    }
+
+    @Transactional
+    public ApiResponse<String> updateCondonation(Long assignmentId, Map<String, Object> payload, Long schoolId) {
+        StudentFeeAssignment assignment = studentFeeAssignmentRepository.findById(assignmentId).orElse(null);
+        if (assignment == null) return ApiResponse.error("Fee assignment not found");
+        if (schoolMismatch(schoolId, assignment.getSchoolId())) return ApiResponse.error("Fee assignment not found");
+        Object condObj = payload.get("condonationAmount");
+        if (condObj != null) {
+            try {
+                java.math.BigDecimal cond = new java.math.BigDecimal(condObj.toString());
+                if (cond.compareTo(java.math.BigDecimal.ZERO) < 0)
+                    return ApiResponse.error("Condonation amount cannot be negative");
+                if (cond.compareTo(assignment.getTotalFee()) > 0)
+                    return ApiResponse.error("Condonation cannot exceed total fee");
+                assignment.setCondonationAmount(cond);
+            } catch (Exception e) {
+                return ApiResponse.error("Invalid condonation amount");
+            }
+        }
+        studentFeeAssignmentRepository.save(assignment);
+        auditLogService.log(null, "SYSTEM", "ADMIN", schoolId, "UPDATE", "StudentFeeAssignment", assignmentId,
+                "Condonation updated for assignment id=" + assignmentId, null);
+        return ApiResponse.success("Condonation updated", "Updated");
     }
 
     @Transactional

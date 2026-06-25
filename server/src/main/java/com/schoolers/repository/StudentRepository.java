@@ -191,4 +191,8 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
                             @Param("newName") String newName,
                             @Param("newSection") String newSection,
                             @Param("schoolId") Long schoolId);
+
+    /** Look up a student by parent/guardian mobile — used for transactional SMS delivery. */
+    java.util.Optional<com.schoolers.model.Student> findFirstByParentMobile(String parentMobile);
+    java.util.Optional<com.schoolers.model.Student> findFirstByGuardianMobile(String guardianMobile);
 }

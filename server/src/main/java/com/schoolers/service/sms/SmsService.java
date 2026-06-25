@@ -382,37 +382,37 @@ public class SmsService {
 
     /**
      * Send a transactional OTP via SMS for forgot-password flows.
-     * Uses the school's configured SMS provider. Best-effort — never throws.
+     * Resolves the school from the user's mobile number, then delegates to
+     * SmsProviderSettingsService.sendSms() which handles the provider call directly.
+     * Best-effort — never throws.
      */
     public void sendTransactionalOtp(String mobileNumber, String otp, String recipientName) {
         try {
             if (mobileNumber == null || mobileNumber.isBlank()) return;
-            // Resolve schoolId from the mobile number (look up the user's school)
-            com.schoolers.model.User userByMobile = null;
-            try {
-                userByMobile = studentRepository.findByPhone(mobileNumber)
-                        .map(s -> s.getStudentUserId() != null
-                                ? new com.schoolers.model.User() {{ setSchoolId(s.getSchoolId()); }} : null)
-                        .orElse(null);
-            } catch (Exception ignored) {}
 
-            // Build a minimal SMS message with the OTP
             String messageText = "Your My-Skoolz password reset OTP is: " + otp +
                     ". Valid for 10 minutes. Do not share this code with anyone.";
 
-            // Use the first configured school provider available for this number's school
-            // Falls back to a direct provider call if school resolution fails
             log.info("[SmsService] Sending transactional OTP to mobile ending in ...{}",
                     mobileNumber.length() > 4 ? mobileNumber.substring(mobileNumber.length() - 4) : "****");
 
-            // Queue via existing infrastructure if a schoolId can be resolved
-            if (userByMobile != null && userByMobile.getSchoolId() != null) {
-                com.schoolers.dto.sms.SmsSendRequest req = new com.schoolers.dto.sms.SmsSendRequest();
-                req.setTargetType(com.schoolers.model.sms.TargetType.CUSTOM);
-                req.setCustomPhones(java.util.List.of(mobileNumber));
-                req.setMessage(messageText);
-                req.setSmsCategory(com.schoolers.model.sms.SmsCategory.TRANSACTIONAL);
-                sendSingle(userByMobile.getSchoolId(), null, req);
+            // Resolve schoolId by looking up the user by mobile number
+            Long schoolId = studentRepository.findFirstByParentMobile(mobileNumber)
+                    .map(Student::getSchoolId)
+                    .orElse(null);
+
+            if (schoolId == null) {
+                // Try guardian mobile as fallback
+                schoolId = studentRepository.findFirstByGuardianMobile(mobileNumber)
+                        .map(Student::getSchoolId)
+                        .orElse(null);
+            }
+
+            if (schoolId != null) {
+                // Send directly via the provider — no campaign/queue overhead for OTPs
+                providerSettingsService.sendSms(schoolId, mobileNumber, messageText);
+            } else {
+                log.warn("[SmsService] Could not resolve schoolId for mobile {} — OTP SMS not sent", PhoneUtil.mask(mobileNumber));
             }
         } catch (Exception e) {
             log.error("[SmsService] Failed to send transactional OTP: {}", e.getMessage());
