@@ -856,11 +856,16 @@ public class AdminService {
 
             for (User u : firstLoginUsers) {
                 // If tempPassword is null (accounts created before the fix), generate
-                // and persist a fresh one so the admin gets a usable password.
+                // a fresh one and update BOTH the plaintext field AND the BCrypt hash
+                // so the student can actually log in. Also clear any lockout caused by
+                // previous failed attempts with the wrong credential.
                 String tempPwd = u.getTempPassword();
                 if (tempPwd == null) {
                     tempPwd = generateStudentPassword();
                     u.setTempPassword(tempPwd);
+                    u.setPassword(passwordEncoder.encode(tempPwd));
+                    u.setFailedLoginAttempts(0);
+                    u.setLockedUntil(null);
                     userRepository.save(u);
                 }
                 com.schoolers.model.Student student = studentByUserId.get(u.getId());
