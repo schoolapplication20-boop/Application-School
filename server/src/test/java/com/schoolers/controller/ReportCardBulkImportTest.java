@@ -5,6 +5,7 @@ import com.schoolers.model.Marks;
 import com.schoolers.model.Student;
 import com.schoolers.model.User;
 import com.schoolers.repository.*;
+import com.schoolers.security.CurrentUserUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -27,11 +28,15 @@ import static org.mockito.Mockito.*;
 @DisplayName("ReportCardController – bulk CSV import")
 class ReportCardBulkImportTest {
 
+    @Mock private CurrentUserUtil      currentUserUtil;
     @Mock private UserRepository       userRepository;
     @Mock private StudentRepository    studentRepository;
     @Mock private MarksRepository      marksRepository;
     @Mock private AttendanceRepository attendanceRepository;
     @Mock private SchoolRepository     schoolRepository;
+    @Mock private com.schoolers.repository.TeacherRepository   teacherRepository;
+    @Mock private com.schoolers.repository.ClassRoomRepository classRoomRepository;
+    @Mock private com.schoolers.repository.GradeScaleRepository gradeScaleRepository;
     @Mock private Authentication       auth;
 
     @InjectMocks private ReportCardController controller;
@@ -46,6 +51,11 @@ class ReportCardBulkImportTest {
 
         when(auth.getName()).thenReturn("teacher@school.com");
         when(userRepository.findByEmailIgnoreCase("teacher@school.com")).thenReturn(Optional.of(teacher));
+        // currentUserUtil is now used by bulkImportMarksCsv to resolve schoolId and teacherId
+        when(currentUserUtil.getCurrentSchoolId(auth)).thenReturn(1L);
+        when(currentUserUtil.getCurrentUserId(auth)).thenReturn(10L);
+        // gradeScaleRepository returns empty → falls back to DEFAULT_GRADE_SCALE in the controller
+        when(gradeScaleRepository.findBySchoolIdOrderByMinPercentageDesc(anyLong())).thenReturn(List.of());
     }
 
     // ── Happy path ────────────────────────────────────────────────────────────
