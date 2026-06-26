@@ -12,9 +12,15 @@ const sslRequired =
   process.env.DB_SSL === 'require' ||
   process.env.NODE_ENV === 'production';
 
-const dialectOptions = sslRequired
-  ? { ssl: { require: true, rejectUnauthorized: false } }
-  : {};
+// All WOP tables live in the whatsapp_portal schema.
+// Setting search_path means every query finds wa_* tables without explicit
+// schema prefixes in models (e.g. wa_users instead of whatsapp_portal.wa_users).
+const dbSchema = process.env.DB_SCHEMA || 'whatsapp_portal';
+
+const dialectOptions = {
+  ...(sslRequired ? { ssl: { require: true, rejectUnauthorized: false } } : {}),
+  options: `-c search_path=${dbSchema},public`,
+};
 
 const sharedOptions = {
   dialect:        'postgres',

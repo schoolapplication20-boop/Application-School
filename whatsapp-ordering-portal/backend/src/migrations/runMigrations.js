@@ -17,9 +17,12 @@ const sslRequired =
   process.env.DB_SSL === 'require' ||
   process.env.NODE_ENV === 'production';
 
-const sslOptions = sslRequired
-  ? { ssl: { require: true, rejectUnauthorized: false } }
-  : {};
+const dbSchema = process.env.DB_SCHEMA || 'whatsapp_portal';
+
+const sslOptions = {
+  ...(sslRequired ? { ssl: { require: true, rejectUnauthorized: false } } : {}),
+  options: `-c search_path=${dbSchema},public`,
+};
 
 let sequelize;
 
