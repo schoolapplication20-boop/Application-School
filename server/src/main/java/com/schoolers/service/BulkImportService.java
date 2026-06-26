@@ -84,6 +84,10 @@ public class BulkImportService {
                         credentials.add(new StudentCredentialDto(
                             row.getFullName(),
                             row.getAdmissionNumber(),
+                            row.getClassName(),
+                            row.getSection(),
+                            row.getFatherName(),
+                            row.getFatherPhone(),
                             (String) result.getData().get("studentUsername"),
                             (String) result.getData().get("studentEmail"),
                             (String) result.getData().get("studentTempPassword")

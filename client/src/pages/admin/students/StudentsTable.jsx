@@ -3,6 +3,8 @@ import { formatDOB, PAGE_SIZE } from './constants';
 import * as XLSX from 'xlsx';
 
 async function downloadPendingCredentials(adminAPI, showToast) {
+  const LOGIN_URL = 'https://my-skoolz.com/login';
+  const INSTRUCTION = 'Select Student role → enter Admission Number as username → enter Temp Password → change password on first login';
   try {
     const res = await adminAPI.getPendingStudentCredentials();
     const rows = res.data?.data ?? [];
@@ -13,14 +15,21 @@ async function downloadPendingCredentials(adminAPI, showToast) {
     // Build as array-of-arrays so we can force every cell to text type.
     // Passwords contain @#$! — Excel interprets cells starting with @ as
     // formulas and corrupts them. Explicit text type prevents this.
-    const headers = ['Student Name', 'Admission Number', 'Class', 'Username', 'Login Email', 'Temp Password'];
-    const data = rows.map(r => [
+    const headers = [
+      'S.No', 'Student Name', 'Admission Number', 'Class',
+      'Login Username', 'Login Email', 'Temporary Password',
+      'Login URL', 'First Login Instructions',
+    ];
+    const data = rows.map((r, idx) => [
+      idx + 1,
       r.studentName     || '',
       r.admissionNumber || '',
       r.className       || '',
-      r.username        || '',
+      r.username        || r.admissionNumber || '',
       r.loginEmail      || '',
       r.tempPassword    || '',
+      LOGIN_URL,
+      INSTRUCTION,
     ]);
     const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
     // Force all cells in every row to type 's' (string) so Excel never
@@ -32,7 +41,11 @@ async function downloadPendingCredentials(adminAPI, showToast) {
         if (ws[addr]) ws[addr].t = 's';
       }
     }
-    ws['!cols'] = [{ wch: 22 }, { wch: 16 }, { wch: 12 }, { wch: 18 }, { wch: 28 }, { wch: 16 }];
+    ws['!cols'] = [
+      { wch: 6 }, { wch: 22 }, { wch: 16 }, { wch: 12 },
+      { wch: 18 }, { wch: 28 }, { wch: 18 },
+      { wch: 30 }, { wch: 55 },
+    ];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Student Credentials');
     XLSX.writeFile(wb, 'pending_student_credentials.xlsx');

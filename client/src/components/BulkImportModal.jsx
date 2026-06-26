@@ -184,13 +184,26 @@ function downloadTemplate() {
 
 /* ── Download student credentials as Excel ──────────────────────────── */
 function downloadCredentials(credentials) {
-  const headers = ['Student Name', 'Admission Number', 'Username', 'Login Email', 'Temp Password'];
-  const data = credentials.map(c => [
+  const LOGIN_URL = 'https://my-skoolz.com/login';
+  const INSTRUCTION = 'Select Student role → enter Admission Number as username → enter Temp Password → change password on first login';
+
+  const headers = [
+    'S.No', 'Student Name', 'Admission Number', 'Class', 'Section',
+    'Father Name', 'Father Phone',
+    'Login Username', 'Temporary Password', 'Login URL', 'First Login Instructions',
+  ];
+  const data = credentials.map((c, idx) => [
+    idx + 1,
     c.studentName     || '',
     c.admissionNumber || '',
-    c.username        || '',
-    c.loginEmail      || '',
+    c.className       || '',
+    c.section         || '',
+    c.fatherName      || '',
+    c.fatherPhone     || '',
+    c.username        || c.admissionNumber || '',
     c.tempPassword    || '',
+    LOGIN_URL,
+    INSTRUCTION,
   ]);
   const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
   // Force all cells to text so Excel never interprets @#$! passwords as formulas
@@ -201,7 +214,11 @@ function downloadCredentials(credentials) {
       if (ws[addr]) ws[addr].t = 's';
     }
   }
-  ws['!cols'] = [{ wch: 22 }, { wch: 16 }, { wch: 20 }, { wch: 30 }, { wch: 16 }];
+  ws['!cols'] = [
+    { wch: 6 }, { wch: 22 }, { wch: 16 }, { wch: 10 }, { wch: 8 },
+    { wch: 20 }, { wch: 14 },
+    { wch: 18 }, { wch: 18 }, { wch: 30 }, { wch: 55 },
+  ];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Student Credentials');
   XLSX.writeFile(wb, 'student_credentials.xlsx');
@@ -235,7 +252,7 @@ export default function BulkImportModal({ onClose, onImportDone }) {
   const [importing,      setImporting]      = useState(false);
   const [result,         setResult]         = useState(null);
   const [skipInvalid,    setSkipInvalid]    = useState(true);
-  const [createAccounts, setCreateAccounts] = useState(false);
+  const [createAccounts, setCreateAccounts] = useState(true);
   const [filterTab,      setFilterTab]      = useState('all');  // all | valid | invalid
   const [history,        setHistory]        = useState(null);
   const [showHistory,    setShowHistory]    = useState(false);
@@ -291,6 +308,7 @@ export default function BulkImportModal({ onClose, onImportDone }) {
           rollNumber:      r.rollNumber      || '',
           className:       r.className       || '',
           section:         r.section         || '',
+          studentEmail:    r.studentEmail    || '',
           fatherName:      r.fatherName      || '',
           fatherPhone:     r.fatherPhone     || '',
           motherName:      r.motherName      || '',
@@ -302,9 +320,14 @@ export default function BulkImportModal({ onClose, onImportDone }) {
         createAccounts,
       };
       const res = await adminAPI.bulkImportStudents(payload);
-      setResult(res.data.data);
+      const importResult = res.data.data;
+      setResult(importResult);
       setStep(2);
       if (onImportDone) onImportDone();
+      // Auto-download credentials immediately so admins don't miss them
+      if (createAccounts && importResult?.credentials?.length > 0) {
+        setTimeout(() => downloadCredentials(importResult.credentials), 500);
+      }
     } catch (e) {
       alert('Import failed: ' + (e.response?.data?.message || e.message));
     } finally {

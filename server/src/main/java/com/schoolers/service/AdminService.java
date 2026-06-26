@@ -359,8 +359,7 @@ public class AdminService {
         }
 
         String parentMobileRaw = str(body, "parentMobile", str(body, "fatherPhone", str(body, "mobile", null)));
-        if (parentMobileRaw == null || parentMobileRaw.isBlank())
-            return ApiResponse.<Map<String, Object>>error("Father's phone number is required");
+        // parentMobile is optional — bulk imports frequently omit it; the UI validates when needed
 
         // Extract schoolId injected by AdminController from authenticated user
         Long schoolId = body.get("schoolId") != null
