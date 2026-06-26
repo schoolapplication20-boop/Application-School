@@ -33,8 +33,17 @@ CREATE INDEX IF NOT EXISTS idx_marks_school_exam
 -- SECTION 2: Unique constraint on marks to prevent duplicates
 -- ============================================================
 
--- Prevent duplicate marks entries for same student+subject+examType+school
--- PostgreSQL does not support ADD CONSTRAINT IF NOT EXISTS — use DO block instead
+-- Deduplicate marks before adding unique constraint.
+-- Keep only the most recent row for each (student_id, subject, exam_type, school_id) group.
+DELETE FROM marks
+WHERE id NOT IN (
+    SELECT MAX(id)
+    FROM marks
+    GROUP BY student_id, subject, exam_type, school_id
+);
+
+-- Add unique constraint (PostgreSQL does not support ADD CONSTRAINT IF NOT EXISTS,
+-- so we use a DO block to check pg_constraint first).
 DO $$
 BEGIN
     IF NOT EXISTS (
