@@ -34,9 +34,18 @@ CREATE INDEX IF NOT EXISTS idx_marks_school_exam
 -- ============================================================
 
 -- Prevent duplicate marks entries for same student+subject+examType+school
-ALTER TABLE marks
-    ADD CONSTRAINT IF NOT EXISTS uq_marks_student_subject_exam_school
-    UNIQUE (student_id, subject, exam_type, school_id);
+-- PostgreSQL does not support ADD CONSTRAINT IF NOT EXISTS — use DO block instead
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'uq_marks_student_subject_exam_school'
+    ) THEN
+        ALTER TABLE marks
+            ADD CONSTRAINT uq_marks_student_subject_exam_school
+            UNIQUE (student_id, subject, exam_type, school_id);
+    END IF;
+END$$;
 
 -- ============================================================
 -- SECTION 3: Marks audit log table
