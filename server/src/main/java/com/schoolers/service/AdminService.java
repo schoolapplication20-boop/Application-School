@@ -836,8 +836,8 @@ public class AdminService {
                 rows.add(credRow(student, result.user().getUsername(),
                         displayEmail(result.loginEmail()), result.rawPassword()));
             } catch (Exception e) {
-                log.warning("[getPendingStudentCredentials] Could not create account for student "
-                        + student.getId() + ": " + e.getMessage());
+                log.warn("[getPendingStudentCredentials] Could not create account for student {}: {}",
+                        student.getId(), e.getMessage());
             }
         }
 
