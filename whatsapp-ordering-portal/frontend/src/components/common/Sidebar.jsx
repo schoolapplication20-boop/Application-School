@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { useBusiness } from '../../context/BusinessContext';
+import { useBusiness } from '../../hooks/useBusiness';
 
 const NAV = [
   {
