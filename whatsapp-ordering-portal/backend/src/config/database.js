@@ -24,6 +24,13 @@ const sharedOptions = {
   define:  { timestamps: true, underscored: true, freezeTableName: true },
 };
 
+// Normalise DATABASE_URL — strip jdbc: prefix if present.
+// Railway exposes JDBC_DATABASE_URL for Java and DATABASE_URL for standard use,
+// but if someone copies the wrong one we handle it gracefully.
+if (process.env.DATABASE_URL?.startsWith('jdbc:')) {
+  process.env.DATABASE_URL = process.env.DATABASE_URL.replace(/^jdbc:/, '');
+}
+
 // Use DATABASE_URL directly when available (Railway, Supabase, Render …)
 // Otherwise fall back to discrete DB_* env vars for local dev.
 const sequelize = process.env.DATABASE_URL

@@ -51,16 +51,25 @@ async function runMigrations() {
   try {
     console.log('🔄 Starting database migrations...');
 
-    // Print which DB we are connecting to (host only — no password)
+    // Normalise DATABASE_URL — strip jdbc: prefix if present
+    // (Railway also exposes JDBC_DATABASE_URL for Java apps; Node needs the plain URL)
     if (process.env.DATABASE_URL) {
+      const raw = process.env.DATABASE_URL;
+      if (raw.startsWith('jdbc:')) {
+        process.env.DATABASE_URL = raw.replace(/^jdbc:/, '');
+        console.log('ℹ️  Stripped jdbc: prefix from DATABASE_URL (was JDBC format, converted to standard)');
+      }
       try {
         const u = new URL(process.env.DATABASE_URL);
         console.log(`🗄️  DB host : ${u.hostname}:${u.port || 5432}`);
         console.log(`🗄️  DB name : ${u.pathname.replace('/', '')}`);
-      } catch { console.log('🗄️  DATABASE_URL is set (could not parse)'); }
+        console.log(`🗄️  Protocol: ${u.protocol}`);
+      } catch (e) {
+        console.log('🗄️  DATABASE_URL is set but could not be parsed:', e.message);
+      }
     } else {
       console.log('⚠️  DATABASE_URL is NOT set — will try localhost:5432 (will fail on Railway!)');
-      console.log('   → Go to Railway wop-backend → Variables → Add Reference → wop-postgres');
+      console.log('   → Go to Railway wop-backend → Variables → select your wop-postgres database');
     }
 
     // Verify connection first — gives a clear error if DATABASE_URL is wrong
