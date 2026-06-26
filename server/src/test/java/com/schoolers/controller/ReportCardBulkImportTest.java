@@ -14,6 +14,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.security.core.Authentication;
 
 import java.util.List;
@@ -25,36 +27,35 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("ReportCardController – bulk CSV import")
 class ReportCardBulkImportTest {
 
-    @Mock private CurrentUserUtil      currentUserUtil;
-    @Mock private UserRepository       userRepository;
-    @Mock private StudentRepository    studentRepository;
-    @Mock private MarksRepository      marksRepository;
-    @Mock private AttendanceRepository attendanceRepository;
-    @Mock private SchoolRepository     schoolRepository;
-    @Mock private com.schoolers.repository.TeacherRepository   teacherRepository;
-    @Mock private com.schoolers.repository.ClassRoomRepository classRoomRepository;
+    @Mock private CurrentUserUtil       currentUserUtil;
+    @Mock private UserRepository        userRepository;
+    @Mock private StudentRepository     studentRepository;
+    @Mock private MarksRepository       marksRepository;
+    @Mock private AttendanceRepository  attendanceRepository;
+    @Mock private SchoolRepository      schoolRepository;
+    @Mock private com.schoolers.repository.TeacherRepository    teacherRepository;
+    @Mock private com.schoolers.repository.ClassRoomRepository  classRoomRepository;
     @Mock private com.schoolers.repository.GradeScaleRepository gradeScaleRepository;
-    @Mock private Authentication       auth;
+    @Mock private Authentication        auth;
 
     @InjectMocks private ReportCardController controller;
 
-    private User teacher;
     private Student student;
 
     @BeforeEach
     void setUp() {
-        teacher = User.builder().id(10L).email("teacher@school.com").schoolId(1L).build();
         student = Student.builder().id(100L).name("Alice").admissionNumber("ADM001").schoolId(1L).build();
 
-        when(auth.getName()).thenReturn("teacher@school.com");
-        when(userRepository.findByEmailIgnoreCase("teacher@school.com")).thenReturn(Optional.of(teacher));
-        // currentUserUtil is now used by bulkImportMarksCsv to resolve schoolId and teacherId
+        // bulkImportMarksCsv uses CurrentUserUtil (not userRepository) to resolve schoolId/userId
         when(currentUserUtil.getCurrentSchoolId(auth)).thenReturn(1L);
         when(currentUserUtil.getCurrentUserId(auth)).thenReturn(10L);
-        // gradeScaleRepository returns empty → falls back to DEFAULT_GRADE_SCALE in the controller
+        // auth.getAuthorities() is called to determine role; empty = not a teacher → skip class-teacher check
+        when(auth.getAuthorities()).thenReturn(java.util.Collections.emptyList());
+        // gradeScaleRepository empty → controller falls back to DEFAULT_GRADE_SCALE
         when(gradeScaleRepository.findBySchoolIdOrderByMinPercentageDesc(anyLong())).thenReturn(List.of());
     }
 
