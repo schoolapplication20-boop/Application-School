@@ -387,7 +387,7 @@ export default function LandingPage() {
                   ) : (
                     <>
                       <span className="landing-price-currency">₹</span>
-                      <span className="landing-price-amount">{annualDiscount(plan.price).toLocaleString('en-IN')}</span>
+                      <span className="landing-price-amount">{annualDiscount(plan.price).toLocaleString()}</span>
                     </>
                   )}
                   <span className="landing-price-period">{plan.period}</span>

@@ -120,7 +120,7 @@ export default function SubscriptionPage() {
                 ) : (
                   <>
                     <span className="sub-price-currency">₹</span>
-                    <span className="sub-price-amount">{plan.price.toLocaleString('en-IN')}</span>
+                    <span className="sub-price-amount">{plan.price.toLocaleString()}</span>
                     <span className="sub-price-period">{plan.period}</span>
                   </>
                 )}
