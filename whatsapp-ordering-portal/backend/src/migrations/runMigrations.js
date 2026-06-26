@@ -93,8 +93,9 @@ async function runMigrations() {
     await sequelize.query(`SET search_path TO ${dbSchema}, public;`);
     console.log('✅ Schema ready');
 
-    // Run init.sql
-    const initSqlPath = path.join(__dirname, '../../docker/init.sql');
+    // Run init.sql — bundled inside the backend deployment (same directory)
+    // so it is available whether deployed standalone or from the full repo.
+    const initSqlPath = path.join(__dirname, 'init.sql');
     console.log(`📋 Running init.sql from: ${initSqlPath}`);
 
     if (fs.existsSync(initSqlPath)) {

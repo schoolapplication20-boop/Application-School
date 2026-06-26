@@ -32,6 +32,10 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
+// Trust Railway's / any cloud load-balancer proxy so express-rate-limit
+// can read the real client IP from X-Forwarded-For instead of erroring.
+app.set('trust proxy', 1);
+
 // ============================================
 // Middleware Setup
 // ============================================
