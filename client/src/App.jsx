@@ -1,4 +1,4 @@
-import React, { lazy, Suspense } from 'react';
+import React, { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { SchoolProvider } from './context/SchoolContext';
@@ -115,6 +115,12 @@ const FeatureControlDashboard = lazy(() => import('./pages/owner/FeatureControlD
 // 404
 const NotFound = lazy(() => import('./pages/NotFound'));
 
+// Hard redirect to an external URL — React Router's <Navigate> only handles
+// internal paths and crashes when given https:// URLs.
+function ExternalRedirect({ to }) {
+  useEffect(() => { window.location.replace(to); }, [to]);
+  return null;
+}
 
 function App() {
   return (
@@ -281,9 +287,10 @@ function App() {
             {/* School Settings */}
             <Route path="/admin/settings"     element={<ProtectedRoute allowedRoles={['ADMIN','SUPER_ADMIN']}><SchoolSettings /></ProtectedRoute>} />
 
-            {/* WhatsApp Ordering Portal — redirect to the standalone SaaS product */}
-            <Route path="/whatsapp" element={<Navigate to={import.meta.env.VITE_WOP_URL || 'https://wop.my-skoolz.com'} replace />} />
-            <Route path="/whatsapp/*" element={<Navigate to={import.meta.env.VITE_WOP_URL || 'https://wop.my-skoolz.com'} replace />} />
+            {/* WhatsApp Ordering Portal — hard redirect to the standalone SaaS product.
+                <Navigate> only handles internal paths; use window.location for external URLs. */}
+            <Route path="/whatsapp" element={<ExternalRedirect to={import.meta.env.VITE_WOP_URL || 'https://wop-frontend-production.up.railway.app'} />} />
+            <Route path="/whatsapp/*" element={<ExternalRedirect to={import.meta.env.VITE_WOP_URL || 'https://wop-frontend-production.up.railway.app'} />} />
 
             {/* 404 */}
             <Route path="*" element={<NotFound />} />
