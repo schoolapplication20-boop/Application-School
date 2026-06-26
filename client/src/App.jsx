@@ -281,6 +281,10 @@ function App() {
             {/* School Settings */}
             <Route path="/admin/settings"     element={<ProtectedRoute allowedRoles={['ADMIN','SUPER_ADMIN']}><SchoolSettings /></ProtectedRoute>} />
 
+            {/* WhatsApp Ordering Portal — redirect to the standalone SaaS product */}
+            <Route path="/whatsapp" element={<Navigate to={import.meta.env.VITE_WOP_URL || 'https://wop.my-skoolz.com'} replace />} />
+            <Route path="/whatsapp/*" element={<Navigate to={import.meta.env.VITE_WOP_URL || 'https://wop.my-skoolz.com'} replace />} />
+
             {/* 404 */}
             <Route path="*" element={<NotFound />} />
           </Routes>

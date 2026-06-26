@@ -3,12 +3,18 @@ import Sidebar from '../../components/common/Sidebar';
 import Navbar from '../../components/common/Navbar';
 
 const PAGE_TITLES = {
-  '/dashboard': 'Overview',
-  '/dashboard/orders': 'Orders',
-  '/dashboard/customers': 'Customers',
-  '/dashboard/products': 'Menu & Products',
-  '/dashboard/analytics': 'Analytics',
-  '/dashboard/settings': 'Settings',
+  '/dashboard':                'Overview',
+  '/dashboard/orders':         'Orders',
+  '/dashboard/customers':      'Customers',
+  '/dashboard/products':       'Menu & Products',
+  '/dashboard/inventory':      'Inventory',
+  '/dashboard/analytics':      'Analytics',
+  '/dashboard/marketing':      'Marketing',
+  '/dashboard/qr-codes':       'QR Codes',
+  '/dashboard/automation':     'WhatsApp Automation',
+  '/dashboard/staff':          'Staff Management',
+  '/dashboard/subscription':   'Subscription',
+  '/dashboard/settings':       'Settings',
 };
 
 const DashboardLayout = () => {

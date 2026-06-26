@@ -1,42 +1,109 @@
-import { NavLink } from 'react-router-dom';
-import { useBusiness } from '../../hooks/useBusiness';
-import {
-  HomeIcon, OrdersIcon, CustomersIcon, ProductsIcon, AnalyticsIcon, SettingsIcon,
-} from './Icons';
+import { NavLink, useLocation } from 'react-router-dom';
+import { useBusiness } from '../../context/BusinessContext';
 
-const NAV_ITEMS = [
-  { to: '/dashboard', label: 'Overview', icon: HomeIcon, end: true },
-  { to: '/dashboard/orders', label: 'Orders', icon: OrdersIcon },
-  { to: '/dashboard/customers', label: 'Customers', icon: CustomersIcon },
-  { to: '/dashboard/products', label: 'Menu & Products', icon: ProductsIcon },
-  { to: '/dashboard/analytics', label: 'Analytics', icon: AnalyticsIcon },
-  { to: '/dashboard/settings', label: 'Settings', icon: SettingsIcon },
+const NAV = [
+  {
+    section: 'Main',
+    items: [
+      { to: '/dashboard',            icon: '📊', label: 'Overview',        exact: true },
+      { to: '/dashboard/orders',     icon: '📦', label: 'Orders',          badge: 'live' },
+      { to: '/dashboard/customers',  icon: '👥', label: 'Customers' },
+      { to: '/dashboard/products',   icon: '🍽️', label: 'Products & Menu' },
+      { to: '/dashboard/inventory',  icon: '📋', label: 'Inventory' },
+    ],
+  },
+  {
+    section: 'Growth',
+    items: [
+      { to: '/dashboard/analytics',  icon: '📈', label: 'Analytics' },
+      { to: '/dashboard/marketing',  icon: '🎯', label: 'Marketing' },
+      { to: '/dashboard/qr-codes',   icon: '⬜', label: 'QR Codes' },
+    ],
+  },
+  {
+    section: 'WhatsApp',
+    items: [
+      { to: '/dashboard/automation', icon: '🤖', label: 'Automation' },
+    ],
+  },
+  {
+    section: 'Business',
+    items: [
+      { to: '/dashboard/staff',        icon: '👤', label: 'Staff' },
+      { to: '/dashboard/subscription', icon: '⭐', label: 'Subscription' },
+      { to: '/dashboard/settings',     icon: '⚙️', label: 'Settings' },
+    ],
+  },
 ];
 
-const Sidebar = () => {
+export default function Sidebar() {
+  const location = useLocation();
   const { business } = useBusiness();
 
   return (
-    <aside className="app-sidebar">
+    <aside className="sidebar">
+      {/* Brand */}
       <div className="sidebar-brand">
-        <span className="sidebar-logo-mark">W</span>
-        <span className="sidebar-brand-name">{business?.business_name || 'WhatsApp Portal'}</span>
+        <div className="sidebar-brand-icon">💬</div>
+        <div className="sidebar-brand-text">
+          <div className="sidebar-brand-name">OrderBot</div>
+          <div className="sidebar-brand-sub">Ordering Portal</div>
+        </div>
       </div>
+
+      {/* Business info */}
+      {business && (
+        <div className="sidebar-business">
+          <div className="sidebar-business-avatar">
+            {business.logoUrl
+              ? <img src={business.logoUrl} alt={business.businessName} />
+              : <span>{(business.businessName || 'B')[0].toUpperCase()}</span>}
+          </div>
+          <div className="sidebar-business-info">
+            <div className="sidebar-business-name">{business.businessName}</div>
+            <div className={`sidebar-business-status ${business.isActive ? 'active' : 'inactive'}`}>
+              <span className="sidebar-status-dot" />
+              {business.isActive ? 'Live' : 'Offline'}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Nav */}
       <nav className="sidebar-nav">
-        {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={end}
-            className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
-          >
-            <Icon />
-            <span>{label}</span>
-          </NavLink>
+        {NAV.map((group) => (
+          <div key={group.section} className="sidebar-section">
+            <div className="sidebar-section-label">{group.section}</div>
+            {group.items.map((item) => {
+              const isActive = item.exact
+                ? location.pathname === item.to
+                : location.pathname.startsWith(item.to);
+
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.exact}
+                  className={`sidebar-link ${isActive ? 'active' : ''}`}
+                >
+                  <span className="sidebar-link-icon">{item.icon}</span>
+                  <span className="sidebar-link-label">{item.label}</span>
+                  {item.badge === 'live' && (
+                    <span className="sidebar-live-dot" title="Live orders" />
+                  )}
+                </NavLink>
+              );
+            })}
+          </div>
         ))}
       </nav>
+
+      {/* Footer */}
+      <div className="sidebar-footer">
+        <a href="#" className="sidebar-help-link">
+          <span>📖</span> Documentation
+        </a>
+      </div>
     </aside>
   );
-};
-
-export default Sidebar;
+}
