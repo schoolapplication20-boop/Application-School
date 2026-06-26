@@ -7,7 +7,7 @@ async function downloadPendingCredentials(adminAPI, showToast) {
     const res = await adminAPI.getPendingStudentCredentials();
     const rows = res.data?.data ?? [];
     if (rows.length === 0) {
-      showToast?.('All students have already changed their passwords.', 'info');
+      showToast?.('No pending credentials — all students have already set their own passwords.', 'info');
       return;
     }
     const sheet = rows.map(r => ({

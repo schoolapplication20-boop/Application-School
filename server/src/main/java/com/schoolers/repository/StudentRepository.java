@@ -154,6 +154,9 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
 
     Optional<Student> findBySchoolIdAndAdmissionNumberIgnoreCase(Long schoolId, String admissionNumber);
 
+    /** Students who have no login account yet (imported without createAccounts). */
+    List<Student> findBySchoolIdAndStudentUserIdIsNull(Long schoolId);
+
     long countByIsActive(Boolean isActive);
 
     @Query("SELECT s FROM Student s WHERE s.isActive = true AND (LOWER(s.name) LIKE LOWER(CONCAT('%',:search,'%')) ESCAPE '\\' OR LOWER(s.rollNumber) LIKE LOWER(CONCAT('%',:search,'%')) ESCAPE '\\')")

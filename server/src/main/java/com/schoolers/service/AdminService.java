@@ -809,39 +809,74 @@ public class AdminService {
     }
 
     /**
-     * Returns credentials for every student in the school who still has
-     * firstLogin=true (i.e. has not yet changed their temp password).
-     * tempPassword is stored in plaintext until first login — once changed it
-     * is nulled out and this method will no longer include that student.
+     * Returns credentials for every student in the school who either:
+     *   (a) has no login account yet — accounts are created on the fly, or
+     *   (b) has an account but firstLogin=true (temp password not yet changed).
+     *
+     * This means the button works whether or not "createAccounts" was checked
+     * during the original bulk import.
      */
+    @Transactional
     public ApiResponse<List<Map<String, Object>>> getPendingStudentCredentials(Long schoolId) {
-        List<User> pending = userRepository.findByRoleAndSchoolIdAndFirstLoginTrue(User.Role.STUDENT, schoolId);
-        if (pending.isEmpty()) return ApiResponse.success("No students with pending credentials", List.of());
-
-        // Batch-load the matching Student records to get admission numbers
-        List<Long> userIds = pending.stream().map(User::getId).toList();
-        Map<Long, com.schoolers.model.Student> studentByUserId = studentRepository
-                .findAll().stream()
-                .filter(s -> s.getStudentUserId() != null && userIds.contains(s.getStudentUserId()))
-                .collect(java.util.stream.Collectors.toMap(
-                        com.schoolers.model.Student::getStudentUserId,
-                        s -> s,
-                        (a, b) -> a));
-
         List<Map<String, Object>> rows = new java.util.ArrayList<>();
-        for (User u : pending) {
-            com.schoolers.model.Student student = studentByUserId.get(u.getId());
-            Map<String, Object> row = new LinkedHashMap<>();
-            row.put("studentName",     u.getName());
-            row.put("admissionNumber", student != null && student.getAdmissionNumber() != null
-                    ? student.getAdmissionNumber() : "");
-            row.put("className",       student != null ? student.getClassName() + (student.getSection() != null && !student.getSection().isBlank() ? " - " + student.getSection() : "") : "");
-            row.put("username",        u.getUsername() != null ? u.getUsername() : "");
-            row.put("loginEmail",      displayEmail(u.getEmail()));
-            row.put("tempPassword",    u.getTempPassword() != null ? u.getTempPassword() : "(already changed)");
-            rows.add(row);
+
+        // ── Group A: students with no account yet ──────────────────────────────
+        List<com.schoolers.model.Student> withoutAccount =
+                studentRepository.findBySchoolIdAndStudentUserIdIsNull(schoolId);
+
+        for (com.schoolers.model.Student student : withoutAccount) {
+            try {
+                StudentUserResult result = createStudentUser(
+                        student.getName(), student.getAdmissionNumber(),
+                        student.getRollNumber(), student.getId(), null, schoolId);
+                if (result == null) continue;
+                student.setStudentUserId(result.user().getId());
+                student.setIsActive(true);
+                studentRepository.save(student);
+                rows.add(credRow(student, result.user().getUsername(),
+                        displayEmail(result.loginEmail()), result.rawPassword()));
+            } catch (Exception e) {
+                log.warning("[getPendingStudentCredentials] Could not create account for student "
+                        + student.getId() + ": " + e.getMessage());
+            }
         }
+
+        // ── Group B: students with account but haven't changed temp password ───
+        List<User> firstLoginUsers =
+                userRepository.findByRoleAndSchoolIdAndFirstLoginTrue(User.Role.STUDENT, schoolId);
+
+        if (!firstLoginUsers.isEmpty()) {
+            List<Long> userIds = firstLoginUsers.stream().map(User::getId).toList();
+            Map<Long, com.schoolers.model.Student> studentByUserId = studentRepository.findBySchoolId(schoolId)
+                    .stream()
+                    .filter(s -> s.getStudentUserId() != null && userIds.contains(s.getStudentUserId()))
+                    .collect(java.util.stream.Collectors.toMap(
+                            com.schoolers.model.Student::getStudentUserId, s -> s, (a, b) -> a));
+
+            for (User u : firstLoginUsers) {
+                com.schoolers.model.Student student = studentByUserId.get(u.getId());
+                rows.add(credRow(student, u.getUsername(),
+                        displayEmail(u.getEmail()),
+                        u.getTempPassword() != null ? u.getTempPassword() : "(already changed)"));
+            }
+        }
+
         return ApiResponse.success("Pending credentials", rows);
+    }
+
+    private Map<String, Object> credRow(com.schoolers.model.Student student,
+                                        String username, String loginEmail, String tempPassword) {
+        Map<String, Object> row = new LinkedHashMap<>();
+        row.put("studentName",     student != null ? student.getName() : "");
+        row.put("admissionNumber", student != null && student.getAdmissionNumber() != null
+                ? student.getAdmissionNumber() : "");
+        row.put("className",       student != null
+                ? student.getClassName() + (student.getSection() != null && !student.getSection().isBlank()
+                    ? " - " + student.getSection() : "") : "");
+        row.put("username",        username != null ? username : "");
+        row.put("loginEmail",      loginEmail);
+        row.put("tempPassword",    tempPassword);
+        return row;
     }
 
     // ── Teachers ───────────────────────────────────────────────────────────
