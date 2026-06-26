@@ -184,14 +184,23 @@ function downloadTemplate() {
 
 /* ── Download student credentials as Excel ──────────────────────────── */
 function downloadCredentials(credentials) {
-  const data = credentials.map(c => ({
-    'Student Name':     c.studentName     || '',
-    'Admission Number': c.admissionNumber || '',
-    'Username':         c.username        || '',
-    'Login Email':      c.loginEmail      || '',
-    'Temp Password':    c.tempPassword    || '',
-  }));
-  const ws = XLSX.utils.json_to_sheet(data);
+  const headers = ['Student Name', 'Admission Number', 'Username', 'Login Email', 'Temp Password'];
+  const data = credentials.map(c => [
+    c.studentName     || '',
+    c.admissionNumber || '',
+    c.username        || '',
+    c.loginEmail      || '',
+    c.tempPassword    || '',
+  ]);
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+  // Force all cells to text so Excel never interprets @#$! passwords as formulas
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  for (let R = range.s.r; R <= range.e.r; R++) {
+    for (let C = range.s.c; C <= range.e.c; C++) {
+      const addr = XLSX.utils.encode_cell({ r: R, c: C });
+      if (ws[addr]) ws[addr].t = 's';
+    }
+  }
   ws['!cols'] = [{ wch: 22 }, { wch: 16 }, { wch: 20 }, { wch: 30 }, { wch: 16 }];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Student Credentials');

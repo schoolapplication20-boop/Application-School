@@ -10,15 +10,28 @@ async function downloadPendingCredentials(adminAPI, showToast) {
       showToast?.('No pending credentials — all students have already set their own passwords.', 'info');
       return;
     }
-    const sheet = rows.map(r => ({
-      'Student Name':     r.studentName     || '',
-      'Admission Number': r.admissionNumber || '',
-      'Class':            r.className       || '',
-      'Username':         r.username        || '',
-      'Login Email':      r.loginEmail      || '',
-      'Temp Password':    r.tempPassword    || '',
-    }));
-    const ws = XLSX.utils.json_to_sheet(sheet);
+    // Build as array-of-arrays so we can force every cell to text type.
+    // Passwords contain @#$! — Excel interprets cells starting with @ as
+    // formulas and corrupts them. Explicit text type prevents this.
+    const headers = ['Student Name', 'Admission Number', 'Class', 'Username', 'Login Email', 'Temp Password'];
+    const data = rows.map(r => [
+      r.studentName     || '',
+      r.admissionNumber || '',
+      r.className       || '',
+      r.username        || '',
+      r.loginEmail      || '',
+      r.tempPassword    || '',
+    ]);
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+    // Force all cells in every row to type 's' (string) so Excel never
+    // interprets values as formulas regardless of leading characters.
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    for (let R = range.s.r; R <= range.e.r; R++) {
+      for (let C = range.s.c; C <= range.e.c; C++) {
+        const addr = XLSX.utils.encode_cell({ r: R, c: C });
+        if (ws[addr]) ws[addr].t = 's';
+      }
+    }
     ws['!cols'] = [{ wch: 22 }, { wch: 16 }, { wch: 12 }, { wch: 18 }, { wch: 28 }, { wch: 16 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Student Credentials');
