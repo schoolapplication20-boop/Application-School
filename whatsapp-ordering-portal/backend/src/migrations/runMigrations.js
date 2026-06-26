@@ -87,9 +87,10 @@ async function runMigrations() {
     await sequelize.authenticate();
     console.log('✅ Database connected');
 
-    // Create schema
+    // Create schema and set search path
     console.log('📦 Creating whatsapp_portal schema...');
     await sequelize.query('CREATE SCHEMA IF NOT EXISTS whatsapp_portal;');
+    await sequelize.query(`SET search_path TO ${dbSchema}, public;`);
     console.log('✅ Schema ready');
 
     // Run init.sql

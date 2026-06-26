@@ -66,6 +66,13 @@ const sequelize = process.env.DATABASE_URL
       });
     })();
 
+// Set search_path after every connection so Sequelize finds wa_* tables
+// in whatsapp_portal schema. Using a hook is more reliable than the
+// dialectOptions.options approach, which can be ignored by connection poolers.
+sequelize.addHook('afterConnect', async (connection) => {
+  await connection.query(`SET search_path TO ${dbSchema}, public;`);
+});
+
 /** Test connectivity and optionally sync models in dev */
 export const initializeDatabase = async () => {
   try {
