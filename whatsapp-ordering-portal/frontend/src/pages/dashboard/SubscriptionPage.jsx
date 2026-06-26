@@ -4,18 +4,18 @@ import api from '../../services/api';
 const PLANS = [
   {
     key: 'free',
-    name: 'Free',
+    name: 'Free Trial',
     price: 0,
-    period: 'Forever',
+    period: '5 orders free/month',
     color: '#64748b',
-    features: ['50 orders/month', '1 WhatsApp number', '20 products', 'Basic dashboard'],
+    features: ['5 orders free every month', '1 WhatsApp number', '20 products', 'Basic dashboard'],
     cta: 'Current Plan',
     disabled: true,
   },
   {
     key: 'professional',
     name: 'Professional',
-    price: 29,
+    price: 1499,
     period: '/month',
     color: '#25d366',
     popular: true,
@@ -25,7 +25,7 @@ const PLANS = [
   {
     key: 'enterprise',
     name: 'Enterprise',
-    price: 79,
+    price: 2999,
     period: '/month',
     color: '#8b5cf6',
     features: ['Everything in Pro', '3 WhatsApp numbers', 'Staff management', 'API access', 'Custom integrations', 'Dedicated account manager', 'SLA guarantee'],
@@ -119,8 +119,8 @@ export default function SubscriptionPage() {
                   <span className="sub-price-free">Free</span>
                 ) : (
                   <>
-                    <span className="sub-price-currency">$</span>
-                    <span className="sub-price-amount">{plan.price}</span>
+                    <span className="sub-price-currency">₹</span>
+                    <span className="sub-price-amount">{plan.price.toLocaleString('en-IN')}</span>
                     <span className="sub-price-period">{plan.period}</span>
                   </>
                 )}

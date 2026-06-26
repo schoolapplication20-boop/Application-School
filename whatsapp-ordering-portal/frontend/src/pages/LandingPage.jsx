@@ -82,12 +82,12 @@ const STEPS = [
 
 const PLANS = [
   {
-    name: 'Starter',
+    name: 'Free Trial',
     price: 0,
-    period: 'Free forever',
+    period: 'First 5 orders free/month',
     highlight: false,
     features: [
-      '50 orders / month',
+      '5 orders free every month',
       '1 WhatsApp number',
       'Basic menu (20 products)',
       'Order dashboard',
@@ -98,7 +98,7 @@ const PLANS = [
   },
   {
     name: 'Professional',
-    price: 29,
+    price: 1499,
     period: 'per month',
     highlight: true,
     badge: 'Most Popular',
@@ -112,12 +112,12 @@ const PLANS = [
       'WhatsApp broadcasts',
       'Priority support',
     ],
-    cta: 'Start 14-Day Free Trial',
+    cta: 'Get Started',
     to: '/signup?plan=professional',
   },
   {
     name: 'Enterprise',
-    price: 79,
+    price: 2999,
     period: 'per month',
     highlight: false,
     features: [
@@ -386,8 +386,8 @@ export default function LandingPage() {
                     <span className="landing-price-amount">Free</span>
                   ) : (
                     <>
-                      <span className="landing-price-currency">$</span>
-                      <span className="landing-price-amount">{annualDiscount(plan.price)}</span>
+                      <span className="landing-price-currency">₹</span>
+                      <span className="landing-price-amount">{annualDiscount(plan.price).toLocaleString('en-IN')}</span>
                     </>
                   )}
                   <span className="landing-price-period">{plan.period}</span>
