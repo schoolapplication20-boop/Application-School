@@ -35,6 +35,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     /** Find the login account directly linked to a student record */
     Optional<User> findByStudentId(Long studentId);
 
+    /** All student accounts in a school that haven't changed their temp password yet. */
+    List<User> findByRoleAndSchoolIdAndFirstLoginTrue(User.Role role, Long schoolId);
+
     /** Find login accounts directly linked to the given student records (batch lookup) */
     List<User> findByStudentIdIn(List<Long> studentIds);
 

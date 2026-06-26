@@ -789,14 +789,59 @@ public class AdminService {
                 return ApiResponse.success("Login account created and credentials retrieved", creds);
             }
             return userRepository.findById(student.getStudentUserId()).map(user -> {
+                boolean isFirstLogin = Boolean.TRUE.equals(user.getFirstLogin());
                 Map<String, Object> creds = new LinkedHashMap<>();
-                creds.put("email", user.getEmail());
-                creds.put("firstLogin", Boolean.TRUE.equals(user.getFirstLogin()));
-                creds.put("tempPassword", null);
+                creds.put("email", displayEmail(user.getEmail()));
+                creds.put("username", user.getUsername() != null ? user.getUsername() : "");
+                creds.put("firstLogin", isFirstLogin);
+                // Temp password is only available while the student hasn't changed it yet
+                creds.put("tempPassword", isFirstLogin ? user.getTempPassword() : null);
                 creds.put("isActive", user.getIsActive());
                 return ApiResponse.success("Credentials retrieved", creds);
             }).orElse(ApiResponse.<Map<String, Object>>error("Student user account not found."));
         }).orElse(ApiResponse.<Map<String, Object>>error("Student not found."));
+    }
+
+    /** Hides auto-generated @my-skoolz.com suffix — shows only the local part as the login handle. */
+    private String displayEmail(String email) {
+        if (email == null) return "";
+        return email.endsWith("@my-skoolz.com") ? email.split("@")[0] : email;
+    }
+
+    /**
+     * Returns credentials for every student in the school who still has
+     * firstLogin=true (i.e. has not yet changed their temp password).
+     * tempPassword is stored in plaintext until first login — once changed it
+     * is nulled out and this method will no longer include that student.
+     */
+    public ApiResponse<List<Map<String, Object>>> getPendingStudentCredentials(Long schoolId) {
+        List<User> pending = userRepository.findByRoleAndSchoolIdAndFirstLoginTrue(User.Role.STUDENT, schoolId);
+        if (pending.isEmpty()) return ApiResponse.success("No students with pending credentials", List.of());
+
+        // Batch-load the matching Student records to get admission numbers
+        List<Long> userIds = pending.stream().map(User::getId).toList();
+        Map<Long, com.schoolers.model.Student> studentByUserId = studentRepository
+                .findAll().stream()
+                .filter(s -> s.getStudentUserId() != null && userIds.contains(s.getStudentUserId()))
+                .collect(java.util.stream.Collectors.toMap(
+                        com.schoolers.model.Student::getStudentUserId,
+                        s -> s,
+                        (a, b) -> a));
+
+        List<Map<String, Object>> rows = new java.util.ArrayList<>();
+        for (User u : pending) {
+            com.schoolers.model.Student student = studentByUserId.get(u.getId());
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("studentName",     u.getName());
+            row.put("admissionNumber", student != null && student.getAdmissionNumber() != null
+                    ? student.getAdmissionNumber() : "");
+            row.put("className",       student != null ? student.getClassName() + (student.getSection() != null && !student.getSection().isBlank() ? " - " + student.getSection() : "") : "");
+            row.put("username",        u.getUsername() != null ? u.getUsername() : "");
+            row.put("loginEmail",      displayEmail(u.getEmail()));
+            row.put("tempPassword",    u.getTempPassword() != null ? u.getTempPassword() : "(already changed)");
+            rows.add(row);
+        }
+        return ApiResponse.success("Pending credentials", rows);
     }
 
     // ── Teachers ───────────────────────────────────────────────────────────

@@ -519,6 +519,7 @@ export default function Students() {
         filterClass={filterClass} setFilterClass={setFilterClass} filterClassOptions={filterClassOptions}
         filterStatus={filterStatus} setFilterStatus={setFilterStatus} totalActive={totalActive} totalInactive={totalInactive}
         setShowBulkImport={setShowBulkImport} setShowExportModal={setShowExportModal}
+        adminAPI={adminAPI} showToast={showToast}
         setPromoteForm={setPromoteForm} setShowPromoteModal={setShowPromoteModal}
         selectionMode={selectionMode} setSelectionMode={setSelectionMode} exitSelectionMode={exitSelectionMode}
         selectedIds={selectedIds} isAllPageSelected={isAllPageSelected} toggleSelect={toggleSelect} toggleSelectAll={toggleSelectAll} setBulkDeleteConfirm={setBulkDeleteConfirm}

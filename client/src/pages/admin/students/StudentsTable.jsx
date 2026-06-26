@@ -1,12 +1,40 @@
 import Button from '../../../components/Button';
 import { formatDOB, PAGE_SIZE } from './constants';
+import * as XLSX from 'xlsx';
+
+async function downloadPendingCredentials(adminAPI, showToast) {
+  try {
+    const res = await adminAPI.getPendingStudentCredentials();
+    const rows = res.data?.data ?? [];
+    if (rows.length === 0) {
+      showToast?.('All students have already changed their passwords.', 'info');
+      return;
+    }
+    const sheet = rows.map(r => ({
+      'Student Name':     r.studentName     || '',
+      'Admission Number': r.admissionNumber || '',
+      'Class':            r.className       || '',
+      'Username':         r.username        || '',
+      'Login Email':      r.loginEmail      || '',
+      'Temp Password':    r.tempPassword    || '',
+    }));
+    const ws = XLSX.utils.json_to_sheet(sheet);
+    ws['!cols'] = [{ wch: 22 }, { wch: 16 }, { wch: 12 }, { wch: 18 }, { wch: 28 }, { wch: 16 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Student Credentials');
+    XLSX.writeFile(wb, 'pending_student_credentials.xlsx');
+    showToast?.(`Downloaded credentials for ${rows.length} student${rows.length > 1 ? 's' : ''}.`, 'success');
+  } catch {
+    showToast?.('Failed to download credentials.', 'error');
+  }
+}
 
 export default function StudentsTable({
   loadingStudents, students, paginated, totalElements,
   searchTerm, setSearchTerm, setCurrentPage,
   filterClass, setFilterClass, filterClassOptions,
   filterStatus, setFilterStatus, totalActive, totalInactive,
-  setShowBulkImport, setShowExportModal,
+  setShowBulkImport, setShowExportModal, adminAPI, showToast,
   setPromoteForm, setShowPromoteModal,
   selectionMode, setSelectionMode, exitSelectionMode,
   selectedIds, isAllPageSelected, toggleSelect, toggleSelectAll, setBulkDeleteConfirm,
@@ -48,6 +76,20 @@ export default function StudentsTable({
         >
           <span className="material-icons" style={{ fontSize: '17px' }}>upload_file</span>
           Bulk Import
+        </button>
+        <button
+          onClick={() => downloadPendingCredentials(adminAPI, showToast)}
+          title="Download temp passwords for students who haven't logged in yet"
+          style={{
+            display: 'flex', alignItems: 'center', gap: '6px',
+            padding: '9px 16px', borderRadius: '9px',
+            border: '1.5px solid #0369a1', background: '#eff6ff',
+            color: '#0369a1', fontWeight: 700, fontSize: '13px', cursor: 'pointer',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          <span className="material-icons" style={{ fontSize: '17px' }}>key</span>
+          Download Credentials
         </button>
         <button
           onClick={() => setShowExportModal(true)}

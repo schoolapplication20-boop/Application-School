@@ -222,6 +222,13 @@ public class AdminController {
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
+    /** Bulk download — credentials for all students who haven't changed their temp password yet. */
+    @GetMapping("/students/credentials/pending")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<?> getPendingStudentCredentials(Authentication auth) {
+        return ResponseEntity.ok(adminService.getPendingStudentCredentials(getCurrentSchoolId(auth)));
+    }
+
     // ===== Teachers =====
     @GetMapping("/teachers")
     public ResponseEntity<?> getTeachers(Authentication auth) {
