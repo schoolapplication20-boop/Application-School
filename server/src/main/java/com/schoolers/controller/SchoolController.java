@@ -90,7 +90,7 @@ public class SchoolController {
     @GetMapping("/by-admin")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getMySchool(Authentication auth) {
         if (auth == null)
-            return ResponseEntity.status(401).body(ApiResponse.error("Unauthorized"));
+            return ResponseEntity.status(200).body(ApiResponse.error("Not authenticated"));
         return ResponseEntity.ok(schoolService.getSchoolByAdminEmail(auth.getName()));
     }
 

@@ -833,7 +833,11 @@ public class AdminService {
         String newPassword = generateStudentPassword();
         user.setTempPassword(newPassword);
         user.setPassword(passwordEncoder.encode(newPassword));
-        user.setFirstLogin(true);
+        // Keep firstLogin=false on admin reset — the student logs straight into
+        // the dashboard. Setting it true would redirect them to change-password,
+        // which calls revokeUser() and invalidates the token they just received,
+        // causing the "session expired" dialog immediately after login.
+        user.setFirstLogin(false);
         user.setFailedLoginAttempts(0);
         user.setLockedUntil(null);
         user.setIsActive(true);

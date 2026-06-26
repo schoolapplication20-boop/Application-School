@@ -42,7 +42,11 @@ api.interceptors.response.use(
 
     // 401: token expired (skip on auth endpoints to avoid redirect loops)
     const isAuthEndpoint = config?.url?.includes('/api/auth/');
-    if (error.response?.status === 401 && !isAuthEndpoint) {
+    // Only treat as "session expired" if the request actually carried a token —
+    // background calls made before login (e.g. school branding fetch) have no
+    // token and legitimately get 401; firing the dialog there is a false alarm.
+    const hadToken = !!(config?.headers?.Authorization || config?.headers?.authorization);
+    if (error.response?.status === 401 && !isAuthEndpoint && hadToken) {
       clearAuthToken();
       // Fire a custom event so AuthContext can show a graceful "session expired" dialog
       // instead of hard-redirecting and losing any unsaved form data.
