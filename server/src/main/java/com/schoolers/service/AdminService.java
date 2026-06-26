@@ -803,6 +803,56 @@ public class AdminService {
         }).orElse(ApiResponse.<Map<String, Object>>error("Student not found."));
     }
 
+    /**
+     * Generates a fresh temp password for a student, persists both the
+     * plaintext (tempPassword) and the BCrypt hash (password), resets firstLogin
+     * to true, and clears any lockout. Works whether the student has an account
+     * already or not.
+     */
+    @Transactional
+    public ApiResponse<Map<String, Object>> resetStudentPassword(Long studentId, Long schoolId) {
+        com.schoolers.model.Student student = studentRepository.findById(studentId).orElse(null);
+        if (student == null || schoolMismatch(schoolId, student.getSchoolId()))
+            return ApiResponse.error("Student not found.");
+
+        // Create account first if it doesn't exist yet
+        if (student.getStudentUserId() == null) {
+            StudentUserResult result = createStudentUser(
+                    student.getName(), student.getAdmissionNumber(),
+                    student.getRollNumber(), student.getId(), null, student.getSchoolId());
+            if (result == null) return ApiResponse.error("Could not create login account.");
+            student.setStudentUserId(result.user().getId());
+            student.setIsActive(true);
+            studentRepository.save(student);
+            return buildResetResponse(result.user(), result.rawPassword());
+        }
+
+        User user = userRepository.findById(student.getStudentUserId()).orElse(null);
+        if (user == null) return ApiResponse.error("Student login account not found.");
+
+        String newPassword = generateStudentPassword();
+        user.setTempPassword(newPassword);
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setFirstLogin(true);
+        user.setFailedLoginAttempts(0);
+        user.setLockedUntil(null);
+        user.setIsActive(true);
+        userRepository.saveAndFlush(user);   // flush immediately — no deferred commit ambiguity
+
+        student.setIsActive(true);
+        studentRepository.save(student);
+
+        return buildResetResponse(user, newPassword);
+    }
+
+    private ApiResponse<Map<String, Object>> buildResetResponse(User user, String plainPassword) {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("username",     user.getUsername() != null ? user.getUsername() : "");
+        data.put("loginEmail",   displayEmail(user.getEmail()));
+        data.put("tempPassword", plainPassword);
+        return ApiResponse.success("Password reset successfully", data);
+    }
+
     /** Hides auto-generated @my-skoolz.com suffix — shows only the local part as the login handle. */
     private String displayEmail(String email) {
         if (email == null) return "";

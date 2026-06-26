@@ -116,6 +116,7 @@ export const adminAPI = {
   deleteStudent: (id) => api.delete(`/api/admin/students/${id}`),
   getStudentCredentials: (id) => api.get(`/api/admin/students/${id}/credentials`),
   getPendingStudentCredentials: () => api.get('/api/admin/students/credentials/pending'),
+  resetStudentPassword: (id) => api.post(`/api/admin/students/${id}/reset-password`),
   onboardStudent: (id, email) => api.post(`/api/admin/students/${id}/onboard`, { email }),
   promoteStudents: (data) => api.post('/api/admin/students/promote', data),
 

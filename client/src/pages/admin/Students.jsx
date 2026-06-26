@@ -461,8 +461,10 @@ export default function Students() {
       const res = await adminAPI.getStudentCredentials(student.id);
       const d = res.data?.data || {};
       setViewCredTarget({
+        studentId:   student.id,
         studentName: student.name,
         email:        d.email,
+        username:     d.username,
         tempPassword: d.tempPassword,
         firstLogin:  d.firstLogin,
         isActive:    d.isActive,
@@ -472,6 +474,24 @@ export default function Students() {
       showToast(msg, 'error');
     } finally {
       setLoadingCred(false);
+    }
+  };
+
+  const handleResetPassword = async (student) => {
+    try {
+      const res = await adminAPI.resetStudentPassword(student.studentId || student.id);
+      const d = res.data?.data || {};
+      setViewCredTarget(prev => ({
+        ...prev,
+        username:    d.username    || prev?.username,
+        email:       d.loginEmail  || prev?.email,
+        tempPassword: d.tempPassword,
+        firstLogin:  true,
+        isActive:    true,
+      }));
+      showToast('Password reset. Share the new temp password with the student.', 'success');
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to reset password.', 'error');
     }
   };
 
@@ -566,7 +586,11 @@ export default function Students() {
 
       {/* ── View Existing Student Credentials Modal ─────────────────────── */}
       {viewCredTarget && (
-        <ViewCredentialsModal viewCredTarget={viewCredTarget} onClose={() => setViewCredTarget(null)} />
+        <ViewCredentialsModal
+          viewCredTarget={viewCredTarget}
+          onClose={() => setViewCredTarget(null)}
+          onResetPassword={() => handleResetPassword(viewCredTarget)}
+        />
       )}
 
       {/* ── Student Credentials Modal ──────────────────────────── */}

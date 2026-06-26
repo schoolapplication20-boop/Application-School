@@ -229,6 +229,15 @@ public class AdminController {
         return ResponseEntity.ok(adminService.getPendingStudentCredentials(getCurrentSchoolId(auth)));
     }
 
+    /** Reset a single student's password — generates a new temp password, updates the BCrypt hash,
+     *  clears lockout, sets firstLogin=true. Returns the new credentials immediately. */
+    @PostMapping("/students/{id}/reset-password")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<?> resetStudentPassword(@PathVariable Long id, Authentication auth) {
+        var response = adminService.resetStudentPassword(id, getCurrentSchoolId(auth));
+        return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
+    }
+
     // ===== Teachers =====
     @GetMapping("/teachers")
     public ResponseEntity<?> getTeachers(Authentication auth) {

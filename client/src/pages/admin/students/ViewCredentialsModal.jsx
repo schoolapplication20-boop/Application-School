@@ -1,6 +1,14 @@
+import { useState } from 'react';
 import { CredentialCard } from './shared';
 
-export default function ViewCredentialsModal({ viewCredTarget, onClose }) {
+export default function ViewCredentialsModal({ viewCredTarget, onClose, onResetPassword }) {
+  const [resetting, setResetting] = useState(false);
+
+  const handleReset = async () => {
+    setResetting(true);
+    try { await onResetPassword?.(); }
+    finally { setResetting(false); }
+  };
   return (
     <div className="modal-overlay">
       <div className="modal-container" style={{ maxWidth: 420 }}>
@@ -50,7 +58,16 @@ export default function ViewCredentialsModal({ viewCredTarget, onClose }) {
           )}
         </div>
 
-        <div className="modal-footer">
+        <div className="modal-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <button
+            onClick={handleReset}
+            disabled={resetting}
+            title="Generate a new temp password and reset any lockout"
+            style={{ padding: '9px 16px', background: resetting ? '#a0aec0' : '#e53e3e', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, cursor: resetting ? 'not-allowed' : 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            <span className="material-icons" style={{ fontSize: 16 }}>lock_reset</span>
+            {resetting ? 'Resetting…' : 'Reset Password'}
+          </button>
           <button onClick={onClose}
             style={{ padding: '10px 28px', background: '#6d28d9', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, cursor: 'pointer', fontFamily: 'Poppins, sans-serif' }}>
             Close
