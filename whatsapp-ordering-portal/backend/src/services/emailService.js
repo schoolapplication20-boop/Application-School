@@ -1,53 +1,59 @@
-import nodemailer from 'nodemailer';
+/**
+ * Email service — uses Resend HTTP API (https://resend.com).
+ *
+ * Why not nodemailer/SMTP? Cloud providers (Railway, AWS, GCP) commonly
+ * block outbound SMTP ports (25 / 465 / 587) to prevent spam.
+ * Resend sends over HTTPS (port 443) which is always open.
+ *
+ * Setup: add RESEND_API_KEY=re_xxxx to Railway environment variables.
+ * Free tier: 3,000 emails / month — more than enough to start.
+ *
+ * Fallback: if RESEND_API_KEY is missing, emails are skipped (logged as warn).
+ */
+
 import logger from '../utils/logger.js';
 
-const fromName = process.env.SMTP_FROM_NAME || 'WhatsApp Portal';
-const fromEmail = process.env.SMTP_FROM_EMAIL || 'noreply@whatsappportal.com';
-const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+const fromName  = process.env.SMTP_FROM_NAME  || process.env.EMAIL_FROM_NAME  || 'OrderBot';
+const fromEmail = process.env.SMTP_FROM_EMAIL || process.env.EMAIL_FROM_EMAIL || 'noreply@orderbot.ai';
+const frontendUrl = process.env.FRONTEND_URL  || 'http://localhost:5173';
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
 
-let transporter = null;
+const isConfigured = () => Boolean(RESEND_API_KEY);
 
-const isConfigured = () => Boolean(
-  process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASSWORD,
-);
-
-const getTransporter = () => {
-  if (!isConfigured()) return null;
-  if (!transporter) {
-    transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT) || 587,
-      secure: Number(process.env.SMTP_PORT) === 465,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASSWORD,
-      },
-    });
-  }
-  return transporter;
-};
-
-const sendMail = async ({
-  to, subject, html, text,
-}) => {
-  const client = getTransporter();
-  if (!client) {
-    logger.warn(`[emailService] SMTP not configured — skipping email to ${to} (${subject})`);
+const sendMail = async ({ to, subject, html, text }) => {
+  if (!isConfigured()) {
+    logger.warn(`[emailService] RESEND_API_KEY not set — skipping email to ${to} (${subject})`);
     return { sent: false, reason: 'NOT_CONFIGURED' };
   }
 
   try {
-    await client.sendMail({
-      from: `"${fromName}" <${fromEmail}>`,
-      to,
-      subject,
-      html,
-      text,
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: `${fromName} <${fromEmail}>`,
+        to: [to],
+        subject,
+        html,
+        text,
+      }),
     });
-    return { sent: true };
-  } catch (error) {
-    logger.error(`[emailService] Failed to send email to ${to}: ${error.message}`);
-    return { sent: false, reason: error.message };
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      logger.error(`[emailService] Resend error to ${to}: ${JSON.stringify(data)}`);
+      return { sent: false, reason: data?.message || 'RESEND_ERROR' };
+    }
+
+    logger.info(`[emailService] Email sent to ${to} — id: ${data.id}`);
+    return { sent: true, id: data.id };
+  } catch (err) {
+    logger.error(`[emailService] Failed to send email to ${to}: ${err.message}`);
+    return { sent: false, reason: err.message };
   }
 };
 
@@ -55,34 +61,42 @@ export const sendVerificationEmail = async (email, fullName, token) => {
   const verifyUrl = `${frontendUrl}/verify-email?token=${token}`;
   return sendMail({
     to: email,
-    subject: 'Verify your email — WhatsApp Ordering Portal',
+    subject: 'Verify your email — OrderBot',
     html: `
-      <p>Hi ${fullName || 'there'},</p>
-      <p>Thanks for signing up for the WhatsApp Ordering Portal. Please verify your email address to activate your account:</p>
-      <p><a href="${verifyUrl}">Verify Email</a></p>
-      <p>If the link doesn't work, copy and paste this URL into your browser:</p>
-      <p>${verifyUrl}</p>
-      <p>This link expires in 24 hours.</p>
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:24px">
+        <h2 style="color:#25d366">Welcome to OrderBot! 💬</h2>
+        <p>Hi ${fullName || 'there'},</p>
+        <p>Thanks for signing up. Click the button below to verify your email and activate your account:</p>
+        <a href="${verifyUrl}" style="display:inline-block;margin:16px 0;padding:12px 28px;background:#25d366;color:#fff;border-radius:8px;text-decoration:none;font-weight:700">
+          Verify Email
+        </a>
+        <p style="color:#64748b;font-size:13px">Or copy this link into your browser:<br/>${verifyUrl}</p>
+        <p style="color:#64748b;font-size:13px">This link expires in 24 hours. If you didn't sign up, ignore this email.</p>
+      </div>
     `,
-    text: `Hi ${fullName || 'there'},\n\nVerify your email by visiting: ${verifyUrl}\n\nThis link expires in 24 hours.`,
+    text: `Hi ${fullName || 'there'},\n\nVerify your email by visiting:\n${verifyUrl}\n\nThis link expires in 24 hours.`,
   });
 };
 
 export const sendOtpEmail = async (email, fullName, otp, purpose) => {
   const purposeText = {
-    LOGIN: 'log in to your account',
-    SIGNUP: 'complete your signup',
+    LOGIN:          'log in to your account',
+    SIGNUP:         'complete your signup',
     PASSWORD_RESET: 'reset your password',
   }[purpose] || 'verify your request';
 
   return sendMail({
     to: email,
-    subject: `Your verification code: ${otp}`,
+    subject: `Your verification code: ${otp} — OrderBot`,
     html: `
-      <p>Hi ${fullName || 'there'},</p>
-      <p>Use the code below to ${purposeText}:</p>
-      <h2 style="letter-spacing: 4px;">${otp}</h2>
-      <p>This code expires in ${process.env.OTP_EXPIRE_MINUTES || 5} minutes. If you didn't request this, you can ignore this email.</p>
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:24px">
+        <h2 style="color:#25d366">Your verification code 🔐</h2>
+        <p>Hi ${fullName || 'there'},</p>
+        <p>Use this code to ${purposeText}:</p>
+        <div style="font-size:36px;font-weight:900;letter-spacing:8px;color:#0f172a;margin:16px 0">${otp}</div>
+        <p style="color:#64748b;font-size:13px">This code expires in ${process.env.OTP_EXPIRE_MINUTES || 5} minutes.</p>
+        <p style="color:#64748b;font-size:13px">If you didn't request this, you can safely ignore this email.</p>
+      </div>
     `,
     text: `Your verification code is ${otp}. It expires in ${process.env.OTP_EXPIRE_MINUTES || 5} minutes.`,
   });
@@ -90,18 +104,18 @@ export const sendOtpEmail = async (email, fullName, otp, purpose) => {
 
 export const sendWelcomeEmail = async (email, fullName) => sendMail({
   to: email,
-  subject: 'Welcome to WhatsApp Ordering Portal',
+  subject: 'Welcome to OrderBot — you\'re all set! 🎉',
   html: `
-    <p>Hi ${fullName || 'there'},</p>
-    <p>Your email has been verified and your account is ready. Log in to set up your business profile and start taking orders over WhatsApp.</p>
-    <p><a href="${frontendUrl}/login">Go to login</a></p>
+    <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:24px">
+      <h2 style="color:#25d366">You're in! 🎉</h2>
+      <p>Hi ${fullName || 'there'},</p>
+      <p>Your email is verified and your OrderBot account is ready. Log in to set up your business and start accepting WhatsApp orders.</p>
+      <a href="${frontendUrl}/login" style="display:inline-block;margin:16px 0;padding:12px 28px;background:#25d366;color:#fff;border-radius:8px;text-decoration:none;font-weight:700">
+        Go to Dashboard
+      </a>
+    </div>
   `,
   text: `Hi ${fullName || 'there'},\n\nYour email has been verified. Log in at ${frontendUrl}/login to get started.`,
 });
 
-export default {
-  isConfigured,
-  sendVerificationEmail,
-  sendOtpEmail,
-  sendWelcomeEmail,
-};
+export default { isConfigured, sendVerificationEmail, sendOtpEmail, sendWelcomeEmail };
