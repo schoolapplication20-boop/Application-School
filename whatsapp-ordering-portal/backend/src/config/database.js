@@ -31,10 +31,22 @@ if (process.env.DATABASE_URL?.startsWith('jdbc:')) {
   process.env.DATABASE_URL = process.env.DATABASE_URL.replace(/^jdbc:/, '');
 }
 
-// Use DATABASE_URL directly when available (Railway, Supabase, Render …)
-// Otherwise fall back to discrete DB_* env vars for local dev.
+// Use DATABASE_URL when available, but parse it into individual params.
+// Passing the raw URL string to Sequelize lets pg-connection-string parse
+// its own SSL settings from the URL, which overrides dialectOptions and
+// causes SELF_SIGNED_CERT_IN_CHAIN errors on Supabase / Railway.
 const sequelize = process.env.DATABASE_URL
-  ? new Sequelize(process.env.DATABASE_URL, sharedOptions)
+  ? (() => {
+      const u = new URL(process.env.DATABASE_URL);
+      return new Sequelize({
+        ...sharedOptions,
+        host:     u.hostname,
+        port:     Number(u.port) || 5432,
+        database: u.pathname.replace(/^\//, ''),
+        username: decodeURIComponent(u.username),
+        password: decodeURIComponent(u.password),
+      });
+    })()
   : (() => {
       const cfg = getDbConnectionConfig();
       return new Sequelize({

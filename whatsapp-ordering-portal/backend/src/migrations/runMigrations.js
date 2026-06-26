@@ -24,10 +24,17 @@ const sslOptions = sslRequired
 let sequelize;
 
 if (process.env.DATABASE_URL) {
-  // Railway / Supabase / any provider that supplies a full connection URL
-  sequelize = new Sequelize(process.env.DATABASE_URL, {
-    dialect: 'postgres',
-    logging: false,
+  // Parse the URL into individual params — avoids pg-connection-string
+  // overriding our SSL settings when the URL is passed as a string.
+  const u = new URL(process.env.DATABASE_URL);
+  sequelize = new Sequelize({
+    dialect:  'postgres',
+    host:     u.hostname,
+    port:     Number(u.port) || 5432,
+    database: u.pathname.replace(/^\//, ''),
+    username: decodeURIComponent(u.username),
+    password: decodeURIComponent(u.password),
+    logging:  false,
     dialectOptions: sslOptions,
   });
 } else {
