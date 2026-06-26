@@ -855,10 +855,16 @@ public class AdminService {
                             com.schoolers.model.Student::getStudentUserId, s -> s, (a, b) -> a));
 
             for (User u : firstLoginUsers) {
+                // If tempPassword is null (accounts created before the fix), generate
+                // and persist a fresh one so the admin gets a usable password.
+                String tempPwd = u.getTempPassword();
+                if (tempPwd == null) {
+                    tempPwd = generateStudentPassword();
+                    u.setTempPassword(tempPwd);
+                    userRepository.save(u);
+                }
                 com.schoolers.model.Student student = studentByUserId.get(u.getId());
-                rows.add(credRow(student, u.getUsername(),
-                        displayEmail(u.getEmail()),
-                        u.getTempPassword() != null ? u.getTempPassword() : "(already changed)"));
+                rows.add(credRow(student, u.getUsername(), displayEmail(u.getEmail()), tempPwd));
             }
         }
 
