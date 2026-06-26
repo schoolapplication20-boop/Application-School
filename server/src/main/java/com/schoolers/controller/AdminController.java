@@ -6,6 +6,7 @@ import com.schoolers.model.*;
 import com.schoolers.repository.EmailVerificationRepository;
 import com.schoolers.repository.IdempotencyKeyRepository;
 import com.schoolers.repository.SchoolDiaryConfigRepository;
+import com.schoolers.repository.SchoolPrivacyConfigRepository;
 import com.schoolers.repository.UserRepository;
 import com.schoolers.service.AdminService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -34,6 +35,7 @@ public class AdminController {
     @Autowired private com.schoolers.repository.StudentFeeAssignmentRepository feeAssignmentRepository;
     @Autowired private com.schoolers.repository.SchoolRepository schoolRepository;
     @Autowired private SchoolDiaryConfigRepository schoolDiaryConfigRepository;
+    @Autowired private SchoolPrivacyConfigRepository schoolPrivacyConfigRepository;
     @Autowired private com.schoolers.repository.SchoolAuthConfigRepository schoolAuthConfigRepository;
 
     private static final java.util.regex.Pattern EMAIL_RE =
@@ -616,6 +618,31 @@ public class AdminController {
         config.setSchoolId(schoolId);
         SchoolDiaryConfig saved = schoolDiaryConfigRepository.save(config);
         return ResponseEntity.ok(ApiResponse.success("Diary config updated", saved));
+    }
+
+    // ===== Privacy Config =====
+
+    @GetMapping("/privacy-config")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','APPLICATION_OWNER')")
+    public ResponseEntity<?> getPrivacyConfig(Authentication auth) {
+        Long schoolId = getCurrentSchoolId(auth);
+        com.schoolers.model.SchoolPrivacyConfig cfg = schoolPrivacyConfigRepository.findBySchoolId(schoolId)
+            .orElseGet(() -> {
+                com.schoolers.model.SchoolPrivacyConfig d = new com.schoolers.model.SchoolPrivacyConfig();
+                d.setSchoolId(schoolId);
+                return d;
+            });
+        return ResponseEntity.ok(ApiResponse.success("Privacy config", cfg));
+    }
+
+    @PutMapping("/privacy-config")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPLICATION_OWNER')")
+    public ResponseEntity<?> updatePrivacyConfig(
+            @RequestBody com.schoolers.model.SchoolPrivacyConfig config, Authentication auth) {
+        Long schoolId = getCurrentSchoolId(auth);
+        config.setSchoolId(schoolId);
+        com.schoolers.model.SchoolPrivacyConfig saved = schoolPrivacyConfigRepository.save(config);
+        return ResponseEntity.ok(ApiResponse.success("Privacy config updated", saved));
     }
 
 }

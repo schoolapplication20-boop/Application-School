@@ -442,11 +442,12 @@ public class AdminService {
             // to the new student so their fee shows up immediately.
             syncClassFeeAssignment(saved);
 
-            // Step 3: Create user account only when an email was provided.
-            // Without an email the student record is saved first; the student can
-            // self-signup later (via /auth/student-signup) or an admin can onboard them.
+            // Step 3: Create user account when email was provided, OR when the
+            // bulk import flag createAccountWithoutEmail=true is set (admission-number
+            // based login with auto-generated @my-skoolz.com email).
             String studentEmail = str(body, "studentEmail", null);
-            StudentUserResult studentUserResult = hasEmail
+            boolean forceCreate = Boolean.TRUE.equals(body.get("createAccountWithoutEmail"));
+            StudentUserResult studentUserResult = (hasEmail || forceCreate)
                     ? createStudentUser(name, saved.getAdmissionNumber(), rollNumber, saved.getId(), studentEmail, schoolId)
                     : null;
 

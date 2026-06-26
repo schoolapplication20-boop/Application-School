@@ -27,9 +27,11 @@ public class BulkImportService {
                                            Long schoolId,
                                            Long adminId,
                                            String adminName) {
-        List<StudentImportRowDto> rows       = request.getRows();
-        boolean                  skipInvalid = request.isSkipInvalid();
-        List<FailedRowDto>       failed      = new ArrayList<>();
+        List<StudentImportRowDto>   rows           = request.getRows();
+        boolean                     skipInvalid    = request.isSkipInvalid();
+        boolean                     createAccounts = request.isCreateAccounts();
+        List<FailedRowDto>          failed         = new ArrayList<>();
+        List<StudentCredentialDto>  credentials    = new ArrayList<>();
         int imported    = 0;
         int duplicates  = 0;
 
@@ -66,7 +68,7 @@ public class BulkImportService {
             }
 
             try {
-                Map<String, Object> body = buildStudentMap(row, schoolId);
+                Map<String, Object> body = buildStudentMap(row, schoolId, createAccounts);
                 ApiResponse<Map<String, Object>> result = adminService.createStudent(body);
 
                 if (result.isSuccess()) {
@@ -76,8 +78,17 @@ public class BulkImportService {
                         existingAdmNos.add(admNo);
                     }
 
-                    // If email provided: account was auto-created with temp password; send welcome email.
-                    // If no email: student record saved without account; student self-signs up via admission number.
+                    // Collect credentials when an account was created (with or without email)
+                    if (createAccounts && result.getData() != null
+                            && result.getData().containsKey("studentTempPassword")) {
+                        credentials.add(new StudentCredentialDto(
+                            row.getFullName(),
+                            row.getAdmissionNumber(),
+                            (String) result.getData().get("studentUsername"),
+                            (String) result.getData().get("studentEmail"),
+                            (String) result.getData().get("studentTempPassword")
+                        ));
+                    }
                 } else {
                     failed.add(new FailedRowDto(row.getRowNumber(), row.getFullName(),
                         row.getAdmissionNumber(), row.getRollNumber(), row.getClassName(),
@@ -121,6 +132,7 @@ public class BulkImportService {
             .failedRowDetails(failed)
             .importLogId(savedLog.getId())
             .status(status)
+            .credentials(credentials)
             .build();
     }
 
@@ -141,11 +153,16 @@ public class BulkImportService {
         }).orElseThrow(() -> new RuntimeException("Import log not found"));
     }
 
-    private Map<String, Object> buildStudentMap(StudentImportRowDto row, Long schoolId) {
+    private Map<String, Object> buildStudentMap(StudentImportRowDto row, Long schoolId,
+                                               boolean createAccounts) {
         Map<String, Object> map = new HashMap<>();
         map.put("schoolId",       schoolId);
         map.put("name",           row.getFullName());
-        map.put("rollNumber",     row.getRollNumber());
+        // If no rollNumber supplied, fall back to admissionNumber so the
+        // NOT-NULL DB constraint is satisfied for admission-number-only schools.
+        String roll = (row.getRollNumber() != null && !row.getRollNumber().isBlank())
+                ? row.getRollNumber() : row.getAdmissionNumber();
+        map.put("rollNumber",     roll);
         map.put("admissionNumber",row.getAdmissionNumber());
         String[] clsSec = parseClassSection(row.getClassName(), row.getSection());
         map.put("className",      clsSec[0]);
@@ -157,9 +174,14 @@ public class BulkImportService {
         map.put("address",        row.getAddress());
         map.put("idProofName",    row.getIdProofFileName());
         if (row.getStudentEmail() != null && !row.getStudentEmail().isBlank()) {
+            // Real email provided — account created via normal path
             map.put("studentEmail", row.getStudentEmail().trim());
+        } else if (createAccounts) {
+            // No email but admin wants accounts — signal AdminService to auto-generate
+            // login email as {admissionNumber}@my-skoolz.com
+            map.put("createAccountWithoutEmail", true);
         } else {
-            // No email → no account created → student starts Inactive
+            // No email and no account flag — student starts Inactive
             map.put("status", "Inactive");
         }
         return map;

@@ -208,7 +208,6 @@ export default function Students() {
     else if (!/^\d{10}$/.test(formData.motherPhone)) e.motherPhone = 'Must be exactly 10 digits';
     if (formData.guardianPhone && !/^\d{10}$/.test(formData.guardianPhone)) e.guardianPhone = 'Must be exactly 10 digits';
     if (!formData.permanentAddress.trim()) e.permanentAddress = 'Permanent address is required';
-    if (!formData.idProofName)            e.idProof     = 'ID proof document is required';
     if (!editStudent && formData.studentEmail?.trim()) {
       // Email is optional — only validate format and OTP if provided
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.studentEmail.trim()))

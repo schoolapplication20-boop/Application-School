@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useSchool } from '../../context/SchoolContext';
-import { schoolAPI, examTypeAPI, gradeScaleAPI, adminAPI, authConfigAPI, diaryConfigAPI, BASE_URL } from '../../services/api';
+import { schoolAPI, examTypeAPI, gradeScaleAPI, adminAPI, authConfigAPI, diaryConfigAPI, privacyConfigAPI, BASE_URL } from '../../services/api';
 import Layout from '../../components/Layout';
 
 const MAX_SIZE_MB = 5;
@@ -154,6 +154,32 @@ const SchoolSettings = () => {
   };
 
   const updateDc = (field, value) => setDiaryConfig(prev => ({ ...prev, [field]: value }));
+
+  // ── Privacy config ────────────────────────────────────────────────────────────
+  const [privacyConfig,  setPrivacyConfig]  = useState({ hideStudentContactInfo: false });
+  const [pcSaving,       setPcSaving]       = useState(false);
+  const [pcError,        setPcError]        = useState('');
+  const [pcSuccess,      setPcSuccess]      = useState('');
+
+  const loadPrivacyConfig = useCallback(async () => {
+    try {
+      const r = await privacyConfigAPI.get();
+      const d = r.data?.data;
+      if (d) setPrivacyConfig({ hideStudentContactInfo: d.hideStudentContactInfo ?? false });
+    } catch { /* silently use defaults */ }
+  }, []);
+
+  useEffect(() => { loadPrivacyConfig(); }, [loadPrivacyConfig]);
+
+  const handleSavePrivacyConfig = async () => {
+    setPcError(''); setPcSuccess(''); setPcSaving(true);
+    try {
+      await privacyConfigAPI.update(privacyConfig);
+      setPcSuccess('Privacy settings saved successfully.');
+    } catch (err) {
+      setPcError(err.response?.data?.message || 'Failed to save privacy settings.');
+    } finally { setPcSaving(false); }
+  };
 
   // ── Exam type management ─────────────────────────────────────────────────────
   const [examTypes,    setExamTypes]    = useState([]);
@@ -1114,6 +1140,61 @@ const SchoolSettings = () => {
             </div>
           )}
         </div>
+
+        {/* ── Privacy Config card ── */}
+        {canEdit && (
+          <div style={{ background: 'var(--surface)', borderRadius: 16, border: '1px solid var(--border-strong)', boxShadow: '0 1px 6px rgba(0,0,0,0.06)', marginTop: 20 }}>
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
+              <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Student Data Privacy</h2>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '4px 0 0' }}>
+                Control which roles can see sensitive student information (phone numbers, parent email).
+              </p>
+            </div>
+            <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {pcError   && <div style={{ padding: '10px 14px', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 8, fontSize: 13, color: '#b91c1c' }}>{pcError}</div>}
+              {pcSuccess && <div style={{ padding: '10px 14px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 8, fontSize: 13, color: '#15803d' }}>{pcSuccess}</div>}
+
+              {/* Toggle */}
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 12, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={privacyConfig.hideStudentContactInfo}
+                  onChange={e => setPrivacyConfig(prev => ({ ...prev, hideStudentContactInfo: e.target.checked }))}
+                  style={{ marginTop: 2, width: 16, height: 16, accentColor: '#0369a1', cursor: 'pointer' }}
+                />
+                <div>
+                  <p style={{ margin: 0, fontWeight: 600, fontSize: 13, color: 'var(--text-primary)' }}>
+                    Hide student contact info from teachers
+                  </p>
+                  <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>
+                    When enabled, teachers can only see student name, class, and roll number.
+                    Phone numbers, parent email, and fee details are visible only to Admin and Super Admin.
+                  </p>
+                </div>
+              </label>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={handleSavePrivacyConfig}
+                  disabled={pcSaving}
+                  style={{ padding: '9px 24px', background: pcSaving ? '#a0aec0' : '#0369a1', color: '#fff', border: 'none', borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: pcSaving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+                >
+                  {pcSaving ? (
+                    <>
+                      <span style={{ width: 13, height: 13, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} />
+                      Saving…
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-icons" style={{ fontSize: 16 }}>save</span>
+                      Save Privacy Settings
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── New Academic Year card ── */}
         {canEdit && (

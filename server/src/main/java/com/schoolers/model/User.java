@@ -60,6 +60,9 @@ public class User {
     @Column(length = 15)
     private String mobile;
 
+    @Column(columnDefinition = "TEXT")
+    private String address;
+
     @JsonIgnore
     @NotBlank
     @Column(nullable = false)

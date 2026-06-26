@@ -15,4 +15,12 @@ public class BulkImportResult {
     private List<FailedRowDto> failedRowDetails;
     private Long importLogId;
     private String status;
+
+    /**
+     * Populated only when {@code createAccounts=true} was set in the request.
+     * Contains one entry per successfully created student account so the admin
+     * can download or share login credentials.
+     */
+    @Builder.Default
+    private List<StudentCredentialDto> credentials = new java.util.ArrayList<>();
 }

@@ -20,7 +20,7 @@ const COL_MAP = {
   'student email': 'studentEmail', 'email': 'studentEmail', 'student email id': 'studentEmail',
 };
 
-const REQUIRED = ['fullName', 'rollNumber', 'className'];
+const REQUIRED = ['fullName', 'className'];   // rollNumber is optional when admissionNumber present
 const PHONE_RE  = /^\d{10}$/;
 const EMAIL_RE  = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -32,10 +32,17 @@ function validateRow(row, idx, seenAdmNos, seenRollKeys) {
 
   REQUIRED.forEach(f => {
     if (!row[f] || String(row[f]).trim() === '') {
-      const label = f === 'fullName' ? 'Full Name' : f === 'rollNumber' ? 'Roll Number' : 'Class';
+      const label = f === 'fullName' ? 'Full Name' : 'Class';
       errors.push(`${label} is required`);
     }
   });
+
+  // Roll number required only when no admission number is provided
+  const hasAdmNo  = row.admissionNumber && String(row.admissionNumber).trim() !== '';
+  const hasRollNo = row.rollNumber     && String(row.rollNumber).trim()     !== '';
+  if (!hasRollNo && !hasAdmNo) {
+    errors.push('Either Roll Number or Admission Number is required');
+  }
 
   // Email is optional but must be valid if provided
   if (row.studentEmail && !EMAIL_RE.test(String(row.studentEmail).trim()))
@@ -102,23 +109,93 @@ function parseFile(file) {
 
 /* ── Download sample template ───────────────────────────────────────── */
 function downloadTemplate() {
+  const wb = XLSX.utils.book_new();
+
+  // ── Sheet 1: Instructions ────────────────────────────────────────────
+  const instructions = [
+    ['STUDENT BULK IMPORT — FORMAT GUIDE'],
+    [''],
+    ['HOW TO USE THIS FILE:'],
+    ['1. Go to the "Students" sheet (tab at the bottom).'],
+    ['2. Fill in student data starting from Row 2 (Row 1 has the column headers — do not change them).'],
+    ['3. Delete the sample rows before uploading.'],
+    ['4. Save as .xlsx, .xls, or .csv and upload via the Bulk Import button.'],
+    ['5. To generate login accounts automatically, check "Create login accounts for all students" before uploading.'],
+    [''],
+    ['COLUMN REFERENCE:'],
+    ['Column',          'Required?',    'Notes'],
+    ['Full Name',       'REQUIRED',     'Student\'s full name'],
+    ['Class',           'REQUIRED',     'Class name, e.g. "Class 10", "10", "10-A", "10 - A"'],
+    ['Admission Number','REQUIRED*',    '*Required when Roll Number is not provided. Used as the student\'s login username.'],
+    ['Roll Number',     'REQUIRED*',    '*Required when Admission Number is not provided. If both are given, Admission Number is used as the login username.'],
+    ['Section',         'Optional',     'Section letter, e.g. "A", "B". Can also be included in the Class column, e.g. "10-A".'],
+    ['Student Email',   'Optional',     'If provided, a welcome email with login credentials is sent to this address. Leave blank for admission-number based login.'],
+    ["Father's Name",   'Optional',     'Parent / guardian name'],
+    ["Father's Phone",  'Optional',     '10-digit mobile number'],
+    ["Mother's Name",   'Optional',     ''],
+    ["Mother's Phone",  'Optional',     '10-digit mobile number'],
+    ['Permanent Address','Optional',    'Student\'s home address'],
+    [''],
+    ['LOGIN ACCOUNTS (when "Create login accounts" is checked):'],
+    ['  • Username   = Admission Number (lowercase, alphanumeric)'],
+    ['  • Login Email= admissionnumber@my-skoolz.com  (auto-generated if no Student Email is given)'],
+    ['  • Password   = Generated automatically by the system (10-char, mixed case + digit + special)'],
+    ['  • After import, download the "Credentials" file from the results screen to share passwords with students.'],
+    ['  • Students must change their password on first login.'],
+    [''],
+    ['TIPS:'],
+    ['  • Maximum 5000 rows per upload.'],
+    ['  • Duplicate admission numbers (same school) are skipped automatically.'],
+    ['  • You can upload multiple files; each upload is tracked in Import History.'],
+    ['  • ID Proof, TC Document, and Bonafide Certificate are optional and can be uploaded later from the student profile.'],
+  ];
+  const wsInstr = XLSX.utils.aoa_to_sheet(instructions);
+  wsInstr['!cols'] = [{ wch: 22 }, { wch: 14 }, { wch: 70 }];
+  // Bold the title cell A1
+  if (!wsInstr['A1'].s) wsInstr['A1'].s = {};
+  wsInstr['A1'].s = { font: { bold: true, sz: 14 } };
+  XLSX.utils.book_append_sheet(wb, wsInstr, 'Instructions');
+
+  // ── Sheet 2: Students data ───────────────────────────────────────────
   const headers = [
     'Admission Number', 'Full Name', 'Roll Number', 'Class', 'Section',
     'Student Email',
-    "Father's Name", "Father's Phone", "Mother's Name", "Mother's Phone",
-    'Permanent Address', 'ID Proof File Name',
+    "Father's Name", "Father's Phone",
+    "Mother's Name", "Mother's Phone",
+    'Permanent Address',
   ];
-  const sample = [
-    'ADM001', 'Rahul Sharma', '1', 'Class 10', 'A',
-    'rahul.sharma@email.com',
-    'Raj Sharma', '9876543210', 'Priya Sharma', '9876543211',
-    '123 Main Street, Hyderabad', 'aadhar.pdf',
+  // Three sample rows showing different common scenarios
+  const samples = [
+    // With admission number only (no email, no roll number) — School A style
+    ['ADM2024001', 'Rahul Sharma',  '',  'Class 10', 'A', '', 'Raj Sharma',  '9876543210', '', '', '12 MG Road, Bangalore'],
+    // With both admission number and roll number
+    ['ADM2024002', 'Priya Patel',   '2', 'Class 10', 'A', '', 'Amit Patel',  '9876543211', 'Neha Patel', '9876543212', '45 Park Street, Mumbai'],
+    // With student email (welcome email will be sent)
+    ['ADM2024003', 'Arjun Singh',   '3', 'Class 10', 'B', 'arjun.singh@gmail.com', 'Suresh Singh', '9876543213', '', '', ''],
   ];
-  const ws = XLSX.utils.aoa_to_sheet([headers, sample]);
-  ws['!cols'] = headers.map(() => ({ wch: 20 }));
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Students');
+  const wsData = XLSX.utils.aoa_to_sheet([headers, ...samples]);
+  wsData['!cols'] = headers.map((h, i) => ({
+    wch: i === 1 ? 22 : i === 11 ? 30 : 18,  // wider for name and address
+  }));
+  XLSX.utils.book_append_sheet(wb, wsData, 'Students');
+
   XLSX.writeFile(wb, 'student_import_template.xlsx');
+}
+
+/* ── Download student credentials as Excel ──────────────────────────── */
+function downloadCredentials(credentials) {
+  const data = credentials.map(c => ({
+    'Student Name':     c.studentName     || '',
+    'Admission Number': c.admissionNumber || '',
+    'Username':         c.username        || '',
+    'Login Email':      c.loginEmail      || '',
+    'Temp Password':    c.tempPassword    || '',
+  }));
+  const ws = XLSX.utils.json_to_sheet(data);
+  ws['!cols'] = [{ wch: 22 }, { wch: 16 }, { wch: 20 }, { wch: 30 }, { wch: 16 }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Student Credentials');
+  XLSX.writeFile(wb, 'student_credentials.xlsx');
 }
 
 /* ── Download failed rows as Excel ─────────────────────────────────── */
@@ -142,16 +219,17 @@ function downloadFailed(failedRows) {
    Main Component
    ───────────────────────────────────────────────────────────────────── */
 export default function BulkImportModal({ onClose, onImportDone }) {
-  const [step,        setStep]        = useState(0);   // 0=Upload 1=Preview 2=Results
-  const [dragging,    setDragging]    = useState(false);
-  const [parsing,     setParsing]     = useState(false);
-  const [rows,        setRows]        = useState([]);
-  const [importing,   setImporting]   = useState(false);
-  const [result,      setResult]      = useState(null);
-  const [skipInvalid, setSkipInvalid] = useState(true);
-  const [filterTab,   setFilterTab]   = useState('all');  // all | valid | invalid
-  const [history,     setHistory]     = useState(null);
-  const [showHistory, setShowHistory] = useState(false);
+  const [step,           setStep]           = useState(0);  // 0=Upload 1=Preview 2=Results
+  const [dragging,       setDragging]       = useState(false);
+  const [parsing,        setParsing]        = useState(false);
+  const [rows,           setRows]           = useState([]);
+  const [importing,      setImporting]      = useState(false);
+  const [result,         setResult]         = useState(null);
+  const [skipInvalid,    setSkipInvalid]    = useState(true);
+  const [createAccounts, setCreateAccounts] = useState(false);
+  const [filterTab,      setFilterTab]      = useState('all');  // all | valid | invalid
+  const [history,        setHistory]        = useState(null);
+  const [showHistory,    setShowHistory]    = useState(false);
   const fileRef = useRef(null);
 
   /* ── derived counts ── */
@@ -212,6 +290,7 @@ export default function BulkImportModal({ onClose, onImportDone }) {
           idProofFileName: r.idProofFileName || '',
         })),
         skipInvalid,
+        createAccounts,
       };
       const res = await adminAPI.bulkImportStudents(payload);
       setResult(res.data.data);
@@ -338,13 +417,46 @@ export default function BulkImportModal({ onClose, onImportDone }) {
               <div className="bim-cols-box">
                 <p className="bim-cols-title">Columns in your file:</p>
                 <div className="bim-cols-grid">
-                  {['Full Name ✱', 'Roll Number ✱', 'Class ✱', 'Admission Number',
-                    'Student Email', 'Section', "Father's Name", "Father's Phone",
-                    "Mother's Name", "Mother's Phone", 'Permanent Address', 'ID Proof File Name'].map(c => (
-                    <span key={c} className={`bim-col-tag ${c.includes('✱') ? 'required' : ''}`}>{c}</span>
+                  {[
+                    { label: 'Full Name',          req: true  },
+                    { label: 'Class',              req: true  },
+                    { label: 'Admission Number',   req: '★'   },
+                    { label: 'Roll Number',        req: '★'   },
+                    { label: 'Section',            req: false },
+                    { label: 'Student Email',      req: false },
+                    { label: "Father's Name",      req: false },
+                    { label: "Father's Phone",     req: false },
+                    { label: "Mother's Name",      req: false },
+                    { label: "Mother's Phone",     req: false },
+                    { label: 'Permanent Address',  req: false },
+                  ].map(({ label, req }) => (
+                    <span key={label} className={`bim-col-tag ${req === true ? 'required' : req === '★' ? 'semi-required' : ''}`}>
+                      {label}{req === true ? ' ✱' : req === '★' ? ' ★' : ''}
+                    </span>
                   ))}
                 </div>
-                <p className="bim-cols-note">✱ Required &nbsp;|&nbsp; Student Email is optional — if provided, student gets a welcome email with login credentials. Without email, student can sign up later using their admission number.</p>
+                <p className="bim-cols-note">
+                  ✱ Always required &nbsp;·&nbsp;
+                  ★ At least one of Admission Number or Roll Number must be provided &nbsp;·&nbsp;
+                  All other columns are optional.
+                  See the <strong>Instructions</strong> sheet in the downloaded template for full details.
+                </p>
+              {/* Account creation toggle */}
+              <label className="bim-checkbox-label" style={{ marginTop: 10 }}>
+                <input
+                  type="checkbox"
+                  checked={createAccounts}
+                  onChange={e => setCreateAccounts(e.target.checked)}
+                />
+                <span>
+                  <strong>Create login accounts for all students</strong>
+                  <br />
+                  <span style={{ fontSize: 12, color: 'var(--text-muted, #6b7280)' }}>
+                    Accounts are created using admission number as username. Students without email
+                    get an auto-generated login email. Download credentials from the results screen.
+                  </span>
+                </span>
+              </label>
               </div>
             </div>
           )}
@@ -525,6 +637,25 @@ export default function BulkImportModal({ onClose, onImportDone }) {
                   <span className="bim-card-label">Duplicates</span>
                 </div>
               </div>
+
+              {/* Credentials download — shown when createAccounts was true */}
+              {result.credentials && result.credentials.length > 0 && (
+                <div style={{ marginTop: 20, padding: '14px 16px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                  <div>
+                    <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: '#15803d' }}>
+                      <span className="material-icons" style={{ fontSize: 18, verticalAlign: 'middle', marginRight: 4 }}>key</span>
+                      {result.credentials.length} student account{result.credentials.length > 1 ? 's' : ''} created
+                    </p>
+                    <p style={{ margin: '3px 0 0', fontSize: 12, color: '#166534' }}>
+                      Download the credentials file and distribute login details to students. Passwords are temporary — students must change on first login.
+                    </p>
+                  </div>
+                  <Button variant="bim-primary" onClick={() => downloadCredentials(result.credentials)}>
+                    <span className="material-icons" style={{ fontSize: 16 }}>download</span>
+                    Download Credentials
+                  </Button>
+                </div>
+              )}
 
               {result.failedRowDetails && result.failedRowDetails.length > 0 && (
                 <div style={{ marginTop: 20 }}>

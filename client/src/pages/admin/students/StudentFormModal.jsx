@@ -316,7 +316,7 @@ export default function StudentFormModal({
               <div className="row g-3">
                 <div className="col-md-4">
                   <DocUpload
-                    label="ID Proof" required
+                    label="ID Proof"
                     fileData={formData.idProof}
                     fileName={formData.idProofName}
                     inputRef={idProofRef}

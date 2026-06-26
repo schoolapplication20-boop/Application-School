@@ -35,6 +35,8 @@ const Navbar = ({ onMenuToggle }) => {
     address: user?.address || '',
   });
   const [profileSaved, setProfileSaved]   = useState(false);
+  const [profileError, setProfileError]   = useState('');
+  const [profileSaving, setProfileSaving] = useState(false);
 
   // Keep profileForm in sync when user data changes
   useEffect(() => {
@@ -58,16 +60,36 @@ const Navbar = ({ onMenuToggle }) => {
 
   const handleProfileSave = async (e) => {
     e.preventDefault();
+    setProfileError('');
+    if (!profileForm.name.trim() || profileForm.name.trim().length < 2) {
+      setProfileError('Name must be at least 2 characters');
+      return;
+    }
+    if (profileForm.phone && !/^\d{10,15}$/.test(profileForm.phone.trim())) {
+      setProfileError('Phone must be 10-15 digits');
+      return;
+    }
+    setProfileSaving(true);
     try {
-      await generalAPI.updateProfile({ name: profileForm.name, phone: profileForm.phone, address: profileForm.address });
-      updateUser({ ...user, name: profileForm.name, phone: profileForm.phone, address: profileForm.address });
+      const res = await generalAPI.updateProfile({
+        name:    profileForm.name.trim(),
+        phone:   profileForm.phone.trim(),
+        address: profileForm.address.trim(),
+      });
+      // Sync local user context with what the server confirmed
+      const updated = res.data?.data || {};
+      updateUser({
+        ...user,
+        name:    updated.name    ?? profileForm.name,
+        mobile:  updated.mobile  ?? profileForm.phone,
+        address: updated.address ?? profileForm.address,
+      });
       setProfileSaved(true);
       setTimeout(() => { setProfileSaved(false); setShowProfile(false); }, 1500);
-    } catch {
-      // Fallback: update local state only if API call fails
-      updateUser({ ...user, name: profileForm.name, phone: profileForm.phone, address: profileForm.address });
-      setProfileSaved(true);
-      setTimeout(() => { setProfileSaved(false); setShowProfile(false); }, 1500);
+    } catch (err) {
+      setProfileError(err.response?.data?.message || 'Failed to save profile. Please try again.');
+    } finally {
+      setProfileSaving(false);
     }
   };
 
@@ -312,7 +334,7 @@ const Navbar = ({ onMenuToggle }) => {
           <div style={{ background: 'var(--surface)', borderRadius: '16px', width: '420px', maxWidth: '95vw', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
             <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h5 style={{ margin: 0, fontWeight: 700, fontSize: '16px' }}>My Profile</h5>
-              <button onClick={() => setShowProfile(false)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '20px', color: '#a0aec0' }}>×</button>
+              <button onClick={() => { setShowProfile(false); setProfileError(''); }} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '20px', color: '#a0aec0' }}>×</button>
             </div>
             <form onSubmit={handleProfileSave}>
               <div style={{ padding: '24px' }}>
@@ -348,14 +370,20 @@ const Navbar = ({ onMenuToggle }) => {
                   ))}
                 </div>
               </div>
+              {/* Error message */}
+              {profileError && (
+                <div style={{ margin: '0 24px', padding: '10px 14px', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '8px', fontSize: '13px', color: '#b91c1c' }}>
+                  {profileError}
+                </div>
+              )}
               <div style={{ padding: '16px 24px', borderTop: '1px solid #f0f4f8', display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                <button type="button" onClick={() => setShowProfile(false)}
+                <button type="button" onClick={() => { setShowProfile(false); setProfileError(''); }}
                   style={{ padding: '9px 20px', border: '1.5px solid #e2e8f0', borderRadius: '8px', background: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>
                   Cancel
                 </button>
-                <button type="submit"
-                  style={{ padding: '9px 24px', background: profileSaved ? '#38a169' : '#0de1e8', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: 600, fontSize: '13px', cursor: 'pointer', transition: 'background 0.2s' }}>
-                  {profileSaved ? '✓ Saved!' : 'Save Changes'}
+                <button type="submit" disabled={profileSaving}
+                  style={{ padding: '9px 24px', background: profileSaved ? '#38a169' : profileSaving ? '#a0aec0' : '#0de1e8', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: 600, fontSize: '13px', cursor: profileSaving ? 'not-allowed' : 'pointer', transition: 'background 0.2s' }}>
+                  {profileSaved ? '✓ Saved!' : profileSaving ? 'Saving…' : 'Save Changes'}
                 </button>
               </div>
             </form>

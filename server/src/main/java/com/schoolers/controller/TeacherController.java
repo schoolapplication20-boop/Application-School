@@ -11,6 +11,7 @@ import com.schoolers.repository.TeacherRepository;
 import com.schoolers.model.AssignmentSubmission;
 import com.schoolers.service.AdminService;
 import com.schoolers.service.EmailService;
+import com.schoolers.service.StudentPrivacyService;
 import com.schoolers.service.TeacherService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +38,9 @@ public class TeacherController {
 
     @Autowired
     private AdminService adminService;
+
+    @Autowired
+    private StudentPrivacyService studentPrivacyService;
 
     @Autowired
     private UserRepository userRepository;
@@ -173,9 +177,22 @@ public class TeacherController {
     // ── Students in a class ───────────────────────────────────────────────────
 
     @GetMapping("/class/{classId}/students")
-    public ResponseEntity<ApiResponse<List<Student>>> getClassStudents(@PathVariable Long classId) {
+    public ResponseEntity<ApiResponse<List<Student>>> getClassStudents(
+            @PathVariable Long classId, Authentication auth) {
         Long resolved = resolveTeacherId(null);
         ApiResponse<List<Student>> response = teacherService.getClassStudents(resolved, classId);
+
+        if (response.isSuccess() && response.getData() != null) {
+            // Determine caller's role — strip the ROLE_ prefix Spring Security adds
+            String role = auth != null ? auth.getAuthorities().stream()
+                    .map(a -> a.getAuthority().replace("ROLE_", ""))
+                    .findFirst().orElse("") : "";
+            Long schoolId = resolveTeacherSchoolId();
+            if (studentPrivacyService.shouldHideContactInfo(schoolId, role)) {
+                studentPrivacyService.maskContactInfo(response.getData());
+            }
+        }
+
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 

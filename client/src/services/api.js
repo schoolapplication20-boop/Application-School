@@ -753,5 +753,10 @@ export const diaryConfigAPI = {
   update: (data) => api.put('/api/admin/diary-config', data),
 };
 
+export const privacyConfigAPI = {
+  get: () => api.get('/api/admin/privacy-config'),
+  update: (data) => api.put('/api/admin/privacy-config', data),
+};
+
 // ============================================
 export default api;
