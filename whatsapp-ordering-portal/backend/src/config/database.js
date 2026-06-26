@@ -5,64 +5,60 @@ import { getDbConnectionConfig } from './dbEnv.js';
 dotenv.config();
 
 const isDevelopment = process.env.NODE_ENV === 'development';
-const isTest = process.env.NODE_ENV === 'test';
+const isTest        = process.env.NODE_ENV === 'test';
 
-const dbConfig = getDbConnectionConfig();
+// Enable SSL in production or when explicitly requested (Railway needs this)
+const sslRequired =
+  process.env.DB_SSL === 'require' ||
+  process.env.NODE_ENV === 'production';
 
-const sequelize = new Sequelize({
-  dialect: 'postgres',
-  host: dbConfig.host,
-  port: dbConfig.port,
-  database: dbConfig.database,
-  username: dbConfig.username,
-  password: dbConfig.password,
-  schema: process.env.DB_SCHEMA || 'whatsapp_portal',
-  logging: isDevelopment ? console.log : false,
-  dialectOptions: process.env.DB_SSL === 'require' ? {
-    ssl: {
-      require: true,
-      rejectUnauthorized: false,
-    },
-  } : {},
-  pool: {
-    max: 5,
-    min: 0,
-    acquire: 30000,
-    idle: 10000,
-  },
-  define: {
-    timestamps: true,
-    underscored: true,
-    freezeTableName: true,
-  },
-});
+const dialectOptions = sslRequired
+  ? { ssl: { require: true, rejectUnauthorized: false } }
+  : {};
 
-/**
- * Initialize database connection
- */
+const sharedOptions = {
+  dialect:        'postgres',
+  logging:        isDevelopment ? console.log : false,
+  dialectOptions,
+  pool:    { max: 5, min: 0, acquire: 30000, idle: 10000 },
+  define:  { timestamps: true, underscored: true, freezeTableName: true },
+};
+
+// Use DATABASE_URL directly when available (Railway, Supabase, Render …)
+// Otherwise fall back to discrete DB_* env vars for local dev.
+const sequelize = process.env.DATABASE_URL
+  ? new Sequelize(process.env.DATABASE_URL, sharedOptions)
+  : (() => {
+      const cfg = getDbConnectionConfig();
+      return new Sequelize({
+        ...sharedOptions,
+        host:     cfg.host,
+        port:     cfg.port,
+        database: cfg.database,
+        username: cfg.username,
+        password: cfg.password,
+        schema:   process.env.DB_SCHEMA || 'whatsapp_portal',
+      });
+    })();
+
+/** Test connectivity and optionally sync models in dev */
 export const initializeDatabase = async () => {
   try {
     await sequelize.authenticate();
     console.log('✓ Database connection established');
 
-    // Sync models if in development
     if (isDevelopment && !isTest) {
       await sequelize.sync({ alter: false });
-      console.log('✓ Database synchronized');
+      console.log('✓ Database models synchronised');
     }
 
     return sequelize;
   } catch (error) {
     console.warn('⚠ Database connection warning:', error.message);
-    // Don't throw - let the app continue for now
-    // This allows the health endpoint to work even without DB
     return sequelize;
   }
 };
 
-/**
- * Close database connection
- */
 export const closeDatabase = async () => {
   try {
     await sequelize.close();

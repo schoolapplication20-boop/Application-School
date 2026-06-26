@@ -3,62 +3,79 @@ import { Sequelize } from 'sequelize';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
-import { getDbConnectionConfig } from '../config/dbEnv.js';
 
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const dbConfig = getDbConnectionConfig();
+// ── Build Sequelize instance ──────────────────────────────────────────────────
+// Always enable SSL when running on Railway (NODE_ENV=production) or when
+// DB_SSL=require is set explicitly.  rejectUnauthorized=false is required
+// because Railway's Postgres uses a self-signed cert on the internal proxy.
+const sslRequired =
+  process.env.DB_SSL === 'require' ||
+  process.env.NODE_ENV === 'production';
 
-const sequelize = new Sequelize(
-  dbConfig.database,
-  dbConfig.username,
-  dbConfig.password,
-  {
-    host: dbConfig.host,
-    port: dbConfig.port,
+const sslOptions = sslRequired
+  ? { ssl: { require: true, rejectUnauthorized: false } }
+  : {};
+
+let sequelize;
+
+if (process.env.DATABASE_URL) {
+  // Railway / Supabase / any provider that supplies a full connection URL
+  sequelize = new Sequelize(process.env.DATABASE_URL, {
     dialect: 'postgres',
-    logging: console.log,
-    dialectOptions: process.env.DB_SSL === 'require' ? {
-      ssl: {
-        require: true,
-        rejectUnauthorized: false,
-      },
-    } : {},
-  },
-);
+    logging: false,
+    dialectOptions: sslOptions,
+  });
+} else {
+  // Local development with discrete DB_* variables
+  sequelize = new Sequelize(
+    process.env.DB_NAME || 'whatsapp_portal',
+    process.env.DB_USERNAME || 'postgres',
+    process.env.DB_PASSWORD || 'postgres',
+    {
+      host: process.env.DB_HOST || 'localhost',
+      port: Number(process.env.DB_PORT) || 5432,
+      dialect: 'postgres',
+      logging: false,
+      dialectOptions: sslOptions,
+    },
+  );
+}
 
-// ======================================
-// Run all migrations
-// ======================================
+// ── Run migrations ────────────────────────────────────────────────────────────
 async function runMigrations() {
   try {
     console.log('🔄 Starting database migrations...');
 
-    // 1. Create schema if it doesn't exist
+    // Verify connection first — gives a clear error if DATABASE_URL is wrong
+    console.log('🔌 Testing database connection...');
+    await sequelize.authenticate();
+    console.log('✅ Database connected');
+
+    // Create schema
     console.log('📦 Creating whatsapp_portal schema...');
     await sequelize.query('CREATE SCHEMA IF NOT EXISTS whatsapp_portal;');
     console.log('✅ Schema ready');
 
-    // 2. Run init.sql to create all tables
+    // Run init.sql
     const initSqlPath = path.join(__dirname, '../../docker/init.sql');
-    console.log(`📋 Running initialization script from: ${initSqlPath}`);
+    console.log(`📋 Running init.sql from: ${initSqlPath}`);
 
     if (fs.existsSync(initSqlPath)) {
       const initSql = fs.readFileSync(initSqlPath, 'utf8');
+      const statements = initSql.split(';').filter((s) => s.trim());
 
-      // Split by ; and execute each statement
-      const statements = initSql.split(';').filter((stmt) => stmt.trim());
       for (const statement of statements) {
         if (statement.trim()) {
           try {
-            await sequelize.query(statement);
+            await sequelize.query(statement + ';');
           } catch (err) {
-            // Ignore "already exists" errors
             if (!err.message.includes('already exists')) {
-              console.warn('⚠️  Statement warning:', err.message.substring(0, 100));
+              console.warn('⚠️  Statement warning:', err.message.slice(0, 120));
             }
           }
         }
@@ -66,15 +83,23 @@ async function runMigrations() {
       console.log('✅ All tables created');
     } else {
       console.warn('⚠️  init.sql not found at:', initSqlPath);
+      console.warn('   Tables will be created by Sequelize sync on first start.');
     }
 
-    console.log('✅ Database migrations completed successfully!');
+    console.log('✅ Migrations complete!');
     process.exit(0);
   } catch (error) {
-    console.error('❌ Migration failed:', error.message);
+    // Log the full error so Railway shows the actual reason
+    console.error('❌ Migration failed!');
+    console.error('   Message  :', error.message || '(no message)');
+    console.error('   Code     :', error.code || error.original?.code || '—');
+    console.error('   Detail   :', error.original?.detail || error.detail || '—');
+    console.error('   Hint     :', error.original?.hint || '—');
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('   Stack    :', error.stack);
+    }
     process.exit(1);
   }
 }
 
-// Run migrations
 runMigrations();
