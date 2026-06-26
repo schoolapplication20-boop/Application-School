@@ -236,6 +236,14 @@ public class AuthService {
 
             String token = jwtUtil.generateToken(userDetails, claims);
 
+            // Clear any in-memory user-level revocation. revokeUser() is called after
+            // password changes (S-15/S-16) to immediately block the old session. A
+            // successful re-login proves the user knows the new credentials, so the
+            // flag must be lifted — otherwise every new JWT for this user is rejected
+            // by JwtFilter until the next server restart, producing the "Session
+            // Expired" popup immediately after login.
+            tokenBlacklistService.restoreUser(user.getId());
+
             // ── Step 5: School branding + setup check (reuse cached lookup) ──────
             LoginResponse.SchoolDto schoolDto = cachedSchoolOpt.map(this::toSchoolDto).orElse(null);
 

@@ -1300,13 +1300,15 @@ public class AdminService {
                     User user = teacher.getUser();
                     if (user == null) return ApiResponse.<String>error("Teacher has no login account.");
                     user.setPassword(passwordEncoder.encode(newPassword));
-                    user.setTempPassword(null);
-                    user.setFirstLogin(true);
+                    user.setTempPassword(newPassword);
+                    // firstLogin=false: admin resets password and shares it with the teacher
+                    // who logs straight into the dashboard. Setting it true redirects to
+                    // change-password which calls revokeUser(), blocking the new session too.
+                    user.setFirstLogin(false);
                     userRepository.save(user);
-                    tokenBlacklistService.revokeUser(user.getId());
                     auditLogService.log(null, "SYSTEM", "ADMIN", schoolId, "PASSWORD_RESET", "Teacher", teacherId,
                             "Password reset for teacher id=" + teacherId, null);
-                    return ApiResponse.success("Password reset successfully", "Password updated");
+                    return ApiResponse.success("Password reset successfully", newPassword);
                 })
                 .orElse(ApiResponse.error("Teacher not found"));
     }
@@ -1330,11 +1332,13 @@ public class AdminService {
                             .map(user -> {
                                 user.setPassword(passwordEncoder.encode(newPassword));
                                 user.setTempPassword(newPassword);   // kept so admin can share it
-                                user.setFirstLogin(true);
+                                // firstLogin=false: admin resets and shares the password directly.
+                                // firstLogin=true would redirect to change-password which calls
+                                // revokeUser(), blocking the student's next session immediately.
+                                user.setFirstLogin(false);
                                 user.setFailedLoginAttempts(0);
                                 user.setLockedUntil(null);
                                 userRepository.save(user);
-                                tokenBlacklistService.revokeUser(user.getId());
                                 auditLogService.log(null, "SYSTEM", "ADMIN", schoolId, "PASSWORD_RESET", "Student", studentId,
                                         "Password reset for student id=" + studentId, null);
                                 return ApiResponse.success("Password reset successfully", newPassword);
