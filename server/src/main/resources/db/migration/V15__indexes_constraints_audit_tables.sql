@@ -21,9 +21,6 @@ CREATE INDEX IF NOT EXISTS idx_sms_log_school_created
 CREATE INDEX IF NOT EXISTS idx_message_school_sender
     ON messages(school_id, sender_id);
 
--- notifications school + user index
-CREATE INDEX IF NOT EXISTS idx_notification_school_user
-    ON app_notifications(school_id, user_id);
 
 -- marks composite index
 CREATE INDEX IF NOT EXISTS idx_marks_student_school
