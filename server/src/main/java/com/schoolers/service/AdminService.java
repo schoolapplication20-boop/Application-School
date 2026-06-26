@@ -212,6 +212,7 @@ public class AdminService {
                 .username(username)
                 .studentId(studentId)
                 .password(passwordEncoder.encode(rawPassword))
+                .tempPassword(rawPassword)
                 .role(User.Role.STUDENT)
                 .isActive(true)
                 .firstLogin(true)
