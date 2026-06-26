@@ -51,6 +51,18 @@ async function runMigrations() {
   try {
     console.log('🔄 Starting database migrations...');
 
+    // Print which DB we are connecting to (host only — no password)
+    if (process.env.DATABASE_URL) {
+      try {
+        const u = new URL(process.env.DATABASE_URL);
+        console.log(`🗄️  DB host : ${u.hostname}:${u.port || 5432}`);
+        console.log(`🗄️  DB name : ${u.pathname.replace('/', '')}`);
+      } catch { console.log('🗄️  DATABASE_URL is set (could not parse)'); }
+    } else {
+      console.log('⚠️  DATABASE_URL is NOT set — will try localhost:5432 (will fail on Railway!)');
+      console.log('   → Go to Railway wop-backend → Variables → Add Reference → wop-postgres');
+    }
+
     // Verify connection first — gives a clear error if DATABASE_URL is wrong
     console.log('🔌 Testing database connection...');
     await sequelize.authenticate();
