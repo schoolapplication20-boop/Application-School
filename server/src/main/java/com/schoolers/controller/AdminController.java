@@ -17,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -645,10 +646,14 @@ public class AdminController {
 
     @PutMapping("/diary-config")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPLICATION_OWNER')")
+    @Transactional  // single persistence context for find + save → prevents duplicate-key on first save
     public ResponseEntity<?> updateDiaryConfig(@RequestBody java.util.Map<String, Object> body,
                                                Authentication auth) {
         Long schoolId = getCurrentSchoolId(auth);
-        SchoolDiaryConfig cfg = schoolDiaryConfigRepository.findBySchoolId(schoolId)
+        // findById (schoolId IS the @Id) so the returned entity stays MANAGED within this TX.
+        // For a first-time save, the new entity is handed to em.merge() in the same context,
+        // which correctly issues one INSERT instead of two.
+        SchoolDiaryConfig cfg = schoolDiaryConfigRepository.findById(schoolId)
             .orElseGet(() -> { SchoolDiaryConfig d = new SchoolDiaryConfig(); d.setSchoolId(schoolId); return d; });
 
         if (body.containsKey("diaryMode"))
