@@ -382,8 +382,12 @@ public class AdminService {
                 (section.isBlank() ? "" : " – " + section) +
                 " for this school.");
 
-        // Validate roll number range and capacity
-        if (schoolId != null && !className.isBlank()) {
+        // Capacity checks are intentionally skipped during bulk import (bulkImport=true).
+        // Bulk import is an admin-level operation; capacity limits are a UI guardrail for
+        // single-student adds only. Enforcing capacity per-row in a loop causes silent
+        // failures for every student beyond the limit even though the preview showed 0 invalid.
+        boolean isBulkImport = Boolean.TRUE.equals(body.get("bulkImport"));
+        if (!isBulkImport && schoolId != null && !className.isBlank()) {
             ClassRoom targetRoom = classRoomRepository
                     .findBySchoolIdAndNameIgnoreCaseAndSectionIgnoreCase(schoolId, className, section != null ? section : "")
                     .orElse(null);

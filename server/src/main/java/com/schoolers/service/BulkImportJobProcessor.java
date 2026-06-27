@@ -42,16 +42,27 @@ public class BulkImportJobProcessor {
         int imported   = 0;
         int duplicates = 0;
 
-        // Pre-load all existing admission numbers for this school once — avoids one
-        // DB query per row and is safe because we also track the current batch in
-        // batchAdmNos so intra-batch duplicates are caught even before the first flush.
-        Set<String> existingAdmNos = studentRepo.findBySchoolId(schoolId).stream()
+        // Pre-load all existing admission numbers and roll-number keys for this school.
+        // This avoids one DB query per row and catches duplicates before they hit DB
+        // constraints, giving precise per-row error messages instead of generic exceptions.
+        List<com.schoolers.model.Student> existingStudents = studentRepo.findBySchoolId(schoolId);
+
+        Set<String> existingAdmNos = existingStudents.stream()
                 .map(s -> s.getAdmissionNumber())
                 .filter(Objects::nonNull)
                 .map(String::toLowerCase)
                 .collect(Collectors.toCollection(HashSet::new));
 
-        Set<String> batchAdmNos = new HashSet<>();
+        // Key: "className|section|rollNumber" (all lowercase) — roll uniqueness per class+section
+        Set<String> existingRollKeys = existingStudents.stream()
+                .filter(s -> s.getRollNumber() != null && s.getClassName() != null)
+                .map(s -> (s.getClassName().toLowerCase().trim())
+                        + "|" + (s.getSection() != null ? s.getSection().toLowerCase().trim() : "")
+                        + "|" + s.getRollNumber().trim())
+                .collect(Collectors.toCollection(HashSet::new));
+
+        Set<String> batchAdmNos  = new HashSet<>();
+        Set<String> batchRollKeys = new HashSet<>();
 
         try {
             for (int i = 0; i < rows.size(); i++) {
@@ -71,6 +82,27 @@ public class BulkImportJobProcessor {
                     continue;
                 }
 
+                // Pre-check roll number conflict (catches DB and intra-batch duplicates before
+                // they reach createStudent() so the error message is clear and precise).
+                String[] cs      = parseClassSection(row.getClassName(), row.getSection());
+                String   effRoll = (row.getRollNumber() != null && !row.getRollNumber().isBlank())
+                        ? row.getRollNumber() : (admNo != null ? admNo : "");
+                String rollKey = cs[0].toLowerCase() + "|" + cs[1].toLowerCase() + "|" + effRoll;
+                if (!effRoll.isBlank()) {
+                    if (existingRollKeys.contains(rollKey)) {
+                        failed.add(failRow(row, "Duplicate: roll number " + effRoll
+                                + " already exists in " + cs[0]
+                                + (cs[1].isBlank() ? "" : " – " + cs[1])));
+                        continue;
+                    }
+                    if (batchRollKeys.contains(rollKey)) {
+                        failed.add(failRow(row, "Duplicate: roll number " + effRoll
+                                + " appears more than once in " + cs[0]
+                                + (cs[1].isBlank() ? "" : " – " + cs[1]) + " in this file"));
+                        continue;
+                    }
+                }
+
                 // ── Create student ─────────────────────────────────────────
                 try {
                     Map<String, Object> body = buildStudentMap(row, schoolId, createAccounts);
@@ -81,6 +113,10 @@ public class BulkImportJobProcessor {
                         if (admNo != null && !admNo.isEmpty()) {
                             batchAdmNos.add(admNo);
                             existingAdmNos.add(admNo);
+                        }
+                        if (!effRoll.isBlank()) {
+                            batchRollKeys.add(rollKey);
+                            existingRollKeys.add(rollKey);
                         }
                         if (createAccounts && result.getData() != null
                                 && result.getData().containsKey("studentTempPassword")) {
@@ -137,6 +173,7 @@ public class BulkImportJobProcessor {
     private Map<String, Object> buildStudentMap(StudentImportRowDto row,
                                                 Long schoolId, boolean createAccounts) {
         Map<String, Object> map = new LinkedHashMap<>();
+        map.put("bulkImport",     true);   // skips capacity check in createStudent()
         map.put("schoolId",       schoolId);
         map.put("name",           row.getFullName());
         String roll = (row.getRollNumber() != null && !row.getRollNumber().isBlank())

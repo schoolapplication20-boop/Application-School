@@ -737,10 +737,19 @@ export default function BulkImportModal({ onClose, onImportDone }) {
                     </span>
                   </div>
                   <h3 className="bim-result-title">
-                    {result.importedRows > 0
-                      ? `${result.importedRows} student${result.importedRows > 1 ? 's' : ''} imported successfully!`
-                      : 'Import failed'}
+                    {result.importedRows > 0 && result.failedRows === 0
+                      ? `All ${result.importedRows} students imported successfully!`
+                      : result.importedRows > 0
+                        ? `${result.importedRows} of ${result.totalRows} students imported`
+                        : 'Import failed — no students were saved'}
                   </h3>
+                  {result.failedRows > 0 && (
+                    <p style={{ color: '#dc2626', fontSize: 13, margin: '4px 0 0' }}>
+                      {result.failedRows} row{result.failedRows > 1 ? 's' : ''} failed
+                      {result.duplicateRows > 0 ? ` (${result.duplicateRows} duplicate${result.duplicateRows > 1 ? 's' : ''})` : ''}.
+                      See the error table below for exact reasons.
+                    </p>
+                  )}
 
                   <div className="bim-summary" style={{ marginTop: 24 }}>
                     <div className="bim-card total">
