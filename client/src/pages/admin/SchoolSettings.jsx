@@ -131,8 +131,10 @@ const SchoolSettings = () => {
       if (d) {
         setDiaryConfig({
           diaryMode:             d.diaryMode             ?? DIARY_CONFIG_DEFAULTS.diaryMode,
-          coordinatorUserId:     d.coordinatorUserId     ?? DIARY_CONFIG_DEFAULTS.coordinatorUserId,
-          requiresAdminApproval: d.requiresAdminApproval ?? DIARY_CONFIG_DEFAULTS.requiresAdminApproval,
+          // Show email in the input when available; fall back to numeric ID as string
+          coordinatorUserId:     d.coordinatorEmail      ?? (d.coordinatorUserId ? String(d.coordinatorUserId) : DIARY_CONFIG_DEFAULTS.coordinatorUserId),
+          // Backend returns both requiresApproval and requiresAdminApproval — read either
+          requiresAdminApproval: d.requiresAdminApproval ?? d.requiresApproval ?? DIARY_CONFIG_DEFAULTS.requiresAdminApproval,
           notifyStudentsPush:    d.notifyStudentsPush    ?? DIARY_CONFIG_DEFAULTS.notifyStudentsPush,
           notifyParentsWhatsapp: d.notifyParentsWhatsapp ?? DIARY_CONFIG_DEFAULTS.notifyParentsWhatsapp,
         });

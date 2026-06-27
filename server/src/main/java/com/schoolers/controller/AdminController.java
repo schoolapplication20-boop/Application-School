@@ -624,16 +624,73 @@ public class AdminController {
         Long schoolId = getCurrentSchoolId(auth);
         SchoolDiaryConfig cfg = schoolDiaryConfigRepository.findBySchoolId(schoolId)
             .orElseGet(() -> { SchoolDiaryConfig d = new SchoolDiaryConfig(); d.setSchoolId(schoolId); return d; });
-        return ResponseEntity.ok(ApiResponse.success("Diary config", cfg));
+
+        // Build a response map that includes both field-name variants so the frontend
+        // can read either requiresApproval or requiresAdminApproval without breaking.
+        java.util.Map<String, Object> resp = new java.util.LinkedHashMap<>();
+        resp.put("schoolId",             cfg.getSchoolId());
+        resp.put("diaryMode",            cfg.getDiaryMode());
+        resp.put("coordinatorUserId",    cfg.getCoordinatorUserId());
+        resp.put("requiresApproval",     cfg.getRequiresApproval());
+        resp.put("requiresAdminApproval",cfg.getRequiresApproval());  // frontend alias
+        resp.put("notifyStudentsPush",   cfg.getNotifyStudentsPush());
+        resp.put("notifyParentsWhatsapp",cfg.getNotifyParentsWhatsapp());
+        // Include coordinator email so the frontend can display it instead of a raw numeric ID
+        if (cfg.getCoordinatorUserId() != null) {
+            userRepository.findById(cfg.getCoordinatorUserId())
+                .ifPresent(u -> resp.put("coordinatorEmail", u.getEmail()));
+        }
+        return ResponseEntity.ok(ApiResponse.success("Diary config", resp));
     }
 
     @PutMapping("/diary-config")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPLICATION_OWNER')")
-    public ResponseEntity<?> updateDiaryConfig(@RequestBody SchoolDiaryConfig config, Authentication auth) {
+    public ResponseEntity<?> updateDiaryConfig(@RequestBody java.util.Map<String, Object> body,
+                                               Authentication auth) {
         Long schoolId = getCurrentSchoolId(auth);
-        config.setSchoolId(schoolId);
-        SchoolDiaryConfig saved = schoolDiaryConfigRepository.save(config);
-        return ResponseEntity.ok(ApiResponse.success("Diary config updated", saved));
+        SchoolDiaryConfig cfg = schoolDiaryConfigRepository.findBySchoolId(schoolId)
+            .orElseGet(() -> { SchoolDiaryConfig d = new SchoolDiaryConfig(); d.setSchoolId(schoolId); return d; });
+
+        if (body.containsKey("diaryMode"))
+            cfg.setDiaryMode((String) body.get("diaryMode"));
+
+        // requiresApproval and requiresAdminApproval are the same toggle — accept either name
+        Object approval = body.containsKey("requiresApproval")
+            ? body.get("requiresApproval") : body.get("requiresAdminApproval");
+        if (approval instanceof Boolean)
+            cfg.setRequiresApproval((Boolean) approval);
+
+        if (body.get("notifyStudentsPush") instanceof Boolean)
+            cfg.setNotifyStudentsPush((Boolean) body.get("notifyStudentsPush"));
+        if (body.get("notifyParentsWhatsapp") instanceof Boolean)
+            cfg.setNotifyParentsWhatsapp((Boolean) body.get("notifyParentsWhatsapp"));
+
+        // coordinatorUserId can arrive as a Long (numeric) or as an email string.
+        // If it is an email, look up the user and store their numeric ID instead.
+        Object coordValue = body.get("coordinatorUserId");
+        if (coordValue != null && !coordValue.toString().isBlank()) {
+            String coordStr = coordValue.toString().trim();
+            if (coordStr.contains("@")) {
+                // Email string — resolve to numeric user ID
+                userRepository.findByEmailIgnoreCase(coordStr)
+                    .ifPresentOrElse(
+                        u -> cfg.setCoordinatorUserId(u.getId()),
+                        () -> { throw new IllegalArgumentException(
+                            "No user found with email: " + coordStr); }
+                    );
+            } else {
+                try { cfg.setCoordinatorUserId(Long.parseLong(coordStr)); }
+                catch (NumberFormatException e) {
+                    return ResponseEntity.badRequest().body(
+                        ApiResponse.error("Coordinator must be a valid email address or numeric user ID"));
+                }
+            }
+        } else {
+            cfg.setCoordinatorUserId(null);
+        }
+
+        schoolDiaryConfigRepository.save(cfg);
+        return ResponseEntity.ok(ApiResponse.success("Diary configuration saved successfully", cfg));
     }
 
     // ===== Privacy Config =====
