@@ -646,56 +646,53 @@ public class AdminController {
 
     @PutMapping("/diary-config")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPLICATION_OWNER')")
-    @Transactional  // single persistence context for find + save → prevents duplicate-key on first save
     public ResponseEntity<?> updateDiaryConfig(@RequestBody java.util.Map<String, Object> body,
                                                Authentication auth) {
         Long schoolId = getCurrentSchoolId(auth);
-        // findById (schoolId IS the @Id) so the returned entity stays MANAGED within this TX.
-        // For a first-time save, the new entity is handed to em.merge() in the same context,
-        // which correctly issues one INSERT instead of two.
-        SchoolDiaryConfig cfg = schoolDiaryConfigRepository.findById(schoolId)
-            .orElseGet(() -> { SchoolDiaryConfig d = new SchoolDiaryConfig(); d.setSchoolId(schoolId); return d; });
 
-        if (body.containsKey("diaryMode"))
-            cfg.setDiaryMode((String) body.get("diaryMode"));
+        // ── Diary mode ────────────────────────────────────────────────────
+        String diaryMode = body.containsKey("diaryMode")
+            ? (String) body.get("diaryMode") : "SUBJECT_TEACHER";
 
-        // requiresApproval and requiresAdminApproval are the same toggle — accept either name
-        Object approval = body.containsKey("requiresApproval")
+        // ── requiresApproval — accept both field-name variants ────────────
+        Object approvalRaw = body.containsKey("requiresApproval")
             ? body.get("requiresApproval") : body.get("requiresAdminApproval");
-        if (approval instanceof Boolean)
-            cfg.setRequiresApproval((Boolean) approval);
+        boolean requiresApproval = Boolean.TRUE.equals(approvalRaw);
 
-        if (body.get("notifyStudentsPush") instanceof Boolean)
-            cfg.setNotifyStudentsPush((Boolean) body.get("notifyStudentsPush"));
-        if (body.get("notifyParentsWhatsapp") instanceof Boolean)
-            cfg.setNotifyParentsWhatsapp((Boolean) body.get("notifyParentsWhatsapp"));
+        boolean notifyStudentsPush    = Boolean.TRUE.equals(body.get("notifyStudentsPush"));
+        boolean notifyParentsWhatsapp = Boolean.TRUE.equals(body.get("notifyParentsWhatsapp"));
 
-        // coordinatorUserId can arrive as a Long (numeric) or as an email string.
-        // If it is an email, look up the user and store their numeric ID instead.
+        // ── Coordinator: accept email string or numeric ID ────────────────
+        Long coordinatorUserId = null;
         Object coordValue = body.get("coordinatorUserId");
         if (coordValue != null && !coordValue.toString().isBlank()) {
             String coordStr = coordValue.toString().trim();
             if (coordStr.contains("@")) {
-                // Email string — resolve to numeric user ID
-                userRepository.findByEmailIgnoreCase(coordStr)
-                    .ifPresentOrElse(
-                        u -> cfg.setCoordinatorUserId(u.getId()),
-                        () -> { throw new IllegalArgumentException(
-                            "No user found with email: " + coordStr); }
-                    );
+                var user = userRepository.findByEmailIgnoreCase(coordStr).orElse(null);
+                if (user == null)
+                    return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("No user found with email: " + coordStr
+                            + ". Please enter a valid staff email."));
+                coordinatorUserId = user.getId();
             } else {
-                try { cfg.setCoordinatorUserId(Long.parseLong(coordStr)); }
+                try { coordinatorUserId = Long.parseLong(coordStr); }
                 catch (NumberFormatException e) {
-                    return ResponseEntity.badRequest().body(
-                        ApiResponse.error("Coordinator must be a valid email address or numeric user ID"));
+                    return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Coordinator must be a valid email address or numeric user ID"));
                 }
             }
-        } else {
-            cfg.setCoordinatorUserId(null);
         }
 
-        schoolDiaryConfigRepository.save(cfg);
-        return ResponseEntity.ok(ApiResponse.success("Diary configuration saved successfully", cfg));
+        // ── Upsert via native PostgreSQL ON CONFLICT to avoid JPA isNew() ─
+        // JPA's save() on an entity with a manually-set @Id calls em.merge(),
+        // which can issue a duplicate INSERT on the first save because isNew()
+        // returns false whenever schoolId != null. The native upsert is atomic
+        // and idempotent — guaranteed to work for both first saves and updates.
+        schoolDiaryConfigRepository.upsert(
+            schoolId, diaryMode, coordinatorUserId,
+            requiresApproval, notifyStudentsPush, notifyParentsWhatsapp);
+
+        return ResponseEntity.ok(ApiResponse.success("Diary configuration saved successfully", null));
     }
 
     // ===== Privacy Config =====
