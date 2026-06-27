@@ -147,7 +147,9 @@ public class ClassDiaryController {
         if (callerUserId != null) body.put("currentUserId", callerUserId);
 
         // Inject teacherId / teacherName from JWT so frontend cannot spoof them
+        boolean coordinator = isDesignatedCoordinator(schoolId, callerUserId);
         Optional<Teacher> teacherOpt = resolveTeacher(auth);
+
         if (teacherOpt.isPresent()) {
             Teacher t = teacherOpt.get();
             body.put("teacherId", t.getId());
@@ -155,12 +157,8 @@ public class ClassDiaryController {
                 body.put("teacherName", t.getName());
             }
 
-            // School-wide Coordinator: skip class-assignment check — they can post
-            // diary entries for ANY class in the school by design.
-            boolean coordinator = isDesignatedCoordinator(schoolId, callerUserId);
-
+            // Coordinator skips the class-assignment check; regular teachers do not.
             if (!coordinator) {
-                // Regular teacher: verify they are assigned to the submitted class
                 String submittedClass   = body.get("className") != null ? body.get("className").toString().trim() : null;
                 String submittedSection = body.get("section")   != null ? body.get("section").toString().trim()   : null;
                 if (submittedClass != null) {
@@ -178,6 +176,13 @@ public class ClassDiaryController {
                     }
                 }
             }
+        } else if (coordinator) {
+            // ADMIN / SUPER_ADMIN coordinator: no teacher profile exists.
+            // class_diary.teacher_id is a plain NOT NULL BIGINT (no FK constraint),
+            // so storing the user's ID here is safe and lets the entry be created.
+            body.put("teacherId", callerUserId);
+            userRepository.findByEmailIgnoreCase(auth.getName())
+                .ifPresent(u -> body.put("teacherName", u.getName()));
         }
         var response = diaryService.create(body);
         return response.isSuccess()

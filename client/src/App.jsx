@@ -193,6 +193,7 @@ function App() {
             } />
 
             {/* Admin Routes — SUPER_ADMIN has full access; permKey enforces module-level permission for restricted admins */}
+            <Route path="/admin/diary"             element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']}><Homework /></ProtectedRoute>} />
             <Route path="/admin/dashboard"         element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']}><AdminDashboard /></ProtectedRoute>} />
             <Route path="/admin/students"          element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} permKey="students"><Students /></ProtectedRoute>} />
             <Route path="/admin/teachers"          element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} permKey="teachers"><Teachers /></ProtectedRoute>} />

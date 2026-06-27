@@ -35,6 +35,8 @@ public class LoginResponse {
         private SchoolDto school;
         private Boolean needsSchoolSetup;
         private String  teacherType;
+        /** True when this user is the designated School-wide Diary Coordinator for their school. */
+        private Boolean isCoordinator;
     }
 
     @Data

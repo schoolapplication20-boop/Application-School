@@ -202,6 +202,12 @@ const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
         const visibleItems = adminNavItems.filter(
           item => item.permKey === null || (perms[item.permKey] === true && hasFeature(item.permKey))
         );
+        // If this admin is also the school-wide diary coordinator, inject a Diary item
+        if (user.isCoordinator) {
+          visibleItems.splice(1, 0, {
+            path: '/admin/diary', icon: 'menu_book', label: 'Diary (Coordinator)', permKey: null,
+          });
+        }
         return [{ label: 'Navigation', items: visibleItems }];
       }
 

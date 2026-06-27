@@ -11,6 +11,7 @@ import com.schoolers.repository.SchoolAuthConfigRepository;
 import com.schoolers.service.sms.SmsService;
 import com.schoolers.repository.SchoolRepository;
 import com.schoolers.repository.StudentRepository;
+import com.schoolers.repository.SchoolDiaryConfigRepository;
 import com.schoolers.repository.TeacherRepository;
 import com.schoolers.repository.UserRepository;
 import com.schoolers.security.JwtUtil;
@@ -40,6 +41,7 @@ public class AuthService {
     @Autowired private SchoolRepository           schoolRepository;
     @Autowired private TeacherRepository          teacherRepository;
     @Autowired private SchoolAuthConfigRepository schoolAuthConfigRepository;
+    @Autowired private SchoolDiaryConfigRepository schoolDiaryConfigRepository;
     @Autowired private JwtUtil                    jwtUtil;
     @Autowired private PasswordEncoder            passwordEncoder;
     @Autowired private EmailService               emailService;
@@ -260,6 +262,23 @@ public class AuthService {
                         .orElse("SUBJECT_TEACHER");
             }
 
+            // Check if this user is the designated School-wide Diary Coordinator.
+            // Resolved school PK is needed because users.school_id may store the
+            // display number (e.g. 3) while school_diary_config.school_id is the PK (e.g. 23).
+            boolean isCoordinator = false;
+            if (user.getSchoolId() != null) {
+                Long schoolPk = cachedSchoolOpt.map(com.schoolers.model.School::getId).orElse(user.getSchoolId());
+                com.schoolers.model.SchoolDiaryConfig diaryCfg =
+                        schoolDiaryConfigRepository.findBySchoolId(schoolPk).orElse(null);
+                if (diaryCfg == null) {
+                    // Fallback: find by display school_id
+                    diaryCfg = schoolDiaryConfigRepository.findBySchoolId(user.getSchoolId()).orElse(null);
+                }
+                isCoordinator = diaryCfg != null
+                        && "COORDINATOR".equals(diaryCfg.getDiaryMode())
+                        && user.getId().equals(diaryCfg.getCoordinatorUserId());
+            }
+
             LoginResponse.UserDto userDto = LoginResponse.UserDto.builder()
                     .id(user.getId())
                     .name(user.getName())
@@ -272,6 +291,7 @@ public class AuthService {
                     .school(schoolDto)
                     .needsSchoolSetup(needsSchoolSetup)
                     .teacherType(teacherType)
+                    .isCoordinator(isCoordinator)
                     .build();
 
             log.info("[login] Success: role={} schoolId={}", user.getRole().name(), user.getSchoolId());

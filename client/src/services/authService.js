@@ -20,7 +20,11 @@ export const loginWithEmail = async (email, password, selectedRole) => {
     if (!token || !user?.role) {
       throw new Error('Unexpected response from server. Please try again.');
     }
-    const normalizedUser = { ...user, role: String(user.role).toUpperCase() };
+    const normalizedUser = {
+      ...user,
+      role: String(user.role).toUpperCase(),
+      isCoordinator: user.isCoordinator === true,
+    };
     return { user: normalizedUser, token };
   } catch (apiErr) {
     const isColdStart = !apiErr.response || [502, 503, 504].includes(apiErr.response?.status);
