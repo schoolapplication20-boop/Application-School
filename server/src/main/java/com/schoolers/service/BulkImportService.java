@@ -22,6 +22,45 @@ public class BulkImportService {
     @Autowired private ImportLogRepository       importLogRepo;
     @Autowired private StudentRepository         studentRepo;
     @Autowired private ObjectMapper              objectMapper;
+    @Autowired private BulkImportJobProcessor    jobProcessor;
+
+    // ── Async (non-blocking) entry point ─────────────────────────────────────
+
+    /**
+     * Creates an ImportLog record with status=PROCESSING and immediately returns
+     * its ID so the controller can respond to the frontend before any student is
+     * saved. The actual import runs in a background thread via BulkImportJobProcessor.
+     */
+    public Long startImport(BulkImportRequest request, Long schoolId,
+                            Long adminId, String adminName) {
+        ImportLog job = importLogRepo.save(ImportLog.builder()
+                .importType("STUDENT")
+                .schoolId(schoolId)
+                .importedBy(adminId)
+                .importedByName(adminName)
+                .totalRows(request.getRows().size())
+                .importedRows(0)
+                .failedRows(0)
+                .duplicateRows(0)
+                .processedRows(0)
+                .failedRowsJson("[]")
+                .status("PROCESSING")
+                .build());
+
+        jobProcessor.processAsync(job.getId(), request, schoolId);
+        return job.getId();
+    }
+
+    /**
+     * Returns the current state of an import job for polling.
+     * credentialsJson is included so the frontend can download credentials
+     * once the job reaches COMPLETED or PARTIAL status.
+     */
+    public ImportLog getJobStatus(Long jobId, Long schoolId) {
+        return importLogRepo.findById(jobId)
+                .filter(j -> schoolId.equals(j.getSchoolId()))
+                .orElseThrow(() -> new RuntimeException("Import job not found"));
+    }
 
     public BulkImportResult importStudents(BulkImportRequest request,
                                            Long schoolId,

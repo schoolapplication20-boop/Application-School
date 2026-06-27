@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import { adminAPI } from '../services/api';
 import Button from './Button';
@@ -246,13 +246,18 @@ export default function BulkImportModal({ onClose, onImportDone }) {
   const [dragging,       setDragging]       = useState(false);
   const [parsing,        setParsing]        = useState(false);
   const [rows,           setRows]           = useState([]);
-  const [importing,      setImporting]      = useState(false);
+  const [importing,      setImporting]      = useState(false);  // true while starting the job
   const [result,         setResult]         = useState(null);
   const [skipInvalid,    setSkipInvalid]    = useState(true);
   const [createAccounts, setCreateAccounts] = useState(true);
   const [filterTab,      setFilterTab]      = useState('all');  // all | valid | invalid
   const [history,        setHistory]        = useState(null);
   const [showHistory,    setShowHistory]    = useState(false);
+
+  // Async job polling state
+  const [jobId,       setJobId]       = useState(null);
+  const [jobStatus,   setJobStatus]   = useState(null);   // live ImportLog from server
+  const pollRef = useRef(null);
   const fileRef = useRef(null);
 
   /* ── derived counts ── */
@@ -291,7 +296,57 @@ export default function BulkImportModal({ onClose, onImportDone }) {
     handleFile(e.dataTransfer.files[0]);
   }, [handleFile]);
 
-  /* ── import ── */
+  /* ── Stop polling on unmount ── */
+  useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
+
+  /* ── Poll job status every 2 s while jobId is set ── */
+  useEffect(() => {
+    if (!jobId) return;
+    const tick = async () => {
+      try {
+        const res = await adminAPI.getImportJobStatus(jobId);
+        const job = res.data?.data;
+        if (!job) return;
+        setJobStatus(job);
+        const done = job.status === 'COMPLETED' || job.status === 'PARTIAL' || job.status === 'FAILED';
+        if (done) {
+          clearInterval(pollRef.current);
+          pollRef.current = null;
+          // Build result shape expected by the Results UI
+          let credentials = [];
+          if (job.credentialsJson) {
+            try { credentials = JSON.parse(job.credentialsJson); } catch {}
+          }
+          let failedRowDetails = [];
+          if (job.failedRowsJson) {
+            try { failedRowDetails = JSON.parse(job.failedRowsJson); } catch {}
+          }
+          const importResult = {
+            totalRows:       job.totalRows,
+            importedRows:    job.importedRows,
+            failedRows:      job.failedRows,
+            duplicateRows:   job.duplicateRows,
+            failedRowDetails,
+            credentials,
+            importLogId:     job.id,
+            status:          job.status,
+          };
+          setResult(importResult);
+          setStep(2);
+          setJobId(null);
+          if (onImportDone) onImportDone();
+          if (createAccounts && credentials.length > 0) {
+            setTimeout(() => downloadCredentials(credentials), 500);
+          }
+        }
+      } catch { /* network blip — keep polling */ }
+    };
+    pollRef.current = setInterval(tick, 2000);
+    tick(); // fire immediately so we don't wait 2 s for the first update
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, [jobId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* ── Start async import — returns immediately with jobId ── */
   const handleImport = async () => {
     const toSend = skipInvalid ? valid : rows;
     if (toSend.length === 0) return;
@@ -317,14 +372,13 @@ export default function BulkImportModal({ onClose, onImportDone }) {
         createAccounts,
       };
       const res = await adminAPI.bulkImportStudents(payload);
-      const importResult = res.data.data;
-      setResult(importResult);
+      const { jobId: newJobId, totalRows } = res.data?.data ?? {};
+      if (!newJobId) throw new Error('Server did not return a job ID');
+      // Seed progress state before polling starts
+      setJobStatus({ status: 'PROCESSING', totalRows: totalRows ?? toSend.length, processedRows: 0 });
+      setJobId(newJobId);
+      // Switch to step 2 now — Results UI shows progress bar while jobId is set
       setStep(2);
-      if (onImportDone) onImportDone();
-      // Auto-download credentials immediately so admins don't miss them
-      if (createAccounts && importResult?.credentials?.length > 0) {
-        setTimeout(() => downloadCredentials(importResult.credentials), 500);
-      }
     } catch (e) {
       alert('Import failed: ' + (e.response?.data?.message || e.message));
     } finally {
@@ -635,90 +689,130 @@ export default function BulkImportModal({ onClose, onImportDone }) {
             </div>
           )}
 
-          {/* ════════ STEP 2 — RESULTS ════════ */}
-          {step === 2 && result && (
-            <div className="bim-results">
-              <div className={`bim-result-icon ${result.importedRows > 0 ? 'success' : 'error'}`}>
-                <span className="material-icons">
-                  {result.importedRows > 0 ? 'check_circle' : 'error'}
-                </span>
-              </div>
-              <h3 className="bim-result-title">
-                {result.importedRows > 0
-                  ? `${result.importedRows} student${result.importedRows > 1 ? 's' : ''} imported successfully!`
-                  : 'Import failed'}
-              </h3>
+          {/* ════════ STEP 2 — IMPORTING (live progress) or RESULTS ════════ */}
+          {step === 2 && (
+            <>
+              {/* ── Live progress while job is still running ── */}
+              {jobId && jobStatus && (
+                <div className="bim-results" style={{ textAlign: 'center', padding: '32px 24px' }}>
+                  <div className="bim-spinner" style={{ width: 48, height: 48, margin: '0 auto 20px', borderWidth: 4 }} />
+                  <h3 className="bim-result-title" style={{ marginBottom: 8 }}>
+                    Importing students…
+                  </h3>
+                  <p style={{ color: '#6b7280', fontSize: 13, marginBottom: 20 }}>
+                    Please keep this window open. You can close it safely — the import will continue in the background.
+                  </p>
 
-              <div className="bim-summary" style={{ marginTop: 24 }}>
-                <div className="bim-card total">
-                  <span className="bim-card-num">{result.totalRows}</span>
-                  <span className="bim-card-label">Total</span>
-                </div>
-                <div className="bim-card valid">
-                  <span className="bim-card-num">{result.importedRows}</span>
-                  <span className="bim-card-label">Imported</span>
-                </div>
-                <div className="bim-card invalid">
-                  <span className="bim-card-num">{result.failedRows}</span>
-                  <span className="bim-card-label">Failed</span>
-                </div>
-                <div className="bim-card dup">
-                  <span className="bim-card-num">{result.duplicateRows}</span>
-                  <span className="bim-card-label">Duplicates</span>
-                </div>
-              </div>
-
-              {/* Credentials download — shown when createAccounts was true */}
-              {result.credentials && result.credentials.length > 0 && (
-                <div style={{ marginTop: 20, padding: '14px 16px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                  <div>
-                    <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: '#15803d' }}>
-                      <span className="material-icons" style={{ fontSize: 18, verticalAlign: 'middle', marginRight: 4 }}>key</span>
-                      {result.credentials.length} student account{result.credentials.length > 1 ? 's' : ''} created
-                    </p>
-                    <p style={{ margin: '3px 0 0', fontSize: 12, color: '#166534' }}>
-                      Download the credentials file and distribute login details to students. Passwords are temporary — students must change on first login.
-                    </p>
-                  </div>
-                  <Button variant="bim-primary" onClick={() => downloadCredentials(result.credentials)}>
-                    <span className="material-icons" style={{ fontSize: 16 }}>download</span>
-                    Download Credentials
-                  </Button>
+                  {/* Progress bar */}
+                  {(() => {
+                    const total   = jobStatus.totalRows   || 0;
+                    const done    = jobStatus.processedRows || 0;
+                    const pct     = total > 0 ? Math.round((done / total) * 100) : 0;
+                    return (
+                      <div style={{ maxWidth: 400, margin: '0 auto' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#374151', marginBottom: 6 }}>
+                          <span>{done.toLocaleString()} / {total.toLocaleString()} rows processed</span>
+                          <span style={{ fontWeight: 700 }}>{pct}%</span>
+                        </div>
+                        <div style={{ height: 10, background: '#e5e7eb', borderRadius: 999, overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: `${pct}%`, background: 'linear-gradient(90deg,#6366f1,#a78bfa)', borderRadius: 999, transition: 'width .4s ease' }} />
+                        </div>
+                        <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginTop: 16, fontSize: 13 }}>
+                          <span style={{ color: '#16a34a' }}>✓ {(jobStatus.importedRows || 0).toLocaleString()} imported</span>
+                          {(jobStatus.failedRows || 0) > 0 && <span style={{ color: '#dc2626' }}>✕ {jobStatus.failedRows} failed</span>}
+                          {(jobStatus.duplicateRows || 0) > 0 && <span style={{ color: '#d97706' }}>⊘ {jobStatus.duplicateRows} duplicate</span>}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
 
-              {result.failedRowDetails && result.failedRowDetails.length > 0 && (
-                <div style={{ marginTop: 20 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                    <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: '#dc2626' }}>
-                      Failed Rows ({result.failedRowDetails.length})
-                    </p>
-                    <Button variant="bim-outline"
-                      onClick={() => downloadFailed(result.failedRowDetails)}>
-                      <span className="material-icons" style={{ fontSize: 15 }}>download</span>
-                      Download Failed Rows
-                    </Button>
+              {/* ── Final results once job is done ── */}
+              {!jobId && result && (
+                <div className="bim-results">
+                  <div className={`bim-result-icon ${result.importedRows > 0 ? 'success' : 'error'}`}>
+                    <span className="material-icons">
+                      {result.importedRows > 0 ? 'check_circle' : 'error'}
+                    </span>
                   </div>
-                  <div className="bim-table-wrap" style={{ maxHeight: 200 }}>
-                    <table className="bim-table">
-                      <thead>
-                        <tr><th>Row</th><th>Name</th><th>Adm No</th><th>Reason</th></tr>
-                      </thead>
-                      <tbody>
-                        {result.failedRowDetails.map(f => (
-                          <tr key={f.rowNumber} className="row-error">
-                            <td className="bim-row-num">{f.rowNumber}</td>
-                            <td>{f.fullName}</td>
-                            <td>{f.admissionNumber || '—'}</td>
-                            <td style={{ color: '#dc2626', fontSize: 12 }}>{f.reason}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                  <h3 className="bim-result-title">
+                    {result.importedRows > 0
+                      ? `${result.importedRows} student${result.importedRows > 1 ? 's' : ''} imported successfully!`
+                      : 'Import failed'}
+                  </h3>
+
+                  <div className="bim-summary" style={{ marginTop: 24 }}>
+                    <div className="bim-card total">
+                      <span className="bim-card-num">{result.totalRows}</span>
+                      <span className="bim-card-label">Total</span>
+                    </div>
+                    <div className="bim-card valid">
+                      <span className="bim-card-num">{result.importedRows}</span>
+                      <span className="bim-card-label">Imported</span>
+                    </div>
+                    <div className="bim-card invalid">
+                      <span className="bim-card-num">{result.failedRows}</span>
+                      <span className="bim-card-label">Failed</span>
+                    </div>
+                    <div className="bim-card dup">
+                      <span className="bim-card-num">{result.duplicateRows}</span>
+                      <span className="bim-card-label">Duplicates</span>
+                    </div>
                   </div>
+
+                  {/* Credentials download */}
+                  {result.credentials && result.credentials.length > 0 && (
+                    <div style={{ marginTop: 20, padding: '14px 16px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                      <div>
+                        <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: '#15803d' }}>
+                          <span className="material-icons" style={{ fontSize: 18, verticalAlign: 'middle', marginRight: 4 }}>key</span>
+                          {result.credentials.length} student account{result.credentials.length > 1 ? 's' : ''} created
+                        </p>
+                        <p style={{ margin: '3px 0 0', fontSize: 12, color: '#166534' }}>
+                          Credentials were auto-downloaded. Click again if needed. Students log in with Admission Number + Temp Password.
+                        </p>
+                      </div>
+                      <Button variant="bim-primary" onClick={() => downloadCredentials(result.credentials)}>
+                        <span className="material-icons" style={{ fontSize: 16 }}>download</span>
+                        Download Credentials
+                      </Button>
+                    </div>
+                  )}
+
+                  {result.failedRowDetails && result.failedRowDetails.length > 0 && (
+                    <div style={{ marginTop: 20 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                        <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: '#dc2626' }}>
+                          Failed Rows ({result.failedRowDetails.length})
+                        </p>
+                        <Button variant="bim-outline" onClick={() => downloadFailed(result.failedRowDetails)}>
+                          <span className="material-icons" style={{ fontSize: 15 }}>download</span>
+                          Download Failed Rows
+                        </Button>
+                      </div>
+                      <div className="bim-table-wrap" style={{ maxHeight: 200 }}>
+                        <table className="bim-table">
+                          <thead>
+                            <tr><th>Row</th><th>Name</th><th>Adm No</th><th>Reason</th></tr>
+                          </thead>
+                          <tbody>
+                            {result.failedRowDetails.map(f => (
+                              <tr key={f.rowNumber} className="row-error">
+                                <td className="bim-row-num">{f.rowNumber}</td>
+                                <td>{f.fullName}</td>
+                                <td>{f.admissionNumber || '—'}</td>
+                                <td style={{ color: '#dc2626', fontSize: 12 }}>{f.reason}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
+            </>
           )}
         </div>
 
@@ -756,13 +850,18 @@ export default function BulkImportModal({ onClose, onImportDone }) {
             </>
           )}
 
-          {step === 2 && (
+          {step === 2 && !jobId && (
             <>
-              <Button variant="bim-ghost" onClick={() => { setStep(0); setRows([]); setResult(null); setFilterTab('all'); }}>
+              <Button variant="bim-ghost" onClick={() => { setStep(0); setRows([]); setResult(null); setJobStatus(null); setFilterTab('all'); }}>
                 Import More
               </Button>
               <Button variant="bim-primary" onClick={onClose}>Done</Button>
             </>
+          )}
+          {step === 2 && jobId && (
+            <Button variant="bim-ghost" onClick={onClose}>
+              Close (import continues in background)
+            </Button>
           )}
         </div>
       </div>

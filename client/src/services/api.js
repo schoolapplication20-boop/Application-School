@@ -124,8 +124,9 @@ export const adminAPI = {
   onboardStudent: (id, email) => api.post(`/api/admin/students/${id}/onboard`, { email }),
   promoteStudents: (data) => api.post('/api/admin/students/promote', data),
 
-  // Bulk Import
+  // Bulk Import — startImport returns {jobId} immediately; poll getImportJobStatus for progress
   bulkImportStudents:  (data)  => api.post('/api/admin/students/bulk-import', data),
+  getImportJobStatus:  (jobId) => api.get(`/api/admin/students/bulk-import/jobs/${jobId}`),
   getImportHistory:    ()      => api.get('/api/admin/students/bulk-import/history'),
   getImportFailedRows: (logId) => api.get(`/api/admin/students/bulk-import/${logId}/failed`),
 

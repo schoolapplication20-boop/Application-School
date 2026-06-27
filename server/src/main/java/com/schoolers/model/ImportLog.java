@@ -49,6 +49,15 @@ public class ImportLog {
     @Builder.Default
     private String status = "COMPLETED";
 
+    /** Rows processed so far (updated every 50 rows by the async worker). */
+    @Column(name = "processed_rows")
+    @Builder.Default
+    private int processedRows = 0;
+
+    /** JSON array of StudentCredentialDto — populated after async import completes. */
+    @Column(name = "credentials_json", columnDefinition = "TEXT")
+    private String credentialsJson;
+
     @CreationTimestamp
     @Column(name = "imported_at", updatable = false)
     private LocalDateTime importedAt;
