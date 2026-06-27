@@ -8,6 +8,7 @@ import com.schoolers.model.Teacher;
 import com.schoolers.repository.ClassDiaryRepository;
 import com.schoolers.repository.ClassRoomRepository;
 import com.schoolers.repository.SchoolDiaryConfigRepository;
+import com.schoolers.repository.SchoolRepository;
 import com.schoolers.repository.TeacherRepository;
 import com.schoolers.repository.UserRepository;
 import com.schoolers.security.CurrentUserUtil;
@@ -35,6 +36,7 @@ public class ClassDiaryController {
     @Autowired private CurrentUserUtil              currentUserUtil;
     @Autowired private SchoolDiaryConfigRepository  diaryConfigRepository;
     @Autowired private ClassRoomRepository          classRoomRepository;
+    @Autowired private SchoolRepository             schoolRepository;
 
     /** Resolve the Teacher entity from the JWT principal. */
     private Optional<Teacher> resolveTeacher(Authentication auth) {
@@ -43,13 +45,32 @@ public class ClassDiaryController {
                 .flatMap(u -> teacherRepository.findByUserId(u.getId()));
     }
 
-    /** Returns true when the caller is the school's designated Diary Coordinator. */
+    /**
+     * Returns true when the caller is the school's designated Diary Coordinator.
+     *
+     * The schoolId from the JWT may be the display school_id (e.g. 2) while
+     * school_diary_config.school_id stores the actual PK (e.g. 22).  We resolve
+     * the PK first so the diary-config lookup succeeds for both variants.
+     */
     private boolean isDesignatedCoordinator(Long schoolId, Long callerUserId) {
         if (schoolId == null || callerUserId == null) return false;
-        SchoolDiaryConfig cfg = diaryConfigRepository.findBySchoolId(schoolId).orElse(null);
+        Long schoolPk = resolveSchoolPk(schoolId);
+        SchoolDiaryConfig cfg = diaryConfigRepository.findBySchoolId(schoolPk).orElse(null);
         return cfg != null
             && "COORDINATOR".equals(cfg.getDiaryMode())
             && callerUserId.equals(cfg.getCoordinatorUserId());
+    }
+
+    /** Resolves a display school_id or PK to the actual schools.id primary key. */
+    private Long resolveSchoolPk(Long schoolIdFromJwt) {
+        if (schoolIdFromJwt == null) return null;
+        try {
+            var byDisplay = schoolRepository.findBySchoolId(schoolIdFromJwt.intValue());
+            if (byDisplay.isPresent()) return byDisplay.get().getId();
+        } catch (Exception ignored) {}
+        return schoolRepository.findById(schoolIdFromJwt)
+                .map(com.schoolers.model.School::getId)
+                .orElse(schoolIdFromJwt);
     }
 
     // ── Coordinator helpers (accessible by TEACHER) ───────────────────────────

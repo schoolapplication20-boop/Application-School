@@ -23,33 +23,55 @@ export default function Homework() {
   const [myClasses, setMyClasses]           = useState([]);
   const [teacherProfile, setTeacherProfile] = useState(null);
   const [classesLoading, setClassesLoading] = useState(true);
-  const [isCoordinator, setIsCoordinator]   = useState(false);
+  // Seed from the stored user object (set at login) so the correct branch runs
+  // immediately without waiting for the live coordinator-check API response.
+  // The live check may return false due to the school_id display/PK mismatch
+  // that exists in the users table; user.isCoordinator is resolved correctly
+  // by AuthService.login() which uses the resolved school PK.
+  const [isCoordinator, setIsCoordinator]   = useState(user?.isCoordinator === true);
 
   useEffect(() => {
     setClassesLoading(true);
-    Promise.all([
-      teacherAPI.getMyProfile().catch(() => null),
-      diaryAPI.getCoordinatorStatus().catch(() => null),
-    ]).then(([profileRes, coordRes]) => {
-      setTeacherProfile(profileRes?.data?.data ?? null);
-      const coordinator = coordRes?.data?.data?.isCoordinator === true;
-      setIsCoordinator(coordinator);
+    // Use the already-known coordinator status as the starting point;
+    // the live check will confirm/update it once the response arrives.
+    const initialCoord = user?.isCoordinator === true;
 
-      if (coordinator) {
-        // Coordinator can post for ALL classes — fetch the full school list
-        diaryAPI.getAllClasses()
-          .then(r => setMyClasses(r?.data?.data ?? []))
-          .catch(() => setMyClasses([]))
-          .finally(() => setClassesLoading(false));
-      } else {
-        // Regular teacher — only their assigned classes
-        teacherAPI.getMyClasses()
-          .then(r => setMyClasses(r?.data?.data ?? []))
-          .catch(() => setMyClasses([]))
-          .finally(() => setClassesLoading(false));
-      }
-    }).catch(() => setClassesLoading(false));
-  }, []);
+    if (initialCoord) {
+      // Start loading all classes immediately — don't wait for live check
+      Promise.all([
+        teacherAPI.getMyProfile().catch(() => null),
+        diaryAPI.getAllClasses().catch(() => null),
+        diaryAPI.getCoordinatorStatus().catch(() => null),
+      ]).then(([profileRes, classesRes, coordRes]) => {
+        setTeacherProfile(profileRes?.data?.data ?? null);
+        setMyClasses(classesRes?.data?.data ?? []);
+        // Live check may correct the flag if config was changed since login
+        const liveCoord = coordRes?.data?.data?.isCoordinator !== false;
+        setIsCoordinator(liveCoord);
+      }).catch(() => {}).finally(() => setClassesLoading(false));
+    } else {
+      Promise.all([
+        teacherAPI.getMyProfile().catch(() => null),
+        diaryAPI.getCoordinatorStatus().catch(() => null),
+      ]).then(([profileRes, coordRes]) => {
+        setTeacherProfile(profileRes?.data?.data ?? null);
+        const coordinator = coordRes?.data?.data?.isCoordinator === true;
+        setIsCoordinator(coordinator);
+
+        if (coordinator) {
+          diaryAPI.getAllClasses()
+            .then(r => setMyClasses(r?.data?.data ?? []))
+            .catch(() => setMyClasses([]))
+            .finally(() => setClassesLoading(false));
+        } else {
+          teacherAPI.getMyClasses()
+            .then(r => setMyClasses(r?.data?.data ?? []))
+            .catch(() => setMyClasses([]))
+            .finally(() => setClassesLoading(false));
+        }
+      }).catch(() => setClassesLoading(false));
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Determine if a classroom is where this teacher is the Class Teacher
   const getClassRole = (cls) => {
@@ -296,7 +318,7 @@ export default function Homework() {
               {classesLoading ? (
                 <div style={{ padding: '10px 0 16px', fontSize: 13, color: 'var(--text-muted)' }}>
                   <span className="material-icons" style={{ fontSize: 16, verticalAlign: 'middle', marginRight: 4 }}>hourglass_empty</span>
-                  Loading your assigned classes…
+                  {isCoordinator ? 'Loading all school classes…' : 'Loading your assigned classes…'}
                 </div>
               ) : (classOptions.length === 0) ? (
                 <div style={{
