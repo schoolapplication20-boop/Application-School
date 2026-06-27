@@ -712,11 +712,15 @@ public class AdminController {
             var coordUser = userRepository.findByEmailIgnoreCase(coordStr).orElse(null);
             if (coordUser == null)
                 return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("No staff/teacher found with email \"" + coordStr
-                        + "\" in this school. Please check the email and try again."));
+                    .body(ApiResponse.error("No user found with email \"" + coordStr
+                        + "\". Please check the email and try again."));
 
-            // School isolation — coordinator must belong to the same school
-            if (coordUser.getSchoolId() == null || !coordUser.getSchoolId().equals(schoolId))
+            // School isolation: resolve the coordinator's school_id to the actual PK so
+            // we compare PKs against PKs. users.school_id may store the display school_id
+            // (e.g. 2) while schoolId here is already the PK (e.g. 22); comparing them
+            // directly would wrongly reject same-school admins/teachers.
+            Long coordSchoolPk = resolveSchoolPk(coordUser.getSchoolId());
+            if (coordSchoolPk == null || !coordSchoolPk.equals(schoolId))
                 return ResponseEntity.badRequest()
                     .body(ApiResponse.error("This user does not belong to your school. "
                         + "Only staff members of this school can be assigned as coordinator."));
