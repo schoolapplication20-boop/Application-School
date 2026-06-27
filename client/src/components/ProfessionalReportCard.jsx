@@ -95,7 +95,26 @@ const tblBorder = `1px solid ${BORDER}`;
 export default function ProfessionalReportCard({ data, gradeScale = [], examFilter = '', onPrint, printId = 'rc-print-root' }) {
   if (!data) return null;
 
-  const { student = {}, school = {}, marksByExam = {}, attendance = {} } = data;
+  const { student = {}, school = {}, marksByExam = {}, attendance = {},
+          manualAttendanceByExam = {} } = data;
+
+  // Prefer manually-entered attendance (from Marks Bulk Entry) over the
+  // auto-computed daily attendance log.  Resolution order:
+  //  1. Manual entry for the currently-selected exam type (examFilter)
+  //  2. Manual entry for any exam type that has data (first found)
+  //  3. Auto-computed attendance from daily records (legacy fallback)
+  const manualAtt =
+    manualAttendanceByExam[examFilter] ||
+    Object.values(manualAttendanceByExam)[0] ||
+    null;
+
+  const displayAtt = manualAtt
+    ? {
+        totalDays:   manualAtt.totalWorkingDays,
+        presentDays: manualAtt.presentDays,
+        percentage:  manualAtt.percentage,
+      }
+    : attendance;
 
   const logoSrc = school.logoUrl
     ? (school.logoUrl.startsWith('http') ? school.logoUrl : `${BASE_URL}${school.logoUrl}`)
@@ -277,17 +296,17 @@ export default function ProfessionalReportCard({ data, gradeScale = [], examFilt
                 <tbody>
                   <tr>
                     <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 700, borderRight: tblBorder }}>
-                      {attendance.totalDays ?? 0}
+                      {displayAtt.totalDays ?? 0}
                     </td>
                     <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 700, color: '#16a34a', borderRight: tblBorder }}>
-                      {attendance.presentDays ?? 0}
+                      {displayAtt.presentDays ?? 0}
                     </td>
                     <td style={{ padding: '8px 10px', textAlign: 'center' }}>
                       <span style={{
                         fontWeight: 900, fontSize: 14,
-                        color: Number(attendance.percentage) >= 75 ? '#16a34a' : '#dc2626',
+                        color: Number(displayAtt.percentage) >= 75 ? '#16a34a' : '#dc2626',
                       }}>
-                        {Number(attendance.percentage || 0).toFixed(1)}%
+                        {Number(displayAtt.percentage || 0).toFixed(1)}%
                       </span>
                     </td>
                   </tr>
