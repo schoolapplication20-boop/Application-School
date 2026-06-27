@@ -167,9 +167,6 @@ export default function Homework() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.classId)                          { showToast('Please select a class', 'error'); return; }
-    if (!form.subject.trim())                   { showToast('Subject is required', 'error'); return; }
-    if (!form.topic.trim())                     { showToast('Topic is required', 'error'); return; }
-    if (!form.homework.trim())                  { showToast('Homework is required', 'error'); return; }
 
     setSubmitting(true);
     try {
@@ -351,7 +348,7 @@ export default function Homework() {
               <div className="row g-3 mb-3">
                 <div className="col-6">
                   <label className="form-label small fw-medium">
-                    Subject *
+                    Subject
                     <span style={{ marginLeft: 6, fontSize: 10, color: 'var(--text-muted)', fontWeight: 400 }}>
                       ↵ or , to add multiple
                     </span>
@@ -405,7 +402,7 @@ export default function Homework() {
 
               {/* Topic (required) */}
               <div className="mb-3">
-                <label className="form-label small fw-medium">Topic Covered *</label>
+                <label className="form-label small fw-medium">Topic Covered <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: 11 }}>(optional)</span></label>
                 <input type="text" className="form-control form-control-sm"
                   placeholder="e.g. Chapter 4 — Quadratic Equations"
                   value={form.topic}
@@ -415,7 +412,7 @@ export default function Homework() {
 
               {/* Homework (required) */}
               <div className="mb-3">
-                <label className="form-label small fw-medium">Homework Assigned *</label>
+                <label className="form-label small fw-medium">Homework Assigned <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: 11 }}>(optional)</span></label>
                 <textarea className="form-control form-control-sm" rows={3}
                   placeholder="e.g. Solve exercises 1–10 from page 78"
                   maxLength={2000}
@@ -619,14 +616,14 @@ export default function Homework() {
             </div>
             <form onSubmit={handleSaveEdit} style={{ padding: '24px' }}>
               <div className="mb-3">
-                <label className="form-label small fw-medium">Topic Covered *</label>
+                <label className="form-label small fw-medium">Topic Covered <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: 11 }}>(optional)</span></label>
                 <input type="text" className="form-control form-control-sm"
                   value={editForm.topic}
                   onChange={e => setEditForm(prev => ({ ...prev, topic: e.target.value }))}
                   required />
               </div>
               <div className="mb-3">
-                <label className="form-label small fw-medium">Homework Assigned *</label>
+                <label className="form-label small fw-medium">Homework Assigned <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: 11 }}>(optional)</span></label>
                 <textarea className="form-control form-control-sm" rows={3}
                   value={editForm.homework}
                   onChange={e => setEditForm(prev => ({ ...prev, homework: e.target.value }))}

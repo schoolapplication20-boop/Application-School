@@ -73,12 +73,10 @@ public class ClassDiaryService {
         if (className == null || className.isBlank()) return ApiResponse.error("Class name is required");
 
         String topic = str(body, "topic", null);
-        if (topic == null || topic.isBlank()) return ApiResponse.error("Topic is required");
-        if (topic.length() > 200) return ApiResponse.error("Topic cannot exceed 200 characters");
+        if (topic != null && topic.length() > 200) return ApiResponse.error("Topic cannot exceed 200 characters");
 
         String homework = str(body, "homework", null);
-        if (homework == null || homework.isBlank()) return ApiResponse.error("Homework is required");
-        if (homework.length() > 2000) return ApiResponse.error("Homework cannot exceed 2000 characters");
+        if (homework != null && homework.length() > 2000) return ApiResponse.error("Homework cannot exceed 2000 characters");
 
         Long teacherId = longVal(body, "teacherId", null);
         if (teacherId == null) return ApiResponse.error("Teacher ID is required");
