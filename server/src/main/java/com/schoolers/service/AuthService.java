@@ -224,11 +224,32 @@ public class AuthService {
                     LoginResponse.builder().otpRequired(true).otpEmail(user.getEmail()).build());
             }
 
-            // ── Step 4: Build JWT claims (include schoolId for tenant isolation) ──
+            // ── Step 4a: Coordinator check (before token so flag can be embedded in JWT) ──
+            // Only TEACHER and ADMIN accounts can be diary coordinators; skip the DB
+            // lookup for all other roles to avoid wasted queries per login.
+            boolean isCoordinatorEarly = false;
+            boolean eligibleForCoordinatorEarly = user.getRole() == User.Role.TEACHER
+                    || user.getRole() == User.Role.ADMIN;
+            if (eligibleForCoordinatorEarly && user.getSchoolId() != null) {
+                Long schoolPkEarly = cachedSchoolOpt.map(com.schoolers.model.School::getId)
+                        .orElse(user.getSchoolId());
+                com.schoolers.model.SchoolDiaryConfig diaryCfgEarly =
+                        schoolDiaryConfigRepository.findBySchoolId(schoolPkEarly).orElse(null);
+                if (diaryCfgEarly == null && !schoolPkEarly.equals(user.getSchoolId()))
+                    diaryCfgEarly = schoolDiaryConfigRepository.findBySchoolId(user.getSchoolId()).orElse(null);
+                isCoordinatorEarly = diaryCfgEarly != null
+                        && "COORDINATOR".equals(diaryCfgEarly.getDiaryMode())
+                        && user.getId().equals(diaryCfgEarly.getCoordinatorUserId());
+            }
+
+            // ── Step 4b: Build JWT claims (include schoolId + coordinator flag) ──────
             Map<String, Object> claims = new HashMap<>();
-            claims.put("role",     user.getRole().name());
-            claims.put("userId",   user.getId());
+            claims.put("role",          user.getRole().name());
+            claims.put("userId",        user.getId());
             if (user.getSchoolId() != null) claims.put("schoolId", user.getSchoolId());
+            // Embed coordinator flag in the token so ClassDiaryController can read it
+            // from auth.getDetails() without a DB query on every diary POST.
+            if (isCoordinatorEarly) claims.put("isCoordinator", true);
 
             UserDetails userDetails = new org.springframework.security.core.userdetails.User(
                     user.getEmail(), user.getPassword(),
@@ -262,22 +283,8 @@ public class AuthService {
                         .orElse("SUBJECT_TEACHER");
             }
 
-            // Check if this user is the designated School-wide Diary Coordinator.
-            // Resolved school PK is needed because users.school_id may store the
-            // display number (e.g. 3) while school_diary_config.school_id is the PK (e.g. 23).
-            boolean isCoordinator = false;
-            if (user.getSchoolId() != null) {
-                Long schoolPk = cachedSchoolOpt.map(com.schoolers.model.School::getId).orElse(user.getSchoolId());
-                com.schoolers.model.SchoolDiaryConfig diaryCfg =
-                        schoolDiaryConfigRepository.findBySchoolId(schoolPk).orElse(null);
-                if (diaryCfg == null) {
-                    // Fallback: find by display school_id
-                    diaryCfg = schoolDiaryConfigRepository.findBySchoolId(user.getSchoolId()).orElse(null);
-                }
-                isCoordinator = diaryCfg != null
-                        && "COORDINATOR".equals(diaryCfg.getDiaryMode())
-                        && user.getId().equals(diaryCfg.getCoordinatorUserId());
-            }
+            // isCoordinatorEarly was computed before token generation and embedded in JWT claims.
+            boolean isCoordinator = isCoordinatorEarly;
 
             LoginResponse.UserDto userDto = LoginResponse.UserDto.builder()
                     .id(user.getId())

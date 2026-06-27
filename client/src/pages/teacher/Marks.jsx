@@ -679,7 +679,9 @@ ADM002,Mathematics,92,100`;
             totalWorkingDays: wdNum,
             students:         attendanceStudents,
           });
-        } catch { /* attendance save failure is non-critical */ }
+        } catch {
+          showToast('Marks saved, but attendance (working/present days) failed to save. Please re-open and save again.', 'error');
+        }
       }
 
       setAllMarks(prev => [...prev, ...saved]);

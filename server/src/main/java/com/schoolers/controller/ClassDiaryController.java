@@ -8,7 +8,6 @@ import com.schoolers.model.Teacher;
 import com.schoolers.repository.ClassDiaryRepository;
 import com.schoolers.repository.ClassRoomRepository;
 import com.schoolers.repository.SchoolDiaryConfigRepository;
-import com.schoolers.repository.SchoolRepository;
 import com.schoolers.repository.TeacherRepository;
 import com.schoolers.repository.UserRepository;
 import com.schoolers.security.CurrentUserUtil;
@@ -36,7 +35,6 @@ public class ClassDiaryController {
     @Autowired private CurrentUserUtil              currentUserUtil;
     @Autowired private SchoolDiaryConfigRepository  diaryConfigRepository;
     @Autowired private ClassRoomRepository          classRoomRepository;
-    @Autowired private SchoolRepository             schoolRepository;
 
     /** Resolve the Teacher entity from the JWT principal. */
     private Optional<Teacher> resolveTeacher(Authentication auth) {
@@ -48,29 +46,29 @@ public class ClassDiaryController {
     /**
      * Returns true when the caller is the school's designated Diary Coordinator.
      *
-     * The schoolId from the JWT may be the display school_id (e.g. 2) while
-     * school_diary_config.school_id stores the actual PK (e.g. 22).  We resolve
-     * the PK first so the diary-config lookup succeeds for both variants.
+     * <p>Fast path: reads the {@code isCoordinator} flag embedded in the JWT at login
+     * (via JwtFilter → auth.getDetails()). No DB query needed on the hot diary-POST path.
+     *
+     * <p>Fallback (old tokens or missing claim): queries SchoolDiaryConfig using the
+     * PK-resolved schoolId so the lookup works regardless of display-vs-PK mismatch.
      */
     private boolean isDesignatedCoordinator(Long schoolId, Long callerUserId) {
         if (schoolId == null || callerUserId == null) return false;
-        Long schoolPk = resolveSchoolPk(schoolId);
+        // Fast path: claim embedded in JWT by AuthService at login time
+        org.springframework.security.core.context.SecurityContext ctx =
+                org.springframework.security.core.context.SecurityContextHolder.getContext();
+        if (ctx.getAuthentication() != null
+                && ctx.getAuthentication().getDetails() instanceof java.util.Map) {
+            Object flag = ((java.util.Map<?, ?>) ctx.getAuthentication().getDetails())
+                    .get("isCoordinator");
+            if (flag != null) return Boolean.TRUE.equals(flag);
+        }
+        // Fallback: live DB check (covers tokens issued before this change was deployed)
+        Long schoolPk = currentUserUtil.resolveSchoolPk(schoolId);
         SchoolDiaryConfig cfg = diaryConfigRepository.findBySchoolId(schoolPk).orElse(null);
         return cfg != null
             && "COORDINATOR".equals(cfg.getDiaryMode())
             && callerUserId.equals(cfg.getCoordinatorUserId());
-    }
-
-    /** Resolves a display school_id or PK to the actual schools.id primary key. */
-    private Long resolveSchoolPk(Long schoolIdFromJwt) {
-        if (schoolIdFromJwt == null) return null;
-        try {
-            var byDisplay = schoolRepository.findBySchoolId(schoolIdFromJwt.intValue());
-            if (byDisplay.isPresent()) return byDisplay.get().getId();
-        } catch (Exception ignored) {}
-        return schoolRepository.findById(schoolIdFromJwt)
-                .map(com.schoolers.model.School::getId)
-                .orElse(schoolIdFromJwt);
     }
 
     // ── Coordinator helpers (accessible by TEACHER) ───────────────────────────
@@ -85,8 +83,10 @@ public class ClassDiaryController {
     public ResponseEntity<?> coordinatorCheck(Authentication auth) {
         Long schoolId     = currentUserUtil.getCurrentSchoolId(auth);
         Long callerUserId = currentUserUtil.getCurrentUserId(auth);
-        SchoolDiaryConfig cfg = schoolId != null
-            ? diaryConfigRepository.findBySchoolId(schoolId).orElse(null) : null;
+        // Resolve to PK before querying diary config — users.school_id may be a display number
+        Long schoolPk = currentUserUtil.resolveSchoolPk(schoolId);
+        SchoolDiaryConfig cfg = schoolPk != null
+            ? diaryConfigRepository.findBySchoolId(schoolPk).orElse(null) : null;
         boolean coordinator = isDesignatedCoordinator(schoolId, callerUserId);
         return ResponseEntity.ok(ApiResponse.success("OK", Map.of(
             "isCoordinator", coordinator,
@@ -111,8 +111,10 @@ public class ClassDiaryController {
             return ResponseEntity.status(403)
                 .body(ApiResponse.error("Only coordinators and admins can list all classes"));
         }
-        List<ClassRoom> classes = schoolId != null
-            ? classRoomRepository.findBySchoolId(schoolId) : List.of();
+        // Resolve to PK so classRoomRepository (which uses schools.id FK) finds the right rows
+        Long schoolPk = currentUserUtil.resolveSchoolPk(schoolId);
+        List<ClassRoom> classes = schoolPk != null
+            ? classRoomRepository.findBySchoolId(schoolPk) : List.of();
         return ResponseEntity.ok(ApiResponse.success("OK", classes));
     }
 

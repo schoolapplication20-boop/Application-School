@@ -42,19 +42,21 @@ public class BulkImportJobProcessor {
         int imported   = 0;
         int duplicates = 0;
 
-        // Pre-load all existing admission numbers and roll-number keys for this school.
-        // This avoids one DB query per row and catches duplicates before they hit DB
-        // constraints, giving precise per-row error messages instead of generic exceptions.
-        List<com.schoolers.model.Student> existingStudents = studentRepo.findBySchoolId(schoolId);
+        // Pre-load only the four key fields (admissionNumber, rollNumber, className, section)
+        // via a JPQL projection instead of loading every column of every Student entity.
+        // For a school with 5,000+ students this avoids loading large object graphs into
+        // the async thread's heap — a significant GC-pressure reduction during bulk imports.
+        List<com.schoolers.repository.StudentKeyProjection> keyRows =
+                studentRepo.findKeysBySchoolId(schoolId);
 
-        Set<String> existingAdmNos = existingStudents.stream()
-                .map(s -> s.getAdmissionNumber())
+        Set<String> existingAdmNos = keyRows.stream()
+                .map(com.schoolers.repository.StudentKeyProjection::getAdmissionNumber)
                 .filter(Objects::nonNull)
                 .map(String::toLowerCase)
                 .collect(Collectors.toCollection(HashSet::new));
 
         // Key: "className|section|rollNumber" (all lowercase) — roll uniqueness per class+section
-        Set<String> existingRollKeys = existingStudents.stream()
+        Set<String> existingRollKeys = keyRows.stream()
                 .filter(s -> s.getRollNumber() != null && s.getClassName() != null)
                 .map(s -> (s.getClassName().toLowerCase().trim())
                         + "|" + (s.getSection() != null ? s.getSection().toLowerCase().trim() : "")

@@ -22,7 +22,9 @@ public interface ReportCardAttendanceRepository extends JpaRepository<ReportCard
 
     Optional<ReportCardAttendance> findByStudentIdAndExamType(Long studentId, String examType);
 
-    List<ReportCardAttendance> findByStudentId(Long studentId);
+    // School-scoped variant — always prefer this over findByStudentId() to prevent
+    // cross-school data leakage in a multi-tenant system.
+    List<ReportCardAttendance> findByStudentIdAndSchoolId(Long studentId, Long schoolId);
 
     /** Upsert a single row — insert or update on the unique constraint. */
     @Modifying @Transactional
@@ -46,4 +48,31 @@ public interface ReportCardAttendanceRepository extends JpaRepository<ReportCard
                 @Param("studentId")         Long   studentId,
                 @Param("totalWorkingDays")  int    totalWorkingDays,
                 @Param("presentDays")       int    presentDays);
+
+    /**
+     * Batch upsert — one SQL statement for all students in a class.
+     * Replaces the per-student loop that caused N round-trips.
+     * Called from TeacherController.saveReportAttendance().
+     */
+    @Modifying @Transactional
+    @Query(value = """
+        INSERT INTO report_card_attendance
+            (school_id, class_name, section, exam_type, academic_year,
+             student_id, total_working_days, present_days, created_at, updated_at)
+        SELECT
+            :schoolId, :className, :section, :examType, :academicYear,
+            s.student_id, :totalWorkingDays, s.present_days, NOW(), NOW()
+        FROM jsonb_to_recordset(:studentJson::jsonb) AS s(student_id BIGINT, present_days INT)
+        ON CONFLICT (school_id, class_name, section, exam_type, student_id, academic_year) DO UPDATE SET
+            total_working_days = EXCLUDED.total_working_days,
+            present_days       = EXCLUDED.present_days,
+            updated_at         = NOW()
+        """, nativeQuery = true)
+    void batchUpsert(@Param("schoolId")         Long   schoolId,
+                     @Param("className")        String className,
+                     @Param("section")          String section,
+                     @Param("examType")         String examType,
+                     @Param("academicYear")     String academicYear,
+                     @Param("totalWorkingDays") int    totalWorkingDays,
+                     @Param("studentJson")      String studentJson);
 }

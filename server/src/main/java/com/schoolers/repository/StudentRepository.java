@@ -157,6 +157,16 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     /** Students who have no login account yet (imported without createAccounts). */
     List<Student> findBySchoolIdAndStudentUserIdIsNull(Long schoolId);
 
+    /**
+     * Lightweight projection used by BulkImportJobProcessor to build duplicate-detection sets.
+     * Returns only (admissionNumber, rollNumber, className, section) to avoid loading all
+     * mapped fields for potentially thousands of students on every import job.
+     */
+    @Query("SELECT s.admissionNumber AS admissionNumber, s.rollNumber AS rollNumber, " +
+           "s.className AS className, s.section AS section " +
+           "FROM Student s WHERE s.schoolId = :schoolId")
+    List<StudentKeyProjection> findKeysBySchoolId(@Param("schoolId") Long schoolId);
+
     long countByIsActive(Boolean isActive);
 
     @Query("SELECT s FROM Student s WHERE s.isActive = true AND (LOWER(s.name) LIKE LOWER(CONCAT('%',:search,'%')) ESCAPE '\\' OR LOWER(s.rollNumber) LIKE LOWER(CONCAT('%',:search,'%')) ESCAPE '\\')")

@@ -100,13 +100,13 @@ export default function ProfessionalReportCard({ data, gradeScale = [], examFilt
 
   // Prefer manually-entered attendance (from Marks Bulk Entry) over the
   // auto-computed daily attendance log.  Resolution order:
-  //  1. Manual entry for the currently-selected exam type (examFilter)
-  //  2. Manual entry for any exam type that has data (first found)
-  //  3. Auto-computed attendance from daily records (legacy fallback)
-  const manualAtt =
-    manualAttendanceByExam[examFilter] ||
-    Object.values(manualAttendanceByExam)[0] ||
-    null;
+  //  1. Manual entry for the currently-selected exam type (examFilter) — exact match only.
+  //  2. Auto-computed attendance from daily records (legacy fallback).
+  //
+  // NOTE: We intentionally do NOT fall back to Object.values(manualAttendanceByExam)[0]
+  // when the filter doesn't match, because that would show the wrong exam's attendance
+  // (e.g. Term 1 data on a Term 2 report card) which is worse than showing computed data.
+  const manualAtt = (examFilter && manualAttendanceByExam[examFilter]) || null;
 
   const displayAtt = manualAtt
     ? {

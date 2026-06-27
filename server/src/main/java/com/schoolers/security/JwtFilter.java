@@ -57,9 +57,14 @@ public class JwtFilter extends OncePerRequestFilter {
                 UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                 Map<String, Object> claimsDetails = new HashMap<>();
-                claimsDetails.put("schoolId", jwtUtil.extractSchoolId(token));
-                claimsDetails.put("userId",   userId);
-                claimsDetails.put("role",     role);
+                claimsDetails.put("schoolId",      jwtUtil.extractSchoolId(token));
+                claimsDetails.put("userId",        userId);
+                claimsDetails.put("role",          role);
+                // Forward the coordinator flag embedded at login so controllers can
+                // check it from auth.getDetails() without an extra DB query per request.
+                Object coordFlag = jwtUtil.extractClaim(token,
+                        claims -> claims.get("isCoordinator"));
+                claimsDetails.put("isCoordinator", Boolean.TRUE.equals(coordFlag));
                 authToken.setDetails(claimsDetails);
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }

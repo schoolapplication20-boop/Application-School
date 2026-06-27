@@ -367,8 +367,19 @@ public class ReportCardController {
         // Teachers enter these in the Marks Bulk Entry screen alongside marks.
         // Each exam type has its own working-days count so multi-term report
         // cards display correct per-term attendance.
-        List<com.schoolers.model.ReportCardAttendance> rcaRows =
-                rcaRepository.findByStudentId(student.getId());
+        // Use school-scoped query to prevent cross-school attendance leakage (multi-tenant safety).
+        // resolveSchoolPk is not available here; use the school found from the student's schoolId
+        // which is already validated to belong to the calling user's school by the route guards.
+        Long rcaSchoolId = student.getSchoolId();
+        Long rcaSchoolPk = null;
+        if (rcaSchoolId != null) {
+            var byDisplay = schoolRepository.findBySchoolId(rcaSchoolId.intValue());
+            rcaSchoolPk = byDisplay.isPresent() ? byDisplay.get().getId()
+                    : schoolRepository.findById(rcaSchoolId).map(s -> s.getId()).orElse(rcaSchoolId);
+        }
+        List<com.schoolers.model.ReportCardAttendance> rcaRows = rcaSchoolPk != null
+                ? rcaRepository.findByStudentIdAndSchoolId(student.getId(), rcaSchoolPk)
+                : java.util.Collections.emptyList();
         Map<String, Map<String, Object>> manualAttendanceByExam = new LinkedHashMap<>();
         for (com.schoolers.model.ReportCardAttendance rca : rcaRows) {
             Map<String, Object> att = new LinkedHashMap<>();
