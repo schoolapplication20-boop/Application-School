@@ -124,6 +124,11 @@ export default function Marks() {
   // grid[studentId][subject] = marks string value
   const [grid, setGrid]                       = useState({});
   const [saving, setSaving]                   = useState(false);
+  // ── Attendance fields ─────────────────────────────────────────────────────────
+  // totalWorkingDays: one value for the whole class/exam period
+  // attendanceGrid[studentId] = present days string
+  const [totalWorkingDays, setTotalWorkingDays]   = useState('');
+  const [attendanceGrid, setAttendanceGrid]       = useState({});
   // ── Custom subject support (persisted per school in localStorage) ─────────────
   // Initialise to [] then load from localStorage only after schoolId is confirmed
   // to prevent writing to a shared 'default' key during the auth-hydration gap.
@@ -409,7 +414,7 @@ ADM002,Mathematics,92,100`;
 
   // ── Load students for bulk modal when class changes ───────────────────────────
   useEffect(() => {
-    if (!bulkClassId) { setBulkStudents([]); setGrid({}); return; }
+    if (!bulkClassId) { setBulkStudents([]); setGrid({}); setAttendanceGrid({}); return; }
     const cls = classes.find(c => String(c.id) === bulkClassId);
     setLoadingBulkStudents(true);
     teacherAPI.getClassStudents(Number(bulkClassId))
@@ -422,10 +427,35 @@ ADM002,Mathematics,92,100`;
         const g = {};
         studs.forEach(s => { g[s.id] = {}; });
         setGrid(g);
+        const ag = {};
+        studs.forEach(s => { ag[s.id] = ''; });
+        setAttendanceGrid(ag);
       })
       .catch(() => showToast('Failed to load students', 'error'))
       .finally(() => setLoadingBulkStudents(false));
   }, [bulkClassId, classes]);
+
+  // ── Load existing attendance when class + examType both set ──────────────────
+  useEffect(() => {
+    if (!bulkClassId || !bulkExamType) return;
+    const cls = classes.find(c => String(c.id) === bulkClassId);
+    if (!cls) return;
+    const params = { className: cls.name, section: cls.section || '', examType: bulkExamType };
+    teacherAPI.getReportAttendance(params)
+      .then(r => {
+        const data = r?.data?.data;
+        if (!data) return;
+        if (data.totalWorkingDays > 0) setTotalWorkingDays(String(data.totalWorkingDays));
+        if (data.students?.length > 0) {
+          setAttendanceGrid(prev => {
+            const next = { ...prev };
+            data.students.forEach(s => { next[s.studentId] = String(s.presentDays); });
+            return next;
+          });
+        }
+      })
+      .catch(() => {});
+  }, [bulkClassId, bulkExamType, classes]);
 
   // ── Helpers ───────────────────────────────────────────────────────────────────
   const allSubjects = [...SUBJECTS, ...customSubjects.filter(s => !SUBJECTS.includes(s))];
@@ -556,6 +586,8 @@ ADM002,Mathematics,92,100`;
     setSubjectMaxMarks({ [initialSubject]: '100' });
     setNewSubjectInput('');
     setGrid({});
+    setTotalWorkingDays('');
+    setAttendanceGrid({});
     setShowModal(true);
   };
 
@@ -596,6 +628,22 @@ ADM002,Mathematics,92,100`;
 
     if (entries.length === 0) { showToast('No marks entered', 'error'); return; }
 
+    // Validate attendance
+    const wdNum = parseFloat(totalWorkingDays);
+    const hasWorkingDays = !isNaN(wdNum) && wdNum > 0;
+    if (hasWorkingDays) {
+      for (const student of bulkStudents) {
+        const pd = attendanceGrid[student.id];
+        if (pd !== '' && pd !== undefined) {
+          const pdNum = parseFloat(pd);
+          if (!isNaN(pdNum) && pdNum > wdNum) {
+            showToast(`Present days for ${student.name} cannot exceed total working days (${wdNum})`, 'error');
+            return;
+          }
+        }
+      }
+    }
+
     setSaving(true);
     try {
       const results = await Promise.all(entries.map(e => teacherAPI.addMarks(e)));
@@ -614,6 +662,25 @@ ADM002,Mathematics,92,100`;
           };
         })
         .filter(Boolean);
+
+      // Save attendance if working days were entered
+      if (hasWorkingDays) {
+        const attendanceStudents = bulkStudents
+          .map(s => {
+            const pd = parseFloat(attendanceGrid[s.id]);
+            return { studentId: s.id, presentDays: isNaN(pd) ? 0 : Math.max(0, Math.min(pd, wdNum)) };
+          });
+        try {
+          await teacherAPI.saveReportAttendance({
+            className:        cls?.name || '',
+            section:          cls?.section || '',
+            examType:         bulkExamType,
+            academicYear:     '',
+            totalWorkingDays: wdNum,
+            students:         attendanceStudents,
+          });
+        } catch { /* attendance save failure is non-critical */ }
+      }
 
       setAllMarks(prev => [...prev, ...saved]);
       showToast(`${saved.length} record${saved.length !== 1 ? 's' : ''} saved successfully`);
@@ -939,6 +1006,17 @@ ADM002,Mathematics,92,100`;
                 <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Exam Date</label>
                 <input type="date" value={bulkDate} onChange={e => setBulkDate(e.target.value)} style={sel({ width: 155 })} />
               </div>
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
+                  Total Working Days
+                </label>
+                <input
+                  type="number" min="1" placeholder="e.g. 220"
+                  value={totalWorkingDays}
+                  onChange={e => setTotalWorkingDays(e.target.value)}
+                  style={sel({ width: 130 })}
+                />
+              </div>
             </div>
 
             {/* ── Subject selector ── */}
@@ -1051,6 +1129,12 @@ ADM002,Mathematics,92,100`;
                         <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '2px solid var(--border-strong)', whiteSpace: 'nowrap', minWidth: 200, position: 'sticky', left: 0, background: 'var(--surface-alt)', zIndex: 2 }}>
                           Student
                         </th>
+                        <th style={{ padding: '10px 10px', textAlign: 'center', fontSize: 11, fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '2px solid var(--border-strong)', whiteSpace: 'nowrap', minWidth: 110, background: '#ede9fe20' }}>
+                          Present Days
+                          <div style={{ fontSize: 10, color: '#7c3aed', fontWeight: 400, marginTop: 2, textTransform: 'none', letterSpacing: 0 }}>
+                            {totalWorkingDays ? `out of ${totalWorkingDays}` : 'optional'}
+                          </div>
+                        </th>
                         {bulkSubjects.map(sub => (
                           <th key={sub} style={{ padding: '10px 10px', textAlign: 'center', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '2px solid var(--border-strong)', whiteSpace: 'nowrap', minWidth: 115 }}>
                             {sub}
@@ -1076,6 +1160,36 @@ ADM002,Mathematics,92,100`;
                               </div>
                             </div>
                           </td>
+
+                          {/* Present Days input */}
+                          {(() => {
+                            const pd     = attendanceGrid[student.id] ?? '';
+                            const pdNum  = parseFloat(pd);
+                            const wdNum  = parseFloat(totalWorkingDays);
+                            const isOver = pd !== '' && !isNaN(pdNum) && !isNaN(wdNum) && pdNum > wdNum;
+                            const isNeg  = pd !== '' && !isNaN(pdNum) && pdNum < 0;
+                            const isErr  = isOver || isNeg;
+                            return (
+                              <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--border)', textAlign: 'center', verticalAlign: 'middle', background: idx % 2 === 0 ? '#faf5ff' : '#f3e8ff20' }}>
+                                <input
+                                  type="number" min="0"
+                                  max={totalWorkingDays || undefined}
+                                  placeholder="—"
+                                  value={pd}
+                                  onChange={e => setAttendanceGrid(prev => ({ ...prev, [student.id]: e.target.value }))}
+                                  style={{
+                                    width: 78, padding: '6px 8px', fontSize: 13, fontWeight: 600,
+                                    textAlign: 'center',
+                                    border: `1.5px solid ${isErr ? '#e53e3e' : pd ? '#7c3aed' : 'var(--border-strong)'}`,
+                                    borderRadius: 8, outline: 'none',
+                                    background: isErr ? '#fff5f5' : pd ? '#f5f3ff' : 'var(--surface)',
+                                    color: isErr ? '#e53e3e' : 'var(--text-primary)',
+                                  }}
+                                />
+                                {isOver && <div style={{ fontSize: 10, color: '#e53e3e', marginTop: 3 }}>exceeds max</div>}
+                              </td>
+                            );
+                          })()}
 
                           {/* One input per subject */}
                           {bulkSubjects.map(sub => {

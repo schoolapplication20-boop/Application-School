@@ -22,6 +22,7 @@ public class ReportCardController {
     @Autowired private MarksRepository      marksRepository;
     @Autowired private AttendanceRepository attendanceRepository;
     @Autowired private SchoolRepository     schoolRepository;
+    @Autowired private ReportCardAttendanceRepository rcaRepository;
     @Autowired private com.schoolers.repository.TeacherRepository    teacherRepository;
     @Autowired private com.schoolers.repository.ClassRoomRepository  classRoomRepository;
     @Autowired private com.schoolers.repository.GradeScaleRepository gradeScaleRepository;
@@ -361,6 +362,26 @@ public class ReportCardController {
         result.put("attendance", Map.of(
             "totalDays", total, "presentDays", present, "percentage", pct
         ));
+
+        // Manually entered working-days / present-days keyed by exam type.
+        // Teachers enter these in the Marks Bulk Entry screen alongside marks.
+        // Each exam type has its own working-days count so multi-term report
+        // cards display correct per-term attendance.
+        List<com.schoolers.model.ReportCardAttendance> rcaRows =
+                rcaRepository.findByStudentId(student.getId());
+        Map<String, Map<String, Object>> manualAttendanceByExam = new LinkedHashMap<>();
+        for (com.schoolers.model.ReportCardAttendance rca : rcaRows) {
+            Map<String, Object> att = new LinkedHashMap<>();
+            att.put("totalWorkingDays", rca.getTotalWorkingDays());
+            att.put("presentDays",      rca.getPresentDays());
+            double pctManual = rca.getTotalWorkingDays() > 0
+                    ? Math.round((rca.getPresentDays() * 100.0 / rca.getTotalWorkingDays()) * 10) / 10.0
+                    : 0.0;
+            att.put("percentage", pctManual);
+            manualAttendanceByExam.put(rca.getExamType(), att);
+        }
+        result.put("manualAttendanceByExam", manualAttendanceByExam);
+
         return result;
     }
 }

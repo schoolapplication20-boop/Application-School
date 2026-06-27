@@ -235,6 +235,9 @@ export const teacherAPI = {
   addMarks: (data) => api.post('/api/teacher/marks', data),
   updateMarks: (id, data) => api.put(`/api/teacher/marks/${id}`, data),
   deleteMarks: (id) => api.delete(`/api/teacher/marks/${id}`),
+  // Report-card attendance (manually entered working/present days alongside marks)
+  saveReportAttendance:  (data)   => api.post('/api/teacher/marks/report-attendance', data),
+  getReportAttendance:   (params) => api.get('/api/teacher/marks/report-attendance', { params }),
 };
 
 // ============================================

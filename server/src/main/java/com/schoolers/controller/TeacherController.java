@@ -5,6 +5,7 @@ import com.schoolers.model.*;
 import com.schoolers.repository.AssignmentRepository;
 import com.schoolers.repository.AssignmentSubmissionRepository;
 import com.schoolers.repository.ClassRoomRepository;
+import com.schoolers.repository.ReportCardAttendanceRepository;
 import com.schoolers.repository.StudentRepository;
 import com.schoolers.repository.UserRepository;
 import com.schoolers.repository.TeacherRepository;
@@ -59,6 +60,9 @@ public class TeacherController {
 
     @Autowired
     private StudentRepository studentRepository;
+
+    @Autowired
+    private ReportCardAttendanceRepository rcaRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -446,6 +450,84 @@ public class TeacherController {
     public ResponseEntity<ApiResponse<String>> deleteMarks(@PathVariable Long id) {
         ApiResponse<String> response = teacherService.deleteMarks(id, resolveTeacherSchoolId());
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
+    }
+
+    // ── Report-card attendance (manually entered working/present days) ────────────
+
+    /**
+     * Save bulk attendance for a class + exam type.
+     * Body: { className, section, examType, academicYear, totalWorkingDays,
+     *         students: [ {studentId, presentDays}, … ] }
+     */
+    @PostMapping("/marks/report-attendance")
+    public ResponseEntity<?> saveReportAttendance(
+            @RequestBody Map<String, Object> body, Authentication auth) {
+        Long schoolId = userRepository.findByEmailIgnoreCase(auth.getName())
+                .map(User::getSchoolId).orElse(null);
+        if (schoolId == null)
+            return ResponseEntity.status(401).body(ApiResponse.error("Not authenticated"));
+
+        String className       = (String) body.get("className");
+        String section         = body.get("section") != null ? (String) body.get("section") : "";
+        String examType        = (String) body.get("examType");
+        String academicYear    = body.get("academicYear") != null ? (String) body.get("academicYear") : "";
+        int    totalWorkingDays = body.get("totalWorkingDays") instanceof Number
+                ? ((Number) body.get("totalWorkingDays")).intValue() : 0;
+
+        if (className == null || examType == null)
+            return ResponseEntity.badRequest().body(ApiResponse.error("className and examType are required"));
+        if (totalWorkingDays <= 0)
+            return ResponseEntity.badRequest().body(ApiResponse.error("totalWorkingDays must be a positive number"));
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> students = (List<Map<String, Object>>) body.get("students");
+        if (students == null || students.isEmpty())
+            return ResponseEntity.badRequest().body(ApiResponse.error("students list is required"));
+
+        int saved = 0;
+        for (Map<String, Object> s : students) {
+            Long studentId  = s.get("studentId") instanceof Number ? ((Number) s.get("studentId")).longValue() : null;
+            int  presentDays = s.get("presentDays") instanceof Number ? ((Number) s.get("presentDays")).intValue() : 0;
+            if (studentId == null) continue;
+            if (presentDays < 0) presentDays = 0;
+            if (presentDays > totalWorkingDays) presentDays = totalWorkingDays;
+            rcaRepository.upsert(schoolId, className, section, examType, academicYear,
+                    studentId, totalWorkingDays, presentDays);
+            saved++;
+        }
+        return ResponseEntity.ok(ApiResponse.success("Attendance saved for " + saved + " students", saved));
+    }
+
+    /**
+     * Get existing attendance for a class + exam type (used to pre-fill the bulk entry form).
+     * Returns: { totalWorkingDays, students: [{studentId, presentDays}] }
+     */
+    @GetMapping("/marks/report-attendance")
+    public ResponseEntity<?> getReportAttendance(
+            @RequestParam String className,
+            @RequestParam(required = false, defaultValue = "") String section,
+            @RequestParam String examType,
+            @RequestParam(required = false, defaultValue = "") String academicYear,
+            Authentication auth) {
+        Long schoolId = userRepository.findByEmailIgnoreCase(auth.getName())
+                .map(User::getSchoolId).orElse(null);
+        if (schoolId == null)
+            return ResponseEntity.status(401).body(ApiResponse.error("Not authenticated"));
+
+        List<com.schoolers.model.ReportCardAttendance> rows =
+                rcaRepository.findBySchoolIdAndClassNameAndSectionAndExamTypeAndAcademicYear(
+                        schoolId, className, section, examType, academicYear);
+
+        int totalWorkingDays = rows.isEmpty() ? 0 : rows.get(0).getTotalWorkingDays();
+        List<Map<String, Object>> students = rows.stream().map(r -> {
+            Map<String, Object> m = new java.util.LinkedHashMap<>();
+            m.put("studentId",   r.getStudentId());
+            m.put("presentDays", r.getPresentDays());
+            return m;
+        }).collect(java.util.stream.Collectors.toList());
+
+        return ResponseEntity.ok(ApiResponse.success("OK",
+                Map.of("totalWorkingDays", totalWorkingDays, "students", students)));
     }
 
     @GetMapping("/grade-scales")
