@@ -65,6 +65,33 @@ public class AdminController {
                 .orElse(null);
     }
 
+    /**
+     * Resolves the actual schools.id (PK) from whatever value is stored in
+     * users.school_id (which may be the display school_id like "3" rather than
+     * the DB primary key like "23").
+     *
+     * school_diary_config.school_id is a FK referencing schools.id (PK).
+     * users.school_id may store the display school_id (schools.school_id column).
+     * Passing the display number directly to diary-config ops violates the FK.
+     *
+     * Resolution order:
+     *   1. Try findBySchoolId(displayId) — matches schools.school_id column.
+     *   2. Fall back to findById(displayId) — in case it already is the PK.
+     *   3. If neither finds a school, return the original value unchanged.
+     */
+    private Long resolveSchoolPk(Long schoolIdFromJwt) {
+        if (schoolIdFromJwt == null) return null;
+        try {
+            // Attempt 1: treat the JWT value as the display school_id (e.g. 3)
+            var byDisplayId = schoolRepository.findBySchoolId(schoolIdFromJwt.intValue());
+            if (byDisplayId.isPresent()) return byDisplayId.get().getId();
+        } catch (Exception ignored) {}
+        // Attempt 2: it might already be the PK (e.g. 23)
+        return schoolRepository.findById(schoolIdFromJwt)
+                .map(com.schoolers.model.School::getId)
+                .orElse(schoolIdFromJwt);
+    }
+
     private Long getCurrentUserId(Authentication auth) {
         if (auth == null) return null;
         if (auth.getDetails() instanceof java.util.Map) {
@@ -622,7 +649,7 @@ public class AdminController {
     @GetMapping("/diary-config")
     @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','APPLICATION_OWNER')")
     public ResponseEntity<?> getDiaryConfig(Authentication auth) {
-        Long schoolId = getCurrentSchoolId(auth);
+        Long schoolId = resolveSchoolPk(getCurrentSchoolId(auth));
         SchoolDiaryConfig cfg = schoolDiaryConfigRepository.findBySchoolId(schoolId)
             .orElseGet(() -> { SchoolDiaryConfig d = new SchoolDiaryConfig(); d.setSchoolId(schoolId); return d; });
 
@@ -650,7 +677,7 @@ public class AdminController {
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','APPLICATION_OWNER')")
     public ResponseEntity<?> updateDiaryConfig(@RequestBody java.util.Map<String, Object> body,
                                                Authentication auth) {
-        Long schoolId = getCurrentSchoolId(auth);
+        Long schoolId = resolveSchoolPk(getCurrentSchoolId(auth));
 
         // ── Diary mode ────────────────────────────────────────────────────
         String diaryMode = body.containsKey("diaryMode")

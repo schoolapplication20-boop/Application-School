@@ -30,7 +30,17 @@ public class GlobalExceptionHandler {
             String detail = ex.getMostSpecificCause().getMessage();
             if (detail != null) {
                 String lower = detail.toLowerCase();
-                if (lower.contains("uq_classrooms_name_section_school")
+                // ── Foreign-key violations ─────────────────────────────────────────
+                if (lower.contains("violates foreign key constraint")) {
+                    if (lower.contains("school_diary_config")) {
+                        msg = "Configuration could not be saved: school reference is invalid. Please contact support.";
+                    } else if (lower.contains("coordinator_user_id")) {
+                        msg = "The selected coordinator user was not found. Please verify the email and try again.";
+                    } else {
+                        msg = "A required reference was not found. Please check your input and try again.";
+                    }
+                // ── Unique / PK violations ─────────────────────────────────────────
+                } else if (lower.contains("uq_classrooms_name_section_school")
                         || lower.contains("classrooms_class_name") || lower.contains("class_name")) {
                     msg = "This class/section already exists in your school";
                 } else if (lower.contains("uk_users_email") || lower.contains("users_email")) {
