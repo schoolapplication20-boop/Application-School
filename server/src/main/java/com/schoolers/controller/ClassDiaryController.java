@@ -3,8 +3,11 @@ package com.schoolers.controller;
 import com.schoolers.dto.ApiResponse;
 import com.schoolers.model.ClassDiary;
 import com.schoolers.model.ClassRoom;
+import com.schoolers.model.SchoolDiaryConfig;
 import com.schoolers.model.Teacher;
 import com.schoolers.repository.ClassDiaryRepository;
+import com.schoolers.repository.ClassRoomRepository;
+import com.schoolers.repository.SchoolDiaryConfigRepository;
 import com.schoolers.repository.TeacherRepository;
 import com.schoolers.repository.UserRepository;
 import com.schoolers.security.CurrentUserUtil;
@@ -24,29 +27,72 @@ import java.util.Optional;
 @RequestMapping("/api/diary")
 public class ClassDiaryController {
 
-    @Autowired
-    private ClassDiaryService diaryService;
-
-    @Autowired
-    private TeacherService teacherService;
-
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private ClassDiaryRepository diaryRepository;
-
-    @Autowired
-    private TeacherRepository teacherRepository;
-
-    @Autowired
-    private CurrentUserUtil currentUserUtil;
+    @Autowired private ClassDiaryService            diaryService;
+    @Autowired private TeacherService               teacherService;
+    @Autowired private UserRepository               userRepository;
+    @Autowired private ClassDiaryRepository         diaryRepository;
+    @Autowired private TeacherRepository            teacherRepository;
+    @Autowired private CurrentUserUtil              currentUserUtil;
+    @Autowired private SchoolDiaryConfigRepository  diaryConfigRepository;
+    @Autowired private ClassRoomRepository          classRoomRepository;
 
     /** Resolve the Teacher entity from the JWT principal. */
     private Optional<Teacher> resolveTeacher(Authentication auth) {
         if (auth == null) return Optional.empty();
         return userRepository.findByEmailIgnoreCase(auth.getName())
                 .flatMap(u -> teacherRepository.findByUserId(u.getId()));
+    }
+
+    /** Returns true when the caller is the school's designated Diary Coordinator. */
+    private boolean isDesignatedCoordinator(Long schoolId, Long callerUserId) {
+        if (schoolId == null || callerUserId == null) return false;
+        SchoolDiaryConfig cfg = diaryConfigRepository.findBySchoolId(schoolId).orElse(null);
+        return cfg != null
+            && "COORDINATOR".equals(cfg.getDiaryMode())
+            && callerUserId.equals(cfg.getCoordinatorUserId());
+    }
+
+    // ── Coordinator helpers (accessible by TEACHER) ───────────────────────────
+
+    /**
+     * Tells the frontend whether the logged-in user is the school's Diary Coordinator.
+     * Used by the Diary/Homework page to decide which classes to show and whether
+     * to display the coordinator banner.
+     */
+    @GetMapping("/coordinator-check")
+    @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<?> coordinatorCheck(Authentication auth) {
+        Long schoolId     = currentUserUtil.getCurrentSchoolId(auth);
+        Long callerUserId = currentUserUtil.getCurrentUserId(auth);
+        SchoolDiaryConfig cfg = schoolId != null
+            ? diaryConfigRepository.findBySchoolId(schoolId).orElse(null) : null;
+        boolean coordinator = isDesignatedCoordinator(schoolId, callerUserId);
+        return ResponseEntity.ok(ApiResponse.success("OK", Map.of(
+            "isCoordinator", coordinator,
+            "diaryMode",     cfg != null ? cfg.getDiaryMode() : "SUBJECT_TEACHER"
+        )));
+    }
+
+    /**
+     * Returns ALL classes for the school — for use by the coordinator when
+     * they need to select any class while creating a diary entry.
+     * Admins always have access; teachers can use it only when they are the coordinator.
+     */
+    @GetMapping("/all-classes")
+    @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<?> getAllClasses(Authentication auth) {
+        Long schoolId     = currentUserUtil.getCurrentSchoolId(auth);
+        Long callerUserId = currentUserUtil.getCurrentUserId(auth);
+        boolean isAdmin   = userRepository.findByEmailIgnoreCase(auth.getName())
+            .map(u -> "ADMIN".equals(u.getRole().name()) || "SUPER_ADMIN".equals(u.getRole().name()))
+            .orElse(false);
+        if (!isAdmin && !isDesignatedCoordinator(schoolId, callerUserId)) {
+            return ResponseEntity.status(403)
+                .body(ApiResponse.error("Only coordinators and admins can list all classes"));
+        }
+        List<ClassRoom> classes = schoolId != null
+            ? classRoomRepository.findBySchoolId(schoolId) : List.of();
+        return ResponseEntity.ok(ApiResponse.success("OK", classes));
     }
 
     // ── Admin / Super Admin ───────────────────────────────────────────────────
@@ -109,22 +155,27 @@ public class ClassDiaryController {
                 body.put("teacherName", t.getName());
             }
 
-            // Verify the teacher is actually assigned to the submitted class.
-            // Admins/Super-Admins bypass this check (no teacher profile).
-            String submittedClass   = body.get("className")  != null ? body.get("className").toString().trim()  : null;
-            String submittedSection = body.get("section")    != null ? body.get("section").toString().trim()    : null;
-            if (submittedClass != null) {
-                List<ClassRoom> assignedClasses = teacherService.getTeacherClasses(t.getId()).getData();
-                boolean authorized = assignedClasses != null && assignedClasses.stream().anyMatch(cls -> {
-                    boolean nameMatch = cls.getName().equalsIgnoreCase(submittedClass);
-                    if (!nameMatch) return false;
-                    if (submittedSection == null || submittedSection.isEmpty()) return true;
-                    return submittedSection.equalsIgnoreCase(cls.getSection());
-                });
-                if (!authorized) {
-                    return ResponseEntity.status(403).body(
-                        ApiResponse.error("You are not assigned to " + submittedClass +
-                            (submittedSection != null && !submittedSection.isEmpty() ? " - " + submittedSection : "")));
+            // School-wide Coordinator: skip class-assignment check — they can post
+            // diary entries for ANY class in the school by design.
+            boolean coordinator = isDesignatedCoordinator(schoolId, callerUserId);
+
+            if (!coordinator) {
+                // Regular teacher: verify they are assigned to the submitted class
+                String submittedClass   = body.get("className") != null ? body.get("className").toString().trim() : null;
+                String submittedSection = body.get("section")   != null ? body.get("section").toString().trim()   : null;
+                if (submittedClass != null) {
+                    List<ClassRoom> assignedClasses = teacherService.getTeacherClasses(t.getId()).getData();
+                    boolean authorized = assignedClasses != null && assignedClasses.stream().anyMatch(cls -> {
+                        boolean nameMatch = cls.getName().equalsIgnoreCase(submittedClass);
+                        if (!nameMatch) return false;
+                        if (submittedSection == null || submittedSection.isEmpty()) return true;
+                        return submittedSection.equalsIgnoreCase(cls.getSection());
+                    });
+                    if (!authorized) {
+                        return ResponseEntity.status(403).body(
+                            ApiResponse.error("You are not assigned to " + submittedClass +
+                                (submittedSection != null && !submittedSection.isEmpty() ? " – " + submittedSection : "")));
+                    }
                 }
             }
         }

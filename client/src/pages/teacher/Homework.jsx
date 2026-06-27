@@ -20,19 +20,35 @@ export default function Homework() {
 
   const showToast = useToast();
 
-  const [myClasses, setMyClasses]       = useState([]);
+  const [myClasses, setMyClasses]           = useState([]);
   const [teacherProfile, setTeacherProfile] = useState(null);
   const [classesLoading, setClassesLoading] = useState(true);
+  const [isCoordinator, setIsCoordinator]   = useState(false);
 
   useEffect(() => {
     setClassesLoading(true);
     Promise.all([
-      teacherAPI.getMyClasses().catch(() => null),
       teacherAPI.getMyProfile().catch(() => null),
-    ]).then(([classesRes, profileRes]) => {
-      setMyClasses(classesRes?.data?.data ?? []);
+      diaryAPI.getCoordinatorStatus().catch(() => null),
+    ]).then(([profileRes, coordRes]) => {
       setTeacherProfile(profileRes?.data?.data ?? null);
-    }).finally(() => setClassesLoading(false));
+      const coordinator = coordRes?.data?.data?.isCoordinator === true;
+      setIsCoordinator(coordinator);
+
+      if (coordinator) {
+        // Coordinator can post for ALL classes — fetch the full school list
+        diaryAPI.getAllClasses()
+          .then(r => setMyClasses(r?.data?.data ?? []))
+          .catch(() => setMyClasses([]))
+          .finally(() => setClassesLoading(false));
+      } else {
+        // Regular teacher — only their assigned classes
+        teacherAPI.getMyClasses()
+          .then(r => setMyClasses(r?.data?.data ?? []))
+          .catch(() => setMyClasses([]))
+          .finally(() => setClassesLoading(false));
+      }
+    }).catch(() => setClassesLoading(false));
   }, []);
 
   // Determine if a classroom is where this teacher is the Class Teacher
@@ -231,6 +247,24 @@ export default function Homework() {
         <h1>Diary</h1>
         <p>Create daily diary entries with topic, homework, and optional notes</p>
       </div>
+
+      {/* Coordinator banner */}
+      {isCoordinator && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          background: 'linear-gradient(135deg,#ede9fe,#ddd6fe)',
+          border: '1.5px solid #7c3aed', borderRadius: 10,
+          padding: '10px 16px', marginBottom: 20,
+        }}>
+          <span className="material-icons" style={{ color: '#7c3aed', fontSize: 20 }}>admin_panel_settings</span>
+          <div>
+            <strong style={{ color: '#4c1d95', fontSize: 13 }}>School-wide Diary Coordinator</strong>
+            <span style={{ color: '#6d28d9', fontSize: 12, marginLeft: 8 }}>
+              You can post diary entries for any class and section in the school.
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Tab Switcher */}
       <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', borderBottom: '2px solid var(--border)' }}>

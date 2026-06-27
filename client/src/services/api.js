@@ -410,6 +410,10 @@ export const diaryAPI = {
   getByClass:     (className)  => api.get(`/api/diary/class/${encodeURIComponent(className)}`),
   // Teacher: get their own diary entries
   getForTeacher:  ()           => api.get('/api/diary/teacher'),
+  // Coordinator: check if the logged-in teacher is the school's diary coordinator
+  getCoordinatorStatus: () => api.get('/api/diary/coordinator-check'),
+  // Coordinator: get ALL school classes (returns 403 for non-coordinators/non-admins)
+  getAllClasses:         () => api.get('/api/diary/all-classes'),
   // Teacher: create diary entry
   create:         (data)       => api.post('/api/diary', data),
   // Teacher: update their own diary entry
