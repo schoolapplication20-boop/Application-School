@@ -135,6 +135,7 @@ function downloadTemplate() {
     ["Mother's Name",   'Optional',     ''],
     ["Mother's Phone",  'Optional',     '10-digit mobile number'],
     ['Permanent Address','Optional',    'Student\'s home address'],
+    ['ID Proof File Name','Optional',  'Name of the ID proof file, e.g. "aadhar.pdf". Actual file can be uploaded later from the student profile.'],
     [''],
     ['LOGIN ACCOUNTS (when "Create login accounts" is checked):'],
     ['  • Username   = Admission Number (lowercase, alphanumeric)'],
@@ -157,26 +158,27 @@ function downloadTemplate() {
   XLSX.utils.book_append_sheet(wb, wsInstr, 'Instructions');
 
   // ── Sheet 2: Students data ───────────────────────────────────────────
+  // Column order must stay in sync with COL_MAP and the columns info list below.
   const headers = [
     'Admission Number', 'Full Name', 'Roll Number', 'Class', 'Section',
     'Student Email',
     "Father's Name", "Father's Phone",
     "Mother's Name", "Mother's Phone",
-    'Permanent Address',
+    'Permanent Address', 'ID Proof File Name',
   ];
-  // Three sample rows showing different common scenarios
   const samples = [
-    // With admission number only (no email, no roll number) — School A style
-    ['ADM2024001', 'Rahul Sharma',  '',  'Class 10', 'A', '', 'Raj Sharma',  '9876543210', '', '', '12 MG Road, Bangalore'],
-    // With both admission number and roll number
-    ['ADM2024002', 'Priya Patel',   '2', 'Class 10', 'A', '', 'Amit Patel',  '9876543211', 'Neha Patel', '9876543212', '45 Park Street, Mumbai'],
-    // With student email (welcome email will be sent)
-    ['ADM2024003', 'Arjun Singh',   '3', 'Class 10', 'B', 'arjun.singh@gmail.com', 'Suresh Singh', '9876543213', '', '', ''],
+    ['ADM001', 'Rahul Sharma', '1', 'Class 10', 'A', 'rahul.sharma@email.com',
+     'Raj Sharma', '9876543210', 'Priya Sharma', '9876543211',
+     '123 Main Street, Hyderabad', 'aadhar.pdf'],
   ];
   const wsData = XLSX.utils.aoa_to_sheet([headers, ...samples]);
-  wsData['!cols'] = headers.map((h, i) => ({
-    wch: i === 1 ? 22 : i === 11 ? 30 : 18,  // wider for name and address
-  }));
+  wsData['!cols'] = [
+    { wch: 16 }, { wch: 22 }, { wch: 12 }, { wch: 12 }, { wch: 10 },
+    { wch: 28 },
+    { wch: 20 }, { wch: 14 },
+    { wch: 20 }, { wch: 14 },
+    { wch: 30 }, { wch: 20 },
+  ];
   XLSX.utils.book_append_sheet(wb, wsData, 'Students');
 
   XLSX.writeFile(wb, 'student_import_template.xlsx');
@@ -461,6 +463,7 @@ export default function BulkImportModal({ onClose, onImportDone }) {
                     { label: "Mother's Name",      req: false },
                     { label: "Mother's Phone",     req: false },
                     { label: 'Permanent Address',  req: false },
+                    { label: 'ID Proof File Name', req: false },
                   ].map(({ label, req }) => (
                     <span key={label} className={`bim-col-tag ${req === true ? 'required' : req === '★' ? 'semi-required' : ''}`}>
                       {label}{req === true ? ' ✱' : req === '★' ? ' ★' : ''}
