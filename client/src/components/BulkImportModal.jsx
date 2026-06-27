@@ -111,53 +111,8 @@ function parseFile(file) {
 function downloadTemplate() {
   const wb = XLSX.utils.book_new();
 
-  // ── Sheet 1: Instructions ────────────────────────────────────────────
-  const instructions = [
-    ['STUDENT BULK IMPORT — FORMAT GUIDE'],
-    [''],
-    ['HOW TO USE THIS FILE:'],
-    ['1. Go to the "Students" sheet (tab at the bottom).'],
-    ['2. Fill in student data starting from Row 2 (Row 1 has the column headers — do not change them).'],
-    ['3. Delete the sample rows before uploading.'],
-    ['4. Save as .xlsx, .xls, or .csv and upload via the Bulk Import button.'],
-    ['5. To generate login accounts automatically, check "Create login accounts for all students" before uploading.'],
-    [''],
-    ['COLUMN REFERENCE:'],
-    ['Column',          'Required?',    'Notes'],
-    ['Full Name',       'REQUIRED',     'Student\'s full name'],
-    ['Class',           'REQUIRED',     'Class name, e.g. "Class 10", "10", "10-A", "10 - A"'],
-    ['Admission Number','REQUIRED*',    '*Required when Roll Number is not provided. Used as the student\'s login username.'],
-    ['Roll Number',     'REQUIRED*',    '*Required when Admission Number is not provided. If both are given, Admission Number is used as the login username.'],
-    ['Section',         'Optional',     'Section letter, e.g. "A", "B". Can also be included in the Class column, e.g. "10-A".'],
-    ['Student Email',   'Optional',     'If provided, a welcome email with login credentials is sent to this address. Leave blank for admission-number based login.'],
-    ["Father's Name",   'Optional',     'Parent / guardian name'],
-    ["Father's Phone",  'Optional',     '10-digit mobile number'],
-    ["Mother's Name",   'Optional',     ''],
-    ["Mother's Phone",  'Optional',     '10-digit mobile number'],
-    ['Permanent Address','Optional',    'Student\'s home address'],
-    ['ID Proof File Name','Optional',  'Name of the ID proof file, e.g. "aadhar.pdf". Actual file can be uploaded later from the student profile.'],
-    [''],
-    ['LOGIN ACCOUNTS (when "Create login accounts" is checked):'],
-    ['  • Username   = Admission Number (lowercase, alphanumeric)'],
-    ['  • Login Email= admissionnumber@my-skoolz.com  (auto-generated if no Student Email is given)'],
-    ['  • Password   = Generated automatically by the system (10-char, mixed case + digit + special)'],
-    ['  • After import, download the "Credentials" file from the results screen to share passwords with students.'],
-    ['  • Students must change their password on first login.'],
-    [''],
-    ['TIPS:'],
-    ['  • Maximum 5000 rows per upload.'],
-    ['  • Duplicate admission numbers (same school) are skipped automatically.'],
-    ['  • You can upload multiple files; each upload is tracked in Import History.'],
-    ['  • ID Proof, TC Document, and Bonafide Certificate are optional and can be uploaded later from the student profile.'],
-  ];
-  const wsInstr = XLSX.utils.aoa_to_sheet(instructions);
-  wsInstr['!cols'] = [{ wch: 22 }, { wch: 14 }, { wch: 70 }];
-  // Bold the title cell A1
-  if (!wsInstr['A1'].s) wsInstr['A1'].s = {};
-  wsInstr['A1'].s = { font: { bold: true, sz: 14 } };
-  XLSX.utils.book_append_sheet(wb, wsInstr, 'Instructions');
-
-  // ── Sheet 2: Students data ───────────────────────────────────────────
+  // ── Sheet 1 (active/primary): Students data ──────────────────────────
+  // Must be added FIRST so Excel opens directly to this sheet.
   // Column order must stay in sync with COL_MAP and the columns info list below.
   const headers = [
     'Admission Number', 'Full Name', 'Roll Number', 'Class', 'Section',
@@ -180,6 +135,46 @@ function downloadTemplate() {
     { wch: 30 }, { wch: 20 },
   ];
   XLSX.utils.book_append_sheet(wb, wsData, 'Students');
+
+  // ── Sheet 2 (reference): Instructions ───────────────────────────────
+  const instructions = [
+    ['STUDENT BULK IMPORT — FORMAT GUIDE'],
+    [''],
+    ['HOW TO USE THIS FILE:'],
+    ['1. Fill in student data on the "Students" sheet starting from Row 2.'],
+    ['2. Row 1 has the column headers — do not change them.'],
+    ['3. Delete the sample row before uploading.'],
+    ['4. Save as .xlsx, .xls, or .csv and upload via the Bulk Import button.'],
+    ['5. "Create login accounts" is checked by default — credentials are auto-downloaded after import.'],
+    [''],
+    ['COLUMN REFERENCE:'],
+    ['Column',            'Required?',  'Notes'],
+    ['Admission Number',  'REQUIRED*',  'Used as the student login username. Required if Roll Number is not provided.'],
+    ['Full Name',         'REQUIRED',   'Student\'s full name'],
+    ['Roll Number',       'REQUIRED*',  'Required if Admission Number is not provided.'],
+    ['Class',             'REQUIRED',   'e.g. "Class 10", "10", "10-A", "10 - A"'],
+    ['Section',           'Optional',   'e.g. "A", "B". Can also be part of the Class column, e.g. "10-A".'],
+    ['Student Email',     'Optional',   'If provided, welcome email with credentials is sent here.'],
+    ["Father's Name",     'Optional',   'Parent / guardian name'],
+    ["Father's Phone",    'Optional',   '10-digit mobile number'],
+    ["Mother's Name",     'Optional',   ''],
+    ["Mother's Phone",    'Optional',   '10-digit mobile number'],
+    ['Permanent Address', 'Optional',   'Student\'s home address'],
+    ['ID Proof File Name','Optional',   'e.g. "aadhar.pdf". Actual file can be uploaded later from the student profile.'],
+    [''],
+    ['LOGIN ACCOUNTS (auto-generated when "Create login accounts" is checked):'],
+    ['  • Username   = Admission Number'],
+    ['  • Password   = Temporary password generated by the system'],
+    ['  • After import, credentials are auto-downloaded as an Excel file.'],
+    ['  • Students log in with Admission Number + Temp Password, then must change password.'],
+    [''],
+    ['TIPS:'],
+    ['  • Maximum 5000 rows per upload.'],
+    ['  • Duplicate admission numbers in the same school are skipped automatically.'],
+  ];
+  const wsInstr = XLSX.utils.aoa_to_sheet(instructions);
+  wsInstr['!cols'] = [{ wch: 22 }, { wch: 14 }, { wch: 70 }];
+  XLSX.utils.book_append_sheet(wb, wsInstr, 'Instructions');
 
   XLSX.writeFile(wb, 'student_import_template.xlsx');
 }
