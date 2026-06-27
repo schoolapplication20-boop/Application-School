@@ -636,10 +636,12 @@ public class AdminController {
         resp.put("requiresAdminApproval",cfg.getRequiresApproval());  // frontend alias
         resp.put("notifyStudentsPush",   cfg.getNotifyStudentsPush());
         resp.put("notifyParentsWhatsapp",cfg.getNotifyParentsWhatsapp());
-        // Include coordinator email so the frontend can display it instead of a raw numeric ID
+        // Include coordinator name + email so the frontend can display the coordinator info card
         if (cfg.getCoordinatorUserId() != null) {
-            userRepository.findById(cfg.getCoordinatorUserId())
-                .ifPresent(u -> resp.put("coordinatorEmail", u.getEmail()));
+            userRepository.findById(cfg.getCoordinatorUserId()).ifPresent(u -> {
+                resp.put("coordinatorEmail", u.getEmail());
+                resp.put("coordinatorName",  u.getName());
+            });
         }
         return ResponseEntity.ok(ApiResponse.success("Diary config", resp));
     }
@@ -662,37 +664,58 @@ public class AdminController {
         boolean notifyStudentsPush    = Boolean.TRUE.equals(body.get("notifyStudentsPush"));
         boolean notifyParentsWhatsapp = Boolean.TRUE.equals(body.get("notifyParentsWhatsapp"));
 
-        // ── Coordinator: accept email string or numeric ID ────────────────
+        // ── Coordinator: accept email address, resolve to user ID ───────────
+        // COORDINATOR mode requires a valid email; other modes clear the field.
         Long coordinatorUserId = null;
-        Object coordValue = body.get("coordinatorUserId");
-        if (coordValue != null && !coordValue.toString().isBlank()) {
-            String coordStr = coordValue.toString().trim();
-            if (coordStr.contains("@")) {
-                var user = userRepository.findByEmailIgnoreCase(coordStr).orElse(null);
-                if (user == null)
-                    return ResponseEntity.badRequest()
-                        .body(ApiResponse.error("No user found with email: " + coordStr
-                            + ". Please enter a valid staff email."));
-                coordinatorUserId = user.getId();
-            } else {
-                try { coordinatorUserId = Long.parseLong(coordStr); }
-                catch (NumberFormatException e) {
-                    return ResponseEntity.badRequest()
-                        .body(ApiResponse.error("Coordinator must be a valid email address or numeric user ID"));
-                }
-            }
+        String coordinatorName = null;
+        String coordinatorEmail = null;
+
+        if ("COORDINATOR".equals(diaryMode)) {
+            Object coordValue = body.get("coordinatorUserId");  // frontend sends email in this field
+            String coordStr = (coordValue != null) ? coordValue.toString().trim() : "";
+
+            if (coordStr.isBlank())
+                return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Coordinator email is required when Diary Mode is School-wide Coordinator."));
+
+            if (!coordStr.contains("@"))
+                return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Please enter a valid email address for the coordinator."));
+
+            var coordUser = userRepository.findByEmailIgnoreCase(coordStr).orElse(null);
+            if (coordUser == null)
+                return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("No staff/teacher found with email \"" + coordStr
+                        + "\" in this school. Please check the email and try again."));
+
+            // School isolation — coordinator must belong to the same school
+            if (coordUser.getSchoolId() == null || !coordUser.getSchoolId().equals(schoolId))
+                return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("This user does not belong to your school. "
+                        + "Only staff members of this school can be assigned as coordinator."));
+
+            coordinatorUserId = coordUser.getId();
+            coordinatorName   = coordUser.getName();
+            coordinatorEmail  = coordUser.getEmail();
         }
 
-        // ── Upsert via native PostgreSQL ON CONFLICT to avoid JPA isNew() ─
-        // JPA's save() on an entity with a manually-set @Id calls em.merge(),
-        // which can issue a duplicate INSERT on the first save because isNew()
-        // returns false whenever schoolId != null. The native upsert is atomic
-        // and idempotent — guaranteed to work for both first saves and updates.
+        // ── Upsert via native PostgreSQL ON CONFLICT ──────────────────────
         schoolDiaryConfigRepository.upsert(
             schoolId, diaryMode, coordinatorUserId,
             requiresApproval, notifyStudentsPush, notifyParentsWhatsapp);
 
-        return ResponseEntity.ok(ApiResponse.success("Diary configuration saved successfully", null));
+        // Return coordinator info so the frontend can display it immediately
+        java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("diaryMode", diaryMode);
+        if (coordinatorUserId != null) {
+            result.put("coordinatorUserId", coordinatorUserId);
+            result.put("coordinatorName",   coordinatorName);
+            result.put("coordinatorEmail",  coordinatorEmail);
+        }
+        String successMsg = "COORDINATOR".equals(diaryMode) && coordinatorName != null
+            ? "School-wide coordinator assigned to " + coordinatorName + " successfully."
+            : "Diary configuration saved successfully.";
+        return ResponseEntity.ok(ApiResponse.success(successMsg, result));
     }
 
     // ===== Privacy Config =====

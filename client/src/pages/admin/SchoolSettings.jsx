@@ -117,11 +117,12 @@ const SchoolSettings = () => {
     notifyParentsWhatsapp: false,
   };
 
-  const [diaryConfig,    setDiaryConfig]    = useState(DIARY_CONFIG_DEFAULTS);
-  const [dcLoading,      setDcLoading]      = useState(false);
-  const [dcSaving,       setDcSaving]       = useState(false);
-  const [dcError,        setDcError]        = useState('');
-  const [dcSuccess,      setDcSuccess]      = useState('');
+  const [diaryConfig,      setDiaryConfig]      = useState(DIARY_CONFIG_DEFAULTS);
+  const [dcLoading,        setDcLoading]        = useState(false);
+  const [dcSaving,         setDcSaving]         = useState(false);
+  const [dcError,          setDcError]          = useState('');
+  const [dcSuccess,        setDcSuccess]        = useState('');
+  const [coordinatorInfo,  setCoordinatorInfo]  = useState(null); // {name, email} of saved coordinator
 
   const loadDiaryConfig = useCallback(async () => {
     setDcLoading(true);
@@ -131,13 +132,16 @@ const SchoolSettings = () => {
       if (d) {
         setDiaryConfig({
           diaryMode:             d.diaryMode             ?? DIARY_CONFIG_DEFAULTS.diaryMode,
-          // Show email in the input when available; fall back to numeric ID as string
-          coordinatorUserId:     d.coordinatorEmail      ?? (d.coordinatorUserId ? String(d.coordinatorUserId) : DIARY_CONFIG_DEFAULTS.coordinatorUserId),
-          // Backend returns both requiresApproval and requiresAdminApproval — read either
+          // Always show the coordinator's email in the input (not a numeric ID)
+          coordinatorUserId:     d.coordinatorEmail      ?? DIARY_CONFIG_DEFAULTS.coordinatorUserId,
           requiresAdminApproval: d.requiresAdminApproval ?? d.requiresApproval ?? DIARY_CONFIG_DEFAULTS.requiresAdminApproval,
           notifyStudentsPush:    d.notifyStudentsPush    ?? DIARY_CONFIG_DEFAULTS.notifyStudentsPush,
           notifyParentsWhatsapp: d.notifyParentsWhatsapp ?? DIARY_CONFIG_DEFAULTS.notifyParentsWhatsapp,
         });
+        // Pre-populate coordinator info card if already assigned
+        if (d.coordinatorEmail) {
+          setCoordinatorInfo({ name: d.coordinatorName ?? '', email: d.coordinatorEmail });
+        }
       }
     } catch { /* silently use defaults */ }
     finally { setDcLoading(false); }
@@ -147,9 +151,32 @@ const SchoolSettings = () => {
 
   const handleSaveDiaryConfig = async () => {
     setDcError(''); setDcSuccess(''); setDcSaving(true);
+
+    // Client-side validation for COORDINATOR mode
+    if (diaryConfig.diaryMode === 'COORDINATOR') {
+      const email = (diaryConfig.coordinatorUserId || '').trim();
+      if (!email) {
+        setDcError('Please enter the coordinator email address.');
+        setDcSaving(false);
+        return;
+      }
+      if (!email.includes('@')) {
+        setDcError('Please enter a valid email address for the coordinator.');
+        setDcSaving(false);
+        return;
+      }
+    }
+
     try {
-      await diaryConfigAPI.update(diaryConfig);
-      setDcSuccess('Diary configuration saved successfully.');
+      const res = await diaryConfigAPI.update(diaryConfig);
+      const data = res.data?.data;
+      // Update coordinator info card from the response
+      if (data?.coordinatorEmail) {
+        setCoordinatorInfo({ name: data.coordinatorName ?? '', email: data.coordinatorEmail });
+      } else if (diaryConfig.diaryMode !== 'COORDINATOR') {
+        setCoordinatorInfo(null);
+      }
+      setDcSuccess(res.data?.message || 'Diary configuration saved successfully.');
     } catch (err) {
       setDcError(err.response?.data?.message || 'Failed to save diary configuration.');
     } finally { setDcSaving(false); }
@@ -1033,21 +1060,39 @@ const SchoolSettings = () => {
                 </div>
               </div>
 
-              {/* Coordinator User ID — visible only when COORDINATOR mode is selected */}
+              {/* Coordinator Email — visible only when COORDINATOR mode is selected */}
               {diaryConfig.diaryMode === 'COORDINATOR' && (
                 <div>
                   <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', display: 'block', marginBottom: 6 }}>
-                    Coordinator User ID
+                    Coordinator Email <span style={{ color: '#dc2626' }}>*</span>
                   </label>
                   <input
-                    type="text"
+                    type="email"
                     value={diaryConfig.coordinatorUserId}
                     disabled={!canEdit}
-                    onChange={e => updateDc('coordinatorUserId', e.target.value)}
-                    placeholder="Enter the user ID of the coordinator"
+                    onChange={e => { updateDc('coordinatorUserId', e.target.value); setCoordinatorInfo(null); }}
+                    placeholder="Enter coordinator email address"
                     style={{ width: '100%', padding: '8px 10px', border: '1.5px solid var(--border-strong)', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box', background: canEdit ? undefined : 'var(--surface-alt)', color: 'var(--text-primary)' }}
                   />
-                  <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '4px 0 0' }}>The user ID of the staff member responsible for posting all diary entries.</p>
+                  <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '4px 0 0' }}>
+                    Enter the email of the staff member who will post diary entries for all classes and sections.
+                  </p>
+
+                  {/* Coordinator info card — shown after a successful save */}
+                  {coordinatorInfo?.email && (
+                    <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 10, background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: 9, padding: '10px 14px' }}>
+                      <span className="material-icons" style={{ color: '#16a34a', fontSize: 20 }}>verified_user</span>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: '#15803d' }}>
+                          {coordinatorInfo.name || 'Coordinator'} assigned
+                        </div>
+                        <div style={{ fontSize: 12, color: '#166534' }}>{coordinatorInfo.email}</div>
+                        <div style={{ fontSize: 11, color: '#166534', marginTop: 2 }}>
+                          This staff member can post diary entries for all classes and sections.
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
