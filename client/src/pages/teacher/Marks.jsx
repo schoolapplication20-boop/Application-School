@@ -185,11 +185,6 @@ ADM002,Mathematics,92,100`;
     URL.revokeObjectURL(url);
   };
 
-  // ── Subject selector for draft CSV ──────────────────────────────────────────
-  const [showSubjectSelector, setShowSubjectSelector] = useState(false);
-  const [draftSubjects,       setDraftSubjects]       = useState([]); // selected
-  const [customSubject,       setCustomSubject]        = useState('');
-
   // ── Class teacher assignment ────────────────────────────────────────────────
   const [myClassAssignment, setMyClassAssignment] = useState(null); // { isClassTeacher, classId, className, section, label }
 
@@ -202,41 +197,27 @@ ADM002,Mathematics,92,100`;
 
   const isClassTeacher = myClassAssignment?.isClassTeacher === true;
 
-  // Step 1: open the subject selector (called from the button)
-  const openDraftSelector = () => {
+  // Opens the Bulk Entry modal pre-set to the class teacher's assigned class.
+  // The Bulk Entry modal has a "Download Template" button that generates the
+  // correct dynamic Excel format — the old separate draft-CSV modal is removed.
+  const openBulkEntryForClass = () => {
     if (!myClassAssignment?.classId) { showToast('No class assigned to you as class teacher', 'error'); return; }
-    setDraftSubjects([]);
-    setCustomSubject('');
-    setShowSubjectSelector(true);
-  };
-
-  // Step 2: build and download wide-format CSV (one row per student, subjects as columns)
-  const downloadClassDraftCsv = async () => {
-    if (!myClassAssignment?.classId) return;
-    if (!draftSubjects.length) { showToast('Select at least one subject', 'error'); return; }
-    try {
-      const res = await teacherAPI.getClassStudents(myClassAssignment.classId);
-      const students = res?.data?.data ?? res?.data ?? [];
-      if (!students.length) { showToast('No students in your assigned class', 'error'); return; }
-
-      // Wide format: AdmissionNumber, StudentName, MaxMarks, Subject1, Subject2, ...
-      // MaxMarks is shared across all subjects (teacher enters once per row)
-      const subjectCols = draftSubjects.join(',');
-      const header = `AdmissionNumber,StudentName,MaxMarks,${subjectCols}`;
-      const emptyMarks = draftSubjects.map(() => '').join(',');
-      const rows = students.map(s =>
-        `${s.admissionNumber || ''},${(s.name || '').replace(/,/g, ' ')},,${emptyMarks}`
-      );
-      const csv = [header, ...rows].join('\n');
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const label = myClassAssignment.label || myClassAssignment.className;
-      const a = document.createElement('a'); a.href = url;
-      a.download = `${label.replace(/\s/g,'_')}_marks_draft.csv`; a.click();
-      URL.revokeObjectURL(url);
-      setShowSubjectSelector(false);
-      showToast(`Draft downloaded — ${students.length} students, ${draftSubjects.length} subject columns`);
-    } catch { showToast('Failed to download draft CSV', 'error'); }
+    const clsId = String(myClassAssignment.classId);
+    const initialSubject = allSubjects[0] || SUBJECTS[0];
+    setBulkClassId(clsId);
+    setBulkExamType(examTypes[0] || '');
+    setBulkDate('');
+    setBulkSubjects([initialSubject]);
+    setSubjectMaxMarks({ [initialSubject]: '100' });
+    setNewSubjectInput('');
+    setGrid({});
+    setSubjectMode({});
+    setIeInternalMax({});
+    setIeExternalMax({});
+    setIeGrid({});
+    setTotalWorkingDays('');
+    setAttendanceGrid({});
+    setShowModal(true);
   };
 
   const parseCsvFile = (file) => {
@@ -964,9 +945,10 @@ ADM002,Mathematics,92,100`;
                 <span className="material-icons" style={{ fontSize: 14 }}>class</span>
                 {myClassAssignment.label}
               </div>
-              <button onClick={openDraftSelector}
+              <button onClick={openBulkEntryForClass}
+                title="Open Bulk Entry for your class — then use the green Download Template button"
                 style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', background: '#eff6ff', border: '1.5px solid #bfdbfe', borderRadius: 8, color: '#2563eb', fontWeight: 700, fontSize: 13, cursor: 'pointer', marginRight: 4 }}>
-                <span className="material-icons" style={{ fontSize: 16 }}>download</span> Download Draft
+                <span className="material-icons" style={{ fontSize: 16 }}>download</span> Download Template
               </button>
               <button onClick={() => { setShowCsvModal(true); setCsvRows([]); setCsvErrors([]); setCsvResults(null); setCsvExamType(''); setCsvDate(''); }}
                 style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 8, color: '#16a34a', fontWeight: 700, fontSize: 13, cursor: 'pointer', marginRight: 6 }}>
@@ -1537,78 +1519,6 @@ ADM002,Mathematics,92,100`;
           </div>
         </div>
       )}
-      {/* ── Subject Selector for Draft CSV ───────────────────────────────── */}
-      {showSubjectSelector && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowSubjectSelector(false)}>
-          <div className="modal-container" style={{ maxWidth: 480 }}>
-            <div className="modal-header">
-              <span className="modal-title">
-                Select Subjects for {myClassAssignment?.label} Draft
-              </span>
-              <button className="modal-close" onClick={() => setShowSubjectSelector(false)}>
-                <span className="material-icons">close</span>
-              </button>
-            </div>
-            <div className="modal-body">
-              <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 14, lineHeight: 1.6 }}>
-                The CSV will have <strong>one row per student per subject</strong>. Select the subjects taught in this class.
-              </p>
-
-              {/* Subject checkboxes — standard + custom */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 8, marginBottom: 16 }}>
-                {allSubjects.map(sub => {
-                  const isCustom = !SUBJECTS.includes(sub);
-                  return (
-                    <label key={sub} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '6px 10px', borderRadius: 8, border: `1.5px solid ${draftSubjects.includes(sub) ? '#4f46e5' : isCustom ? '#d69e2e' : 'var(--border-strong)'}`, background: draftSubjects.includes(sub) ? '#eef2ff' : isCustom ? '#fffbeb' : 'var(--surface)', fontSize: 13 }}>
-                      <input type="checkbox" checked={draftSubjects.includes(sub)}
-                        onChange={e => setDraftSubjects(prev => e.target.checked ? [...prev, sub] : prev.filter(s => s !== sub))}
-                        style={{ accentColor: '#4f46e5' }} />
-                      {sub}{isCustom && <span style={{ fontSize: 9, color: '#b45309', marginLeft: 2 }}>✦</span>}
-                    </label>
-                  );
-                })}
-              </div>
-
-              {/* Add custom subject */}
-              <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-                <input value={customSubject} onChange={e => setCustomSubject(e.target.value)}
-                  placeholder="Add custom subject (e.g. Sanskrit)"
-                  onKeyDown={e => { if (e.key === 'Enter' && customSubject.trim()) { setDraftSubjects(p => [...new Set([...p, customSubject.trim()])]); setCustomSubject(''); }}}
-                  style={{ flex: 1, padding: '7px 10px', border: '1.5px solid var(--border-strong)', borderRadius: 8, fontSize: 13, outline: 'none' }} />
-                <button onClick={() => { if (customSubject.trim()) { setDraftSubjects(p => [...new Set([...p, customSubject.trim()])]); setCustomSubject(''); }}}
-                  style={{ padding: '7px 14px', background: 'var(--surface-alt)', border: '1px solid var(--border-strong)', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Add</button>
-              </div>
-
-              {/* Selected summary */}
-              {draftSubjects.length > 0 && (
-                <div style={{ background: '#f0fdf4', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: '#16a34a' }}>
-                  ✓ {draftSubjects.length} subject{draftSubjects.length !== 1 ? 's' : ''} selected · CSV will have approximately {draftSubjects.length} rows per student
-                  <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                    {draftSubjects.map(s => (
-                      <span key={s} style={{ background: '#dcfce7', color: '#16a34a', borderRadius: 12, padding: '2px 8px', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
-                        onClick={() => setDraftSubjects(p => p.filter(x => x !== s))}>
-                        {s} ✕
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-            <div className="modal-footer">
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={() => setDraftSubjects([...allSubjects])} style={{ padding: '8px 14px', border: '1px solid var(--border-strong)', borderRadius: 8, background: 'var(--surface-alt)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Select All</button>
-                <button onClick={() => setDraftSubjects([])} style={{ padding: '8px 14px', border: '1px solid var(--border-strong)', borderRadius: 8, background: 'var(--surface)', fontSize: 12, color: 'var(--text-muted)', cursor: 'pointer' }}>Clear</button>
-              </div>
-              <button onClick={downloadClassDraftCsv} disabled={!draftSubjects.length}
-                style={{ padding: '9px 22px', background: draftSubjects.length ? '#2563eb' : '#a0aec0', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, fontSize: 13, cursor: draftSubjects.length ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 7 }}>
-                <span className="material-icons" style={{ fontSize: 16 }}>download</span>
-                Generate & Download
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* ── CSV Import Modal ─────────────────────────────────────────────── */}
       {showCsvModal && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowCsvModal(false)}>
@@ -1635,27 +1545,29 @@ ADM002,Mathematics,92,100`;
               {/* Sample + upload */}
               <div style={{ background: '#f8faff', border: '1.5px dashed #c7d2fe', borderRadius: 10, padding: 16, marginBottom: 14 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: '#4f46e5', marginBottom: 8 }}>CSV Format</div>
-                <code style={{ fontSize: 11, color: '#374151', display: 'block', background: '#fff', padding: 10, borderRadius: 6, marginBottom: 10, lineHeight: 1.7 }}>
-                  AdmissionNumber,StudentName,MaxMarks,Mathematics,Science,English<br/>
-                  ADM001,Alice Johnson,100,85,78,90<br/>
-                  ADM002,Bob Smith,100,72,80,88
+                <code style={{ fontSize: 10, color: '#374151', display: 'block', background: '#fff', padding: 10, borderRadius: 6, marginBottom: 10, lineHeight: 1.8 }}>
+                  Student Name | Admission Number | Roll Number | Class | Section<br/>
+                  | Exam Type | Exam Date | Total Working Days | Present Days<br/>
+                  | Mathematics Internal Max Marks | Mathematics Internal Marks<br/>
+                  | Mathematics External Max Marks | Mathematics External Marks<br/>
+                  | Mathematics Total Max Marks | Mathematics Total Marks<br/>
+                  | English Max Marks | English Marks
                 </code>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8 }}>
-                  One row per student · Subject names are column headers · MaxMarks applies to all subjects in that row
+                  The Excel template has <strong>one row per student</strong> and columns based on the selected subjects and marks structure.
+                  Download the template from the <strong>Bulk Entry modal</strong> (green Download Template button) — it is pre-filled with your class, exam type, and subject configuration.
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   {isClassTeacher && myClassAssignment?.classId && (
-                    <>
-                      <div style={{ fontSize: 11, color: '#16a34a', fontWeight: 700, marginBottom: 6 }}>
-                        📚 Importing for: <strong>{myClassAssignment.label}</strong> — only students from this class will be accepted
-                      </div>
-                      <button onClick={openDraftSelector} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', border: '1px solid #bfdbfe', borderRadius: 7, background: '#eff6ff', color: '#2563eb', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
-                        <span className="material-icons" style={{ fontSize: 15 }}>download</span>Download {myClassAssignment.label} Draft
-                      </button>
-                    </>
+                    <div style={{ fontSize: 11, color: '#16a34a', fontWeight: 700, marginBottom: 6 }}>
+                      📚 Importing for: <strong>{myClassAssignment.label}</strong> — only students from this class will be accepted
+                    </div>
                   )}
-                  <button onClick={downloadSampleCsv} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', border: '1px solid #c7d2fe', borderRadius: 7, background: '#eef2ff', color: '#4f46e5', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                    <span className="material-icons" style={{ fontSize: 15 }}>download</span>Sample Format
+                  <button
+                    onClick={() => { setShowCsvModal(false); openBulkEntryForClass(); }}
+                    title="Open Bulk Entry → configure subjects → click Download Template"
+                    style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', border: '1px solid #bfdbfe', borderRadius: 7, background: '#eff6ff', color: '#2563eb', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                    <span className="material-icons" style={{ fontSize: 15 }}>download</span>Download Template
                   </button>
                   <button onClick={() => csvFileRef.current?.click()} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', border: '1px solid #d1fae5', borderRadius: 7, background: '#ecfdf5', color: '#16a34a', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                     <span className="material-icons" style={{ fontSize: 15 }}>upload_file</span>Select CSV File
