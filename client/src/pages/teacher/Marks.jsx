@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import * as XLSX from 'xlsx';
 import Layout from '../../components/Layout';
 import Button from '../../components/Button';
 import { useAuth } from '../../context/AuthContext';
@@ -752,6 +753,102 @@ ADM002,Mathematics,92,100`;
     }
   };
 
+  // ── Download dynamic marks template (Excel) ──────────────────────────────────
+  // Generates an Excel file using the current Bulk Entry modal selections:
+  //   - student list pre-filled from bulkStudents
+  //   - columns vary per subject based on NORMAL vs IE mode
+  //   - max marks pre-filled; marks/present-days left blank for teacher entry
+  const downloadBulkEntryTemplate = () => {
+    if (!bulkClassId)          { showToast('Please select a class before downloading the template.', 'error'); return; }
+    if (!bulkSubjects.length)  { showToast('Please select at least one subject before downloading the template.', 'error'); return; }
+    if (!bulkStudents.length)  { showToast('No students loaded. Please wait and try again.', 'error'); return; }
+
+    const cls      = classes.find(c => String(c.id) === bulkClassId);
+    const clsName  = cls?.name    || '';
+    const section  = cls?.section || '';
+    const examDate = bulkDate || new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+    const wDays    = totalWorkingDays || '';
+
+    // ── Build headers ─────────────────────────────────────────────────────────
+    const headers = [
+      'Student Name', 'Admission Number', 'Roll Number',
+      'Class', 'Section', 'Exam Type', 'Exam Date',
+      'Total Working Days', 'Present Days',
+    ];
+    bulkSubjects.forEach(sub => {
+      if (subjectMode[sub] === 'IE') {
+        const iMax = ieInternalMax[sub] || '';
+        const eMax = ieExternalMax[sub] || '';
+        const tMax = ((parseFloat(iMax)||0) + (parseFloat(eMax)||0)) || '';
+        headers.push(
+          `${sub} Internal Max Marks`,  `${sub} Internal Marks`,
+          `${sub} External Max Marks`,  `${sub} External Marks`,
+          `${sub} Total Max Marks`,     `${sub} Total Marks`,
+        );
+      } else {
+        headers.push(`${sub} Max Marks`, `${sub} Marks`);
+      }
+    });
+
+    // ── Build rows — one per student, marks/present-days blank ────────────────
+    const rows = bulkStudents.map(s => {
+      const row = [
+        s.name || '', s.admissionNumber || '', s.rollNumber || '',
+        clsName, section, bulkExamType || '', examDate,
+        wDays, '',   // Present Days blank
+      ];
+      bulkSubjects.forEach(sub => {
+        if (subjectMode[sub] === 'IE') {
+          const iMax = ieInternalMax[sub] || '';
+          const eMax = ieExternalMax[sub] || '';
+          const tMax = ((parseFloat(iMax)||0) + (parseFloat(eMax)||0)) || '';
+          row.push(iMax, '', eMax, '', String(tMax), '');
+        } else {
+          row.push(subjectMaxMarks[sub] || '100', '');
+        }
+      });
+      return row;
+    });
+
+    // ── Build Excel workbook ──────────────────────────────────────────────────
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    // Force all cells to text so Excel never misreads values starting with numbers/symbols
+    const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+    for (let R = range.s.r; R <= range.e.r; R++) {
+      for (let C = range.s.c; C <= range.e.c; C++) {
+        const addr = XLSX.utils.encode_cell({ r: R, c: C });
+        if (ws[addr]) ws[addr].t = 's';
+      }
+    }
+    // Column widths
+    ws['!cols'] = headers.map(h =>
+      h.includes('Marks') ? { wch: 22 } : h === 'Student Name' ? { wch: 22 } : { wch: 15 }
+    );
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Marks Entry');
+
+    // Instructions sheet
+    const instr = [
+      ['MARKS ENTRY TEMPLATE — HOW TO USE'],
+      [''],
+      ['1. Fill in marks and Present Days for each student.'],
+      ['2. Do NOT change column headers or student rows.'],
+      ['3. Total Working Days and Exam info are pre-filled.'],
+      ['4. For Internal+External subjects, enter Internal Marks and External Marks.'],
+      ['   Total Marks will be validated as Internal + External on import.'],
+      ['5. Leave a marks cell blank to skip that student-subject combination.'],
+      ['6. Present Days cannot exceed Total Working Days.'],
+    ];
+    const wsInstr = XLSX.utils.aoa_to_sheet(instr);
+    wsInstr['!cols'] = [{ wch: 75 }];
+    XLSX.utils.book_append_sheet(wb, wsInstr, 'Instructions');
+
+    const label = clsName + (section ? `-${section}` : '');
+    XLSX.writeFile(wb, `${label}_${bulkExamType || 'marks'}_template.xlsx`);
+    showToast('Template downloaded. Fill in marks and Present Days, then import.', 'success');
+  };
+
   // ── Delete ────────────────────────────────────────────────────────────────────
   const handleDelete = async (markId) => {
     try {
@@ -1399,6 +1496,25 @@ ADM002,Mathematics,92,100`;
                   style={{ padding: '9px 22px', border: '1.5px solid var(--border-strong)', borderRadius: 9, background: 'var(--surface)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
                 >
                   Cancel
+                </button>
+                {/* Download Template — generates Excel based on current selections */}
+                <button
+                  type="button"
+                  onClick={downloadBulkEntryTemplate}
+                  disabled={!bulkClassId || bulkSubjects.length === 0 || loadingBulkStudents}
+                  title="Download Excel template pre-filled with student list and subject columns"
+                  style={{
+                    padding: '9px 18px',
+                    background: (!bulkClassId || bulkSubjects.length === 0 || loadingBulkStudents) ? '#e5e7eb' : '#f0fdf4',
+                    color: (!bulkClassId || bulkSubjects.length === 0 || loadingBulkStudents) ? '#9ca3af' : '#16a34a',
+                    border: `1.5px solid ${(!bulkClassId || bulkSubjects.length === 0 || loadingBulkStudents) ? '#e5e7eb' : '#86efac'}`,
+                    borderRadius: 9, fontWeight: 700, fontSize: 12,
+                    cursor: (!bulkClassId || bulkSubjects.length === 0 || loadingBulkStudents) ? 'not-allowed' : 'pointer',
+                    display: 'flex', alignItems: 'center', gap: 5,
+                  }}
+                >
+                  <span className="material-icons" style={{ fontSize: 15 }}>download</span>
+                  Download Template
                 </button>
                 <button
                   type="button"
