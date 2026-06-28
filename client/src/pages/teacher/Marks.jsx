@@ -791,43 +791,31 @@ ADM002,Mathematics,92,100`;
       return row;
     });
 
-    // ── Build Excel workbook ──────────────────────────────────────────────────
-    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-    // Force all cells to text so Excel never misreads values starting with numbers/symbols
-    const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
-    for (let R = range.s.r; R <= range.e.r; R++) {
-      for (let C = range.s.c; C <= range.e.c; C++) {
-        const addr = XLSX.utils.encode_cell({ r: R, c: C });
-        if (ws[addr]) ws[addr].t = 's';
-      }
-    }
-    // Column widths
-    ws['!cols'] = headers.map(h =>
-      h.includes('Marks') ? { wch: 22 } : h === 'Student Name' ? { wch: 22 } : { wch: 15 }
-    );
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Marks Entry');
-
-    // Instructions sheet
-    const instr = [
-      ['MARKS ENTRY TEMPLATE — HOW TO USE'],
-      [''],
-      ['1. Fill in marks and Present Days for each student.'],
-      ['2. Do NOT change column headers or student rows.'],
-      ['3. Total Working Days and Exam info are pre-filled.'],
-      ['4. For Internal+External subjects, enter Internal Marks and External Marks.'],
-      ['   Total Marks will be validated as Internal + External on import.'],
-      ['5. Leave a marks cell blank to skip that student-subject combination.'],
-      ['6. Present Days cannot exceed Total Working Days.'],
+    // ── Build CSV string ──────────────────────────────────────────────────────
+    // Escape a single cell value: wrap in quotes if it contains comma, quote, or newline
+    const esc = v => {
+      const s = String(v ?? '');
+      return (s.includes(',') || s.includes('"') || s.includes('\n'))
+        ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const csvLines = [
+      headers.map(esc).join(','),
+      ...rows.map(row => row.map(esc).join(',')),
     ];
-    const wsInstr = XLSX.utils.aoa_to_sheet(instr);
-    wsInstr['!cols'] = [{ wch: 75 }];
-    XLSX.utils.book_append_sheet(wb, wsInstr, 'Instructions');
+    // UTF-8 BOM so Excel opens the file with correct encoding without conversion dialog
+    const BOM = '﻿';
+    const csvContent = BOM + csvLines.join('\n');
 
-    const label = clsName + (section ? `-${section}` : '');
-    XLSX.writeFile(wb, `${label}_${bulkExamType || 'marks'}_template.xlsx`);
-    showToast('Template downloaded. Fill in marks and Present Days, then import.', 'success');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+    const url  = URL.createObjectURL(blob);
+    const label = (clsName + (section ? `_${section}` : '')).replace(/\s+/g, '_');
+    const exam  = (bulkExamType || 'marks').replace(/\s+/g, '_');
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${label}_${exam}_marks_template.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('CSV template downloaded. Fill in marks and Present Days, then import.', 'success');
   };
 
   // ── Delete ────────────────────────────────────────────────────────────────────
