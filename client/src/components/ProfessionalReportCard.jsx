@@ -349,24 +349,33 @@ export default function ProfessionalReportCard({ data, gradeScale = [], examFilt
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                     <thead>
                       <tr>
-                        <th style={th('center', { width: 40 })}>S.NO.</th>
+                        <th style={th('center', { width: 36 })}>S.NO.</th>
                         <th style={th('left')}>SUBJECT</th>
-                        <th style={th('center', { width: 110 })}>MARKS OBTAINED</th>
-                        <th style={th('center', { width: 110 })}>MAXIMUM MARKS</th>
-                        <th style={th('center', { width: 100 })}>PERCENTAGE (%)</th>
-                        <th style={th('center', { width: 70 })}>GRADE</th>
-                        <th style={th('center', { width: 70, borderRight: 'none' })}>RESULT</th>
+                        <th style={th('center', { width: 90 })}>INTERNAL</th>
+                        <th style={th('center', { width: 90 })}>EXTERNAL</th>
+                        <th style={th('center', { width: 100 })}>MARKS OBTAINED</th>
+                        <th style={th('center', { width: 100 })}>MAXIMUM MARKS</th>
+                        <th style={th('center', { width: 90 })}>PERCENTAGE (%)</th>
+                        <th style={th('center', { width: 65 })}>GRADE</th>
+                        <th style={th('center', { width: 65, borderRight: 'none' })}>RESULT</th>
                       </tr>
                     </thead>
                     <tbody>
                       {rows.map((r, i) => {
                         const subPct = p(r.marks, r.maxMarks);
                         const fail   = isFailing(r);
+                        const isIE   = r.marksType === 'INTERNAL_EXTERNAL';
                         return (
                           <tr key={i} style={{ background: fail ? '#fef2f2' : i % 2 === 0 ? '#fff' : '#f8faff' }}>
                             <td style={td({ textAlign: 'center', color: '#6b7280', fontSize: 11 })}>{i + 1}</td>
                             <td style={{ ...td({ fontWeight: 600 }), color: fail ? '#991b1b' : '#111827' }}>
                               {r.subject}
+                            </td>
+                            <td style={td({ textAlign: 'center', color: isIE ? '#7c3aed' : '#9ca3af', fontSize: 11 })}>
+                              {isIE ? `${r.internalMarksObtained ?? 0}/${r.internalMaxMarks ?? 0}` : '—'}
+                            </td>
+                            <td style={td({ textAlign: 'center', color: isIE ? '#0369a1' : '#9ca3af', fontSize: 11 })}>
+                              {isIE ? `${r.externalMarksObtained ?? 0}/${r.externalMaxMarks ?? 0}` : '—'}
                             </td>
                             <td style={td({ textAlign: 'center', fontWeight: 800, fontSize: 13, color: DARK_BLUE })}>
                               {r.marks ?? '—'}
@@ -388,7 +397,7 @@ export default function ProfessionalReportCard({ data, gradeScale = [], examFilt
                       })}
                       {/* Totals row */}
                       <tr style={{ background: '#dbeafe', borderTop: `2px solid ${BLUE}` }}>
-                        <td colSpan={2} style={{ padding: '7px 14px', fontWeight: 900, color: DARK_BLUE, fontSize: 12, borderRight: tblBorder }}>
+                        <td colSpan={4} style={{ padding: '7px 14px', fontWeight: 900, color: DARK_BLUE, fontSize: 12, borderRight: tblBorder }}>
                           TOTAL
                         </td>
                         <td style={{ padding: '7px 8px', textAlign: 'center', fontWeight: 900, fontSize: 14, color: DARK_BLUE, borderRight: tblBorder }}>

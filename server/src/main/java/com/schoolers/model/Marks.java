@@ -65,6 +65,28 @@ public class Marks {
     @Column(name = "school_id")
     private Long schoolId;
 
+    // ── Internal + External mark structure ────────────────────────────────────────
+    /** NORMAL (default) or INTERNAL_EXTERNAL. */
+    @Builder.Default
+    @Column(name = "marks_type", length = 20, nullable = false)
+    private String marksType = "NORMAL";
+
+    /** Maximum marks for the internal component (null when marksType = NORMAL). */
+    @Column(name = "internal_max_marks")
+    private Integer internalMaxMarks;
+
+    /** Marks obtained in the internal component (null when marksType = NORMAL). */
+    @Column(name = "internal_marks_obtained")
+    private Integer internalMarksObtained;
+
+    /** Maximum marks for the external component (null when marksType = NORMAL). */
+    @Column(name = "external_max_marks")
+    private Integer externalMaxMarks;
+
+    /** Marks obtained in the external component (null when marksType = NORMAL). */
+    @Column(name = "external_marks_obtained")
+    private Integer externalMarksObtained;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

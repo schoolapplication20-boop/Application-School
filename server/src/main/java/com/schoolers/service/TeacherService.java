@@ -724,6 +724,27 @@ public class TeacherService {
     }
 
     public ApiResponse<Marks> addMarks(Marks marks, Long authSchoolId) {
+        // ── Internal + External mode: derive totals from components ──────────────
+        if ("INTERNAL_EXTERNAL".equals(marks.getMarksType())) {
+            if (marks.getInternalMaxMarks() == null || marks.getExternalMaxMarks() == null)
+                return ApiResponse.error("Internal and External max marks are required for INTERNAL_EXTERNAL mode");
+            if (marks.getInternalMaxMarks() < 0 || marks.getExternalMaxMarks() <= 0)
+                return ApiResponse.error("Internal max marks cannot be negative; External max marks must be positive");
+            int internalObt  = marks.getInternalMarksObtained() != null ? marks.getInternalMarksObtained() : 0;
+            int externalObt  = marks.getExternalMarksObtained() != null ? marks.getExternalMarksObtained() : 0;
+            if (internalObt < 0) return ApiResponse.error("Internal marks cannot be negative");
+            if (externalObt < 0) return ApiResponse.error("External marks cannot be negative");
+            if (internalObt > marks.getInternalMaxMarks())
+                return ApiResponse.error("Internal marks (" + internalObt + ") cannot exceed internal max (" + marks.getInternalMaxMarks() + ")");
+            if (externalObt > marks.getExternalMaxMarks())
+                return ApiResponse.error("External marks (" + externalObt + ") cannot exceed external max (" + marks.getExternalMaxMarks() + ")");
+            marks.setInternalMarksObtained(internalObt);
+            marks.setExternalMarksObtained(externalObt);
+            // Always derive totals so frontend cannot submit inconsistent values
+            marks.setMarks(internalObt + externalObt);
+            marks.setMaxMarks(marks.getInternalMaxMarks() + marks.getExternalMaxMarks());
+        }
+
         // Validate marks range
         if (marks.getMarks() == null || marks.getMaxMarks() == null)
             return ApiResponse.error("Marks and maximum marks are required");
@@ -810,8 +831,26 @@ public class TeacherService {
                     Integer oldMarksVal = m.getMarks();
                     String oldGrade = m.getGrade();
 
-                    if (updated.getMarks() != null)    m.setMarks(updated.getMarks());
-                    if (updated.getMaxMarks() != null) m.setMaxMarks(updated.getMaxMarks());
+                    // Internal + External update: propagate component fields and recompute totals
+                    if ("INTERNAL_EXTERNAL".equals(updated.getMarksType())
+                            || "INTERNAL_EXTERNAL".equals(m.getMarksType())) {
+                        if (updated.getMarksType() != null)               m.setMarksType(updated.getMarksType());
+                        if (updated.getInternalMaxMarks() != null)        m.setInternalMaxMarks(updated.getInternalMaxMarks());
+                        if (updated.getInternalMarksObtained() != null)   m.setInternalMarksObtained(updated.getInternalMarksObtained());
+                        if (updated.getExternalMaxMarks() != null)        m.setExternalMaxMarks(updated.getExternalMaxMarks());
+                        if (updated.getExternalMarksObtained() != null)   m.setExternalMarksObtained(updated.getExternalMarksObtained());
+                        // Recompute totals from components
+                        if ("INTERNAL_EXTERNAL".equals(m.getMarksType())) {
+                            int intObt = m.getInternalMarksObtained() != null ? m.getInternalMarksObtained() : 0;
+                            int extObt = m.getExternalMarksObtained() != null ? m.getExternalMarksObtained() : 0;
+                            m.setMarks(intObt + extObt);
+                            if (m.getInternalMaxMarks() != null && m.getExternalMaxMarks() != null)
+                                m.setMaxMarks(m.getInternalMaxMarks() + m.getExternalMaxMarks());
+                        }
+                    } else {
+                        if (updated.getMarks() != null)    m.setMarks(updated.getMarks());
+                        if (updated.getMaxMarks() != null) m.setMaxMarks(updated.getMaxMarks());
+                    }
                     if (updated.getGrade() != null)    m.setGrade(updated.getGrade());
                     Marks saved = marksRepository.save(m);
 

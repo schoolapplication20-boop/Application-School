@@ -307,11 +307,18 @@ public class ReportCardController {
                 LinkedHashMap::new,
                 Collectors.mapping(m -> {
                     Map<String, Object> row = new LinkedHashMap<>();
-                    row.put("subject", m.getSubject());
-                    row.put("marks", m.getMarks());
-                    row.put("maxMarks", m.getMaxMarks());
-                    row.put("grade", m.getGrade());
-                    row.put("examDate", m.getExamDate() != null ? m.getExamDate().toString() : null);
+                    row.put("subject",   m.getSubject());
+                    row.put("marks",     m.getMarks());
+                    row.put("maxMarks",  m.getMaxMarks());
+                    row.put("grade",     m.getGrade());
+                    row.put("examDate",  m.getExamDate() != null ? m.getExamDate().toString() : null);
+                    // Internal + External breakdown (null for NORMAL marks)
+                    String marksType = m.getMarksType() != null ? m.getMarksType() : "NORMAL";
+                    row.put("marksType",              marksType);
+                    row.put("internalMaxMarks",       m.getInternalMaxMarks());
+                    row.put("internalMarksObtained",  m.getInternalMarksObtained());
+                    row.put("externalMaxMarks",       m.getExternalMaxMarks());
+                    row.put("externalMarksObtained",  m.getExternalMarksObtained());
                     return row;
                 }, Collectors.toList())
             )

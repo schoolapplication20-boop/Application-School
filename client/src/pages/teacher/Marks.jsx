@@ -121,9 +121,18 @@ export default function Marks() {
   const [bulkSubjects, setBulkSubjects]       = useState([SUBJECTS[0]]);
   const [bulkStudents, setBulkStudents]       = useState([]);
   const [loadingBulkStudents, setLoadingBulkStudents] = useState(false);
-  // grid[studentId][subject] = marks string value
+  // grid[studentId][subject] = marks string value (NORMAL mode)
   const [grid, setGrid]                       = useState({});
   const [saving, setSaving]                   = useState(false);
+  // ── Internal + External mode per subject ─────────────────────────────────────
+  // subjectMode[subject] = 'NORMAL' | 'IE'
+  const [subjectMode,     setSubjectMode]     = useState({});
+  // ieInternalMax[subject] = string (internal component max marks)
+  const [ieInternalMax,   setIeInternalMax]   = useState({});
+  // ieExternalMax[subject] = string (external component max marks)
+  const [ieExternalMax,   setIeExternalMax]   = useState({});
+  // ieGrid[studentId][subject] = { int: string, ext: string }
+  const [ieGrid,          setIeGrid]          = useState({});
   // ── Attendance fields ─────────────────────────────────────────────────────────
   // totalWorkingDays: one value for the whole class/exam period
   // attendanceGrid[studentId] = present days string
@@ -427,6 +436,9 @@ ADM002,Mathematics,92,100`;
         const g = {};
         studs.forEach(s => { g[s.id] = {}; });
         setGrid(g);
+        const ie = {};
+        studs.forEach(s => { ie[s.id] = {}; });
+        setIeGrid(ie);
         const ag = {};
         studs.forEach(s => { ag[s.id] = ''; });
         setAttendanceGrid(ag);
@@ -565,6 +577,15 @@ ADM002,Mathematics,92,100`;
   const updateCell = (studentId, subject, value) =>
     setGrid(prev => ({ ...prev, [studentId]: { ...prev[studentId], [subject]: value } }));
 
+  const updateIeCell = (studentId, subject, field, value) =>
+    setIeGrid(prev => ({
+      ...prev,
+      [studentId]: {
+        ...prev[studentId],
+        [subject]: { ...(prev[studentId]?.[subject] || {}), [field]: value },
+      },
+    }));
+
   // ── Filtered marks list ───────────────────────────────────────────────────────
   const filtered = allMarks.filter(m => {
     const matchClass = !filterClassId || String(m.classId) === String(filterClassId);
@@ -586,6 +607,10 @@ ADM002,Mathematics,92,100`;
     setSubjectMaxMarks({ [initialSubject]: '100' });
     setNewSubjectInput('');
     setGrid({});
+    setSubjectMode({});
+    setIeInternalMax({});
+    setIeExternalMax({});
+    setIeGrid({});
     setTotalWorkingDays('');
     setAttendanceGrid({});
     setShowModal(true);
@@ -607,22 +632,55 @@ ADM002,Mathematics,92,100`;
     const entries = [];
     for (const student of bulkStudents) {
       for (const subject of bulkSubjects) {
-        const val    = grid[student.id]?.[subject];
-        if (val === undefined || val === '') continue;
-        const marksNum = parseFloat(val);
-        const maxNum   = parseFloat(subjectMaxMarks[subject] || '100');
-        if (isNaN(marksNum) || marksNum < 0 || marksNum > maxNum) continue;
-        entries.push({
-          studentId:   student.id,
-          studentName: student.name,
-          subject,
-          examType:    bulkExamType,
-          marks:       marksNum,
-          maxMarks:    maxNum,
-          grade:       getGrade(marksNum, maxNum),
-          teacherId:   user.id,
-          examDate:    date,
-        });
+        const isIE = subjectMode[subject] === 'IE';
+
+        if (isIE) {
+          const ie     = ieGrid[student.id]?.[subject] || {};
+          const intVal = ie.int !== undefined && ie.int !== '' ? parseFloat(ie.int) : null;
+          const extVal = ie.ext !== undefined && ie.ext !== '' ? parseFloat(ie.ext) : null;
+          if (intVal === null && extVal === null) continue;  // nothing entered
+          const intMax = parseFloat(ieInternalMax[subject] || '0');
+          const extMax = parseFloat(ieExternalMax[subject] || '0');
+          const intObt = intVal !== null && !isNaN(intVal) ? Math.max(0, Math.min(intVal, intMax)) : 0;
+          const extObt = extVal !== null && !isNaN(extVal) ? Math.max(0, Math.min(extVal, extMax)) : 0;
+          const total  = intObt + extObt;
+          const maxTot = intMax + extMax;
+          if (maxTot <= 0) continue;
+          entries.push({
+            studentId:              student.id,
+            studentName:            student.name,
+            subject,
+            examType:               bulkExamType,
+            marks:                  total,
+            maxMarks:               maxTot,
+            grade:                  getGrade(total, maxTot),
+            teacherId:              user.id,
+            examDate:               date,
+            marksType:              'INTERNAL_EXTERNAL',
+            internalMaxMarks:       intMax,
+            internalMarksObtained:  intObt,
+            externalMaxMarks:       extMax,
+            externalMarksObtained:  extObt,
+          });
+        } else {
+          const val    = grid[student.id]?.[subject];
+          if (val === undefined || val === '') continue;
+          const marksNum = parseFloat(val);
+          const maxNum   = parseFloat(subjectMaxMarks[subject] || '100');
+          if (isNaN(marksNum) || marksNum < 0 || marksNum > maxNum) continue;
+          entries.push({
+            studentId:   student.id,
+            studentName: student.name,
+            subject,
+            examType:    bulkExamType,
+            marks:       marksNum,
+            maxMarks:    maxNum,
+            grade:       getGrade(marksNum, maxNum),
+            teacherId:   user.id,
+            examDate:    date,
+            marksType:   'NORMAL',
+          });
+        }
       }
     }
 
@@ -1062,23 +1120,71 @@ ADM002,Mathematics,92,100`;
                           style={{ accentColor: '#0de1e8', cursor: 'pointer', width: 13, height: 13 }} />
                         {sub}{isCustom && <span style={{ fontSize: 9, marginLeft: 2 }}>✦</span>}
                       </div>
-                      {/* Per-subject max marks — only shown when checked */}
-                      {checked && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                          <span style={{ fontSize: 10, color: '#6b7280' }}>out of</span>
-                          <input
-                            type="number" min="1"
-                            value={subjectMaxMarks[sub] ?? '100'}
-                            onChange={e => setSubjectMaxMarks(prev => ({ ...prev, [sub]: e.target.value }))}
-                            style={{
-                              width: 52, padding: '2px 5px', fontSize: 11, fontWeight: 700,
-                              border: '1.5px solid #0de1e8', borderRadius: 6,
-                              outline: 'none', textAlign: 'center',
-                              background: '#f0fff4', color: '#276749',
-                            }}
-                          />
-                        </div>
-                      )}
+                      {/* Per-subject config — only shown when checked */}
+                      {checked && (() => {
+                        const isIE = subjectMode[sub] === 'IE';
+                        const intMax = ieInternalMax[sub] ?? '';
+                        const extMax = ieExternalMax[sub] ?? '';
+                        return (
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                            {!isIE && (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                                <span style={{ fontSize: 10, color: '#6b7280' }}>out of</span>
+                                <input
+                                  type="number" min="1"
+                                  value={subjectMaxMarks[sub] ?? '100'}
+                                  onChange={e => setSubjectMaxMarks(prev => ({ ...prev, [sub]: e.target.value }))}
+                                  style={{ width: 52, padding: '2px 5px', fontSize: 11, fontWeight: 700, border: '1.5px solid #0de1e8', borderRadius: 6, outline: 'none', textAlign: 'center', background: '#f0fff4', color: '#276749' }}
+                                />
+                              </div>
+                            )}
+                            {isIE && (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap', justifyContent: 'center' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                  <span style={{ fontSize: 9, color: '#7c3aed' }}>Int/</span>
+                                  <input type="number" min="0" placeholder="20" value={intMax}
+                                    onChange={e => {
+                                      setIeInternalMax(prev => ({ ...prev, [sub]: e.target.value }));
+                                      const total = (parseFloat(e.target.value)||0) + (parseFloat(extMax)||0);
+                                      setSubjectMaxMarks(prev => ({ ...prev, [sub]: String(total) }));
+                                    }}
+                                    style={{ width: 40, padding: '2px 4px', fontSize: 11, fontWeight: 700, border: '1.5px solid #7c3aed', borderRadius: 5, outline: 'none', textAlign: 'center', background: '#f5f3ff', color: '#4c1d95' }}
+                                  />
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                  <span style={{ fontSize: 9, color: '#0369a1' }}>Ext/</span>
+                                  <input type="number" min="1" placeholder="80" value={extMax}
+                                    onChange={e => {
+                                      setIeExternalMax(prev => ({ ...prev, [sub]: e.target.value }));
+                                      const total = (parseFloat(intMax)||0) + (parseFloat(e.target.value)||0);
+                                      setSubjectMaxMarks(prev => ({ ...prev, [sub]: String(total) }));
+                                    }}
+                                    style={{ width: 40, padding: '2px 4px', fontSize: 11, fontWeight: 700, border: '1.5px solid #0369a1', borderRadius: 5, outline: 'none', textAlign: 'center', background: '#eff6ff', color: '#1e3a5f' }}
+                                  />
+                                </div>
+                                {(parseFloat(intMax)||0) + (parseFloat(extMax)||0) > 0 && (
+                                  <span style={{ fontSize: 9, color: '#374151' }}>={((parseFloat(intMax)||0)+(parseFloat(extMax)||0))}</span>
+                                )}
+                              </div>
+                            )}
+                            {/* IE mode toggle */}
+                            <button type="button"
+                              onClick={() => {
+                                const next = isIE ? 'NORMAL' : 'IE';
+                                setSubjectMode(prev => ({ ...prev, [sub]: next }));
+                                if (next === 'NORMAL') {
+                                  setIeInternalMax(prev => { const n = { ...prev }; delete n[sub]; return n; });
+                                  setIeExternalMax(prev => { const n = { ...prev }; delete n[sub]; return n; });
+                                }
+                              }}
+                              style={{
+                                padding: '2px 8px', fontSize: 9, fontWeight: 700, border: 'none', borderRadius: 10, cursor: 'pointer',
+                                background: isIE ? '#7c3aed' : '#e5e7eb', color: isIE ? '#fff' : '#374151',
+                              }}
+                            >{isIE ? '✓ Int+Ext' : 'Int+Ext?'}</button>
+                          </div>
+                        );
+                      })()}
                     </div>
                   );
                 })}
@@ -1137,14 +1243,31 @@ ADM002,Mathematics,92,100`;
                             {totalWorkingDays ? `out of ${totalWorkingDays}` : 'optional'}
                           </div>
                         </th>
-                        {bulkSubjects.map(sub => (
-                          <th key={sub} style={{ padding: '10px 10px', textAlign: 'center', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '2px solid var(--border-strong)', whiteSpace: 'nowrap', minWidth: 115 }}>
-                            {sub}
-                            <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 400, marginTop: 2, textTransform: 'none', letterSpacing: 0 }}>
-                              out of {subjectMaxMarks[sub] || '100'}
-                            </div>
-                          </th>
-                        ))}
+                        {bulkSubjects.flatMap(sub => {
+                          const isIE = subjectMode[sub] === 'IE';
+                          const thBase = { padding: '10px 8px', textAlign: 'center', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '2px solid var(--border-strong)', whiteSpace: 'nowrap', minWidth: 90 };
+                          if (isIE) {
+                            const iMax = ieInternalMax[sub] || '?';
+                            const eMax = ieExternalMax[sub] || '?';
+                            return [
+                              <th key={sub+'_int'} style={{ ...thBase, color: '#7c3aed', background: '#f5f3ff30' }}>
+                                {sub}<br/><span style={{ fontWeight: 400, fontSize: 10, textTransform: 'none' }}>Internal /{iMax}</span>
+                              </th>,
+                              <th key={sub+'_ext'} style={{ ...thBase, color: '#0369a1', background: '#eff6ff30' }}>
+                                {sub}<br/><span style={{ fontWeight: 400, fontSize: 10, textTransform: 'none' }}>External /{eMax}</span>
+                              </th>,
+                              <th key={sub+'_tot'} style={{ ...thBase, color: '#059669' }}>
+                                {sub}<br/><span style={{ fontWeight: 400, fontSize: 10, textTransform: 'none' }}>Total /{(parseFloat(iMax)||0)+(parseFloat(eMax)||0) || '?'}</span>
+                              </th>,
+                            ];
+                          }
+                          return [
+                            <th key={sub} style={{ ...thBase, color: 'var(--text-secondary)' }}>
+                              {sub}
+                              <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 400, marginTop: 2, textTransform: 'none', letterSpacing: 0 }}>out of {subjectMaxMarks[sub] || '100'}</div>
+                            </th>
+                          ];
+                        })}
                       </tr>
                     </thead>
                     <tbody>
@@ -1193,42 +1316,63 @@ ADM002,Mathematics,92,100`;
                             );
                           })()}
 
-                          {/* One input per subject */}
-                          {bulkSubjects.map(sub => {
+                          {/* One or three inputs per subject depending on mode */}
+                          {bulkSubjects.flatMap(sub => {
+                            const isIE = subjectMode[sub] === 'IE';
+                            if (isIE) {
+                              const ie     = ieGrid[student.id]?.[sub] || {};
+                              const intMax = parseFloat(ieInternalMax[sub] || '0');
+                              const extMax = parseFloat(ieExternalMax[sub] || '0');
+                              const intVal = ie.int ?? '';
+                              const extVal = ie.ext ?? '';
+                              const intNum = parseFloat(intVal);
+                              const extNum = parseFloat(extVal);
+                              const intOver = intVal !== '' && !isNaN(intNum) && intNum > intMax;
+                              const extOver = extVal !== '' && !isNaN(extNum) && extNum > extMax;
+                              const total   = (isNaN(intNum) ? 0 : Math.max(0, intNum)) + (isNaN(extNum) ? 0 : Math.max(0, extNum));
+                              const totMax  = intMax + extMax;
+                              const grade   = totMax > 0 ? getGrade(total, totMax) : '';
+                              const inputSt = (val, over, border) => ({
+                                width: 68, padding: '5px 6px', fontSize: 12, fontWeight: 600, textAlign: 'center',
+                                border: `1.5px solid ${over ? '#e53e3e' : val ? border : 'var(--border-strong)'}`,
+                                borderRadius: 7, outline: 'none',
+                                background: over ? '#fff5f5' : val ? '#fafafa' : 'var(--surface)',
+                                color: over ? '#e53e3e' : 'var(--text-primary)',
+                              });
+                              return [
+                                <td key={sub+'_int'} style={{ padding: '7px 8px', borderBottom: '1px solid var(--border)', textAlign: 'center', background: idx%2===0?'#faf5ff30':'#f3e8ff20' }}>
+                                  <input type="number" min="0" max={intMax||undefined} placeholder="—" value={intVal}
+                                    onChange={e => updateIeCell(student.id, sub, 'int', e.target.value)}
+                                    style={inputSt(intVal, intOver, '#7c3aed')} />
+                                  {intOver && <div style={{ fontSize: 9, color: '#e53e3e' }}>exceeds max</div>}
+                                </td>,
+                                <td key={sub+'_ext'} style={{ padding: '7px 8px', borderBottom: '1px solid var(--border)', textAlign: 'center' }}>
+                                  <input type="number" min="0" max={extMax||undefined} placeholder="—" value={extVal}
+                                    onChange={e => updateIeCell(student.id, sub, 'ext', e.target.value)}
+                                    style={inputSt(extVal, extOver, '#0369a1')} />
+                                  {extOver && <div style={{ fontSize: 9, color: '#e53e3e' }}>exceeds max</div>}
+                                </td>,
+                                <td key={sub+'_tot'} style={{ padding: '7px 8px', borderBottom: '1px solid var(--border)', textAlign: 'center', background: '#f0fdf430' }}>
+                                  <div style={{ fontSize: 14, fontWeight: 800, color: '#059669' }}>{total}</div>
+                                  {grade && <div style={{ fontSize: 10, fontWeight: 700, color: getGradeColor(grade, gradeScale).color }}>{grade} · {totMax>0?Math.round((total/totMax)*100):0}%</div>}
+                                </td>,
+                              ];
+                            }
                             const val    = grid[student.id]?.[sub] ?? '';
                             const numVal = parseFloat(val);
                             const maxNum = parseFloat(subjectMaxMarks[sub] || '100');
                             const isOver = val !== '' && !isNaN(numVal) && numVal > maxNum;
                             const grade  = val !== '' && !isNaN(numVal) && !isOver ? getGrade(numVal, maxNum) : '';
-                            return (
+                            return [
                               <td key={sub} style={{ padding: '8px 10px', borderBottom: '1px solid var(--border)', textAlign: 'center', verticalAlign: 'middle' }}>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max={subjectMaxMarks[sub] || '100'}
-                                  placeholder="—"
-                                  value={val}
+                                <input type="number" min="0" max={subjectMaxMarks[sub] || '100'} placeholder="—" value={val}
                                   onChange={e => updateCell(student.id, sub, e.target.value)}
-                                  style={{
-                                    width: 78, padding: '6px 8px', fontSize: 13, fontWeight: 600,
-                                    textAlign: 'center',
-                                    border: `1.5px solid ${isOver ? '#e53e3e' : val ? '#0de1e8' : 'var(--border-strong)'}`,
-                                    borderRadius: 8, outline: 'none',
-                                    background: isOver ? '#fff5f5' : val ? '#f0fff4' : 'var(--surface)',
-                                    color: isOver ? '#e53e3e' : 'var(--text-primary)',
-                                    transition: 'border-color 0.15s, background 0.15s',
-                                  }}
+                                  style={{ width: 78, padding: '6px 8px', fontSize: 13, fontWeight: 600, textAlign: 'center', border: `1.5px solid ${isOver ? '#e53e3e' : val ? '#0de1e8' : 'var(--border-strong)'}`, borderRadius: 8, outline: 'none', background: isOver ? '#fff5f5' : val ? '#f0fff4' : 'var(--surface)', color: isOver ? '#e53e3e' : 'var(--text-primary)', transition: 'border-color 0.15s, background 0.15s' }}
                                 />
-                                {grade && (
-                                  <div style={{ fontSize: 10, fontWeight: 700, marginTop: 3, color: getGradeColor(grade, gradeScale).color }}>
-                                    {grade} · {Math.round((numVal / maxNum) * 100)}%
-                                  </div>
-                                )}
-                                {isOver && (
-                                  <div style={{ fontSize: 10, color: '#e53e3e', marginTop: 3 }}>exceeds max</div>
-                                )}
+                                {grade && <div style={{ fontSize: 10, fontWeight: 700, marginTop: 3, color: getGradeColor(grade, gradeScale).color }}>{grade} · {Math.round((numVal/maxNum)*100)}%</div>}
+                                {isOver && <div style={{ fontSize: 10, color: '#e53e3e', marginTop: 3 }}>exceeds max</div>}
                               </td>
-                            );
+                            ];
                           })}
                         </tr>
                       ))}
