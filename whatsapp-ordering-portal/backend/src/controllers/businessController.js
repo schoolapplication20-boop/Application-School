@@ -16,6 +16,11 @@ export const updateBusiness = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, data: result, message: 'Business profile updated' });
 });
 
+export const updateBusinessHours = asyncHandler(async (req, res) => {
+  const result = await businessService.updateBusinessHours(req.user.businessId, req.body.businessHours);
+  res.status(200).json({ success: true, data: result, message: 'Business hours updated' });
+});
+
 export const getWhatsappConfig = asyncHandler(async (req, res) => {
   const result = await businessService.getWhatsappConfig(req.user.businessId);
   res.status(200).json({ success: true, data: result, message: 'WhatsApp configuration retrieved' });
@@ -35,6 +40,7 @@ export default {
   createBusiness,
   getBusiness,
   updateBusiness,
+  updateBusinessHours,
   getWhatsappConfig,
   setupWhatsappConfig,
   updateWhatsappConfig,

@@ -52,6 +52,13 @@ router.put(
   businessController.updateWhatsappConfig,
 );
 
+router.patch(
+  '/hours',
+  authenticate,
+  requireBusiness,
+  businessController.updateBusinessHours,
+);
+
 router.get(
   '/:businessId',
   authenticate,

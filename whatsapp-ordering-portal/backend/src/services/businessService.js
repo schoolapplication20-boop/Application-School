@@ -115,6 +115,16 @@ export const updateBusiness = async (businessId, body) => {
   return { business: formatBusiness(business) };
 };
 
+export const updateBusinessHours = async (businessId, businessHours) => {
+  const business = await Business.findByPk(businessId);
+  if (!business) {
+    throw new ApiError(HTTP_STATUS.NOT_FOUND, ERROR_CODES.NOT_FOUND, 'Business not found');
+  }
+  business.businessHoursJson = businessHours;
+  await business.save();
+  return { business: formatBusiness(business) };
+};
+
 export const getWhatsappConfig = async (businessId) => {
   const config = await WhatsappConfig.findOne({ where: { businessId } });
   if (!config) {
@@ -166,6 +176,7 @@ export default {
   createBusiness,
   getBusiness,
   updateBusiness,
+  updateBusinessHours,
   getWhatsappConfig,
   setupWhatsappConfig,
   updateWhatsappConfig,
