@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useBusiness } from '../../hooks/useBusiness';
+import ReportIssueModal from './ReportIssueModal';
 
 const NAV = [
   {
@@ -39,6 +41,7 @@ const NAV = [
 export default function Sidebar() {
   const location = useLocation();
   const { business } = useBusiness();
+  const [showReport, setShowReport] = useState(false);
 
   return (
     <aside className="sidebar">
@@ -103,7 +106,17 @@ export default function Sidebar() {
         <a href="#" className="sidebar-help-link">
           <span>📖</span> Documentation
         </a>
+        <button
+          type="button"
+          className="sidebar-help-link"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', width: '100%', textAlign: 'left' }}
+          onClick={() => setShowReport(true)}
+        >
+          <span>🐛</span> Report an Issue
+        </button>
       </div>
+
+      {showReport && <ReportIssueModal onClose={() => setShowReport(false)} />}
     </aside>
   );
 }

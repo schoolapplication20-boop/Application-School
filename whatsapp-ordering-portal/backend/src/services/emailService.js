@@ -118,4 +118,26 @@ export const sendWelcomeEmail = async (email, fullName) => sendMail({
   text: `Hi ${fullName || 'there'},\n\nYour email has been verified. Log in at ${frontendUrl}/login to get started.`,
 });
 
-export default { isConfigured, sendVerificationEmail, sendOtpEmail, sendWelcomeEmail };
+export const sendIssueReport = async ({ issueType, description, reporterEmail, businessName }) => {
+  const subject = `[OrderBot Issue] ${issueType} — ${businessName || 'Unknown Business'}`;
+  return sendMail({
+    to: 'navaneeswar1861@gmail.com',
+    subject,
+    html: `
+      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
+        <h2 style="color:#25d366">Issue Report</h2>
+        <table style="width:100%;border-collapse:collapse">
+          <tr><td style="padding:8px;font-weight:700;width:140px">Type</td><td style="padding:8px">${issueType}</td></tr>
+          <tr style="background:#f8fafc"><td style="padding:8px;font-weight:700">Business</td><td style="padding:8px">${businessName || '—'}</td></tr>
+          <tr><td style="padding:8px;font-weight:700">Reporter</td><td style="padding:8px">${reporterEmail || '—'}</td></tr>
+          <tr style="background:#f8fafc"><td style="padding:8px;font-weight:700">Time</td><td style="padding:8px">${new Date().toUTCString()}</td></tr>
+        </table>
+        <h3 style="margin-top:20px">Description</h3>
+        <div style="background:#f8fafc;padding:16px;border-radius:8px;white-space:pre-wrap">${description}</div>
+      </div>
+    `,
+    text: `Issue Report\nType: ${issueType}\nBusiness: ${businessName || '—'}\nReporter: ${reporterEmail || '—'}\n\n${description}`,
+  });
+};
+
+export default { isConfigured, sendVerificationEmail, sendOtpEmail, sendWelcomeEmail, sendIssueReport };
