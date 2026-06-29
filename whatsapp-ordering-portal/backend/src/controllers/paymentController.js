@@ -32,23 +32,27 @@ const sendPaymentConfirmation = async (order, business, customer) => {
 
     await whatsappService.sendTextMessage(config, customer.whatsappNumber, message);
   } catch (err) {
-    logger.error(`[paymentController] Failed to send payment confirmation: ${err.message}`);
+    logger.error(`[paymentController] WhatsApp confirmation failed: ${err.message}`);
   }
 };
 
-const processPaymentLinkPaid = async (payload) => {
-  const paymentLinkId   = payload.payment_link?.entity?.id;
-  const razorpayPayId   = payload.payment?.entity?.id;
-  const amountPaise     = payload.payment?.entity?.amount;
+const processPaymentLinkPaid = async (payload, business) => {
+  const paymentLinkId  = payload.payment_link?.entity?.id;
+  const razorpayPayId  = payload.payment?.entity?.id;
+  const amountPaise    = payload.payment?.entity?.amount;
 
   if (!paymentLinkId) {
-    logger.warn('[paymentController] payment_link.paid event missing payment_link.entity.id');
+    logger.warn('[paymentController] payment_link.paid missing payment_link.entity.id');
     return;
   }
 
-  const order = await Order.findOne({ where: { paymentLinkId } });
+  // Only match orders belonging to this business (prevents cross-tenant spoofing)
+  const order = await Order.findOne({
+    where: { paymentLinkId, businessId: business.businessId },
+  });
+
   if (!order) {
-    logger.warn(`[paymentController] No order found for payment_link_id: ${paymentLinkId}`);
+    logger.warn(`[paymentController] No order for payment_link_id ${paymentLinkId} / business ${business.businessId}`);
     return;
   }
 
@@ -58,50 +62,54 @@ const processPaymentLinkPaid = async (payload) => {
   }
 
   await order.update({
-    paymentStatus:    PAYMENT_STATUS.COMPLETED,
-    status:           ORDER_STATUS.ACCEPTED,
+    paymentStatus:     PAYMENT_STATUS.COMPLETED,
+    status:            ORDER_STATUS.ACCEPTED,
     razorpayPaymentId: razorpayPayId,
   });
 
-  logger.info(`[paymentController] Order ${order.orderNumber} marked PAID via Razorpay (${razorpayPayId})`);
+  logger.info(`[paymentController] Order ${order.orderNumber} marked PAID (${razorpayPayId})`);
 
-  const [business, customer] = await Promise.all([
-    Business.findByPk(order.businessId),
-    Customer.findByPk(order.customerId),
-  ]);
-
-  if (business && customer) {
-    await sendPaymentConfirmation(order, business, customer);
-  }
+  const customer = await Customer.findByPk(order.customerId);
+  if (customer) await sendPaymentConfirmation(order, business, customer);
 
   await Notification.create({
-    businessId:       order.businessId,
+    businessId:       business.businessId,
     notificationType: NOTIFICATION_TYPES.PAYMENT_RECEIVED,
     title:            'Payment received',
     message:          `Payment of ${formatMoney(amountPaise / 100)} received for order ${order.orderNumber}`,
-  }).catch((err) => logger.error(`[paymentController] Notification create failed: ${err.message}`));
+  }).catch((err) => logger.error(`[paymentController] Notification failed: ${err.message}`));
 };
 
 /**
- * POST /api/v1/payments/webhook/razorpay
- * Responds 200 immediately (required by Razorpay), then processes asynchronously.
+ * POST /api/v1/payments/webhook/razorpay/:businessId
+ *
+ * Each restaurant registers this URL with THEIR businessId on Razorpay's dashboard.
+ * HMAC is verified using that business's stored webhookSecret (encrypted at rest).
  */
-export const razorpayWebhook = (req, res) => {
-  res.sendStatus(200);
+export const razorpayWebhook = async (req, res) => {
+  res.sendStatus(200); // Respond immediately — Razorpay requires a fast 200
 
+  const { businessId } = req.params;
   const signature = req.headers['x-razorpay-signature'];
   const rawBody   = req.rawBody?.toString() || '';
 
-  if (!paymentService.verifyRazorpayWebhook(rawBody, signature)) {
-    logger.warn('[paymentController] Razorpay webhook HMAC verification failed');
+  const business = await Business.findByPk(businessId).catch(() => null);
+  if (!business) {
+    logger.warn(`[paymentController] Webhook for unknown businessId: ${businessId}`);
+    return;
+  }
+
+  const webhookSecret = paymentService.getWebhookSecret(business);
+  if (!paymentService.verifyRazorpayWebhook(rawBody, signature, webhookSecret)) {
+    logger.warn(`[paymentController] HMAC verification failed for business ${businessId}`);
     return;
   }
 
   const { event, payload } = req.body || {};
-  logger.info(`[paymentController] Razorpay webhook received: ${event}`);
+  logger.info(`[paymentController] Razorpay event "${event}" for business ${businessId}`);
 
   if (event === 'payment_link.paid') {
-    processPaymentLinkPaid(payload).catch((err) =>
+    processPaymentLinkPaid(payload, business).catch((err) =>
       logger.error(`[paymentController] processPaymentLinkPaid error: ${err.message}`),
     );
   }

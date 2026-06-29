@@ -1,5 +1,8 @@
 import { useState } from 'react';
+import { useAuth } from '../../hooks/useAuth';
 import api from '../../services/api';
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1';
 
 const PAYMENT_METHODS = [
   { key: 'cash',          label: 'Cash',          icon: '💵', desc: 'Cash on delivery or pickup', always: true },
@@ -15,15 +18,29 @@ const PAYMENT_METHODS = [
 ];
 
 export default function PaymentsStep({ data, updateData, onNext, onBack }) {
+  const { businessId } = useAuth();
+  const razorpayWebhookUrl = businessId
+    ? `${API_BASE}/payments/webhook/razorpay/${businessId}`
+    : null;
+
   const [selected, setSelected]   = useState(data.paymentMethods || ['cash']);
   const [configs, setConfigs]     = useState(data.paymentConfigs || {});
   const [expanded, setExpanded]   = useState(null);
+  const [copied, setCopied]       = useState(false);
   const [saving, setSaving]       = useState(false);
   const [error, setError]         = useState('');
 
   const toggle = (key) => {
-    if (key === 'cash') return; // always enabled
+    if (key === 'cash') return;
     setSelected((s) => s.includes(key) ? s.filter((k) => k !== key) : [...s, key]);
+  };
+
+  const copyWebhookUrl = () => {
+    if (!razorpayWebhookUrl) return;
+    navigator.clipboard.writeText(razorpayWebhookUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
   };
 
   const setConfig = (gateway, field, value) =>
@@ -98,8 +115,21 @@ export default function PaymentsStep({ data, updateData, onNext, onBack }) {
                   )}
                   {pm.key === 'razorpay' && (
                     <>
-                      <input className="onb-input onb-input-sm" placeholder="Razorpay Key ID" value={configs.razorpay?.keyId || ''} onChange={(e) => setConfig('razorpay', 'keyId', e.target.value)} />
-                      <input className="onb-input onb-input-sm" type="password" placeholder="Razorpay Key Secret" value={configs.razorpay?.keySecret || ''} onChange={(e) => setConfig('razorpay', 'keySecret', e.target.value)} />
+                      <input className="onb-input onb-input-sm" placeholder="Key ID (rzp_live_…)" value={configs.razorpay?.keyId || ''} onChange={(e) => setConfig('razorpay', 'keyId', e.target.value)} />
+                      <input className="onb-input onb-input-sm" type="password" placeholder="Key Secret" value={configs.razorpay?.keySecret || ''} onChange={(e) => setConfig('razorpay', 'keySecret', e.target.value)} />
+                      <input className="onb-input onb-input-sm" type="password" placeholder="Webhook Secret (from Razorpay dashboard)" value={configs.razorpay?.webhookSecret || ''} onChange={(e) => setConfig('razorpay', 'webhookSecret', e.target.value)} />
+                      {razorpayWebhookUrl && (
+                        <div className="onb-webhook-url-box">
+                          <p className="onb-webhook-label">Register this URL in Razorpay → Settings → Webhooks:</p>
+                          <div className="onb-webhook-row">
+                            <code className="onb-webhook-url">{razorpayWebhookUrl}</code>
+                            <button type="button" className="btn btn-outline btn-xs" onClick={copyWebhookUrl}>
+                              {copied ? '✓ Copied' : 'Copy'}
+                            </button>
+                          </div>
+                          <p className="onb-webhook-hint">Enable the <strong>payment_link.paid</strong> event and paste the generated Webhook Secret above.</p>
+                        </div>
+                      )}
                     </>
                   )}
                 </div>

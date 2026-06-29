@@ -160,11 +160,26 @@ export const updateTaxSettings = async (businessId, body) => {
   return { business: formatBusiness(business) };
 };
 
+const encryptGatewaySecrets = (configs = {}) => {
+  const out = {};
+  for (const [gateway, cfg] of Object.entries(configs)) {
+    out[gateway] = { ...cfg };
+    // Encrypt any field whose key ends with "Secret" or "webhookSecret"
+    for (const [field, value] of Object.entries(cfg)) {
+      if ((field === 'keySecret' || field === 'webhookSecret' || field === 'clientSecret') && value) {
+        out[gateway][`${field}Enc`] = encrypt(value);
+        delete out[gateway][field];
+      }
+    }
+  }
+  return out;
+};
+
 export const updatePaymentSettings = async (businessId, body) => {
   const business = await getOwnedBusiness(businessId);
   mergeSettings(business, {
     paymentMethods: body.paymentMethods,
-    paymentConfigs: body.paymentConfigs ?? {},
+    paymentConfigs: encryptGatewaySecrets(body.paymentConfigs ?? {}),
   });
   await business.save();
   return { business: formatBusiness(business) };
