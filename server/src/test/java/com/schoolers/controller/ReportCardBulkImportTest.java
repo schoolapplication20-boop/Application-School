@@ -40,6 +40,7 @@ class ReportCardBulkImportTest {
     @Mock private com.schoolers.repository.TeacherRepository    teacherRepository;
     @Mock private com.schoolers.repository.ClassRoomRepository  classRoomRepository;
     @Mock private com.schoolers.repository.GradeScaleRepository gradeScaleRepository;
+    @Mock private com.schoolers.repository.ExamTypeRepository   examTypeRepository;
     @Mock private Authentication        auth;
 
     @InjectMocks private ReportCardController controller;
@@ -57,6 +58,11 @@ class ReportCardBulkImportTest {
         when(auth.getAuthorities()).thenReturn(java.util.Collections.emptyList());
         // gradeScaleRepository empty → controller falls back to DEFAULT_GRADE_SCALE
         when(gradeScaleRepository.findBySchoolIdOrderByMinPercentageDesc(anyLong())).thenReturn(List.of());
+        // examTypeRepository — find or create exam type (return existing to avoid save())
+        com.schoolers.model.ExamType stubExamType = com.schoolers.model.ExamType.builder()
+                .name("stub").schoolId(1L).marksPublished(false).build();
+        when(examTypeRepository.findByNameIgnoreCaseAndSchoolId(anyString(), anyLong()))
+                .thenReturn(Optional.of(stubExamType));
     }
 
     // ── Happy path ────────────────────────────────────────────────────────────

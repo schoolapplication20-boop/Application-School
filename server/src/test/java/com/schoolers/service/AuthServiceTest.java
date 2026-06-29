@@ -5,6 +5,7 @@ import com.schoolers.dto.LoginRequest;
 import com.schoolers.dto.LoginResponse;
 import com.schoolers.model.School;
 import com.schoolers.model.User;
+import com.schoolers.repository.SchoolDiaryConfigRepository;
 import com.schoolers.repository.SchoolRepository;
 import com.schoolers.repository.StudentRepository;
 import com.schoolers.repository.TeacherRepository;
@@ -41,14 +42,15 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
 
-    @Mock private UserRepository         userRepository;
-    @Mock private SchoolRepository       schoolRepository;
-    @Mock private StudentRepository      studentRepository;
-    @Mock private TeacherRepository      teacherRepository;
-    @Mock private JwtUtil                jwtUtil;
-    @Mock private PasswordEncoder        passwordEncoder;
-    @Mock private EmailService           emailService;
-    @Mock private TokenBlacklistService  tokenBlacklistService;
+    @Mock private UserRepository              userRepository;
+    @Mock private SchoolRepository            schoolRepository;
+    @Mock private SchoolDiaryConfigRepository schoolDiaryConfigRepository;
+    @Mock private StudentRepository           studentRepository;
+    @Mock private TeacherRepository           teacherRepository;
+    @Mock private JwtUtil                     jwtUtil;
+    @Mock private PasswordEncoder             passwordEncoder;
+    @Mock private EmailService                emailService;
+    @Mock private TokenBlacklistService       tokenBlacklistService;
 
     @InjectMocks
     private AuthService authService;
