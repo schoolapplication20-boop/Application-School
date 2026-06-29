@@ -5,6 +5,7 @@ import {
 import * as whatsappService from './whatsappService.js';
 import * as chatSessionService from './chatSessionService.js';
 import * as paymentService from './paymentService.js';
+import * as aiAgentService from './aiAgentService.js';
 import logger from '../utils/logger.js';
 import {
   SESSION_STATES, ORDER_STATUS, DELIVERY_TYPES, PAYMENT_METHODS, PAYMENT_STATUS, NOTIFICATION_TYPES,
@@ -601,6 +602,40 @@ export const handleIncomingMessage = async ({
       && session.sessionDataJson?.checkout?.awaiting === 'address'
     ) {
       return await handleAddressInput(business, config, customer, session, text);
+    }
+
+    // AI agent handles all free-text messages that didn't match a structured handler
+    if (text && aiAgentService.isConfigured()) {
+      const [categories, products] = await Promise.all([
+        Category.findAll({ where: { businessId: business.businessId, isActive: true }, order: [['displayOrder', 'ASC']] }),
+        Product.findAll({ where: { businessId: business.businessId, isAvailable: true } }),
+      ]);
+
+      const agentResult = await aiAgentService.runAiAgent({
+        business, categories, products, customer, session, userMessage: text,
+      });
+
+      if (agentResult.text || agentResult.action) {
+        // Persist updated cart + history
+        await saveSession(session, {
+          sessionDataJson: {
+            ...session.sessionDataJson,
+            cart: agentResult.cart ?? session.sessionDataJson?.cart ?? [],
+            aiHistory: agentResult.aiHistory ?? session.sessionDataJson?.aiHistory ?? [],
+          },
+        });
+
+        if (agentResult.text) {
+          await whatsappService.sendTextMessage(config, customer.whatsappNumber, agentResult.text);
+        }
+
+        // Checkout triggered via AI → hand off to existing checkout flow
+        if (agentResult.action === 'CHECKOUT') {
+          await handleCheckoutStart(business, config, customer, session);
+        }
+
+        return;
+      }
     }
 
     return await sendHelp(business, config, customer);
