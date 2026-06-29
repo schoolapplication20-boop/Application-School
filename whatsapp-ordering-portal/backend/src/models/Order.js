@@ -79,6 +79,18 @@ const Order = sequelize.define('Order', {
     field: 'payment_status',
     validate: { isIn: [Object.values(PAYMENT_STATUS)] },
   },
+  paymentLinkId: {
+    type: DataTypes.STRING(255),
+    field: 'payment_link_id',
+  },
+  paymentLinkUrl: {
+    type: DataTypes.STRING(500),
+    field: 'payment_link_url',
+  },
+  razorpayPaymentId: {
+    type: DataTypes.STRING(255),
+    field: 'razorpay_payment_id',
+  },
   notes: DataTypes.TEXT,
   completedAt: {
     type: DataTypes.DATE,

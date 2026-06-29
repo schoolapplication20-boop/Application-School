@@ -367,3 +367,8 @@ ALTER TABLE wa_businesses ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN 
 
 ALTER TABLE wa_products ADD COLUMN IF NOT EXISTS track_inventory BOOLEAN DEFAULT FALSE;
 ALTER TABLE wa_products ADD COLUMN IF NOT EXISTS low_stock_threshold INTEGER DEFAULT 5;
+
+ALTER TABLE wa_orders ADD COLUMN IF NOT EXISTS payment_link_id VARCHAR(255);
+ALTER TABLE wa_orders ADD COLUMN IF NOT EXISTS payment_link_url VARCHAR(500);
+ALTER TABLE wa_orders ADD COLUMN IF NOT EXISTS razorpay_payment_id VARCHAR(255);
+CREATE INDEX IF NOT EXISTS idx_wa_orders_payment_link_id ON wa_orders(payment_link_id) WHERE payment_link_id IS NOT NULL;

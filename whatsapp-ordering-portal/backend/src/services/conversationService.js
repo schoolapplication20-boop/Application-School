@@ -4,15 +4,17 @@ import {
 } from '../models/index.js';
 import * as whatsappService from './whatsappService.js';
 import * as chatSessionService from './chatSessionService.js';
+import * as paymentService from './paymentService.js';
 import logger from '../utils/logger.js';
 import {
   SESSION_STATES, ORDER_STATUS, DELIVERY_TYPES, PAYMENT_METHODS, PAYMENT_STATUS, NOTIFICATION_TYPES,
 } from '../utils/constants.js';
 
 const PAYMENT_LABELS = {
-  [PAYMENT_METHODS.CASH]: 'Cash',
+  [PAYMENT_METHODS.CASH]: 'Cash on delivery/pickup',
   [PAYMENT_METHODS.CARD]: 'Card on delivery/pickup',
-  [PAYMENT_METHODS.ONLINE]: 'Online payment',
+  [PAYMENT_METHODS.ONLINE]: 'Online payment (Razorpay)',
+  [PAYMENT_METHODS.RAZORPAY]: 'Online payment (Razorpay)',
   [PAYMENT_METHODS.UPI]: 'UPI',
 };
 
@@ -483,18 +485,50 @@ const handleConfirmOrder = async (business, config, customer, session) => {
     return newOrder;
   });
 
+  // Generate payment link for online payment methods
+  let paymentLinkUrl = null;
+  if (paymentService.isOnlinePayment(checkout.paymentMethod)) {
+    try {
+      const linkData = await paymentService.createPaymentLink(order, business, customer);
+      if (linkData) {
+        paymentLinkUrl = linkData.paymentLinkUrl;
+        await order.update({
+          paymentLinkId:  linkData.paymentLinkId,
+          paymentLinkUrl: linkData.paymentLinkUrl,
+        });
+        logger.info(`[conversationService] Payment link sent for order ${order.orderNumber}`);
+      }
+    } catch (err) {
+      logger.error(`[conversationService] Payment link creation failed for ${order.orderNumber}: ${err.message}`);
+    }
+  }
+
   const confirmationLines = [
-    '🎉 Order placed successfully!',
+    '🎉 *Order placed successfully!*',
     '',
     `Order #: ${order.orderNumber}`,
-    ...itemsData.map((item) => `${item.quantity}x ${item.productName} - ${formatMoney(item.totalPrice)}`),
+    ...itemsData.map((item) => `${item.quantity}x ${item.productName} — ${formatMoney(item.totalPrice)}`),
     '',
     `Subtotal: ${formatMoney(subtotal)}`,
     `Tax: ${formatMoney(taxAmount)}`,
     `*Total: ${formatMoney(totalAmount)}*`,
-    '',
-    `${business.businessName} has received your order and will confirm it shortly.`,
+    `Payment: ${PAYMENT_LABELS[checkout.paymentMethod] || checkout.paymentMethod}`,
   ];
+
+  if (paymentLinkUrl) {
+    confirmationLines.push(
+      '',
+      '💳 *Complete your payment to confirm your order:*',
+      paymentLinkUrl,
+      '',
+      '⚠️ Link expires in 24 hours. Your order will be prepared once payment is received.',
+    );
+  } else {
+    confirmationLines.push(
+      '',
+      `${business.businessName} has received your order and will confirm it shortly. 🙏`,
+    );
+  }
 
   await whatsappService.sendTextMessage(config, customer.whatsappNumber, confirmationLines.join('\n'));
   await chatSessionService.resetSession(session);

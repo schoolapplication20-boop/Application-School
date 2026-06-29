@@ -71,6 +71,8 @@ export const formatOrder = (order) => ({
   delivery_address: order.deliveryAddress,
   payment_method: order.paymentMethod,
   payment_status: order.paymentStatus,
+  payment_link_url: order.paymentLinkUrl,
+  razorpay_payment_id: order.razorpayPaymentId,
   notes: order.notes,
   completed_at: order.completedAt,
   created_at: order.createdAt,

@@ -45,6 +45,7 @@ export const PAYMENT_METHODS = {
   CARD: 'CARD',
   ONLINE: 'ONLINE',
   UPI: 'UPI',
+  RAZORPAY: 'RAZORPAY',
 };
 
 // Payment Status
