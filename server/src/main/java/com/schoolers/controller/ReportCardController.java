@@ -216,55 +216,108 @@ public class ReportCardController {
 
         List<Map<String, Object>> results = new java.util.ArrayList<>();
         int saved = 0;
+        // Cache students looked up during this import to avoid repeated DB queries
+        java.util.Map<String, com.schoolers.model.Student> studentCache = new java.util.LinkedHashMap<>();
+        // Attendance: admissionNumber.lower → [totalWorkingDays, presentDays, studentId]
+        java.util.Map<String, long[]> attendanceMap = new java.util.LinkedHashMap<>();
+
         for (Map<String, Object> row : rows) {
-            String admNum  = row.get("admissionNumber") != null ? row.get("admissionNumber").toString().trim() : null;
-            String subject = row.get("subject") != null ? row.get("subject").toString().trim() : null;
-            String marksS  = row.get("marks") != null ? row.get("marks").toString().trim() : null;
-            String maxS    = row.get("maxMarks") != null ? row.get("maxMarks").toString().trim() : null;
+            String admNum    = row.get("admissionNumber") != null ? row.get("admissionNumber").toString().trim() : null;
+            String subject   = row.get("subject")   != null ? row.get("subject").toString().trim()   : null;
+            String marksS    = row.get("marks")     != null ? row.get("marks").toString().trim()     : null;
+            String maxS      = row.get("maxMarks")  != null ? row.get("maxMarks").toString().trim()  : null;
+            String marksType = row.get("marksType") != null ? row.get("marksType").toString().trim() : "NORMAL";
 
             Map<String, Object> res = new LinkedHashMap<>();
-            res.put("admissionNumber", admNum);
-            res.put("subject", subject);
+            res.put("admissionNumber", admNum); res.put("subject", subject);
 
             if (admNum == null || admNum.isBlank() || subject == null || subject.isBlank() || marksS == null || maxS == null) {
                 res.put("status", "error"); res.put("message", "Missing required fields"); results.add(res); continue;
             }
-            List<com.schoolers.model.Student> found = studentRepository.findAllByAdmissionNumberIgnoreCase(admNum);
-            found = found.stream().filter(s -> schoolId.equals(s.getSchoolId())).collect(Collectors.toList());
-            if (found.isEmpty()) { res.put("status", "error"); res.put("message", "Student not found"); results.add(res); continue; }
-            com.schoolers.model.Student student = found.get(0);
 
-            // Enforce class-teacher scope: student must be in the teacher's assigned class
+            // Student lookup with per-import cache
+            com.schoolers.model.Student student = studentCache.get(admNum.toLowerCase());
+            if (student == null) {
+                List<com.schoolers.model.Student> found = studentRepository.findAllByAdmissionNumberIgnoreCase(admNum);
+                found = found.stream().filter(s -> schoolId.equals(s.getSchoolId())).collect(Collectors.toList());
+                if (found.isEmpty()) { res.put("status", "error"); res.put("message", "Student not found"); results.add(res); continue; }
+                student = found.get(0);
+                studentCache.put(admNum.toLowerCase(), student);
+            }
+
+            // Enforce class-teacher scope
             if (allowedClassName != null) {
                 boolean classMatch = allowedClassName.equalsIgnoreCase(student.getClassName());
                 boolean sectionMatch = allowedSection == null || allowedSection.isBlank()
                         || allowedSection.equalsIgnoreCase(student.getSection() != null ? student.getSection() : "");
                 if (!classMatch || !sectionMatch) {
                     String allowed = allowedClassName + (allowedSection != null && !allowedSection.isBlank() ? " - " + allowedSection : "");
-                    res.put("status", "error");
-                    res.put("message", "Student not in your class (" + allowed + ")");
+                    res.put("status", "error"); res.put("message", "Student not in your class (" + allowed + ")");
                     results.add(res); continue;
                 }
             }
 
             double marksVal, maxVal;
             try { marksVal = Double.parseDouble(marksS); maxVal = Double.parseDouble(maxS); }
-            catch (NumberFormatException e) { res.put("status", "error"); res.put("message", "Invalid marks/maxMarks — must be numbers"); results.add(res); continue; }
-            if (marksVal < 0 || maxVal <= 0) { res.put("status", "error"); res.put("message", "maxMarks must be > 0 and marks must be ≥ 0"); results.add(res); continue; }
+            catch (NumberFormatException e) { res.put("status", "error"); res.put("message", "Invalid marks/maxMarks"); results.add(res); continue; }
+            if (marksVal < 0 || maxVal <= 0) { res.put("status", "error"); res.put("message", "maxMarks must be > 0 and marks ≥ 0"); results.add(res); continue; }
             if (marksVal > maxVal) { res.put("status", "error"); res.put("message", "marks (" + marksVal + ") cannot exceed maxMarks (" + maxVal + ")"); results.add(res); continue; }
 
             double pctVal = (marksVal / maxVal) * 100;
-            String grade = computeGrade(pctVal, gradeScales);
+            String grade  = computeGrade(pctVal, gradeScales);
 
-            com.schoolers.model.Marks m = com.schoolers.model.Marks.builder()
+            com.schoolers.model.Marks.MarksBuilder mb = com.schoolers.model.Marks.builder()
                 .studentId(student.getId()).studentName(student.getName())
                 .subject(subject).examType(examType != null ? examType : "General")
                 .marks((int) marksVal).maxMarks((int) maxVal).grade(grade)
-                .teacherId(teacherId).schoolId(schoolId).examDate(examDate).build();
-            marksRepository.save(m);
+                .teacherId(teacherId).schoolId(schoolId).examDate(examDate)
+                .marksType(marksType);
+
+            // Internal + External components (ignored for NORMAL type)
+            if ("INTERNAL_EXTERNAL".equals(marksType)) {
+                try {
+                    String iMx = row.get("internalMaxMarks")      != null ? row.get("internalMaxMarks").toString().trim()      : null;
+                    String iOb = row.get("internalMarksObtained") != null ? row.get("internalMarksObtained").toString().trim() : null;
+                    String eMx = row.get("externalMaxMarks")      != null ? row.get("externalMaxMarks").toString().trim()      : null;
+                    String eOb = row.get("externalMarksObtained") != null ? row.get("externalMarksObtained").toString().trim() : null;
+                    if (iMx != null && !iMx.isBlank()) mb.internalMaxMarks(Integer.parseInt(iMx));
+                    if (iOb != null && !iOb.isBlank()) mb.internalMarksObtained(Integer.parseInt(iOb));
+                    if (eMx != null && !eMx.isBlank()) mb.externalMaxMarks(Integer.parseInt(eMx));
+                    if (eOb != null && !eOb.isBlank()) mb.externalMarksObtained(Integer.parseInt(eOb));
+                } catch (NumberFormatException ignored) {}
+            }
+
+            marksRepository.save(mb.build());
             saved++;
             res.put("status", "ok"); res.put("studentName", student.getName()); results.add(res);
+
+            // Collect attendance (per-student, last value in file wins)
+            String wdStr = row.get("totalWorkingDays") != null ? row.get("totalWorkingDays").toString().trim() : "";
+            String pdStr = row.get("presentDays")      != null ? row.get("presentDays").toString().trim()      : "";
+            if (!wdStr.isBlank()) {
+                try {
+                    int wd = Integer.parseInt(wdStr);
+                    int pd = pdStr.isBlank() ? 0 : Integer.parseInt(pdStr);
+                    if (wd > 0) attendanceMap.put(admNum.toLowerCase(), new long[]{wd, Math.min(pd, wd), student.getId()});
+                } catch (NumberFormatException ignored) {}
+            }
         }
+
+        // Persist attendance records in a single pass after all marks are saved
+        if (!attendanceMap.isEmpty() && examType != null) {
+            for (long[] att : attendanceMap.values()) {
+                com.schoolers.model.Student stu = studentCache.values().stream()
+                        .filter(s -> s.getId() == att[2]).findFirst().orElse(null);
+                if (stu == null) continue;
+                try {
+                    rcaRepository.upsert(schoolId,
+                            stu.getClassName() != null ? stu.getClassName() : "",
+                            stu.getSection()   != null ? stu.getSection()   : "",
+                            examType, "", att[2], (int) att[0], (int) att[1]);
+                } catch (Exception ignored) {}
+            }
+        }
+
         Map<String, Object> resp = new LinkedHashMap<>();
         resp.put("saved", saved); resp.put("total", rows.size()); resp.put("results", results);
         return ResponseEntity.ok(ApiResponse.success(resp));
