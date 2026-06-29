@@ -21,6 +21,36 @@ export const updateBusinessHours = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, data: result, message: 'Business hours updated' });
 });
 
+export const updateDeliverySettings = asyncHandler(async (req, res) => {
+  const result = await businessService.updateDeliverySettings(req.user.businessId, req.body);
+  res.status(200).json({ success: true, data: result, message: 'Delivery settings updated' });
+});
+
+export const updateTaxSettings = asyncHandler(async (req, res) => {
+  const result = await businessService.updateTaxSettings(req.user.businessId, req.body);
+  res.status(200).json({ success: true, data: result, message: 'Tax settings updated' });
+});
+
+export const updatePaymentSettings = asyncHandler(async (req, res) => {
+  const result = await businessService.updatePaymentSettings(req.user.businessId, req.body);
+  res.status(200).json({ success: true, data: result, message: 'Payment settings updated' });
+});
+
+export const updateLogoUrl = asyncHandler(async (req, res) => {
+  const result = await businessService.updateLogoUrl(req.user.businessId, req.body.logoUrl);
+  res.status(200).json({ success: true, data: result, message: 'Logo updated' });
+});
+
+export const updateThemeSettings = asyncHandler(async (req, res) => {
+  const result = await businessService.updateThemeSettings(req.user.businessId, req.body);
+  res.status(200).json({ success: true, data: result, message: 'Theme updated' });
+});
+
+export const completeOnboarding = asyncHandler(async (req, res) => {
+  const result = await businessService.completeOnboarding(req.user.businessId);
+  res.status(200).json({ success: true, data: result, message: 'Onboarding completed' });
+});
+
 export const getWhatsappConfig = asyncHandler(async (req, res) => {
   const result = await businessService.getWhatsappConfig(req.user.businessId);
   res.status(200).json({ success: true, data: result, message: 'WhatsApp configuration retrieved' });
@@ -41,6 +71,12 @@ export default {
   getBusiness,
   updateBusiness,
   updateBusinessHours,
+  updateDeliverySettings,
+  updateTaxSettings,
+  updatePaymentSettings,
+  updateLogoUrl,
+  updateThemeSettings,
+  completeOnboarding,
   getWhatsappConfig,
   setupWhatsappConfig,
   updateWhatsappConfig,

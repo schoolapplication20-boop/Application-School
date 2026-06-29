@@ -15,7 +15,7 @@ export const validationErrorHandler = (req, res, next) => {
       error: 'VALIDATION_ERROR',
       message: 'Request validation failed',
       details: errors.array().map((err) => ({
-        field: err.param,
+        field: err.path || err.param,
         message: err.msg,
       })),
     });
@@ -39,9 +39,8 @@ export const validators = {
     .withMessage('Password must contain uppercase, lowercase, number, and special character'),
 
   otp: () => body('otp')
-    .isLength({ min: 6, max: 6 })
-    .isNumeric()
-    .withMessage('OTP must be 6 digits'),
+    .matches(/^\d{6}$/)
+    .withMessage('OTP must be exactly 6 digits'),
 
   otpPurpose: () => body('purpose')
     .optional()

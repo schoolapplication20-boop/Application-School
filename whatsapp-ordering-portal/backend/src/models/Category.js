@@ -34,6 +34,7 @@ const Category = sequelize.define('Category', {
   },
 }, {
   tableName: 'wa_categories',
+  paranoid: true,
 });
 
 export default Category;

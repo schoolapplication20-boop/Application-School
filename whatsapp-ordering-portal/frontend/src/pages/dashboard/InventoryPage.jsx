@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useToast } from '../../hooks/useToast';
 import api from '../../services/api';
 
 const STATUS_COLORS = {
@@ -8,20 +9,23 @@ const STATUS_COLORS = {
 };
 
 export default function InventoryPage() {
-  const [items, setItems]       = useState([]);
-  const [loading, setLoading]   = useState(true);
-  const [search, setSearch]     = useState('');
-  const [filter, setFilter]     = useState('all');
-  const [editing, setEditing]   = useState(null);  // { id, stock, lowStockThreshold }
-  const [saving, setSaving]     = useState(false);
-  const [toast, setToast]       = useState('');
+  const toast = useToast();
+  const [items, setItems]     = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState('');
+  const [search, setSearch]   = useState('');
+  const [filter, setFilter]   = useState('all');
+  const [editing, setEditing] = useState(null);
+  const [saving, setSaving]   = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setError('');
     try {
       const res = await api.get('/products', { params: { limit: 200 } });
       setItems(res.data.data?.products || []);
     } catch {
+      setError('Failed to load inventory. Please refresh.');
       setItems([]);
     } finally {
       setLoading(false);
@@ -31,39 +35,41 @@ export default function InventoryPage() {
   useEffect(() => { load(); }, [load]);
 
   const stockStatus = (item) => {
-    if (!item.trackInventory) return null;
-    if (item.stockQuantity <= 0)                                  return 'out_of_stock';
-    if (item.stockQuantity <= (item.lowStockThreshold || 5))     return 'low_stock';
+    if (!item.track_inventory) return null;
+    if (item.stock_quantity <= 0)                                      return 'out_of_stock';
+    if (item.stock_quantity <= (item.low_stock_threshold || 5))       return 'low_stock';
     return 'in_stock';
   };
 
   const filtered = items.filter((it) => {
-    const matchSearch = it.name?.toLowerCase().includes(search.toLowerCase());
+    const matchSearch = it.product_name?.toLowerCase().includes(search.toLowerCase());
     if (!matchSearch) return false;
     if (filter === 'all') return true;
     return stockStatus(it) === filter;
   });
 
-  const startEdit = (item) =>
-    setEditing({ id: item.productId, stock: item.stockQuantity ?? 0, threshold: item.lowStockThreshold ?? 5 });
+  const startEdit = (item) => setEditing({
+    id: item.product_id,
+    stock: item.stock_quantity ?? 0,
+    threshold: item.low_stock_threshold ?? 5,
+  });
 
   const saveEdit = async () => {
     if (!editing) return;
     setSaving(true);
     try {
-      await api.patch(`/products/${editing.id}/inventory`, {
-        stockQuantity:    parseInt(editing.stock, 10),
-        lowStockThreshold: parseInt(editing.threshold, 10),
-        trackInventory:   true,
+      await api.put(`/products/${editing.id}`, {
+        stock_quantity:     parseInt(editing.stock, 10),
+        low_stock_threshold: parseInt(editing.threshold, 10),
+        track_inventory:    true,
       });
-      setToast('Inventory updated');
+      toast.success('Inventory updated');
       setEditing(null);
       load();
     } catch {
-      setToast('Failed to update');
+      toast.error('Failed to update inventory');
     } finally {
       setSaving(false);
-      setTimeout(() => setToast(''), 3000);
     }
   };
 
@@ -76,8 +82,6 @@ export default function InventoryPage() {
 
   return (
     <div className="page-shell">
-      {toast && <div className="toast toast-success">{toast}</div>}
-
       <div className="page-header">
         <div>
           <h1 className="page-title">Inventory</h1>
@@ -86,13 +90,12 @@ export default function InventoryPage() {
         <button className="btn btn-primary" onClick={load}>↻ Refresh</button>
       </div>
 
-      {/* Summary cards */}
       <div className="inventory-summary">
         {[
-          { key: 'all',          label: 'Total Products', icon: '📋', color: 'blue'    },
-          { key: 'in_stock',     label: 'In Stock',       icon: '✅', color: 'green'   },
-          { key: 'low_stock',    label: 'Low Stock',      icon: '⚠️', color: 'yellow'  },
-          { key: 'out_of_stock', label: 'Out of Stock',   icon: '❌', color: 'red'     },
+          { key: 'all',          label: 'Total Products', icon: '📋', color: 'blue'   },
+          { key: 'in_stock',     label: 'In Stock',       icon: '✅', color: 'green'  },
+          { key: 'low_stock',    label: 'Low Stock',      icon: '⚠️', color: 'yellow' },
+          { key: 'out_of_stock', label: 'Out of Stock',   icon: '❌', color: 'red'    },
         ].map((s) => (
           <button
             key={s.key}
@@ -108,7 +111,6 @@ export default function InventoryPage() {
         ))}
       </div>
 
-      {/* Search */}
       <div className="table-toolbar">
         <input
           className="input search-input"
@@ -120,6 +122,8 @@ export default function InventoryPage() {
 
       {loading ? (
         <div className="page-loader">Loading inventory…</div>
+      ) : error ? (
+        <div className="form-banner form-banner-error">{error}</div>
       ) : (
         <div className="table-wrap">
           <table className="table">
@@ -140,17 +144,20 @@ export default function InventoryPage() {
               ) : filtered.map((item) => {
                 const status = stockStatus(item);
                 const st     = STATUS_COLORS[status];
-                const isEdit = editing?.id === item.productId;
+                const isEdit = editing?.id === item.product_id;
 
                 return (
-                  <tr key={item.productId} className={status === 'out_of_stock' ? 'row-danger' : status === 'low_stock' ? 'row-warning' : ''}>
+                  <tr
+                    key={item.product_id}
+                    className={status === 'out_of_stock' ? 'row-danger' : status === 'low_stock' ? 'row-warning' : ''}
+                  >
                     <td>
                       <div className="product-cell">
-                        {item.imageUrl && <img src={item.imageUrl} alt="" className="product-thumb" />}
-                        <span className="product-name">{item.name}</span>
+                        {item.image_url && <img src={item.image_url} alt="" className="product-thumb" />}
+                        <span className="product-name">{item.product_name}</span>
                       </div>
                     </td>
-                    <td><span className="badge badge-neutral">{item.category?.name || '—'}</span></td>
+                    <td><span className="badge badge-neutral">{item.category?.category_name || '—'}</span></td>
                     <td>₹{parseFloat(item.price).toFixed(2)}</td>
                     <td>
                       {isEdit ? (
@@ -161,8 +168,8 @@ export default function InventoryPage() {
                           style={{ width: 80 }}
                         />
                       ) : (
-                        <span className={item.trackInventory ? '' : 'text-muted'}>
-                          {item.trackInventory ? item.stockQuantity ?? 0 : '∞'}
+                        <span className={item.track_inventory ? '' : 'text-muted'}>
+                          {item.track_inventory ? (item.stock_quantity ?? 0) : '∞'}
                         </span>
                       )}
                     </td>
@@ -175,7 +182,7 @@ export default function InventoryPage() {
                           style={{ width: 80 }}
                         />
                       ) : (
-                        <span className="text-muted">{item.lowStockThreshold ?? 5}</span>
+                        <span className="text-muted">{item.low_stock_threshold ?? 5}</span>
                       )}
                     </td>
                     <td>

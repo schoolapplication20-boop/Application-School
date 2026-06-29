@@ -14,13 +14,25 @@ const ORDER_ACTIONS = {
     allowedFrom: [ORDER_STATUS.PENDING],
     newStatus: ORDER_STATUS.CANCELED,
   },
+  prepare: {
+    allowedFrom: [ORDER_STATUS.ACCEPTED],
+    newStatus: ORDER_STATUS.PREPARING,
+  },
+  ready: {
+    allowedFrom: [ORDER_STATUS.PREPARING],
+    newStatus: ORDER_STATUS.READY,
+  },
+  deliver: {
+    allowedFrom: [ORDER_STATUS.READY],
+    newStatus: ORDER_STATUS.DELIVERED,
+  },
   complete: {
     allowedFrom: [ORDER_STATUS.ACCEPTED, ORDER_STATUS.PREPARING, ORDER_STATUS.READY, ORDER_STATUS.DELIVERED],
     newStatus: ORDER_STATUS.COMPLETED,
     setCompletedAt: true,
   },
   cancel: {
-    allowedFrom: [ORDER_STATUS.PENDING, ORDER_STATUS.ACCEPTED, ORDER_STATUS.PREPARING, ORDER_STATUS.READY, ORDER_STATUS.DELIVERED],
+    allowedFrom: [ORDER_STATUS.PENDING, ORDER_STATUS.ACCEPTED, ORDER_STATUS.PREPARING, ORDER_STATUS.READY],
     newStatus: ORDER_STATUS.CANCELED,
   },
 };

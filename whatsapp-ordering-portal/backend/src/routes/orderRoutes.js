@@ -62,4 +62,25 @@ router.post(
   orderController.cancelOrder,
 );
 
+router.post(
+  '/:orderId/prepare',
+  [param('orderId').isUUID().withMessage('Invalid order ID')],
+  validationErrorHandler,
+  orderController.prepareOrder,
+);
+
+router.post(
+  '/:orderId/ready',
+  [param('orderId').isUUID().withMessage('Invalid order ID')],
+  validationErrorHandler,
+  orderController.markOrderReady,
+);
+
+router.post(
+  '/:orderId/deliver',
+  [param('orderId').isUUID().withMessage('Invalid order ID')],
+  validationErrorHandler,
+  orderController.deliverOrder,
+);
+
 export default router;

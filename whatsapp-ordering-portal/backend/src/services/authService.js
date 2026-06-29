@@ -1,5 +1,5 @@
 import {
-  User, OtpToken, EmailVerificationToken, Session,
+  User, OtpToken, EmailVerificationToken, Session, Business,
 } from '../models/index.js';
 import { ApiError } from '../middleware/errorHandler.js';
 import {
@@ -22,6 +22,11 @@ export const formatUser = (user) => ({
 });
 
 const issueOtp = async (user, purpose) => {
+  await OtpToken.update(
+    { isUsed: true, usedAt: new Date() },
+    { where: { userId: user.userId, purpose, isUsed: false } },
+  );
+
   const otp = generateOTP(6);
   await OtpToken.create({
     userId: user.userId,
@@ -96,12 +101,11 @@ export const login = async ({ email, password }) => {
 
 export const sendOtp = async ({ email, purpose = OTP_PURPOSE.LOGIN }) => {
   const user = await User.findOne({ where: { email } });
-  if (!user) {
-    throw new ApiError(HTTP_STATUS.NOT_FOUND, ERROR_CODES.USER_NOT_FOUND, 'No account found for this email');
+  if (user) {
+    await issueOtp(user, purpose);
+  } else {
+    logger.warn(`[authService] OTP requested for unknown email (suppressed)`);
   }
-
-  await issueOtp(user, purpose);
-
   return { otp_sent: true, otp_delivery_method: 'email' };
 };
 
@@ -151,7 +155,10 @@ export const verifyOtpAndLogin = async ({ email, otp }, meta) => {
 
   await consumeOtp(user, otp, OTP_PURPOSE.LOGIN);
 
-  const accessToken = generateAccessToken(user.userId, user.email, null);
+  const business = await Business.findOne({ where: { userId: user.userId } });
+  const businessId = business?.businessId || null;
+
+  const accessToken = generateAccessToken(user.userId, user.email, businessId);
   const refreshToken = generateRefreshToken(user.userId);
   await createSession(user, refreshToken, meta);
 

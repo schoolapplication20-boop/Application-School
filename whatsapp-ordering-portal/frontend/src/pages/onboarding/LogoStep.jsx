@@ -24,17 +24,13 @@ export default function LogoStep({ data, updateData, onNext, onBack }) {
     setSaving(true);
     setError('');
     try {
-      if (file) {
-        const form = new FormData();
-        form.append('logo', file);
-        const res = await api.post('/businesses/logo', form, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
-        updateData({ logoUrl: res.data.data?.logoUrl });
+      if (preview && file) {
+        await api.patch('/businesses/logo-url', { logoUrl: preview });
+        updateData({ logoUrl: preview });
       }
       onNext();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to upload logo');
+      setError(err.response?.data?.message || 'Failed to save logo');
     } finally {
       setSaving(false);
     }

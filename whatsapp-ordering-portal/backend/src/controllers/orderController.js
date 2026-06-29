@@ -31,11 +31,29 @@ export const cancelOrder = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, data: result, message: 'Order canceled' });
 });
 
+export const prepareOrder = asyncHandler(async (req, res) => {
+  const result = await orderService.updateOrderStatus(req.user.businessId, req.params.orderId, 'prepare');
+  res.status(200).json({ success: true, data: result, message: 'Order marked as preparing' });
+});
+
+export const markOrderReady = asyncHandler(async (req, res) => {
+  const result = await orderService.updateOrderStatus(req.user.businessId, req.params.orderId, 'ready');
+  res.status(200).json({ success: true, data: result, message: 'Order marked as ready' });
+});
+
+export const deliverOrder = asyncHandler(async (req, res) => {
+  const result = await orderService.updateOrderStatus(req.user.businessId, req.params.orderId, 'deliver');
+  res.status(200).json({ success: true, data: result, message: 'Order marked as delivered' });
+});
+
 export default {
   listOrders,
   getOrder,
   acceptOrder,
   rejectOrder,
+  prepareOrder,
+  markOrderReady,
+  deliverOrder,
   completeOrder,
   cancelOrder,
 };

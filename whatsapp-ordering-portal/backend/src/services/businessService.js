@@ -17,6 +17,8 @@ export const formatBusiness = (business) => ({
   whatsapp_number: business.whatsappNumber,
   website_url: business.websiteUrl,
   business_hours_json: business.businessHoursJson,
+  settings_json: business.settingsJson,
+  onboarding_completed: business.onboardingCompleted,
   is_active: business.isActive,
   subscription_status: business.subscriptionStatus,
   subscription_tier: business.subscriptionTier,
@@ -64,7 +66,7 @@ export const createBusiness = async (user, body) => {
   if (existing) {
     const accessToken = generateAccessToken(user.userId, user.email, existing.businessId);
     const refreshToken = generateRefreshToken(user.userId);
-    await Session.create({ userId: user.userId, token: hashOTP(refreshToken) });
+    await Session.upsert({ userId: user.userId, token: hashOTP(refreshToken) });
     return { business: formatBusiness(existing), access_token: accessToken, refresh_token: refreshToken };
   }
 
@@ -115,12 +117,80 @@ export const updateBusiness = async (businessId, body) => {
   return { business: formatBusiness(business) };
 };
 
-export const updateBusinessHours = async (businessId, businessHours) => {
+const getOwnedBusiness = async (businessId) => {
   const business = await Business.findByPk(businessId);
   if (!business) {
     throw new ApiError(HTTP_STATUS.NOT_FOUND, ERROR_CODES.NOT_FOUND, 'Business not found');
   }
+  return business;
+};
+
+const mergeSettings = (business, patch) => {
+  business.settingsJson = { ...(business.settingsJson || {}), ...patch };
+};
+
+export const updateBusinessHours = async (businessId, businessHours) => {
+  const business = await getOwnedBusiness(businessId);
   business.businessHoursJson = businessHours;
+  await business.save();
+  return { business: formatBusiness(business) };
+};
+
+export const updateDeliverySettings = async (businessId, body) => {
+  const business = await getOwnedBusiness(businessId);
+  mergeSettings(business, {
+    deliveryOptions:   body.deliveryOptions,
+    deliveryFee:       body.deliveryFee,
+    minOrderAmount:    body.minOrderAmount,
+    freeDeliveryAbove: body.freeDeliveryAbove ?? null,
+  });
+  await business.save();
+  return { business: formatBusiness(business) };
+};
+
+export const updateTaxSettings = async (businessId, body) => {
+  const business = await getOwnedBusiness(businessId);
+  mergeSettings(business, {
+    taxEnabled:   body.taxEnabled,
+    taxName:      body.taxName ?? null,
+    taxRate:      body.taxRate,
+    taxInclusive: body.taxInclusive,
+  });
+  await business.save();
+  return { business: formatBusiness(business) };
+};
+
+export const updatePaymentSettings = async (businessId, body) => {
+  const business = await getOwnedBusiness(businessId);
+  mergeSettings(business, {
+    paymentMethods: body.paymentMethods,
+    paymentConfigs: body.paymentConfigs ?? {},
+  });
+  await business.save();
+  return { business: formatBusiness(business) };
+};
+
+export const updateLogoUrl = async (businessId, logoUrl) => {
+  const business = await getOwnedBusiness(businessId);
+  business.logoUrl = logoUrl;
+  await business.save();
+  return { business: formatBusiness(business) };
+};
+
+export const updateThemeSettings = async (businessId, body) => {
+  const business = await getOwnedBusiness(businessId);
+  mergeSettings(business, {
+    theme:          body.theme,
+    primaryColor:   body.primaryColor,
+    secondaryColor: body.secondaryColor,
+  });
+  await business.save();
+  return { business: formatBusiness(business) };
+};
+
+export const completeOnboarding = async (businessId) => {
+  const business = await getOwnedBusiness(businessId);
+  business.onboardingCompleted = true;
   await business.save();
   return { business: formatBusiness(business) };
 };
@@ -177,6 +247,12 @@ export default {
   getBusiness,
   updateBusiness,
   updateBusinessHours,
+  updateDeliverySettings,
+  updateTaxSettings,
+  updatePaymentSettings,
+  updateLogoUrl,
+  updateThemeSettings,
+  completeOnboarding,
   getWhatsappConfig,
   setupWhatsappConfig,
   updateWhatsappConfig,

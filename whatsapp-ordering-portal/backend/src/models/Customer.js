@@ -55,6 +55,7 @@ const Customer = sequelize.define('Customer', {
   },
 }, {
   tableName: 'wa_customers',
+  paranoid: true,
   indexes: [
     { unique: true, fields: ['business_id', 'whatsapp_number'] },
   ],

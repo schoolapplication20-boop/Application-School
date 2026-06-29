@@ -39,7 +39,18 @@ const Product = sequelize.define('Product', {
   },
   stockQuantity: {
     type: DataTypes.INTEGER,
+    defaultValue: 0,
     field: 'stock_quantity',
+  },
+  trackInventory: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    field: 'track_inventory',
+  },
+  lowStockThreshold: {
+    type: DataTypes.INTEGER,
+    defaultValue: 5,
+    field: 'low_stock_threshold',
   },
   taxPercentage: {
     type: DataTypes.DECIMAL(5, 2),

@@ -75,20 +75,15 @@ sequelize.addHook('afterConnect', async (connection) => {
 
 /** Test connectivity and optionally sync models in dev */
 export const initializeDatabase = async () => {
-  try {
-    await sequelize.authenticate();
-    console.log('✓ Database connection established');
+  await sequelize.authenticate();
+  console.log('✓ Database connection established');
 
-    if (isDevelopment && !isTest) {
-      await sequelize.sync({ alter: false });
-      console.log('✓ Database models synchronised');
-    }
-
-    return sequelize;
-  } catch (error) {
-    console.warn('⚠ Database connection warning:', error.message);
-    return sequelize;
+  if (isDevelopment && !isTest) {
+    await sequelize.sync({ alter: false });
+    console.log('✓ Database models synchronised');
   }
+
+  return sequelize;
 };
 
 export const closeDatabase = async () => {

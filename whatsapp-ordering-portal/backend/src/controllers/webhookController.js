@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { Business, WhatsappConfig, AuditLog } from '../models/index.js';
 import { decrypt } from '../utils/crypto.js';
 import * as whatsappService from '../services/whatsappService.js';
@@ -5,6 +6,39 @@ import * as chatSessionService from '../services/chatSessionService.js';
 import * as conversationService from '../services/conversationService.js';
 import logger from '../utils/logger.js';
 import { AUDIT_ACTIONS, AUDIT_STATUS } from '../utils/constants.js';
+
+/**
+ * Middleware: verify Meta's X-Hub-Signature-256 HMAC before processing webhooks.
+ * If WHATSAPP_APP_SECRET is not set the check is skipped (logs a warning).
+ */
+export const verifyHmac = (req, res, next) => {
+  const appSecret = process.env.WHATSAPP_APP_SECRET;
+  if (!appSecret) {
+    logger.warn('WHATSAPP_APP_SECRET not set — skipping webhook HMAC verification');
+    return next();
+  }
+
+  const signature = req.headers['x-hub-signature-256'];
+  if (!signature) {
+    return res.status(403).json({ success: false, message: 'Missing signature' });
+  }
+
+  const rawBody = req.rawBody;
+  if (!rawBody) {
+    return res.status(400).json({ success: false, message: 'Raw body unavailable' });
+  }
+
+  const expected = `sha256=${crypto.createHmac('sha256', appSecret).update(rawBody).digest('hex')}`;
+  const received = Buffer.from(signature);
+  const expectedBuf = Buffer.from(expected);
+
+  if (received.length !== expectedBuf.length || !crypto.timingSafeEqual(received, expectedBuf)) {
+    logger.warn('Webhook HMAC verification failed');
+    return res.status(403).json({ success: false, message: 'Invalid signature' });
+  }
+
+  return next();
+};
 
 const buildConfig = (whatsappConfig) => ({
   phoneNumberId: whatsappConfig.phoneNumberId,

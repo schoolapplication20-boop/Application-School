@@ -32,6 +32,8 @@ export const formatProduct = (product) => ({
   image_url: product.imageUrl,
   is_available: product.isAvailable,
   stock_quantity: product.stockQuantity,
+  track_inventory: product.trackInventory,
+  low_stock_threshold: product.lowStockThreshold,
   tax_percentage: product.taxPercentage,
   preparation_time_minutes: product.preparationTimeMinutes,
   tags: product.tags,
@@ -160,6 +162,8 @@ export const updateProduct = async (businessId, productId, body) => {
   if (body.image_url !== undefined) product.imageUrl = body.image_url;
   if (body.is_available !== undefined) product.isAvailable = body.is_available;
   if (body.stock_quantity !== undefined) product.stockQuantity = body.stock_quantity;
+  if (body.track_inventory !== undefined) product.trackInventory = body.track_inventory;
+  if (body.low_stock_threshold !== undefined) product.lowStockThreshold = body.low_stock_threshold;
   if (body.tax_percentage !== undefined) product.taxPercentage = body.tax_percentage;
   if (body.preparation_time_minutes !== undefined) product.preparationTimeMinutes = body.preparation_time_minutes;
   if (body.tags !== undefined) product.tags = body.tags;

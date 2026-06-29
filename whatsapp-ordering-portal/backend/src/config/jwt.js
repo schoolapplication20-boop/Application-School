@@ -57,9 +57,13 @@ export const generateRefreshToken = (userId) => {
  */
 export const verifyAccessToken = (token) => {
   try {
-    return jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
+    const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
+    if (decoded.type !== 'access') {
+      throw new Error('Invalid token type');
+    }
+    return decoded;
   } catch (error) {
-    throw new Error(`Invalid access token: ${error.message}`);
+    throw error;
   }
 };
 

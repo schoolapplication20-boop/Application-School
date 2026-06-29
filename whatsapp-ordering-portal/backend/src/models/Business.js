@@ -52,6 +52,16 @@ const Business = sequelize.define('Business', {
     type: DataTypes.JSONB,
     field: 'business_hours_json',
   },
+  settingsJson: {
+    type: DataTypes.JSONB,
+    defaultValue: {},
+    field: 'settings_json',
+  },
+  onboardingCompleted: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    field: 'onboarding_completed',
+  },
   isActive: {
     type: DataTypes.BOOLEAN,
     defaultValue: true,

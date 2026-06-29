@@ -19,12 +19,12 @@ export const initializeRedis = async () => {
     } : {
       socket: {
         host: process.env.REDIS_HOST || 'localhost',
-        port: process.env.REDIS_PORT || 6379,
+        port: parseInt(process.env.REDIS_PORT, 10) || 6379,
         connectTimeout: 5000,
         reconnectStrategy,
       },
       password: process.env.REDIS_PASSWORD || undefined,
-      db: process.env.REDIS_DB || 1,
+      database: parseInt(process.env.REDIS_DB, 10) || 1,
     };
 
     const client = createClient(clientOptions);

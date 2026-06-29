@@ -50,9 +50,12 @@ app.use(corsErrorHandler);
 // Logging
 app.use(morgan('combined', { stream: { write: (message) => logger.info(message) } }));
 
-// Body parsing
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ limit: '10mb', extended: true }));
+// Body parsing — capture raw body for webhook HMAC verification
+app.use(express.json({
+  limit: '100kb',
+  verify: (req, _res, buf) => { req.rawBody = buf; },
+}));
+app.use(express.urlencoded({ limit: '100kb', extended: false }));
 
 // Static files
 app.use(express.static(path.join(__dirname, '../public')));

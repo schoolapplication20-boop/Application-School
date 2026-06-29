@@ -59,6 +59,50 @@ router.patch(
   businessController.updateBusinessHours,
 );
 
+router.patch(
+  '/delivery',
+  authenticate,
+  requireBusiness,
+  businessController.updateDeliverySettings,
+);
+
+router.patch(
+  '/tax',
+  authenticate,
+  requireBusiness,
+  businessController.updateTaxSettings,
+);
+
+router.patch(
+  '/payments',
+  authenticate,
+  requireBusiness,
+  businessController.updatePaymentSettings,
+);
+
+router.patch(
+  '/logo-url',
+  authenticate,
+  requireBusiness,
+  [body('logoUrl').notEmpty().withMessage('logoUrl is required')],
+  validationErrorHandler,
+  businessController.updateLogoUrl,
+);
+
+router.patch(
+  '/theme',
+  authenticate,
+  requireBusiness,
+  businessController.updateThemeSettings,
+);
+
+router.patch(
+  '/onboarding-complete',
+  authenticate,
+  requireBusiness,
+  businessController.completeOnboarding,
+);
+
 router.get(
   '/:businessId',
   authenticate,

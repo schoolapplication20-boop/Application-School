@@ -1,15 +1,14 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import PropTypes from 'prop-types';
 import { useBusiness } from '../../hooks/useBusiness';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
 import * as businessService from '../../services/businessService';
-import { isRequired, isValidUrl } from '../../utils/validators';
+import { isValidUrl } from '../../utils/validators';
 import { getErrorMessage } from '../../utils/errors';
 
-const WhatsappSetupStep = () => {
+const WhatsappSetupStep = ({ onNext, onBack }) => {
   const { refreshWhatsappConfig } = useBusiness();
-  const navigate = useNavigate();
 
   const [form, setForm] = useState({
     phoneNumberId: '',
@@ -29,14 +28,12 @@ const WhatsappSetupStep = () => {
 
   const validate = () => {
     const nextErrors = {};
-    if (!isRequired(form.phoneNumberId)) nextErrors.phoneNumberId = 'Phone number ID is required';
-    if (!isRequired(form.accessToken)) nextErrors.accessToken = 'Access token is required';
+    if (!form.phoneNumberId.trim()) nextErrors.phoneNumberId = 'Phone number ID is required';
+    if (!form.accessToken.trim()) nextErrors.accessToken = 'Access token is required';
     if (form.webhookUrl && !isValidUrl(form.webhookUrl)) nextErrors.webhookUrl = 'Enter a valid URL';
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   };
-
-  const goToDashboard = () => navigate('/dashboard', { replace: true });
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -53,7 +50,7 @@ const WhatsappSetupStep = () => {
         webhook_verify_token: form.webhookVerifyToken || undefined,
       });
       await refreshWhatsappConfig();
-      goToDashboard();
+      onNext();
     } catch (error) {
       setFormError(getErrorMessage(error, 'Unable to save WhatsApp settings. Please try again.'));
     } finally {
@@ -117,10 +114,16 @@ const WhatsappSetupStep = () => {
         <Button type="submit" block loading={loading}>Save and continue</Button>
       </form>
       <div className="auth-footer">
-        <Button variant="ghost" size="sm" onClick={goToDashboard}>Skip for now</Button>
+        <Button variant="ghost" size="sm" onClick={onBack} disabled={loading}>← Back</Button>
+        <Button variant="ghost" size="sm" onClick={onNext} disabled={loading}>Skip for now</Button>
       </div>
     </>
   );
+};
+
+WhatsappSetupStep.propTypes = {
+  onNext: PropTypes.func.isRequired,
+  onBack: PropTypes.func.isRequired,
 };
 
 export default WhatsappSetupStep;

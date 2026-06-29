@@ -42,12 +42,8 @@ export const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => {
-    // Use email as key for auth endpoints to prevent email enumeration attacks
-    return req.body?.email || req.ip;
-  },
-  skip: (req) => {
-    // Skip for non-auth endpoints
-    return !req.path.includes('/auth');
+    const email = req.body?.email || '';
+    return `${email}:${req.ip}`;
   },
 });
 

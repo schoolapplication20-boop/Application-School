@@ -360,3 +360,10 @@ CREATE INDEX IF NOT EXISTS idx_wa_message_templates_template_type ON whatsapp_po
 -- Grant permissions (if using separate user)
 -- GRANT ALL PRIVILEGES ON SCHEMA whatsapp_portal TO whatsapp_user;
 -- GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA whatsapp_portal TO whatsapp_user;
+
+-- ── Column additions (idempotent via IF NOT EXISTS) ───────────────────────────
+ALTER TABLE wa_businesses ADD COLUMN IF NOT EXISTS settings_json JSONB DEFAULT '{}';
+ALTER TABLE wa_businesses ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN DEFAULT FALSE;
+
+ALTER TABLE wa_products ADD COLUMN IF NOT EXISTS track_inventory BOOLEAN DEFAULT FALSE;
+ALTER TABLE wa_products ADD COLUMN IF NOT EXISTS low_stock_threshold INTEGER DEFAULT 5;

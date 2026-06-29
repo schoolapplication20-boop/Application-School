@@ -7,99 +7,57 @@ dotenv.config();
 const { ENCRYPTION_KEY } = process.env;
 
 if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length < 32) {
-  console.warn('⚠ ENCRYPTION_KEY is not set or too short. Encryption features may not work properly.');
+  throw new Error('ENCRYPTION_KEY must be set and at least 32 characters long');
 }
 
-/**
- * Hash password using bcrypt
- */
+const deriveKey = () => crypto.createHash('sha256').update(String(ENCRYPTION_KEY)).digest();
+
 export const hashPassword = async (password) => {
-  try {
-    const salt = await bcrypt.genSalt(12);
-    return bcrypt.hash(password, salt);
-  } catch (error) {
-    throw new Error(`Password hashing failed: ${error.message}`);
-  }
+  const salt = await bcrypt.genSalt(12);
+  return bcrypt.hash(password, salt);
 };
 
-/**
- * Verify password against hash
- */
-export const verifyPassword = async (password, hash) => {
-  try {
-    return bcrypt.compare(password, hash);
-  } catch (error) {
-    throw new Error(`Password verification failed: ${error.message}`);
-  }
-};
+export const verifyPassword = async (password, hash) => bcrypt.compare(password, hash);
 
-/**
- * Hash OTP (for storing in database)
- */
-export const hashOTP = (otp) => {
-  return crypto.createHash('sha256').update(otp).digest('hex');
-};
+export const hashOTP = (otp) => crypto.createHash('sha256').update(String(otp)).digest('hex');
 
-/**
- * Verify OTP hash
- */
 export const verifyOTPHash = (otp, hash) => {
-  return crypto.createHash('sha256').update(otp).digest('hex') === hash;
+  const computed = Buffer.from(hashOTP(otp), 'hex');
+  const stored   = Buffer.from(hash, 'hex');
+  if (computed.length !== stored.length) return false;
+  return crypto.timingSafeEqual(computed, stored);
 };
 
-/**
- * Generate random token
- */
-export const generateToken = (length = 32) => {
-  return crypto.randomBytes(length).toString('hex');
-};
+export const generateToken = (length = 32) => crypto.randomBytes(length).toString('hex');
 
-/**
- * Generate OTP
- */
-export const generateOTP = (length = 6) => {
-  let otp = '';
-  for (let i = 0; i < length; i += 1) {
-    otp += Math.floor(Math.random() * 10);
-  }
-  return otp;
-};
+export const generateOTP = (length = 6) =>
+  Array.from({ length }, () => crypto.randomInt(0, 10)).join('');
 
-/**
- * Encrypt sensitive data
- */
 export const encrypt = (data) => {
-  try {
-    const iv = crypto.randomBytes(16);
-    const key = crypto.createHash('sha256').update(String(ENCRYPTION_KEY)).digest();
-    const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
+  const iv  = crypto.randomBytes(12);
+  const key = deriveKey();
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
 
-    let encrypted = cipher.update(data, 'utf8', 'hex');
-    encrypted += cipher.final('hex');
+  const encrypted = Buffer.concat([cipher.update(data, 'utf8'), cipher.final()]);
+  const authTag   = cipher.getAuthTag();
 
-    return `${iv.toString('hex')}:${encrypted}`;
-  } catch (error) {
-    throw new Error(`Encryption failed: ${error.message}`);
-  }
+  return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted.toString('hex')}`;
 };
 
-/**
- * Decrypt sensitive data
- */
 export const decrypt = (encryptedData) => {
-  try {
-    const [ivHex, encrypted] = encryptedData.split(':');
-    const iv = Buffer.from(ivHex, 'hex');
-    const key = crypto.createHash('sha256').update(String(ENCRYPTION_KEY)).digest();
-    const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
+  const parts = encryptedData.split(':');
+  if (parts.length !== 3) throw new Error('Invalid encrypted data format');
 
-    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
-    decrypted += decipher.final('utf8');
+  const [ivHex, authTagHex, encryptedHex] = parts;
+  const iv        = Buffer.from(ivHex, 'hex');
+  const authTag   = Buffer.from(authTagHex, 'hex');
+  const encrypted = Buffer.from(encryptedHex, 'hex');
+  const key       = deriveKey();
 
-    return decrypted;
-  } catch (error) {
-    throw new Error(`Decryption failed: ${error.message}`);
-  }
+  const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+  decipher.setAuthTag(authTag);
+
+  return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString('utf8');
 };
 
 export default {
