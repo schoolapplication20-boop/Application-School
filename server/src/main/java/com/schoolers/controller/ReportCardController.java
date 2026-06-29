@@ -23,6 +23,7 @@ public class ReportCardController {
     @Autowired private AttendanceRepository attendanceRepository;
     @Autowired private SchoolRepository     schoolRepository;
     @Autowired private ReportCardAttendanceRepository rcaRepository;
+    @Autowired private com.schoolers.repository.ExamTypeRepository   examTypeRepository;
     @Autowired private com.schoolers.repository.TeacherRepository    teacherRepository;
     @Autowired private com.schoolers.repository.ClassRoomRepository  classRoomRepository;
     @Autowired private com.schoolers.repository.GradeScaleRepository gradeScaleRepository;
@@ -202,17 +203,39 @@ public class ReportCardController {
 
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> rows = (List<Map<String, Object>>) body.get("rows");
-        String examType = body.get("examType") != null ? body.get("examType").toString() : null;
+        String examType = body.get("examType") != null ? body.get("examType").toString().trim() : null;
+        // Fall back to exam type embedded in first CSV row (new template format includes it)
+        if ((examType == null || examType.isBlank()) && rows != null && !rows.isEmpty()) {
+            Object et = rows.get(0).get("examType");
+            if (et != null && !et.toString().isBlank()) examType = et.toString().trim();
+        }
         String examDateStr = body.get("examDate") != null ? body.get("examDate").toString() : null;
         if (rows == null || rows.isEmpty()) return ResponseEntity.badRequest().body(ApiResponse.error("No rows provided"));
+        if (examType == null || examType.isBlank()) return ResponseEntity.badRequest().body(ApiResponse.error("Exam type is required"));
 
         java.time.LocalDate examDate = null;
         try { if (examDateStr != null) examDate = java.time.LocalDate.parse(examDateStr); } catch (Exception ignored) {}
+
+        // Auto-create the exam type if it doesn't already exist for this school.
+        // This lets teachers import results for a new exam (e.g. FA-2) without first
+        // manually creating it in Exam Types settings.
+        final String finalExamType = examType;
+        examTypeRepository.findByNameIgnoreCaseAndSchoolId(finalExamType, schoolId)
+                .orElseGet(() -> examTypeRepository.save(
+                        com.schoolers.model.ExamType.builder()
+                                .name(finalExamType).schoolId(schoolId).marksPublished(false).build()));
 
         // Load the school's configured grade scale; fall back to the default if none configured.
         List<com.schoolers.model.GradeScale> gradeScales =
                 gradeScaleRepository.findBySchoolIdOrderByMinPercentageDesc(schoolId);
         if (gradeScales.isEmpty()) gradeScales = DEFAULT_GRADE_SCALE;
+
+        // Resolve the actual schools.id PK for attendance storage.
+        // users.school_id may be the display number (e.g. 2) while
+        // report_card_attendance.school_id is the FK to schools.id (e.g. 22).
+        // Saving with the display number produces a row that buildReportCard() cannot find
+        // because it queries by resolved PK — resulting in 0 attendance on the report card.
+        Long resolvedSchoolPk = currentUserUtil.resolveSchoolPk(schoolId);
 
         List<Map<String, Object>> results = new java.util.ArrayList<>();
         int saved = 0;
@@ -303,17 +326,18 @@ public class ReportCardController {
             }
         }
 
-        // Persist attendance records in a single pass after all marks are saved
-        if (!attendanceMap.isEmpty() && examType != null) {
+        // Persist attendance records using the RESOLVED school PK so buildReportCard()
+        // can find them via findByStudentIdAndSchoolId(studentId, resolvedPk).
+        if (!attendanceMap.isEmpty()) {
             for (long[] att : attendanceMap.values()) {
                 com.schoolers.model.Student stu = studentCache.values().stream()
-                        .filter(s -> s.getId() == att[2]).findFirst().orElse(null);
+                        .filter(s -> s.getId().equals(att[2])).findFirst().orElse(null);
                 if (stu == null) continue;
                 try {
-                    rcaRepository.upsert(schoolId,
+                    rcaRepository.upsert(resolvedSchoolPk,
                             stu.getClassName() != null ? stu.getClassName() : "",
                             stu.getSection()   != null ? stu.getSection()   : "",
-                            examType, "", att[2], (int) att[0], (int) att[1]);
+                            finalExamType, "", att[2], (int) att[0], (int) att[1]);
                 } catch (Exception ignored) {}
             }
         }

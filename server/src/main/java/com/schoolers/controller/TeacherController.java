@@ -65,6 +65,9 @@ public class TeacherController {
     private ReportCardAttendanceRepository rcaRepository;
 
     @Autowired
+    private com.schoolers.security.CurrentUserUtil currentUserUtil;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @Autowired
@@ -501,9 +504,12 @@ public class TeacherController {
             return ResponseEntity.badRequest().body(ApiResponse.error("No valid student rows to save"));
 
         try {
+            // Resolve display school_id → actual schools.id PK so the attendance row
+            // matches what buildReportCard() queries (it always uses the resolved PK).
+            Long resolvedSchoolPk = currentUserUtil.resolveSchoolPk(schoolId);
             String studentJson = new com.fasterxml.jackson.databind.ObjectMapper()
                     .writeValueAsString(validStudents);
-            rcaRepository.batchUpsert(schoolId, className, section, examType, academicYear,
+            rcaRepository.batchUpsert(resolvedSchoolPk, className, section, examType, academicYear,
                     totalWorkingDays, studentJson);
         } catch (Exception e) {
             return ResponseEntity.status(500)

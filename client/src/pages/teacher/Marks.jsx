@@ -272,43 +272,58 @@ ADM002,Mathematics,92,100`;
         const legacyMaxIdx   = normIdx['maxmarks']  ?? normIdx['maxmarks'] ?? -1;
 
         // Detect new-format subject columns via suffix matching.
-        // Process suffixes longest-first so "internal max marks" is preferred over "max marks".
+        // Process suffixes longest-first so "internal max marks" wins over "max marks".
+        // Each entry carries `orig`: the human-readable suffix string (with spaces) so we
+        // can slice the subject name from the ORIGINAL header using the original suffix length
+        // instead of the normalized length — which caused "Mathematics In" instead of "Mathematics".
         const SUFFIXES = [
-          { s: 'internalmaxmarks',   field: 'intMaxIdx',  isIE: true  },
-          { s: 'externalmaxmarks',   field: 'extMaxIdx',  isIE: true  },
-          { s: 'totalmaxmarks',      field: 'totMaxIdx',  isIE: true  },
-          { s: 'maxmarks',           field: 'maxIdx',     isIE: false },
-          { s: 'internalmarks',      field: 'intIdx',     isIE: true  },
-          { s: 'externalmarks',      field: 'extIdx',     isIE: true  },
-          { s: 'totalmarks',         field: 'totIdx',     isIE: true  },
-          { s: 'marks',              field: 'marksIdx',   isIE: false },
+          { s: 'internalmaxmarks', orig: 'Internal Max Marks', field: 'intMaxIdx',  isIE: true  },
+          { s: 'externalmaxmarks', orig: 'External Max Marks', field: 'extMaxIdx',  isIE: true  },
+          { s: 'totalmaxmarks',    orig: 'Total Max Marks',    field: 'totMaxIdx',  isIE: true  },
+          { s: 'maxmarks',         orig: 'Max Marks',          field: 'maxIdx',     isIE: false },
+          { s: 'internalmarks',    orig: 'Internal Marks',     field: 'intIdx',     isIE: true  },
+          { s: 'externalmarks',    orig: 'External Marks',     field: 'extIdx',     isIE: true  },
+          { s: 'totalmarks',       orig: 'Total Marks',        field: 'totIdx',     isIE: true  },
+          { s: 'marks',            orig: 'Marks',              field: 'marksIdx',   isIE: false },
         ];
         // subjects: { normalizedName → { name, isIE, intMaxIdx, intIdx, extMaxIdx, extIdx, totMaxIdx, totIdx, maxIdx, marksIdx } }
         const subjects = {};
 
         rawHeaders.forEach((h, idx) => {
           const hn = normalize(h);
-          for (const { s, field, isIE } of SUFFIXES) {
+          for (const { s, orig, field, isIE } of SUFFIXES) {
             if (hn.endsWith(s) && hn.length > s.length) {
               const subNorm = hn.slice(0, hn.length - s.length);
               if (!subNorm) break;
               if (!subjects[subNorm]) {
-                // Recover proper-cased subject name from original header
-                const origSuffix = h.slice(h.length - s.length); // approximate
-                const origSub    = h.slice(0, h.trim().length - s.length).trim();
-                subjects[subNorm] = {
-                  name: origSub || (subNorm.charAt(0).toUpperCase() + subNorm.slice(1)),
-                  isIE: false,
-                };
+                // Extract proper-cased subject name using the ORIGINAL (spaced) suffix string.
+                // e.g. "Mathematics Internal Max Marks".lastIndexOf("Internal Max Marks") = 13
+                //      → slice(0, 13).trim() = "Mathematics"   ✓
+                // Wrong old approach: h.trim().length - s.length (normalized) = 30 - 16 = 14
+                //      → slice(0, 14).trim() = "Mathematics In"  ✗
+                const origH   = h.trim();
+                const sfxPos  = origH.toLowerCase().lastIndexOf(orig.toLowerCase());
+                const origSub = sfxPos >= 0
+                  ? origH.slice(0, sfxPos).trim()
+                  : subNorm.charAt(0).toUpperCase() + subNorm.slice(1);
+                subjects[subNorm] = { name: origSub, isIE: false };
               }
               if (isIE) subjects[subNorm].isIE = true;
               subjects[subNorm][field] = idx;
-              break; // longest match wins
+              break; // longest-match wins
             }
           }
         });
 
         const isNewFormat = Object.keys(subjects).length > 0;
+
+        // Auto-fill exam type from CSV if the column exists and the form is still empty
+        const etColIdx = normIdx['examtype'] ?? -1;
+        if (etColIdx >= 0 && lines.length > 1) {
+          const firstVals = lines[1].split(',').map(v => v.trim().replace(/^"(.*)"$/, '$1'));
+          const csvEt = etColIdx < firstVals.length ? firstVals[etColIdx] : '';
+          if (csvEt) setCsvExamType(csvEt);
+        }
 
         // ── Parse each data row ────────────────────────────────────────────────
         for (let i = 1; i < lines.length; i++) {
