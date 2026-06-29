@@ -51,6 +51,26 @@ export const completeOnboarding = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, data: result, message: 'Onboarding completed' });
 });
 
+export const getMyBusiness = asyncHandler(async (req, res) => {
+  const result = await businessService.getMyBusiness(req.user.userId);
+  res.status(200).json({ success: true, data: result, message: 'Business retrieved' });
+});
+
+export const listQrCodes = asyncHandler(async (req, res) => {
+  const result = await businessService.listQrCodes(req.user.businessId);
+  res.status(200).json({ success: true, data: result.qrCodes, message: 'QR codes retrieved' });
+});
+
+export const createQrCode = asyncHandler(async (req, res) => {
+  const result = await businessService.createQrCode(req.user.businessId, req.body);
+  res.status(201).json({ success: true, data: result, message: 'QR code saved' });
+});
+
+export const deleteQrCode = asyncHandler(async (req, res) => {
+  const result = await businessService.deleteQrCode(req.user.businessId, req.params.qrCodeId);
+  res.status(200).json({ success: true, data: result, message: 'QR code deleted' });
+});
+
 export const getWhatsappConfig = asyncHandler(async (req, res) => {
   const result = await businessService.getWhatsappConfig(req.user.businessId);
   res.status(200).json({ success: true, data: result, message: 'WhatsApp configuration retrieved' });

@@ -52,6 +52,39 @@ router.put(
   businessController.updateWhatsappConfig,
 );
 
+router.get(
+  '/me',
+  authenticate,
+  businessController.getMyBusiness,
+);
+
+router.get(
+  '/qr-codes',
+  authenticate,
+  requireBusiness,
+  businessController.listQrCodes,
+);
+
+router.post(
+  '/qr-codes',
+  authenticate,
+  requireBusiness,
+  [
+    body('label').trim().notEmpty().withMessage('label is required'),
+    body('type').isIn(['ordering', 'table', 'whatsapp']).withMessage('Invalid QR type'),
+    body('value').trim().notEmpty().withMessage('value is required'),
+  ],
+  validationErrorHandler,
+  businessController.createQrCode,
+);
+
+router.delete(
+  '/qr-codes/:qrCodeId',
+  authenticate,
+  requireBusiness,
+  businessController.deleteQrCode,
+);
+
 router.patch(
   '/hours',
   authenticate,

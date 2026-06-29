@@ -105,6 +105,52 @@ export const getBusiness = async (businessId) => {
   return { business: formatBusiness(business) };
 };
 
+export const getMyBusiness = async (userId) => {
+  const business = await Business.findOne({ where: { userId } });
+  if (!business) {
+    throw new ApiError(HTTP_STATUS.NOT_FOUND, ERROR_CODES.NOT_FOUND, 'No business found for this account');
+  }
+  return { business: formatBusiness(business) };
+};
+
+// ── QR Codes stored in settingsJson.qrCodes ───────────────────────────────────
+
+export const listQrCodes = async (businessId) => {
+  const business = await getOwnedBusiness(businessId);
+  const qrCodes = business.settingsJson?.qrCodes || [];
+  return { qrCodes };
+};
+
+export const createQrCode = async (businessId, body) => {
+  const { v4: uuidv4 } = await import('uuid');
+  const business = await getOwnedBusiness(businessId);
+  const qrCodes = [...(business.settingsJson?.qrCodes || [])];
+
+  const newCode = {
+    qrCodeId: uuidv4(),
+    label:     body.label,
+    type:      body.type,
+    value:     body.value,
+    tableName: body.tableName || null,
+    scanCount: 0,
+    createdAt: new Date().toISOString(),
+  };
+
+  qrCodes.unshift(newCode);
+  mergeSettings(business, { qrCodes });
+  await business.save();
+
+  return newCode;
+};
+
+export const deleteQrCode = async (businessId, qrCodeId) => {
+  const business = await getOwnedBusiness(businessId);
+  const qrCodes = (business.settingsJson?.qrCodes || []).filter((q) => q.qrCodeId !== qrCodeId);
+  mergeSettings(business, { qrCodes });
+  await business.save();
+  return { deleted: true };
+};
+
 export const updateBusiness = async (businessId, body) => {
   const business = await Business.findByPk(businessId);
   if (!business) {
