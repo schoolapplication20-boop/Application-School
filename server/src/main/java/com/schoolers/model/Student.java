@@ -115,6 +115,16 @@ public class Student {
     private Boolean isActive = true;
 
     /**
+     * Deletion approval workflow state: NONE | PENDING | REJECTED.
+     * Set to PENDING when an admin submits a deletion request, reset to NONE
+     * once a Super Admin approves (student is soft-deleted via isActive=false)
+     * or rejects (student remains active) the request.
+     */
+    @Builder.Default
+    @Column(name = "deletion_status", nullable = false, length = 20)
+    private String deletionStatus = "NONE";
+
+    /**
      * Multi-tenancy: which school this student belongs to.
      * Set on creation from the authenticated user's schoolId.
      */

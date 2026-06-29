@@ -119,6 +119,13 @@ export const adminAPI = {
   updateStudent: (id, data) => api.put(`/api/admin/students/${id}`, data),
   deleteStudent: (id) => api.delete(`/api/admin/students/${id}`),
   getStudentCredentials: (id) => api.get(`/api/admin/students/${id}/credentials`),
+
+  // Student deletion approval workflow
+  requestStudentDeletion:      (id, reason) => api.post(`/api/admin/students/${id}/deletion-requests`, { reason }),
+  listStudentDeletionRequests: ()           => api.get('/api/admin/student-deletion-requests'),
+  getStudentDeletionBadge:     ()           => api.get('/api/admin/student-deletion-requests/pending-count'),
+  approveStudentDeletion:      (id, data)   => api.post(`/api/admin/student-deletion-requests/${id}/approve`, data || {}),
+  rejectStudentDeletion:       (id, data)   => api.post(`/api/admin/student-deletion-requests/${id}/reject`,  data || {}),
   getPendingStudentCredentials: () => api.get('/api/admin/students/credentials/pending'),
   resetStudentPassword: (id) => api.post(`/api/admin/students/${id}/reset-password`),
   onboardStudent: (id, email) => api.post(`/api/admin/students/${id}/onboard`, { email }),

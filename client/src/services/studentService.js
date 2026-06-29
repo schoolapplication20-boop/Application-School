@@ -15,6 +15,7 @@ const normalizeStudent = (s) => ({
   admissionNumber:  s.admissionNumber  ?? s.admission_number ?? '',
   bloodGroup:       s.bloodGroup       ?? '',
   status:           s.status           ?? (s.studentUserId ? (s.isActive === false ? 'Inactive' : 'Active') : 'Inactive'),
+  deletionStatus:   s.deletionStatus   ?? 'NONE',
   studentUserId:    s.studentUserId    ?? null,
   photo:            s.photo            ?? s.photoUrl    ?? null,
   fatherName:       s.fatherName       ?? s.parentName  ?? '',
@@ -96,15 +97,15 @@ export const updateStudent = async (id, studentData) => {
   }
 };
 
-/** Delete a student by id */
-export const deleteStudent = async (id) => {
+/** Submit a deletion request for Super Admin approval (Admin); applies immediately for Super Admin. */
+export const requestStudentDeletion = async (id, reason) => {
   try {
-    await adminAPI.deleteStudent(id);
-    return true;
+    const res = await adminAPI.requestStudentDeletion(id, reason);
+    return { success: true, status: res.data?.data?.status, message: res.data?.message };
   } catch (err) {
-    console.error('[studentService] deleteStudent failed:', err?.response?.status, err?.message);
-    return false;
+    const msg = err.response?.data?.message || 'Failed to submit deletion request. Please try again.';
+    return { success: false, message: msg };
   }
 };
 
-export default { fetchStudents, createStudent, updateStudent, deleteStudent };
+export default { fetchStudents, createStudent, updateStudent, requestStudentDeletion };

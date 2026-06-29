@@ -354,7 +354,18 @@ export default function StudentsTable({
                 <td><span style={{ padding: '2px 10px', borderRadius: 20, fontSize: '11px', fontWeight: 700, background: '#3182ce20', color: '#2b6cb0' }}>{s.section || '—'}</span></td>
                 <td style={{ fontSize: '13px' }}>{s.fatherName || s.parent || '—'}</td>
                 <td style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{s.fatherPhone || s.mobile || '—'}</td>
-                <td><span className={`status-badge ${s.status === 'Active' ? 'status-present' : 'status-absent'}`}>{s.status}</span></td>
+                <td>
+                  <span className={`status-badge ${s.status === 'Active' ? 'status-present' : 'status-absent'}`}>{s.status}</span>
+                  {s.deletionStatus === 'PENDING' && (
+                    <span style={{
+                      display: 'inline-block', marginLeft: 6, padding: '2px 9px', borderRadius: 20,
+                      fontSize: 10, fontWeight: 700, background: '#fef3c7', color: '#92400e',
+                      border: '1px solid #fcd34d', whiteSpace: 'nowrap',
+                    }}>
+                      Deletion Pending
+                    </span>
+                  )}
+                </td>
                 <td>
                   <div className="action-btns">
                     <Button variant="view" onClick={() => onView(s)} />
@@ -372,7 +383,14 @@ export default function StudentsTable({
                         <span className="material-icons" style={{ fontSize: 16 }}>person_add</span>
                       </button>
                     )}
-                    <Button variant="delete" onClick={() => onDelete(s)} />
+                    {s.deletionStatus === 'PENDING' ? (
+                      <button className="action-btn" title="Deletion request awaiting Super Admin approval" disabled
+                        style={{ color: '#92400e', background: '#fef3c7', border: '1px solid #fcd34d', cursor: 'not-allowed', opacity: 0.7 }}>
+                        <span className="material-icons" style={{ fontSize: 16 }}>hourglass_top</span>
+                      </button>
+                    ) : (
+                      <Button variant="delete" onClick={() => onDelete(s)} />
+                    )}
                   </div>
                 </td>
               </tr>

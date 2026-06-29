@@ -168,7 +168,13 @@ public class AdminController {
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
+    /**
+     * Permanent hard-delete — bypasses the deletion-approval workflow entirely.
+     * Restricted to SUPER_ADMIN; ADMIN must go through
+     * POST /students/{id}/deletion-requests instead (see StudentDeletionController).
+     */
     @DeleteMapping("/students/{id}")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<String>> deleteStudent(@PathVariable Long id, Authentication auth) {
         ApiResponse<String> response = adminService.deleteStudent(id, getCurrentSchoolId(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();

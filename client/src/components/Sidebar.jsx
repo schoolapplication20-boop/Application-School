@@ -9,6 +9,7 @@ import '../styles/sidebar.css';
 const adminNavItems = [
   { path: '/admin/dashboard',          icon: 'dashboard',              label: 'Dashboard',          permKey: null },
   { path: '/admin/students',           icon: 'school',                  label: 'Students',           permKey: 'students' },
+  { path: '/admin/student-deletion-approvals', icon: 'person_remove',   label: 'Deletion Requests',  permKey: 'students', _deletionBadge: true },
   { path: '/admin/teachers',           icon: 'person',                  label: 'Teachers',           permKey: 'teachers' },
   { path: '/admin/applications',       icon: 'assignment_ind',          label: 'Applications',       permKey: 'applications' },
   { path: '/admin/classes',            icon: 'class',                   label: 'Classes',            permKey: 'classes' },
@@ -100,6 +101,24 @@ const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
     const fetch = () => {
       adminAPI.getFeeApprovalBadge()
         .then(r => { if (!cancelled) setFeeApprovalCount(r.data?.data?.pendingCount ?? 0); })
+        .catch(() => {});
+    };
+    fetch();
+    const interval = setInterval(fetch, 60000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [user?.role]);
+
+  // Live badge: Super Admin sees all school pending deletion requests; Admin sees own pending requests.
+  const [deletionApprovalCount, setDeletionApprovalCount] = useState(0);
+  useEffect(() => {
+    if (user?.role !== 'SUPER_ADMIN' && user?.role !== 'ADMIN') {
+      setDeletionApprovalCount(0);
+      return () => {};
+    }
+    let cancelled = false;
+    const fetch = () => {
+      adminAPI.getStudentDeletionBadge()
+        .then(r => { if (!cancelled) setDeletionApprovalCount(r.data?.data?.pendingCount ?? 0); })
         .catch(() => {});
     };
     fetch();
@@ -336,6 +355,11 @@ const Sidebar = ({ collapsed, onToggle, mobileOpen }) => {
                 {item._approvalBadge && feeApprovalCount > 0 && !collapsed && (
                   <span className="nav-badge" style={{ background: '#e53e3e', color: '#fff' }}>
                     {feeApprovalCount}
+                  </span>
+                )}
+                {item._deletionBadge && deletionApprovalCount > 0 && !collapsed && (
+                  <span className="nav-badge" style={{ background: '#e53e3e', color: '#fff' }}>
+                    {deletionApprovalCount}
                   </span>
                 )}
               </NavLink>

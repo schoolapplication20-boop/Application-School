@@ -4,11 +4,12 @@ import StudentExportModal from '../../components/StudentExportModal';
 import BulkImportModal from '../../components/BulkImportModal';
 import { sortClassNames } from '../../utils/classOrder';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/AuthContext';
 import {
   fetchStudents as apiFetchStudents,
   createStudent as apiCreateStudent,
   updateStudent as apiUpdateStudent,
-  deleteStudent as apiDeleteStudent,
+  requestStudentDeletion as apiRequestStudentDeletion,
 } from '../../services/studentService';
 import { adminAPI, onboardingVerifyAPI } from '../../services/api';
 import { EMPTY_FORM, PAGE_SIZE, phoneOnly } from './students/constants';
@@ -24,6 +25,8 @@ import OnboardStudentModal from './students/OnboardStudentModal';
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function Students() {
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
   const [students, setStudents]         = useState([]);
   const [totalElements, setTotalElements] = useState(0);
   const [totalPages, setTotalPages]     = useState(0);
@@ -57,6 +60,7 @@ export default function Students() {
   const [selectedIds, setSelectedIds]     = useState(new Set());
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
   const [bulkDeleting, setBulkDeleting]   = useState(false);
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
   const [showPromoteModal, setShowPromoteModal] = useState(false);
   const [promoteForm, setPromoteForm]     = useState({ fromClass: '', fromSection: '', toClass: '', toSection: '' });
   const [promoting, setPromoting]         = useState(false);
@@ -384,15 +388,22 @@ export default function Students() {
     }
   };
 
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    const ok = await apiDeleteStudent(deleteTarget.id);
+  const handleDelete = async (reason) => {
+    if (!deleteTarget || !reason?.trim()) return;
+    setDeleteSubmitting(true);
+    const result = await apiRequestStudentDeletion(deleteTarget.id, reason.trim());
+    setDeleteSubmitting(false);
     setDeleteTarget(null);
-    if (ok) {
-      showToast('Student removed successfully', 'warning');
+    if (result.success) {
+      showToast(
+        result.status === 'APPROVED'
+          ? 'Student deleted and login disabled'
+          : 'Deletion request submitted — awaiting Super Admin approval',
+        'warning'
+      );
       loadStudents();
     } else {
-      showToast('Failed to delete student', 'error');
+      showToast(result.message || 'Failed to submit deletion request', 'error');
     }
   };
 
@@ -411,15 +422,22 @@ export default function Students() {
     }
   };
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = async (reason) => {
+    if (!reason?.trim()) return;
     const ids = [...selectedIds];
     setBulkDeleting(true);
-    const results = await Promise.all(ids.map(id => apiDeleteStudent(id).catch(() => false)));
-    const ok = results.filter(Boolean).length;
+    const results = await Promise.all(ids.map(id => apiRequestStudentDeletion(id, reason.trim())));
+    const approved = results.filter(r => r.success && r.status === 'APPROVED').length;
+    const pending  = results.filter(r => r.success && r.status === 'PENDING').length;
+    const failed   = results.filter(r => !r.success).length;
     setBulkDeleting(false);
     setBulkDeleteConfirm(false);
     exitSelectionMode();
-    showToast(`${ok} student${ok !== 1 ? 's' : ''} deleted`, ok > 0 ? 'warning' : 'error');
+    const parts = [];
+    if (approved) parts.push(`${approved} deleted`);
+    if (pending)  parts.push(`${pending} submitted for approval`);
+    if (failed)   parts.push(`${failed} failed`);
+    showToast(parts.join(', ') || 'No students processed', failed > 0 && !approved && !pending ? 'error' : 'warning');
     setCurrentPage(0);
     loadStudents(0);
   };
@@ -583,7 +601,7 @@ export default function Students() {
 
       {/* Delete Confirm */}
       {deleteTarget && (
-        <DeleteStudentModal deleteTarget={deleteTarget} onCancel={() => setDeleteTarget(null)} onConfirm={handleDelete} />
+        <DeleteStudentModal deleteTarget={deleteTarget} submitting={deleteSubmitting} isSuperAdmin={isSuperAdmin} onCancel={() => setDeleteTarget(null)} onConfirm={handleDelete} />
       )}
 
       {/* ── View Existing Student Credentials Modal ─────────────────────── */}
@@ -602,7 +620,7 @@ export default function Students() {
 
       {/* Bulk Delete Confirm */}
       {bulkDeleteConfirm && (
-        <BulkDeleteModal selectedIds={selectedIds} bulkDeleting={bulkDeleting} onCancel={() => setBulkDeleteConfirm(false)} onConfirm={handleBulkDelete} />
+        <BulkDeleteModal selectedIds={selectedIds} bulkDeleting={bulkDeleting} isSuperAdmin={isSuperAdmin} onCancel={() => setBulkDeleteConfirm(false)} onConfirm={handleBulkDelete} />
       )}
 
       {/* Excel Export Modal */}
