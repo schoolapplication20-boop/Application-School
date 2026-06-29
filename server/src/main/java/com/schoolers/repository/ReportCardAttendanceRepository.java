@@ -22,9 +22,12 @@ public interface ReportCardAttendanceRepository extends JpaRepository<ReportCard
 
     Optional<ReportCardAttendance> findByStudentIdAndExamType(Long studentId, String examType);
 
-    // School-scoped variant — always prefer this over findByStudentId() to prevent
-    // cross-school data leakage in a multi-tenant system.
+    // School-scoped variant — always prefer this to prevent cross-school data leakage.
     List<ReportCardAttendance> findByStudentIdAndSchoolId(Long studentId, Long schoolId);
+
+    // Unscoped fallback — used only when the scoped query returns 0 rows, which indicates
+    // a school_id mismatch between the save path and the read path (display id vs PK).
+    List<ReportCardAttendance> findByStudentId(Long studentId);
 
     /** Upsert a single row — insert or update on the unique constraint. */
     @Modifying @Transactional

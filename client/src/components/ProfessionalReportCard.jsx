@@ -98,15 +98,29 @@ export default function ProfessionalReportCard({ data, gradeScale = [], examFilt
   const { student = {}, school = {}, marksByExam = {}, attendance = {},
           manualAttendanceByExam = {} } = data;
 
-  // Prefer manually-entered attendance (from Marks Bulk Entry) over the
-  // auto-computed daily attendance log.  Resolution order:
-  //  1. Manual entry for the currently-selected exam type (examFilter) — exact match only.
-  //  2. Auto-computed attendance from daily records (legacy fallback).
-  //
-  // NOTE: We intentionally do NOT fall back to Object.values(manualAttendanceByExam)[0]
-  // when the filter doesn't match, because that would show the wrong exam's attendance
-  // (e.g. Term 1 data on a Term 2 report card) which is worse than showing computed data.
-  const manualAtt = (examFilter && manualAttendanceByExam[examFilter]) || null;
+  // Prefer manually-entered attendance (from Marks Bulk Entry / CSV Import) over
+  // the auto-computed daily attendance log.  Resolution order:
+  //  1. Exact match on examFilter (e.g. "FA-2" === "FA-2")
+  //  2. Case-insensitive match  (e.g. "FA-2" matches "fa-2" or "Fa-2")
+  //  3. Single-entry fallback   (if only one exam has attendance, show it)
+  //  4. Daily-log fallback      (legacy — used when no manual data exists at all)
+  const manualAttByExam = manualAttendanceByExam || {};
+  const manualAtt = (() => {
+    if (!Object.keys(manualAttByExam).length) return null;
+    // 1. Exact match
+    if (examFilter && manualAttByExam[examFilter]) return manualAttByExam[examFilter];
+    // 2. Case-insensitive match (handles "FA-2" vs "fa-2" etc.)
+    if (examFilter) {
+      const key = Object.keys(manualAttByExam).find(
+        k => k.trim().toLowerCase() === examFilter.trim().toLowerCase()
+      );
+      if (key) return manualAttByExam[key];
+    }
+    // 3. If there is exactly one attendance record and no filter mismatch, use it
+    const vals = Object.values(manualAttByExam);
+    if (vals.length === 1) return vals[0];
+    return null;
+  })();
 
   const displayAtt = manualAtt
     ? {

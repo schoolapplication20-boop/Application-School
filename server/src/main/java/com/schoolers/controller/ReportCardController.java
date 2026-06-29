@@ -4,6 +4,8 @@ import com.schoolers.dto.ApiResponse;
 import com.schoolers.model.*;
 import com.schoolers.repository.*;
 import com.schoolers.security.CurrentUserUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -16,6 +18,8 @@ import java.util.stream.Collectors;
 
 @RestController
 public class ReportCardController {
+
+    private static final Logger log = LoggerFactory.getLogger(ReportCardController.class);
 
     @Autowired private CurrentUserUtil       currentUserUtil;
     @Autowired private StudentRepository    studentRepository;
@@ -326,20 +330,36 @@ public class ReportCardController {
             }
         }
 
-        // Persist attendance records using the RESOLVED school PK so buildReportCard()
-        // can find them via findByStudentIdAndSchoolId(studentId, resolvedPk).
+        // Persist attendance records using the RESOLVED school PK.
+        // We log both success and failure so silent swallowing never hides real issues.
         if (!attendanceMap.isEmpty()) {
+            log.info("[CSV-Import] Saving attendance for {} student(s), examType='{}', resolvedSchoolPk={}",
+                    attendanceMap.size(), finalExamType, resolvedSchoolPk);
             for (long[] att : attendanceMap.values()) {
+                long studentIdLong = att[2];
                 com.schoolers.model.Student stu = studentCache.values().stream()
-                        .filter(s -> s.getId().equals(att[2])).findFirst().orElse(null);
-                if (stu == null) continue;
+                        .filter(s -> s.getId() != null && s.getId() == studentIdLong)
+                        .findFirst().orElse(null);
+                if (stu == null) {
+                    log.warn("[CSV-Import] Could not find cached student for id={} — attendance skipped", studentIdLong);
+                    continue;
+                }
+                int wd = (int) att[0];
+                int pd = (int) att[1];
+                String className = stu.getClassName() != null ? stu.getClassName() : "";
+                String section   = stu.getSection()   != null ? stu.getSection()   : "";
+                log.debug("[CSV-Import] Upserting attendance: studentId={} class='{}' section='{}' wd={} pd={} school={}",
+                        studentIdLong, className, section, wd, pd, resolvedSchoolPk);
                 try {
-                    rcaRepository.upsert(resolvedSchoolPk,
-                            stu.getClassName() != null ? stu.getClassName() : "",
-                            stu.getSection()   != null ? stu.getSection()   : "",
-                            finalExamType, "", att[2], (int) att[0], (int) att[1]);
-                } catch (Exception ignored) {}
+                    rcaRepository.upsert(resolvedSchoolPk, className, section,
+                            finalExamType, "", studentIdLong, wd, pd);
+                    log.info("[CSV-Import] Attendance saved: studentId={} wd={} pd={}", studentIdLong, wd, pd);
+                } catch (Exception ex) {
+                    log.error("[CSV-Import] Failed to save attendance for studentId={}: {}", studentIdLong, ex.getMessage());
+                }
             }
+        } else {
+            log.warn("[CSV-Import] No attendance data found in CSV rows (totalWorkingDays column missing or empty)");
         }
 
         Map<String, Object> resp = new LinkedHashMap<>();
@@ -454,6 +474,8 @@ public class ReportCardController {
         // Use school-scoped query to prevent cross-school attendance leakage (multi-tenant safety).
         // resolveSchoolPk is not available here; use the school found from the student's schoolId
         // which is already validated to belong to the calling user's school by the route guards.
+        // Resolve student's school to the actual PK so the attendance query uses
+        // the same school_id that was used when saving (resolvedSchoolPk in the import path).
         Long rcaSchoolId = student.getSchoolId();
         Long rcaSchoolPk = null;
         if (rcaSchoolId != null) {
@@ -461,9 +483,26 @@ public class ReportCardController {
             rcaSchoolPk = byDisplay.isPresent() ? byDisplay.get().getId()
                     : schoolRepository.findById(rcaSchoolId).map(s -> s.getId()).orElse(rcaSchoolId);
         }
+        log.debug("[ReportCard] studentId={} rcaSchoolPk={} (from student.schoolId={})",
+                student.getId(), rcaSchoolPk, rcaSchoolId);
+
+        // Primary: scoped by (studentId, schoolPk)
         List<com.schoolers.model.ReportCardAttendance> rcaRows = rcaSchoolPk != null
                 ? rcaRepository.findByStudentIdAndSchoolId(student.getId(), rcaSchoolPk)
                 : java.util.Collections.emptyList();
+
+        // Fallback: if scoped query returned nothing, broaden to just studentId
+        // (handles the case where the save used a different school_id mapping)
+        if (rcaRows.isEmpty()) {
+            rcaRows = rcaRepository.findByStudentId(student.getId());
+            if (!rcaRows.isEmpty()) {
+                log.warn("[ReportCard] School-scoped attendance query returned 0 rows for studentId={} schoolPk={}; " +
+                         "fallback found {} row(s) — school_id mismatch between save and read paths",
+                         student.getId(), rcaSchoolPk, rcaRows.size());
+            }
+        }
+
+        log.info("[ReportCard] studentId={} attendance rows found={}", student.getId(), rcaRows.size());
         Map<String, Map<String, Object>> manualAttendanceByExam = new LinkedHashMap<>();
         for (com.schoolers.model.ReportCardAttendance rca : rcaRows) {
             Map<String, Object> att = new LinkedHashMap<>();
@@ -474,6 +513,8 @@ public class ReportCardController {
                     : 0.0;
             att.put("percentage", pctManual);
             manualAttendanceByExam.put(rca.getExamType(), att);
+            log.debug("[ReportCard] attendance for examType='{}': wd={} pd={}",
+                    rca.getExamType(), rca.getTotalWorkingDays(), rca.getPresentDays());
         }
         result.put("manualAttendanceByExam", manualAttendanceByExam);
 
