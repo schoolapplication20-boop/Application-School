@@ -62,7 +62,10 @@ const applyUpdatableFields = (instance, body, fieldMap) => {
 export const createBusiness = async (user, body) => {
   const existing = await Business.findOne({ where: { userId: user.userId } });
   if (existing) {
-    throw new ApiError(HTTP_STATUS.CONFLICT, ERROR_CODES.DUPLICATE_ENTRY, 'A business profile already exists for this account');
+    const accessToken = generateAccessToken(user.userId, user.email, existing.businessId);
+    const refreshToken = generateRefreshToken(user.userId);
+    await Session.create({ userId: user.userId, token: hashOTP(refreshToken) });
+    return { business: formatBusiness(existing), access_token: accessToken, refresh_token: refreshToken };
   }
 
   const business = await Business.create({

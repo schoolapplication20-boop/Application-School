@@ -82,7 +82,7 @@ const OnboardingFlow = () => {
 
         {/* Step content */}
         <div className="onboarding-content">
-          {step === 1 && <BusinessProfileStep data={formData} updateData={updateData} onNext={next} />}
+          {step === 1 && <BusinessProfileStep data={formData} updateData={updateData} onComplete={next} />}
           {step === 2 && <BusinessHoursStep   data={formData} updateData={updateData} onNext={next} onBack={back} />}
           {step === 3 && <WhatsappSetupStep   data={formData} updateData={updateData} onNext={next} onBack={back} />}
           {step === 4 && <DeliveryOptionsStep data={formData} updateData={updateData} onNext={next} onBack={back} />}
