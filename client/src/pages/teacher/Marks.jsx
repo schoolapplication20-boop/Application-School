@@ -928,13 +928,30 @@ ADM002,Mathematics,92,100`;
   };
 
   // ── Delete ────────────────────────────────────────────────────────────────────
-  const handleDelete = async (markId) => {
+  // deleteTarget = { markIds: number[], studentName: string, subject: string, isGroup: bool }
+  // null = no confirmation dialog open
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const openDeleteConfirm = (markIds, studentName, subject, isGroup = false) =>
+    setDeleteTarget({ markIds, studentName, subject, isGroup });
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    const { markIds } = deleteTarget;
+    setDeleteTarget(null);
+    setDeleting(true);
     try {
-      await teacherAPI.deleteMarks(markId);
-      setAllMarks(prev => prev.filter(m => m.id !== markId));
-      showToast('Record deleted', 'warning');
+      await Promise.all(markIds.map(id => teacherAPI.deleteMarks(id)));
+      setAllMarks(prev => prev.filter(m => !markIds.includes(m.id)));
+      showToast(
+        `${markIds.length} mark record${markIds.length !== 1 ? 's' : ''} deleted`,
+        'warning'
+      );
     } catch {
-      showToast('Failed to delete', 'error');
+      showToast('Failed to delete — please try again', 'error');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -1138,6 +1155,21 @@ ADM002,Mathematics,92,100`;
                                 {isExpanded ? 'visibility_off' : 'visibility'}
                               </span>
                             </button>
+                            {/* Delete All — one-click delete all subjects for this student (admin only) */}
+                            {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
+                              <button
+                                title="Delete all subject marks for this student"
+                                onClick={() => openDeleteConfirm(
+                                  group.rows.map(r => r.id),
+                                  group.studentName,
+                                  `all ${group.rows.length} subject${group.rows.length !== 1 ? 's' : ''}`,
+                                  true
+                                )}
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 8, border: 'none', background: '#fff5f5', cursor: 'pointer' }}
+                              >
+                                <span className="material-icons" style={{ fontSize: 16, color: '#e53e3e' }}>delete_sweep</span>
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -1177,7 +1209,8 @@ ADM002,Mathematics,92,100`;
                                   style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 8, border: 'none', background: '#eff6ff', cursor: 'pointer' }}>
                                   <span className="material-icons" style={{ fontSize: 16, color: '#2563eb' }}>edit</span>
                                 </button>
-                                <Button variant="delete" onClick={() => handleDelete(m.id)} />
+                                <Button variant="delete"
+                                  onClick={() => openDeleteConfirm([m.id], group.studentName, m.subject, false)} />
                               </div>
                             </td>
                           </tr>
@@ -1846,6 +1879,61 @@ ADM002,Mathematics,92,100`;
         </div>
         );
       })()}
+
+      {/* ── Delete Confirmation Dialog ─────────────────────────────────────────── */}
+      {deleteTarget && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999,
+        }} onClick={() => setDeleteTarget(null)}>
+          <div style={{
+            background: '#fff', borderRadius: 16, padding: '32px 28px', maxWidth: 420,
+            width: 'calc(100% - 40px)', boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ textAlign: 'center', marginBottom: 20 }}>
+              <div style={{
+                width: 56, height: 56, borderRadius: '50%',
+                background: 'linear-gradient(135deg,#e53e3e,#c53030)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                margin: '0 auto 14px',
+              }}>
+                <span className="material-icons" style={{ color: '#fff', fontSize: 28 }}>
+                  {deleteTarget.isGroup ? 'delete_sweep' : 'delete'}
+                </span>
+              </div>
+              <h3 style={{ fontSize: 18, fontWeight: 800, color: '#1a202c', marginBottom: 8 }}>
+                Confirm Delete
+              </h3>
+              <p style={{ fontSize: 14, color: '#4a5568', lineHeight: 1.6, marginBottom: 8 }}>
+                {deleteTarget.isGroup
+                  ? <>Delete <strong>{deleteTarget.subject}</strong> for <strong>{deleteTarget.studentName}</strong>?</>
+                  : <>Delete <strong>{deleteTarget.subject}</strong> marks for <strong>{deleteTarget.studentName}</strong>?</>
+                }
+              </p>
+              {user?.role === 'TEACHER' && (
+                <p style={{ fontSize: 12, color: '#718096', background: '#f7fafc', borderRadius: 8, padding: '8px 12px' }}>
+                  Only marks for subjects assigned to you will be deleted.
+                </p>
+              )}
+              {deleteTarget.isGroup && (user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
+                <p style={{ fontSize: 12, color: '#c53030', background: '#fff5f5', borderRadius: 8, padding: '8px 12px' }}>
+                  This will delete marks for {deleteTarget.subject}. This action cannot be undone.
+                </p>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setDeleteTarget(null)}
+                style={{ flex: 1, padding: '10px 0', border: '1.5px solid #e2e8f0', borderRadius: 9, background: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', color: '#4a5568' }}>
+                Cancel
+              </button>
+              <button onClick={confirmDelete} disabled={deleting}
+                style={{ flex: 1, padding: '10px 0', border: 'none', borderRadius: 9, background: deleting ? '#a0aec0' : 'linear-gradient(135deg,#e53e3e,#c53030)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: deleting ? 'not-allowed' : 'pointer' }}>
+                {deleting ? 'Deleting…' : 'Yes, Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }
