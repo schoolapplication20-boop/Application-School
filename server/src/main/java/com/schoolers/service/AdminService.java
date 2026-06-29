@@ -446,13 +446,16 @@ public class AdminService {
             // to the new student so their fee shows up immediately.
             syncClassFeeAssignment(saved);
 
-            // Step 3: Create user account when email was provided, OR when the
-            // bulk import flag createAccountWithoutEmail=true is set (admission-number
-            // based login with auto-generated @my-skoolz.com email).
+            // Step 3: Create the login account whenever we have an admission number to
+            // key it off of (manual add, bulk import, or explicit createAccountWithoutEmail
+            // flag) — every student needs to be able to log in immediately after creation.
             String studentEmail = str(body, "studentEmail", null);
             boolean forceCreate = Boolean.TRUE.equals(body.get("createAccountWithoutEmail"));
-            StudentUserResult studentUserResult = (hasEmail || forceCreate)
-                    ? createStudentUser(name, saved.getAdmissionNumber(), rollNumber, saved.getId(), studentEmail, schoolId)
+            String admissionNumber = saved.getAdmissionNumber();
+            boolean shouldCreateAccount = hasEmail || forceCreate
+                    || (admissionNumber != null && !admissionNumber.isBlank());
+            StudentUserResult studentUserResult = shouldCreateAccount
+                    ? createStudentUser(name, admissionNumber, rollNumber, saved.getId(), studentEmail, schoolId)
                     : null;
 
             // Step 4: Back-patch the student row with the user ID

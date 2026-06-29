@@ -77,10 +77,15 @@ export default function StudentFormModal({
                   {errors.rollNo && <div className="invalid-feedback">{errors.rollNo}</div>}
                 </div>
                 <div className="col-md-4">
-                  <label className="form-label fw-medium small">Admission Number</label>
-                  <input type="text" className="form-control form-control-sm"
+                  <label className="form-label fw-medium small">Admission Number {!editStudent && '*'}</label>
+                  <input type="text" className={`form-control form-control-sm ${errors.admissionNumber ? 'is-invalid' : ''}`}
                     placeholder="e.g., ADM2024001" value={formData.admissionNumber}
-                    onChange={set('admissionNumber')} />
+                    onChange={e => {
+                      set('admissionNumber')(e);
+                      if (errors.admissionNumber) setErrors(er => ({ ...er, admissionNumber: '' }));
+                    }} />
+                  {errors.admissionNumber && <div className="invalid-feedback">{errors.admissionNumber}</div>}
+                  {!editStudent && <small className="text-muted">Used as the student's login username</small>}
                 </div>
                 <div className="col-md-3">
                   <label className="form-label fw-medium small">Class *</label>

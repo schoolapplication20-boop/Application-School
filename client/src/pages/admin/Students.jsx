@@ -199,6 +199,8 @@ export default function Students() {
       if (rn < 1 || rn > capacityInfo.capacity)
         e.rollNo = `Roll number must be between 1 and ${capacityInfo.capacity}`;
     }
+    if (!editStudent && !formData.admissionNumber.trim())
+      e.admissionNumber = 'Admission number is required to generate login credentials';
     if (!formData.class.trim())           e.class       = 'Class is required';
     if (!formData.fatherName.trim())      e.fatherName  = "Father's name is required";
     if (!formData.motherName.trim())      e.motherName  = "Mother's name is required";
