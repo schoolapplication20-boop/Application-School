@@ -372,3 +372,10 @@ ALTER TABLE wa_orders ADD COLUMN IF NOT EXISTS payment_link_id VARCHAR(255);
 ALTER TABLE wa_orders ADD COLUMN IF NOT EXISTS payment_link_url VARCHAR(500);
 ALTER TABLE wa_orders ADD COLUMN IF NOT EXISTS razorpay_payment_id VARCHAR(255);
 CREATE INDEX IF NOT EXISTS idx_wa_orders_payment_link_id ON wa_orders(payment_link_id) WHERE payment_link_id IS NOT NULL;
+
+-- The Category and Customer Sequelize models are paranoid (soft-delete), which
+-- requires a deleted_at column. It was missing from both tables' original
+-- CREATE TABLE statements above, causing every insert/query to fail with a
+-- generic 500 ("column deleted_at does not exist").
+ALTER TABLE wa_categories ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP;
+ALTER TABLE wa_customers ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP;
