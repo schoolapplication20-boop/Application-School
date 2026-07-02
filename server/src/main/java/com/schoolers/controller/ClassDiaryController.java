@@ -61,11 +61,17 @@ public class ClassDiaryController {
                 && ctx.getAuthentication().getDetails() instanceof java.util.Map) {
             Object flag = ((java.util.Map<?, ?>) ctx.getAuthentication().getDetails())
                     .get("isCoordinator");
-            if (flag != null) return Boolean.TRUE.equals(flag);
+            // Only short-circuit on true — a false/null flag may mean the coordinator was
+            // assigned after the JWT was issued, so always fall through to the live DB check.
+            if (Boolean.TRUE.equals(flag)) return true;
         }
-        // Fallback: live DB check (covers tokens issued before this change was deployed)
+        // Live DB check: handles coordinators assigned after login and stale JWT claims
         Long schoolPk = currentUserUtil.resolveSchoolPk(schoolId);
         SchoolDiaryConfig cfg = diaryConfigRepository.findBySchoolId(schoolPk).orElse(null);
+        // If resolveSchoolPk returned the raw display value and found nothing, try the raw value too
+        if (cfg == null && schoolPk != null && !schoolPk.equals(schoolId)) {
+            cfg = diaryConfigRepository.findBySchoolId(schoolId).orElse(null);
+        }
         return cfg != null
             && "COORDINATOR".equals(cfg.getDiaryMode())
             && callerUserId.equals(cfg.getCoordinatorUserId());
@@ -111,10 +117,15 @@ public class ClassDiaryController {
             return ResponseEntity.status(403)
                 .body(ApiResponse.error("Only coordinators and admins can list all classes"));
         }
-        // Resolve to PK so classRoomRepository (which uses schools.id FK) finds the right rows
+        // Resolve display school_id → PK so classRoomRepository finds the right rows
         Long schoolPk = currentUserUtil.resolveSchoolPk(schoolId);
         List<ClassRoom> classes = schoolPk != null
             ? classRoomRepository.findBySchoolId(schoolPk) : List.of();
+        // Fallback: if resolveSchoolPk returned a different value and found nothing,
+        // the classrooms may have been stored against the raw JWT schoolId directly.
+        if (classes.isEmpty() && schoolId != null && !schoolId.equals(schoolPk)) {
+            classes = classRoomRepository.findBySchoolId(schoolId);
+        }
         return ResponseEntity.ok(ApiResponse.success("OK", classes));
     }
 

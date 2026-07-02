@@ -45,9 +45,13 @@ export default function Homework() {
       ]).then(([profileRes, classesRes, coordRes]) => {
         setTeacherProfile(profileRes?.data?.data ?? null);
         setMyClasses(classesRes?.data?.data ?? []);
-        // Live check may correct the flag if config was changed since login
-        const liveCoord = coordRes?.data?.data?.isCoordinator !== false;
-        setIsCoordinator(liveCoord);
+        // Only revoke coordinator status if the live check explicitly returned false
+        // (don't let a failed/null response override a valid login-time isCoordinator=true)
+        const liveCheckData = coordRes?.data?.data;
+        if (liveCheckData != null && liveCheckData.isCoordinator === false) {
+          setIsCoordinator(false);
+        }
+        // If live check returned true or failed (null), keep initialCoord=true
       }).catch(() => {}).finally(() => setClassesLoading(false));
     } else {
       Promise.all([
@@ -325,7 +329,9 @@ export default function Homework() {
                 }}>
                   <span className="material-icons" style={{ fontSize: 20, color: '#e53e3e' }}>assignment_late</span>
                   <span style={{ fontSize: 13, color: '#c53030', fontWeight: 600 }}>
-                    No classes assigned to you. Please contact your admin.
+                    {isCoordinator
+                      ? 'No classes found for your school. Please ensure classes are set up in School Settings.'
+                      : 'No classes assigned to you. Please contact your admin.'}
                   </span>
                 </div>
               ) : (
