@@ -117,7 +117,8 @@ export const adminAPI = {
   getStudentById: (id) => api.get(`/api/admin/students/${id}`),
   createStudent: (data) => api.post('/api/admin/students', data),
   updateStudent: (id, data) => api.put(`/api/admin/students/${id}`, data),
-  deleteStudent: (id) => api.delete(`/api/admin/students/${id}`),
+  deleteStudent:      (id)  => api.delete(`/api/admin/students/${id}`),
+  bulkDeleteStudents: (ids) => api.delete('/api/admin/students/bulk', { data: { ids } }),
   getStudentCredentials: (id) => api.get(`/api/admin/students/${id}/credentials`),
 
   // Student deletion approval workflow

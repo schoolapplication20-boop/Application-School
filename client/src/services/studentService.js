@@ -108,4 +108,27 @@ export const requestStudentDeletion = async (id, reason) => {
   }
 };
 
-export default { fetchStudents, createStudent, updateStudent, requestStudentDeletion };
+/** Super Admin: permanently delete a single student (bypasses approval workflow). */
+export const deleteStudentDirectly = async (id) => {
+  try {
+    const res = await adminAPI.deleteStudent(id);
+    return { success: true, message: res.data?.message };
+  } catch (err) {
+    const msg = err.response?.data?.message || 'Failed to delete student. Please try again.';
+    return { success: false, message: msg };
+  }
+};
+
+/** Super Admin: permanently delete multiple students in one request. */
+export const bulkDeleteStudentsDirectly = async (ids) => {
+  try {
+    const res = await adminAPI.bulkDeleteStudents(ids);
+    const data = res.data?.data ?? {};
+    return { success: true, deleted: data.deleted ?? 0, failed: data.failed ?? 0 };
+  } catch (err) {
+    const msg = err.response?.data?.message || 'Bulk delete failed. Please try again.';
+    return { success: false, message: msg, deleted: 0, failed: ids.length };
+  }
+};
+
+export default { fetchStudents, createStudent, updateStudent, requestStudentDeletion, deleteStudentDirectly, bulkDeleteStudentsDirectly };

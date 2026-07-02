@@ -4,6 +4,49 @@ export default function DeleteStudentModal({ deleteTarget, submitting, isSuperAd
   const [reason, setReason] = useState('');
   const trimmed = reason.trim();
 
+  if (isSuperAdmin) {
+    return (
+      <div className="modal-overlay">
+        <div className="modal-container" style={{ maxWidth: 420 }}>
+          <div className="modal-body" style={{ textAlign: 'center', padding: '32px 28px' }}>
+            <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#fff5f5', margin: '0 auto 16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span className="material-icons" style={{ fontSize: 32, color: '#e53e3e' }}>delete_forever</span>
+            </div>
+            <h3 style={{ fontSize: 17, fontWeight: 700, margin: '0 0 8px', color: '#c53030' }}>
+              Delete Student Permanently?
+            </h3>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 4px', fontWeight: 600 }}>
+              {deleteTarget.name}
+            </p>
+            <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '0 0 20px' }}>
+              Roll No: {deleteTarget.rollNo || deleteTarget.rollNumber} &nbsp;·&nbsp;
+              {deleteTarget.class || deleteTarget.className}
+              {deleteTarget.section ? ` – ${deleteTarget.section}` : ''}
+            </p>
+            <div style={{ padding: '10px 14px', background: '#fff5f5', border: '1px solid #fed7d7', borderRadius: 8, fontSize: 12, color: '#c53030', marginBottom: 24, textAlign: 'left', display: 'flex', gap: 8 }}>
+              <span className="material-icons" style={{ fontSize: 15, flexShrink: 0, marginTop: 1 }}>warning</span>
+              <span>This action will remove the student record and disable their login access. This action cannot be undone.</span>
+            </div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+              <button
+                onClick={onCancel}
+                disabled={submitting}
+                style={{ padding: '9px 22px', border: '1.5px solid var(--border-strong)', borderRadius: 9, background: 'var(--surface)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+                Cancel
+              </button>
+              <button
+                onClick={() => onConfirm()}
+                disabled={submitting}
+                style={{ padding: '9px 22px', background: submitting ? '#a0aec0' : '#e53e3e', color: '#fff', border: 'none', borderRadius: 9, fontWeight: 600, fontSize: 13, cursor: submitting ? 'not-allowed' : 'pointer' }}>
+                {submitting ? 'Deleting…' : 'Delete Permanently'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="modal-overlay">
       <div className="modal-container" style={{ maxWidth: 440 }}>
@@ -11,8 +54,8 @@ export default function DeleteStudentModal({ deleteTarget, submitting, isSuperAd
           <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#fff5f5', margin: '0 auto 16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <span className="material-icons" style={{ fontSize: 32, color: '#e53e3e' }}>person_remove</span>
           </div>
-          <h3 style={{ fontSize: 17, fontWeight: 700, margin: '0 0 8px', color: isSuperAdmin ? '#c53030' : 'var(--text-primary)' }}>
-            {isSuperAdmin ? 'Delete Student Permanently' : 'Request Deletion of Student'}
+          <h3 style={{ fontSize: 17, fontWeight: 700, margin: '0 0 8px', color: 'var(--text-primary)' }}>
+            Request Deletion of Student
           </h3>
           <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 4px', fontWeight: 600 }}>
             {deleteTarget.name}
@@ -22,22 +65,9 @@ export default function DeleteStudentModal({ deleteTarget, submitting, isSuperAd
             {deleteTarget.class || deleteTarget.className}
             {deleteTarget.section ? ` – ${deleteTarget.section}` : ''}
           </p>
-          <div style={{
-            padding: '10px 14px',
-            background: isSuperAdmin ? '#fff5f5' : '#fff7ed',
-            border: `1px solid ${isSuperAdmin ? '#fed7d7' : '#fed7aa'}`,
-            borderRadius: 8, fontSize: 12,
-            color: isSuperAdmin ? '#c53030' : '#9a3412',
-            marginBottom: 16, textAlign: 'left', display: 'flex', gap: 8,
-          }}>
-            <span className="material-icons" style={{ fontSize: 15, flexShrink: 0, marginTop: 1 }}>
-              {isSuperAdmin ? 'warning' : 'info'}
-            </span>
-            <span>
-              {isSuperAdmin
-                ? 'This action will permanently remove the student record and disable their login access. This action cannot be undone.'
-                : 'This sends a deletion request to the Super Admin for approval. The student will not be removed until it is approved.'}
-            </span>
+          <div style={{ padding: '10px 14px', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, fontSize: 12, color: '#9a3412', marginBottom: 16, textAlign: 'left', display: 'flex', gap: 8 }}>
+            <span className="material-icons" style={{ fontSize: 15, flexShrink: 0, marginTop: 1 }}>info</span>
+            <span>This sends a deletion request to the Super Admin for approval. The student will not be removed until it is approved.</span>
           </div>
           <div style={{ textAlign: 'left', marginBottom: 20 }}>
             <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 5 }}>
@@ -61,11 +91,8 @@ export default function DeleteStudentModal({ deleteTarget, submitting, isSuperAd
             <button
               onClick={() => onConfirm(trimmed)}
               disabled={submitting || !trimmed}
-              style={{
-                padding: '9px 22px', background: (submitting || !trimmed) ? '#a0aec0' : '#e53e3e', color: '#fff', border: 'none',
-                borderRadius: 9, fontWeight: 600, fontSize: 13, cursor: (submitting || !trimmed) ? 'not-allowed' : 'pointer',
-              }}>
-              {submitting ? 'Deleting…' : isSuperAdmin ? 'Delete Permanently' : 'Submit for Approval'}
+              style={{ padding: '9px 22px', background: (submitting || !trimmed) ? '#a0aec0' : '#e53e3e', color: '#fff', border: 'none', borderRadius: 9, fontWeight: 600, fontSize: 13, cursor: (submitting || !trimmed) ? 'not-allowed' : 'pointer' }}>
+              {submitting ? 'Submitting…' : 'Submit for Approval'}
             </button>
           </div>
         </div>

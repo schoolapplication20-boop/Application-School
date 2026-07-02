@@ -180,6 +180,18 @@ public class AdminController {
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
     }
 
+    /** Bulk permanent hard-delete for Super Admin. Body: { "ids": [1, 2, 3] } */
+    @DeleteMapping("/students/bulk")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> bulkDeleteStudents(
+            @RequestBody Map<String, List<Long>> body, Authentication auth) {
+        List<Long> ids = body.get("ids");
+        if (ids == null || ids.isEmpty())
+            return ResponseEntity.badRequest().body(ApiResponse.error("No student IDs provided"));
+        Map<String, Object> result = adminService.bulkDeleteStudents(ids, getCurrentSchoolId(auth));
+        return ResponseEntity.ok(ApiResponse.success("Bulk delete complete", result));
+    }
+
     /** Creates a login account for a student that was imported without an email. */
     @PostMapping("/students/{id}/onboard")
     public ResponseEntity<ApiResponse<Map<String, Object>>> onboardStudent(

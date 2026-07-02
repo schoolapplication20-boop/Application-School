@@ -772,6 +772,19 @@ public class AdminService {
         return ApiResponse.success("Student and login account deleted successfully", "Deleted");
     }
 
+    /** Bulk hard-delete — permanently removes each student and their login account. SA-only. */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> bulkDeleteStudents(List<Long> ids, Long schoolId) {
+        int deleted = 0;
+        int failed  = 0;
+        for (Long id : ids) {
+            ApiResponse<String> result = deleteStudent(id, schoolId);
+            if (result.isSuccess()) deleted++;
+            else failed++;
+        }
+        return Map.of("deleted", deleted, "failed", failed);
+    }
+
     /** Returns the student's login username and temp password (only while firstLogin is still true).
      *  If the student has no linked user account, one is auto-created on demand. */
     @Transactional

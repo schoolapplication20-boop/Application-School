@@ -10,6 +10,8 @@ import {
   createStudent as apiCreateStudent,
   updateStudent as apiUpdateStudent,
   requestStudentDeletion as apiRequestStudentDeletion,
+  deleteStudentDirectly as apiDeleteStudentDirectly,
+  bulkDeleteStudentsDirectly as apiBulkDeleteStudentsDirectly,
 } from '../../services/studentService';
 import { adminAPI, onboardingVerifyAPI } from '../../services/api';
 import { EMPTY_FORM, PAGE_SIZE, phoneOnly } from './students/constants';
@@ -389,21 +391,29 @@ export default function Students() {
   };
 
   const handleDelete = async (reason) => {
-    if (!deleteTarget || !reason?.trim()) return;
+    if (!deleteTarget) return;
     setDeleteSubmitting(true);
-    const result = await apiRequestStudentDeletion(deleteTarget.id, reason.trim());
+
+    let result;
+    if (isSuperAdmin) {
+      result = await apiDeleteStudentDirectly(deleteTarget.id);
+    } else {
+      if (!reason?.trim()) { setDeleteSubmitting(false); return; }
+      result = await apiRequestStudentDeletion(deleteTarget.id, reason.trim());
+    }
+
     setDeleteSubmitting(false);
     setDeleteTarget(null);
     if (result.success) {
       showToast(
-        result.status === 'APPROVED'
+        isSuperAdmin
           ? 'Student permanently deleted'
           : 'Deletion request submitted — awaiting Super Admin approval',
-        result.status === 'APPROVED' ? 'success' : 'warning'
+        isSuperAdmin ? 'success' : 'warning'
       );
       loadStudents();
     } else {
-      showToast(result.message || 'Failed to submit deletion request', 'error');
+      showToast(result.message || 'Failed to delete student', 'error');
     }
   };
 
@@ -423,21 +433,36 @@ export default function Students() {
   };
 
   const handleBulkDelete = async (reason) => {
-    if (!reason?.trim()) return;
     const ids = [...selectedIds];
     setBulkDeleting(true);
-    const results = await Promise.all(ids.map(id => apiRequestStudentDeletion(id, reason.trim())));
-    const approved = results.filter(r => r.success && r.status === 'APPROVED').length;
-    const pending  = results.filter(r => r.success && r.status === 'PENDING').length;
-    const failed   = results.filter(r => !r.success).length;
-    setBulkDeleting(false);
-    setBulkDeleteConfirm(false);
-    exitSelectionMode();
-    const parts = [];
-    if (approved) parts.push(`${approved} deleted`);
-    if (pending)  parts.push(`${pending} submitted for approval`);
-    if (failed)   parts.push(`${failed} failed`);
-    showToast(parts.join(', ') || 'No students processed', failed > 0 && !approved && !pending ? 'error' : 'warning');
+
+    if (isSuperAdmin) {
+      const result = await apiBulkDeleteStudentsDirectly(ids);
+      setBulkDeleting(false);
+      setBulkDeleteConfirm(false);
+      exitSelectionMode();
+      if (result.success) {
+        const parts = [];
+        if (result.deleted) parts.push(`${result.deleted} permanently deleted`);
+        if (result.failed)  parts.push(`${result.failed} failed`);
+        showToast(parts.join(', ') || 'No students processed', result.failed > 0 && !result.deleted ? 'error' : 'success');
+      } else {
+        showToast(result.message || 'Bulk delete failed', 'error');
+      }
+    } else {
+      if (!reason?.trim()) { setBulkDeleting(false); return; }
+      const results = await Promise.all(ids.map(id => apiRequestStudentDeletion(id, reason.trim())));
+      const pending = results.filter(r => r.success && r.status === 'PENDING').length;
+      const failed  = results.filter(r => !r.success).length;
+      setBulkDeleting(false);
+      setBulkDeleteConfirm(false);
+      exitSelectionMode();
+      const parts = [];
+      if (pending) parts.push(`${pending} submitted for approval`);
+      if (failed)  parts.push(`${failed} failed`);
+      showToast(parts.join(', ') || 'No students processed', failed > 0 && !pending ? 'error' : 'warning');
+    }
+
     setCurrentPage(0);
     loadStudents(0);
   };
