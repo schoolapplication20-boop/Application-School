@@ -29,6 +29,10 @@ public interface ReportCardAttendanceRepository extends JpaRepository<ReportCard
     // a school_id mismatch between the save path and the read path (display id vs PK).
     List<ReportCardAttendance> findByStudentId(Long studentId);
 
+    @Modifying
+    @Transactional
+    void deleteByStudentId(Long studentId);
+
     /** Upsert a single row — insert or update on the unique constraint. */
     @Modifying @Transactional
     @Query(value = """

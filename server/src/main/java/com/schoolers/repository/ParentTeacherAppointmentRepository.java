@@ -13,5 +13,7 @@ public interface ParentTeacherAppointmentRepository extends JpaRepository<Parent
 
     List<ParentTeacherAppointment> findByTeacherIdOrderByCreatedAtDesc(Long teacherId);
 
+    void deleteByStudentId(Long studentId);
+
     void deleteBySchoolId(Long schoolId);
 }

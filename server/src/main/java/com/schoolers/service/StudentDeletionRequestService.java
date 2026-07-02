@@ -3,9 +3,8 @@ package com.schoolers.service;
 import com.schoolers.dto.ApiResponse;
 import com.schoolers.model.Student;
 import com.schoolers.model.StudentDeletionRequest;
-import com.schoolers.repository.StudentDeletionRequestRepository;
-import com.schoolers.repository.StudentRepository;
-import com.schoolers.repository.UserRepository;
+import com.schoolers.model.User;
+import com.schoolers.repository.*;
 import com.schoolers.security.CurrentUserUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -28,11 +27,33 @@ import java.util.UUID;
 @Service
 public class StudentDeletionRequestService {
 
-    @Autowired private StudentDeletionRequestRepository requestRepo;
-    @Autowired private StudentRepository                studentRepository;
-    @Autowired private UserRepository                    userRepository;
-    @Autowired private CurrentUserUtil                   currentUserUtil;
-    @Autowired private AuditLogService                   auditLogService;
+    @Autowired private StudentDeletionRequestRepository   requestRepo;
+    @Autowired private StudentRepository                  studentRepository;
+    @Autowired private UserRepository                     userRepository;
+    @Autowired private CurrentUserUtil                    currentUserUtil;
+    @Autowired private AuditLogService                    auditLogService;
+
+    @Autowired private AttendanceRepository               attendanceRepository;
+    @Autowired private MarksRepository                    marksRepository;
+    @Autowired private MarksAuditLogRepository            marksAuditLogRepository;
+    @Autowired private CertificateRepository              certificateRepository;
+    @Autowired private HallTicketRepository               hallTicketRepository;
+    @Autowired private FeeRepository                      feeRepository;
+    @Autowired private FeePaymentRepository               feePaymentRepository;
+    @Autowired private StudentFeeAssignmentRepository     studentFeeAssignmentRepository;
+    @Autowired private TransportFeeRepository             transportFeeRepository;
+    @Autowired private TransportStudentAssignmentRepository transportStudentAssignmentRepository;
+    @Autowired private StudentTransportRepository         studentTransportRepository;
+    @Autowired private ReportCardAttendanceRepository     reportCardAttendanceRepository;
+    @Autowired private AssignmentSubmissionRepository     assignmentSubmissionRepository;
+    @Autowired private OnlineExamAnswerRepository         onlineExamAnswerRepository;
+    @Autowired private OnlineExamAttemptRepository        onlineExamAttemptRepository;
+    @Autowired private MeetingBookingRepository           meetingBookingRepository;
+    @Autowired private ParentTeacherAppointmentRepository parentTeacherAppointmentRepository;
+    @Autowired private MessageReadRepository              messageReadRepository;
+    @Autowired private MessageRepository                  messageRepository;
+    @Autowired private AppNotificationRepository          appNotificationRepository;
+    @Autowired private EmailVerificationRepository        emailVerificationRepository;
 
     // ── auth helpers ─────────────────────────────────────────────────────────
 
@@ -110,7 +131,7 @@ public class StudentDeletionRequestService {
 
     private ResponseEntity<ApiResponse<Map<String, Object>>> applyDirectly(
             Student student, String reason, Long schoolId, Long userId, Authentication auth) {
-        softDelete(student);
+        hardDelete(student);
 
         StudentDeletionRequest audit = StudentDeletionRequest.builder()
                 .requestId(UUID.randomUUID().toString())
@@ -134,28 +155,60 @@ public class StudentDeletionRequestService {
                 "DELETE", "Student", student.getId(),
                 "Soft-deleted student: " + student.getName() + " — reason: " + reason, null);
 
-        return ResponseEntity.ok(ApiResponse.success("Student deleted and login disabled", Map.of(
+        return ResponseEntity.ok(ApiResponse.success("Student permanently deleted", Map.of(
                 "status", "APPROVED"
         )));
     }
 
-    /** Soft-deletes the student and disables their login account. Does not remove any rows. */
-    private void softDelete(Student student) {
-        student.setIsActive(false);
-        student.setDeletionStatus("NONE");
-        studentRepository.save(student);
+    /** Hard-deletes the student and all their associated data from the database. */
+    @Transactional
+    private void hardDelete(Student student) {
+        Long studentId = student.getId();
 
-        if (student.getStudentUserId() != null) {
-            userRepository.findById(student.getStudentUserId()).ifPresent(u -> {
-                u.setIsActive(false);
-                userRepository.save(u);
-            });
-        } else {
-            userRepository.findByStudentId(student.getId()).ifPresent(u -> {
-                u.setIsActive(false);
-                userRepository.save(u);
-            });
-        }
+        Optional<User> userOpt = student.getStudentUserId() != null
+                ? userRepository.findById(student.getStudentUserId())
+                : userRepository.findByStudentId(studentId);
+
+        // Delete exam answers before attempts (answers reference attempt IDs)
+        onlineExamAnswerRepository.deleteByStudentId(studentId);
+        onlineExamAttemptRepository.deleteByStudentId(studentId);
+
+        // Academic records
+        marksAuditLogRepository.deleteByStudentId(studentId);
+        marksRepository.deleteByStudentId(studentId);
+        attendanceRepository.deleteByStudentId(studentId);
+        reportCardAttendanceRepository.deleteByStudentId(studentId);
+        assignmentSubmissionRepository.deleteByStudentId(studentId);
+        hallTicketRepository.deleteByStudentId(studentId);
+        certificateRepository.deleteByStudentId(studentId);
+
+        // Fee records
+        feePaymentRepository.deleteByStudentId(studentId);
+        studentFeeAssignmentRepository.deleteByStudentId(studentId);
+        feeRepository.deleteByStudentId(studentId);
+
+        // Transport records
+        transportFeeRepository.deleteByStudentId(studentId);
+        transportStudentAssignmentRepository.deleteByStudentId(studentId);
+        studentTransportRepository.deleteByStudentId(studentId);
+
+        // Communication / scheduling records
+        meetingBookingRepository.deleteByStudentId(studentId);
+        parentTeacherAppointmentRepository.deleteByStudentId(studentId);
+        messageRepository.deleteByTargetStudentId(studentId);
+
+        // User-account-linked records
+        userOpt.ifPresent(u -> {
+            messageReadRepository.deleteByUserId(u.getId());
+            messageRepository.deleteBySenderId(u.getId());
+            appNotificationRepository.deleteByUserId(u.getId());
+            if (u.getEmail() != null) {
+                emailVerificationRepository.deleteByEmail(u.getEmail());
+            }
+            userRepository.delete(u);
+        });
+
+        studentRepository.delete(student);
     }
 
     // ── List requests ─────────────────────────────────────────────────────────
@@ -205,7 +258,7 @@ public class StudentDeletionRequestService {
             return ResponseEntity.badRequest().body(ApiResponse.error("Student no longer exists"));
 
         Long userId = currentUserUtil.getCurrentUserId(auth);
-        softDelete(studentOpt.get());
+        hardDelete(studentOpt.get());
 
         req.setStatus("APPROVED");
         req.setApprovedByUserId(userId);
@@ -218,7 +271,7 @@ public class StudentDeletionRequestService {
                 "APPROVE_DELETE", "Student", req.getStudentId(),
                 "Approved deletion of student: " + req.getStudentName(), null);
 
-        return ResponseEntity.ok(ApiResponse.success("Request approved — student soft-deleted and login disabled", req));
+        return ResponseEntity.ok(ApiResponse.success("Request approved — student permanently deleted", req));
     }
 
     // ── Reject ────────────────────────────────────────────────────────────────

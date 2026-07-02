@@ -26,5 +26,9 @@ public interface OnlineExamAttemptRepository extends JpaRepository<OnlineExamAtt
 
     @Modifying
     @Transactional
+    void deleteByStudentId(Long studentId);
+
+    @Modifying
+    @Transactional
     void deleteByExamId(Long examId);
 }

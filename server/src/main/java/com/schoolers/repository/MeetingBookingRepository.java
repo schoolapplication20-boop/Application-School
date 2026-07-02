@@ -17,5 +17,7 @@ public interface MeetingBookingRepository extends JpaRepository<MeetingBooking, 
 
     boolean existsBySlotIdAndStudentId(Long slotId, Long studentId);
 
+    void deleteByStudentId(Long studentId);
+
     void deleteBySchoolId(Long schoolId);
 }

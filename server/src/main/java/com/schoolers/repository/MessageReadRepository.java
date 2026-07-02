@@ -11,4 +11,5 @@ public interface MessageReadRepository extends JpaRepository<MessageRead, Messag
     boolean existsByMessageIdAndUserId(Long messageId, Long userId);
     List<MessageRead> findByMessageId(Long messageId);
     long countByMessageId(Long messageId);
+    void deleteByUserId(Long userId);
 }

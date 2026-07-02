@@ -27,6 +27,12 @@ public interface OnlineExamAnswerRepository extends JpaRepository<OnlineExamAnsw
 
     @Modifying
     @Transactional
+    @Query("DELETE FROM OnlineExamAnswer a WHERE a.attemptId IN " +
+           "(SELECT at.id FROM OnlineExamAttempt at WHERE at.studentId = :studentId)")
+    void deleteByStudentId(@Param("studentId") Long studentId);
+
+    @Modifying
+    @Transactional
     @Query("DELETE FROM OnlineExamAnswer a WHERE a.examId = :examId")
     void deleteByExamId(@Param("examId") Long examId);
 }
