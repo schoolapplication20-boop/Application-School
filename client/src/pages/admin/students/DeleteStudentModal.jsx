@@ -11,8 +11,8 @@ export default function DeleteStudentModal({ deleteTarget, submitting, isSuperAd
           <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#fff5f5', margin: '0 auto 16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <span className="material-icons" style={{ fontSize: 32, color: '#e53e3e' }}>person_remove</span>
           </div>
-          <h3 style={{ fontSize: 17, fontWeight: 700, margin: '0 0 8px', color: 'var(--text-primary)' }}>
-            {isSuperAdmin ? 'Delete Student' : 'Request Deletion of Student'}
+          <h3 style={{ fontSize: 17, fontWeight: 700, margin: '0 0 8px', color: isSuperAdmin ? '#c53030' : 'var(--text-primary)' }}>
+            {isSuperAdmin ? 'Delete Student Permanently' : 'Request Deletion of Student'}
           </h3>
           <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 4px', fontWeight: 600 }}>
             {deleteTarget.name}
@@ -22,11 +22,20 @@ export default function DeleteStudentModal({ deleteTarget, submitting, isSuperAd
             {deleteTarget.class || deleteTarget.className}
             {deleteTarget.section ? ` – ${deleteTarget.section}` : ''}
           </p>
-          <div style={{ padding: '10px 14px', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, fontSize: 12, color: '#9a3412', marginBottom: 16, textAlign: 'left', display: 'flex', gap: 8 }}>
-            <span className="material-icons" style={{ fontSize: 15, flexShrink: 0, marginTop: 1 }}>info</span>
+          <div style={{
+            padding: '10px 14px',
+            background: isSuperAdmin ? '#fff5f5' : '#fff7ed',
+            border: `1px solid ${isSuperAdmin ? '#fed7d7' : '#fed7aa'}`,
+            borderRadius: 8, fontSize: 12,
+            color: isSuperAdmin ? '#c53030' : '#9a3412',
+            marginBottom: 16, textAlign: 'left', display: 'flex', gap: 8,
+          }}>
+            <span className="material-icons" style={{ fontSize: 15, flexShrink: 0, marginTop: 1 }}>
+              {isSuperAdmin ? 'warning' : 'info'}
+            </span>
             <span>
               {isSuperAdmin
-                ? 'The student will be deactivated immediately and their login disabled. This is recorded in the audit trail.'
+                ? 'This action will permanently remove the student record and disable their login access. This action cannot be undone.'
                 : 'This sends a deletion request to the Super Admin for approval. The student will not be removed until it is approved.'}
             </span>
           </div>
@@ -56,7 +65,7 @@ export default function DeleteStudentModal({ deleteTarget, submitting, isSuperAd
                 padding: '9px 22px', background: (submitting || !trimmed) ? '#a0aec0' : '#e53e3e', color: '#fff', border: 'none',
                 borderRadius: 9, fontWeight: 600, fontSize: 13, cursor: (submitting || !trimmed) ? 'not-allowed' : 'pointer',
               }}>
-              {submitting ? 'Submitting…' : isSuperAdmin ? 'Delete Student' : 'Submit for Approval'}
+              {submitting ? 'Deleting…' : isSuperAdmin ? 'Delete Permanently' : 'Submit for Approval'}
             </button>
           </div>
         </div>

@@ -397,9 +397,9 @@ export default function Students() {
     if (result.success) {
       showToast(
         result.status === 'APPROVED'
-          ? 'Student deleted and login disabled'
+          ? 'Student permanently deleted'
           : 'Deletion request submitted — awaiting Super Admin approval',
-        'warning'
+        result.status === 'APPROVED' ? 'success' : 'warning'
       );
       loadStudents();
     } else {

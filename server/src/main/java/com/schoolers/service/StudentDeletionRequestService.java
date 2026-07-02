@@ -21,7 +21,7 @@ import java.util.UUID;
 /**
  * Student deletion approval workflow.
  * ADMIN  → submits a deletion request (queued, PENDING).
- * SA     → submitting applies immediately (soft-delete + audit record).
+ * SA     → submitting applies immediately (hard-delete + audit record).
  * SA     → approves/rejects ADMIN-submitted requests.
  */
 @Service
@@ -153,7 +153,7 @@ public class StudentDeletionRequestService {
 
         auditLogService.log(userId, getDisplayName(auth), "SUPER_ADMIN", schoolId,
                 "DELETE", "Student", student.getId(),
-                "Soft-deleted student: " + student.getName() + " — reason: " + reason, null);
+                "Permanently deleted student: " + student.getName() + " — reason: " + reason, null);
 
         return ResponseEntity.ok(ApiResponse.success("Student permanently deleted", Map.of(
                 "status", "APPROVED"
