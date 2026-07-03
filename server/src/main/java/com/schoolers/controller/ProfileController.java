@@ -66,20 +66,24 @@ public class ProfileController {
         return ResponseEntity.ok(ApiResponse.success("Profile updated successfully", safeView(user)));
     }
 
-    /** Returns only the fields safe to expose — never password, tokens, OTP, permissions. */
+    /** Returns fields safe to expose — never password, tokens, or OTP secrets. */
     private Map<String, Object> safeView(User u) {
         String displayEmail = u.getEmail() != null && u.getEmail().endsWith("@my-skoolz.com")
                 ? u.getEmail().split("@")[0]   // show only the username part for auto-generated emails
                 : u.getEmail();
-        return Map.of(
-            "id",       u.getId(),
-            "name",     u.getName() != null ? u.getName() : "",
-            "email",    displayEmail != null ? displayEmail : "",
-            "mobile",   u.getMobile()  != null ? u.getMobile()  : "",
-            "address",  u.getAddress() != null ? u.getAddress() : "",
-            "role",     u.getRole() != null ? u.getRole().name() : "",
-            "username", u.getUsername() != null ? u.getUsername() : "",
-            "firstLogin", Boolean.TRUE.equals(u.getFirstLogin())
-        );
+        // Use a mutable map so we can conditionally include permissions
+        java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
+        m.put("id",         u.getId());
+        m.put("name",       u.getName()     != null ? u.getName()              : "");
+        m.put("email",      displayEmail    != null ? displayEmail              : "");
+        m.put("mobile",     u.getMobile()   != null ? u.getMobile()             : "");
+        m.put("address",    u.getAddress()  != null ? u.getAddress()            : "");
+        m.put("role",       u.getRole()     != null ? u.getRole().name()        : "");
+        m.put("username",   u.getUsername() != null ? u.getUsername()           : "");
+        m.put("firstLogin", Boolean.TRUE.equals(u.getFirstLogin()));
+        // Include permissions so the frontend refreshPermissions() call can pick up
+        // the latest module permissions without requiring the admin to re-login.
+        m.put("permissions", u.getPermissions());
+        return m;
     }
 }

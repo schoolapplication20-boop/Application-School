@@ -25,7 +25,7 @@ const ALL_ROLES = [
 const Login = () => {
   const navigate = useNavigate();
   const [searchParams]  = useSearchParams();
-  const { login, refreshPermissions, isAuthenticated, getDashboardPath } = useAuth();
+  const { login, isAuthenticated, getDashboardPath } = useAuth();
   const { school } = useSchool();
 
   const primary   = school?.primaryColor   || '#F97316';
@@ -159,12 +159,7 @@ const Login = () => {
 
       retryCountRef.current = 0;
       login(loggedInUser, token);
-
-      // Fire permissions refresh in background — do not block navigation.
-      // Permissions are already in the login response; this is only a fallback.
-      if (loggedInUser.role === 'ADMIN' && loggedInUser.permissions == null) {
-        refreshPermissions(); // intentionally not awaited
-      }
+      // Permissions refresh is handled automatically by AuthContext for ADMIN users.
 
       navigateByRole(loggedInUser);
     } catch (err) {

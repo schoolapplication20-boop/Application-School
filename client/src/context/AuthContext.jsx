@@ -175,9 +175,21 @@ export const AuthProvider = ({ children }) => {
   const refreshPermissions = useCallback(async () => {
     setIsLoading(true);
     const candidates = [
-      '/api/admin/permissions',   // dedicated permissions endpoint
-      '/api/user/profile',        // generic profile fallback
+      '/api/user/profile',        // profile endpoint — returns { permissions, name, email, ... }
+      '/api/admin/permissions',   // dedicated permissions endpoint — returns raw JSON string
     ];
+
+    const applyPerms = (perms) => {
+      setUser(prev => {
+        if (!prev) return prev;
+        const updated = { ...prev, permissions: perms };
+        try {
+          const raw = sessionStorage.getItem(SESSION_KEY);
+          if (raw) sessionStorage.setItem(SESSION_KEY, JSON.stringify({ ...JSON.parse(raw), user: updated }));
+        } catch { /* ignore */ }
+        return updated;
+      });
+    };
 
     try {
       for (const url of candidates) {
@@ -185,36 +197,31 @@ export const AuthProvider = ({ children }) => {
           const res  = await api.get(url);
           const data = res.data?.data ?? res.data;
 
-          // Case 1: { permissions: ... } nested inside data
-          if (data?.permissions !== undefined) {
+          // Case 1: object with a "permissions" field — covers /api/user/profile response
+          // (data has name/email AND permissions; we only need the permissions part)
+          if (data && typeof data === 'object' && 'permissions' in data) {
             const perms = parsePermissions(data.permissions);
             if (perms && typeof perms === 'object') {
-              setUser(prev => {
-                if (!prev) return prev;
-                const updated = { ...prev, permissions: perms };
-                try {
-                  const raw = sessionStorage.getItem(SESSION_KEY);
-                  if (raw) sessionStorage.setItem(SESSION_KEY, JSON.stringify({ ...JSON.parse(raw), user: updated }));
-                } catch { /* ignore */ }
-                return updated;
-              });
+              applyPerms(perms);
               return;
             }
           }
 
-          // Case 2: data is the permissions object directly (no name/email fields)
+          // Case 2: data is a raw permissions JSON string — covers /api/admin/permissions response
+          // The endpoint wraps the string in ApiResponse.data, so data is the string itself.
+          if (typeof data === 'string') {
+            const perms = parsePermissions(data);
+            if (perms && typeof perms === 'object') {
+              applyPerms(perms);
+              return;
+            }
+          }
+
+          // Case 3: data is the permissions object directly (no name/email fields)
           if (data && typeof data === 'object' && !data.name && !data.email && !Array.isArray(data)) {
             const perms = parsePermissions(data);
             if (perms && Object.keys(perms).length > 0) {
-              setUser(prev => {
-                if (!prev) return prev;
-                const updated = { ...prev, permissions: perms };
-                try {
-                  const raw = sessionStorage.getItem(SESSION_KEY);
-                  if (raw) sessionStorage.setItem(SESSION_KEY, JSON.stringify({ ...JSON.parse(raw), user: updated }));
-                } catch { /* ignore */ }
-                return updated;
-              });
+              applyPerms(perms);
               return;
             }
           }
@@ -227,6 +234,23 @@ export const AuthProvider = ({ children }) => {
       setIsLoading(false);
     }
   }, []);
+
+  // ── Auto-refresh ADMIN permissions on login / session restore ─────────────
+  // Ensures module changes made by Super Admin are visible immediately after a
+  // page reload, without requiring the admin to log out and back in.
+  // The ref prevents duplicate calls when the user object identity changes for
+  // unrelated reasons (e.g. updateUser calls).
+  const permRefreshDoneRef = useRef(false);
+  useEffect(() => {
+    if (user?.role === 'ADMIN' && !permRefreshDoneRef.current) {
+      permRefreshDoneRef.current = true;
+      refreshPermissions();
+    }
+    if (!user) {
+      // Reset so the next login / session restore triggers a fresh fetch.
+      permRefreshDoneRef.current = false;
+    }
+  }, [user?.role, refreshPermissions]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isAuthenticated = !!token && !!user;
 
