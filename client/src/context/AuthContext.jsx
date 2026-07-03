@@ -173,7 +173,6 @@ export const AuthProvider = ({ children }) => {
    * Tries endpoints in order and stops at the first that returns permissions.
    */
   const refreshPermissions = useCallback(async () => {
-    setIsLoading(true);
     const candidates = [
       '/api/user/profile',        // profile endpoint — returns { permissions, name, email, ... }
       '/api/admin/permissions',   // dedicated permissions endpoint — returns raw JSON string
@@ -191,48 +190,44 @@ export const AuthProvider = ({ children }) => {
       });
     };
 
-    try {
-      for (const url of candidates) {
-        try {
-          const res  = await api.get(url);
-          const data = res.data?.data ?? res.data;
+    for (const url of candidates) {
+      try {
+        const res  = await api.get(url);
+        const data = res.data?.data ?? res.data;
 
-          // Case 1: object with a "permissions" field — covers /api/user/profile response
-          // (data has name/email AND permissions; we only need the permissions part)
-          if (data && typeof data === 'object' && 'permissions' in data) {
-            const perms = parsePermissions(data.permissions);
-            if (perms && typeof perms === 'object') {
-              applyPerms(perms);
-              return;
-            }
+        // Case 1: object with a "permissions" field — covers /api/user/profile response
+        // (data has name/email AND permissions; we only need the permissions part)
+        if (data && typeof data === 'object' && 'permissions' in data) {
+          const perms = parsePermissions(data.permissions);
+          if (perms && typeof perms === 'object') {
+            applyPerms(perms);
+            return;
           }
-
-          // Case 2: data is a raw permissions JSON string — covers /api/admin/permissions response
-          // The endpoint wraps the string in ApiResponse.data, so data is the string itself.
-          if (typeof data === 'string') {
-            const perms = parsePermissions(data);
-            if (perms && typeof perms === 'object') {
-              applyPerms(perms);
-              return;
-            }
-          }
-
-          // Case 3: data is the permissions object directly (no name/email fields)
-          if (data && typeof data === 'object' && !data.name && !data.email && !Array.isArray(data)) {
-            const perms = parsePermissions(data);
-            if (perms && Object.keys(perms).length > 0) {
-              applyPerms(perms);
-              return;
-            }
-          }
-        } catch {
-          // try next endpoint
         }
+
+        // Case 2: data is a raw permissions JSON string — covers /api/admin/permissions response
+        // The endpoint wraps the string in ApiResponse.data, so data is the string itself.
+        if (typeof data === 'string') {
+          const perms = parsePermissions(data);
+          if (perms && typeof perms === 'object') {
+            applyPerms(perms);
+            return;
+          }
+        }
+
+        // Case 3: data is the permissions object directly (no name/email fields)
+        if (data && typeof data === 'object' && !data.name && !data.email && !Array.isArray(data)) {
+          const perms = parsePermissions(data);
+          if (perms && Object.keys(perms).length > 0) {
+            applyPerms(perms);
+            return;
+          }
+        }
+      } catch {
+        // try next endpoint
       }
-      // If all endpoints fail, permissions remain as set by login()
-    } finally {
-      setIsLoading(false);
     }
+    // If all endpoints fail, permissions remain as set by login()
   }, []);
 
   // ── Auto-refresh ADMIN permissions on login / session restore ─────────────
