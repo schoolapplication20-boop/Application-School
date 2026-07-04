@@ -229,10 +229,18 @@ public class MessageService {
             if (Boolean.TRUE.equals(isSchoolWide)) {
                 return ApiResponse.error("Teachers are not permitted to send school-wide broadcasts");
             }
-            // Class-section broadcasts must target a section the teacher is assigned to
+            // Class-section broadcasts must target a section the teacher is assigned to.
+            // teacher.getClasses() stores "ClassName - Section" (spaces around dash),
+            // but classSection from the frontend uses "ClassName-Section" (no spaces).
+            // Normalize both to "classname-section" lowercase before comparing.
             if (classSection != null && !classSection.isBlank()) {
                 String teacherClasses = teacher.getClasses();
-                boolean assigned = teacherClasses != null && teacherClasses.contains(classSection);
+                String normalizedTarget = classSection.trim().toLowerCase().replaceAll("\\s*-\\s*", "-");
+                boolean assigned = teacherClasses != null &&
+                        Arrays.stream(teacherClasses.split(","))
+                              .map(String::trim)
+                              .map(c -> c.toLowerCase().replaceAll("\\s*-\\s*", "-"))
+                              .anyMatch(c -> c.equals(normalizedTarget));
                 if (!assigned) {
                     return ApiResponse.error("You are not assigned to class section: " + classSection);
                 }
