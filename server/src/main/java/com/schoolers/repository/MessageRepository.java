@@ -44,11 +44,17 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
             @Param("studentId") Long studentId,
             Pageable pageable);
 
-    /** All broadcast messages sent for a given school (for admin/teacher views), capped via Pageable */
+    /** All broadcast messages sent for a given school (for admin/super-admin views), capped via Pageable */
     @Query("SELECT m FROM Message m WHERE m.schoolId = :schoolId " +
-           "AND (m.isSchoolWide = true OR m.classSection IS NOT NULL) " +
+           "AND (m.isSchoolWide = true OR m.classSection IS NOT NULL OR m.targetStudentId IS NOT NULL) " +
            "ORDER BY m.createdAt DESC")
     List<Message> findBroadcastsBySchool(@Param("schoolId") Long schoolId, Pageable pageable);
+
+    /** Broadcasts sent by a specific user (for teacher "Sent Messages" view), capped via Pageable */
+    @Query("SELECT m FROM Message m WHERE m.senderId = :senderId AND m.schoolId = :schoolId " +
+           "AND (m.isSchoolWide = true OR m.classSection IS NOT NULL OR m.targetStudentId IS NOT NULL) " +
+           "ORDER BY m.createdAt DESC")
+    List<Message> findBroadcastsBySender(@Param("senderId") Long senderId, @Param("schoolId") Long schoolId, Pageable pageable);
 
     @Modifying @Transactional
     void deleteBySenderId(Long senderId);

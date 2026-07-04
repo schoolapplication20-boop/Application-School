@@ -300,7 +300,9 @@ public class MessageService {
         expoPushService.sendToMany(tokens, title, body, data);
     }
 
-    /** GET /api/messages/broadcasts — list broadcasts visible to authenticated admin/teacher */
+    /** GET /api/messages/broadcasts — list broadcasts visible to authenticated admin/teacher.
+     *  Teachers see only their own sent messages (including direct-to-student ones).
+     *  Admins/Super Admins see all broadcasts for the school. */
     public ApiResponse<List<Map<String, Object>>> getBroadcasts(Authentication auth) {
         User user = resolveUser(auth);
         if (user == null) return ApiResponse.error("Unauthorized");
@@ -308,7 +310,10 @@ public class MessageService {
         Long schoolId = user.getSchoolId();
         if (schoolId == null) return ApiResponse.error("No school context");
 
-        List<Message> msgs = messageRepository.findBroadcastsBySchool(schoolId, MESSAGE_RESULTS_PAGE);
+        List<Message> msgs = user.getRole() == User.Role.TEACHER
+                ? messageRepository.findBroadcastsBySender(user.getId(), schoolId, MESSAGE_RESULTS_PAGE)
+                : messageRepository.findBroadcastsBySchool(schoolId, MESSAGE_RESULTS_PAGE);
+
         List<Map<String, Object>> result = msgs.stream().map(m -> {
             Map<String, Object> dto = new LinkedHashMap<>();
             dto.put("id", m.getId());
@@ -317,8 +322,10 @@ public class MessageService {
             dto.put("category", m.getCategory());
             dto.put("senderName", m.getSenderName());
             dto.put("senderRole", m.getSenderRole());
+            dto.put("senderId", m.getSenderId());
             dto.put("isSchoolWide", m.getIsSchoolWide());
             dto.put("classSection", m.getClassSection());
+            dto.put("targetStudentId", m.getTargetStudentId());
             dto.put("isImportant", m.getIsImportant());
             dto.put("createdAt", m.getCreatedAt());
             return dto;
