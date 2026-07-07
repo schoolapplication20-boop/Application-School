@@ -51,6 +51,7 @@ class AuthServiceTest {
     @Mock private PasswordEncoder             passwordEncoder;
     @Mock private EmailService                emailService;
     @Mock private TokenBlacklistService       tokenBlacklistService;
+    @Mock private org.springframework.transaction.PlatformTransactionManager transactionManager;
 
     @InjectMocks
     private AuthService authService;

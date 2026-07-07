@@ -19,7 +19,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.security.MessageDigest;
 import java.security.SecureRandom;
@@ -49,6 +50,20 @@ public class AuthService {
     @Autowired(required = false)
     @org.springframework.context.annotation.Lazy
     private SmsService smsService;
+    @Autowired private PlatformTransactionManager transactionManager;
+
+    private volatile TransactionTemplate transactionTemplateInstance;
+
+    // Lazily built (rather than @PostConstruct) so plain Mockito unit tests that
+    // construct this class without a Spring context still work.
+    private TransactionTemplate transactionTemplate() {
+        TransactionTemplate tt = transactionTemplateInstance;
+        if (tt == null) {
+            tt = new TransactionTemplate(transactionManager);
+            transactionTemplateInstance = tt;
+        }
+        return tt;
+    }
 
     private static final int MAX_LOGIN_ATTEMPTS = 5;
 
@@ -57,8 +72,19 @@ public class AuthService {
 
     // ── Login ─────────────────────────────────────────────────────────────────
 
-    @Transactional
+    // Deliberately NOT @Transactional at the method level. The APPLICATION_OWNER
+    // path below makes a blocking Resend API call (sendOwnerLoginOtp) which used
+    // to run inside the same transaction as every other login step — holding a
+    // pooled DB connection (only 5-10 available, see application.properties) for
+    // as long as that external HTTP call took. A slow Resend response could starve
+    // the pool and fail unrelated logins for every other role with a generic
+    // "server unavailable" error. The DB work below runs in its own short-lived
+    // transaction via transactionTemplate, which commits (and releases its
+    // connection) BEFORE the owner-OTP email is sent.
     public ApiResponse<LoginResponse> login(LoginRequest request) {
+        final String[] ownerOtp = new String[2]; // [0]=email, [1]=otp — set only when an owner-OTP email needs sending post-commit
+
+        ApiResponse<LoginResponse> result = transactionTemplate().execute(status -> {
         try {
             // ── Step 1: Resolve the user ───────────────────────────────────
             String username;
@@ -207,21 +233,15 @@ public class AuthService {
                 return ApiResponse.error("Your account is not linked to any school. Please contact admin.");
             }
 
-            // ── Step 3d: APPLICATION_OWNER 2FA — send OTP before issuing JWT ──
+            // ── Step 3d: APPLICATION_OWNER 2FA — persist OTP now, email it after commit ──
             if (user.getRole() == User.Role.APPLICATION_OWNER) {
                 String otp = String.format("%06d", new SecureRandom().nextInt(1_000_000));
                 user.setResetOtp(hashOtp(otp, user.getEmail()));
                 user.setOtpExpiry(LocalDateTime.now(ZoneOffset.UTC).plusMinutes(5));
                 userRepository.save(user);
-                try {
-                    emailService.sendOwnerLoginOtp(user.getEmail(), otp);
-                } catch (Exception e) {
-                    log.error("[login] Failed to send owner OTP email: {}", e.getMessage());
-                    return ApiResponse.error("Failed to send verification OTP. Please try again.");
-                }
-                log.info("[login] Owner OTP issued, awaiting 2FA: {}", user.getEmail());
-                return ApiResponse.success("OTP sent to authorized email address.",
-                    LoginResponse.builder().otpRequired(true).otpEmail(user.getEmail()).build());
+                ownerOtp[0] = user.getEmail();
+                ownerOtp[1] = otp;
+                return null; // signals the caller (after commit) to send the OTP email
             }
 
             // ── Step 4a: Coordinator check (before token so flag can be embedded in JWT) ──
@@ -310,6 +330,22 @@ public class AuthService {
             log.error("[login] Unexpected error: {}", e.getMessage());
             return ApiResponse.error("Login failed. Please try again.");
         }
+        });
+
+        if (ownerOtp[0] != null) {
+            // Transaction above has already committed and released its DB connection —
+            // safe to make the blocking Resend call now without holding pool capacity hostage.
+            try {
+                emailService.sendOwnerLoginOtp(ownerOtp[0], ownerOtp[1]);
+            } catch (Exception e) {
+                log.error("[login] Failed to send owner OTP email: {}", e.getMessage());
+                return ApiResponse.error("Failed to send verification OTP. Please try again.");
+            }
+            log.info("[login] Owner OTP issued, awaiting 2FA: {}", ownerOtp[0]);
+            return ApiResponse.success("OTP sent to authorized email address.",
+                LoginResponse.builder().otpRequired(true).otpEmail(ownerOtp[0]).build());
+        }
+        return result;
     }
 
     // ── Verify APPLICATION_OWNER login OTP ───────────────────────────────────
