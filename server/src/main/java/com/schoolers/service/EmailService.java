@@ -6,6 +6,7 @@ import com.schoolers.dto.JobApplicationRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -31,7 +32,19 @@ public class EmailService {
     @Value("${app.frontend.url:https://my-skoolz.com}")
     private String appBaseUrl;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    // Bounded timeouts so a slow/unresponsive Resend API can't hang the calling
+    // thread indefinitely — sendOwnerLoginOtp() runs synchronously on the login
+    // request thread, and an unbounded hang there was blocking the HTTP response
+    // until the client's own 60s timeout, which the frontend then misreports as
+    // "server temporarily unavailable" instead of a real error.
+    private final RestTemplate restTemplate = buildRestTemplate();
+
+    private static RestTemplate buildRestTemplate() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(5000);
+        factory.setReadTimeout(8000);
+        return new RestTemplate(factory);
+    }
 
     // ── OTP email (async — forgotPassword always returns the same generic ───
     // message regardless of send outcome, so this never blocks the request) ──
