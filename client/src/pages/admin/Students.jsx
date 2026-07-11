@@ -209,13 +209,10 @@ export default function Students() {
       e.admissionNumber = 'Admission number is required to generate login credentials';
     if (!formData.class.trim())           e.class       = 'Class is required';
     if (!formData.fatherName.trim())      e.fatherName  = "Father's name is required";
-    if (!formData.motherName.trim())      e.motherName  = "Mother's name is required";
     if (!formData.fatherPhone.trim())     e.fatherPhone = "Father's phone is required";
     else if (!/^\d{10}$/.test(formData.fatherPhone)) e.fatherPhone = 'Must be exactly 10 digits';
-    if (!formData.motherPhone.trim())     e.motherPhone = "Mother's phone is required";
-    else if (!/^\d{10}$/.test(formData.motherPhone)) e.motherPhone = 'Must be exactly 10 digits';
+    if (formData.motherPhone && !/^\d{10}$/.test(formData.motherPhone)) e.motherPhone = 'Must be exactly 10 digits';
     if (formData.guardianPhone && !/^\d{10}$/.test(formData.guardianPhone)) e.guardianPhone = 'Must be exactly 10 digits';
-    if (!formData.permanentAddress.trim()) e.permanentAddress = 'Permanent address is required';
     if (!editStudent && formData.studentEmail?.trim()) {
       // Email is optional — only validate format and OTP if provided
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.studentEmail.trim()))

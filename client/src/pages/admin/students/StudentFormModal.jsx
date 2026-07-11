@@ -255,14 +255,14 @@ export default function StudentFormModal({
                     </div>
                     <div className="row g-3">
                       <div className="col-md-6">
-                        <label className="form-label fw-medium small">Mother's Name *</label>
+                        <label className="form-label fw-medium small">Mother's Name <span className="text-muted">(Optional)</span></label>
                         <input type="text" className={`form-control form-control-sm ${errors.motherName ? 'is-invalid' : ''}`}
                           placeholder="Mother's full name" value={formData.motherName}
                           onChange={set('motherName')} />
                         {errors.motherName && <div className="invalid-feedback">{errors.motherName}</div>}
                       </div>
                       <div className="col-md-6">
-                        <label className="form-label fw-medium small">Mother's Phone *</label>
+                        <label className="form-label fw-medium small">Mother's Phone <span className="text-muted">(Optional)</span></label>
                         <input type="tel" className={`form-control form-control-sm ${errors.motherPhone ? 'is-invalid' : ''}`}
                           placeholder="10-digit number" value={formData.motherPhone}
                           onChange={setPhone('motherPhone')} maxLength={10} inputMode="numeric" />
@@ -302,7 +302,7 @@ export default function StudentFormModal({
               <SectionLabel icon="home" text="Address Details" />
               <div className="row g-3">
                 <div className="col-12">
-                  <label className="form-label fw-medium small">Permanent Address *</label>
+                  <label className="form-label fw-medium small">Permanent Address <span className="text-muted">(Optional)</span></label>
                   <textarea className={`form-control form-control-sm ${errors.permanentAddress ? 'is-invalid' : ''}`}
                     rows={2} maxLength={500} placeholder="House No, Street, Area, City, State, PIN"
                     value={formData.permanentAddress} onChange={set('permanentAddress')} />
