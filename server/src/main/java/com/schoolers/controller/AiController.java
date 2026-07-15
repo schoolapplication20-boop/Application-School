@@ -23,7 +23,7 @@ public class AiController {
     @Autowired private UserRepository userRepository;
 
     @PostMapping("/chat")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'APPLICATION_OWNER')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<String>> chat(@RequestBody AiChatRequest request) {
         try {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();

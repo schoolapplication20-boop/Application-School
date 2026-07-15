@@ -17,7 +17,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/ai/sessions")
-@PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','APPLICATION_OWNER')")
+@PreAuthorize("isAuthenticated()")
 public class AiChatController {
 
     @Autowired private AiChatService aiChatService;
