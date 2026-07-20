@@ -4,7 +4,7 @@ import SEOMeta from '../../components/SEOMeta';
 import { BASE_URL as BACKEND_URL } from '../../services/api';
 import './marketing.css';
 
-const WHATSAPP_NUMBER = '918333838252';
+const WHATSAPP_NUMBER = '12604670199';
 const WHATSAPP_MSG = encodeURIComponent("Hi My-Skoolz, I'd like to know more about your school management platform.");
 
 const ContactUsPage = () => {
