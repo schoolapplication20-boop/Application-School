@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.interceptor.TransactionAspectSupport;
 
@@ -41,6 +42,12 @@ public class AdminService {
 
     /** Cap on results returned by searchStudentsForFee to avoid returning an entire school roster. */
     private static final int MAX_FEE_SEARCH_RESULTS = 100;
+
+    // Self-reference (via Spring proxy) so bulkDeleteStudents can invoke deleteStudent with its
+    // own REQUIRES_NEW transaction — a direct `this.deleteStudent(...)` call bypasses the proxy
+    // and silently ignores the @Transactional annotation (Spring AOP self-invocation limitation).
+    @Autowired @org.springframework.context.annotation.Lazy
+    private AdminService self;
 
     @Autowired private StudentRepository studentRepository;
     @Autowired private TeacherRepository teacherRepository;
@@ -674,11 +681,13 @@ public class AdminService {
      *   4. student row
      *   5. linked User login account (resolved via studentUserId on Student OR studentId on User)
      *
-     * The entire operation runs inside a single @Transactional boundary.
+     * Runs in its own transaction (REQUIRES_NEW) so that when this is called in a loop
+     * from bulkDeleteStudents, one student's failure can't poison or roll back the deletes
+     * already committed for other students in the same batch.
      * If the login-account deletion throws, the exception propagates and Spring
-     * rolls back the whole transaction — no partial deletes, no orphan records.
+     * rolls back just this student's transaction — no partial deletes, no orphan records.
      */
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     public ApiResponse<String> deleteStudent(Long id, Long schoolId) {
         Student student = studentRepository.findById(id).orElse(null);
         if (student == null) {
@@ -772,15 +781,26 @@ public class AdminService {
         return ApiResponse.success("Student and login account deleted successfully", "Deleted");
     }
 
-    /** Bulk hard-delete — permanently removes each student and their login account. SA-only. */
-    @Transactional(rollbackFor = Exception.class)
+    /**
+     * Bulk hard-delete — permanently removes each student and their login account. SA-only.
+     * Deliberately NOT @Transactional here: each student is deleted via self.deleteStudent(),
+     * which opens its own REQUIRES_NEW transaction. That way one student's unexpected failure
+     * (e.g. a data-integrity issue specific to that record) can't roll back the deletes already
+     * committed for the rest of the batch and doesn't abort the whole request with a generic
+     * "Bulk delete failed" error — it's simply counted under "failed" and the batch continues.
+     */
     public Map<String, Object> bulkDeleteStudents(List<Long> ids, Long schoolId) {
         int deleted = 0;
         int failed  = 0;
         for (Long id : ids) {
-            ApiResponse<String> result = deleteStudent(id, schoolId);
-            if (result.isSuccess()) deleted++;
-            else failed++;
+            try {
+                ApiResponse<String> result = self.deleteStudent(id, schoolId);
+                if (result.isSuccess()) deleted++;
+                else failed++;
+            } catch (Exception ex) {
+                log.error("[bulkDeleteStudents] Failed to delete studentId=" + id, ex);
+                failed++;
+            }
         }
         return Map.of("deleted", deleted, "failed", failed);
     }
