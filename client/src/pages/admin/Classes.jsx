@@ -34,7 +34,6 @@ const iStyle = { padding: '9px 12px', border: '1.5px solid var(--border-strong)'
 const Classes = () => {
   const [classes,      setClasses]      = useState([]);
   const [classLoading, setClassLoading] = useState(false);
-  const [allStudents,  setAllStudents]  = useState([]);
   const [studLoading,  setStudLoading]  = useState(false);
 
   // Main table filters
@@ -49,8 +48,10 @@ const Classes = () => {
   const [formData,   setFormData]   = useState(initialForm);
 
   // Student view panel
-  const [viewClass,  setViewClass]  = useState(null);
-  const [viewSearch, setViewSearch] = useState('');
+  const [viewClass,       setViewClass]       = useState(null);
+  const [viewSearch,      setViewSearch]      = useState('');
+  const [viewStudentsRaw, setViewStudentsRaw] = useState([]); // all students for the open class/section, any status
+  const [viewStatusFilter, setViewStatusFilter] = useState('active'); // 'active' | 'inactive' | 'all' — matches occupancy by default
 
   // Confirmation dialogs
   const [deleteClassTarget,   setDeleteClassTarget]   = useState(null); // class row to delete
@@ -82,23 +83,11 @@ const Classes = () => {
       .finally(() => setClassLoading(false));
   };
 
-  const loadStudents = () => {
-    setStudLoading(true);
-    adminAPI.getStudents({ page: 0, size: 1000 })
-      .then(res => {
-        const data = res.data?.data?.content ?? res.data?.data ?? [];
-        setAllStudents(Array.isArray(data) ? data : []);
-      })
-      .catch(() => setAllStudents([]))
-      .finally(() => setStudLoading(false));
-  };
-
   const [teacherList, setTeacherList] = useState([]);
 
-  // ── Load classes + students + teachers from backend ──────────────────────
+  // ── Load classes + teachers from backend ──────────────────────────────────
   useEffect(() => {
     loadClasses();
-    loadStudents();
     adminAPI.getTeachers().then(res => {
       const data = res.data?.data ?? [];
       setTeacherList(Array.isArray(data) ? data.filter(t => t.isActive !== false) : []);
@@ -147,32 +136,33 @@ const Classes = () => {
     }),
   [withEnrolled, searchTerm, filterClass, filterSection, filterCategory]);
 
+  // A student counts toward occupancy when isActive is true or unset — mirrors the
+  // backend's countEnrolledForCapacity query, so the "Active" tab matches the class list's count.
+  const isActiveStudent = (s) => s.isActive === true || s.isActive == null;
+
   // ── Students shown in the view panel ─────────────────────────────────────
+  // viewStudentsRaw already comes pre-filtered to this exact class+section from the backend
+  // (GET /classes/{id}/students, case-insensitive, no pagination) — here we only apply the
+  // status tab and the in-modal search.
   const viewStudents = useMemo(() => {
-    if (!viewClass) return [];
-    return allStudents.filter(s => {
-      const sClass   = String(s.className || s.class || '').trim();
-      const sSection = String(s.section || '').trim();
+    const q = viewSearch.toLowerCase();
+    return viewStudentsRaw.filter(s => {
+      const matchStatus =
+        viewStatusFilter === 'all'      ? true :
+        viewStatusFilter === 'inactive' ? !isActiveStudent(s) :
+        isActiveStudent(s);
 
-      // Normalise both sides: strip leading "Class " so "Class 3" and "3" both match,
-      // and ignore case so imported rows like "vii"/"VII" or "s"/"S" still match —
-      // mirrors the case-insensitive match the backend uses to compute the enrolled count.
-      const normalise = (v) => v.replace(/^Class\s+/i, '').trim().toLowerCase();
-      const targetClass   = normalise(viewClass.name);
-      const targetSection = normalise(viewClass.section);
-
-      const matchClass   = normalise(sClass) === targetClass;
-      const matchSection = normalise(sSection) === targetSection;
-
-      const q = viewSearch.toLowerCase();
       const matchSearch = !q ||
         (s.name || '').toLowerCase().includes(q) ||
         String(s.rollNumber || s.rollNo || '').toLowerCase().includes(q) ||
         (s.parentName || s.parent || '').toLowerCase().includes(q);
 
-      return matchClass && matchSection && matchSearch;
+      return matchStatus && matchSearch;
     });
-  }, [allStudents, viewClass, viewSearch]);
+  }, [viewStudentsRaw, viewSearch, viewStatusFilter]);
+
+  const viewActiveCount   = useMemo(() => viewStudentsRaw.filter(isActiveStudent).length, [viewStudentsRaw]);
+  const viewInactiveCount = viewStudentsRaw.length - viewActiveCount;
 
   // ── Export students of current view class as CSV ─────────────────────────
   const handleExportCSV = () => {
@@ -200,11 +190,21 @@ const Classes = () => {
     URL.revokeObjectURL(url);
   };
 
+  // ── Fetch every student in a class/section (unpaginated, backend-filtered) ─
+  const loadViewStudents = (classId) => {
+    setStudLoading(true);
+    adminAPI.getClassStudents(classId)
+      .then(res => setViewStudentsRaw(Array.isArray(res.data?.data) ? res.data.data : []))
+      .catch(() => setViewStudentsRaw([]))
+      .finally(() => setStudLoading(false));
+  };
+
   // ── Open view panel — always reload students for fresh data ──────────────
   const openView = (c) => {
     setViewClass(c);
     setViewSearch('');
-    loadStudents();
+    setViewStatusFilter('active');
+    loadViewStudents(c.id);
   };
 
   // ── Delete class (with cascade) ──────────────────────────────────────────
@@ -214,7 +214,6 @@ const Classes = () => {
       await adminAPI.deleteClass(deleteClassTarget.id);
       showToast(`${deleteClassTarget.name} – ${deleteClassTarget.section} and all its students have been deleted`, 'warning');
       loadClasses();
-      loadStudents();
     } catch {
       showToast('Failed to delete class. Please try again.', 'error');
     } finally {
@@ -228,7 +227,7 @@ const Classes = () => {
     try {
       await adminAPI.deleteStudent(deleteStudentTarget.id);
       showToast(`${deleteStudentTarget.name} has been removed`, 'warning');
-      loadStudents();
+      if (viewClass) loadViewStudents(viewClass.id);
       loadClasses();
     } catch {
       showToast('Failed to delete student. Please try again.', 'error');
@@ -568,7 +567,28 @@ const Classes = () => {
               <button className="modal-close" onClick={() => setViewClass(null)}><span className="material-icons">close</span></button>
             </div>
 
-            {/* Search only */}
+            {/* Status tabs */}
+            <div style={{ padding: '10px 20px 0', display: 'flex', gap: 8 }}>
+              {[
+                { key: 'active',   label: 'Active',   count: viewActiveCount },
+                { key: 'inactive', label: 'Inactive', count: viewInactiveCount },
+                { key: 'all',      label: 'All',       count: viewStudentsRaw.length },
+              ].map(tab => (
+                <button
+                  key={tab.key}
+                  onClick={() => setViewStatusFilter(tab.key)}
+                  style={{
+                    padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                    border: viewStatusFilter === tab.key ? '1.5px solid #0de1e8' : '1.5px solid var(--border-strong)',
+                    background: viewStatusFilter === tab.key ? '#0de1e820' : 'var(--surface)',
+                    color: viewStatusFilter === tab.key ? '#0de1e8' : 'var(--text-secondary)',
+                  }}>
+                  {tab.label} {tab.count}
+                </button>
+              ))}
+            </div>
+
+            {/* Search */}
             <div style={{ padding: '14px 20px', background: 'var(--surface-alt)', borderBottom: '1px solid var(--border-strong)', display: 'flex', gap: '12px', alignItems: 'center' }}>
               <div style={{ position: 'relative', flex: 1 }}>
                 <span className="material-icons" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 16, color: 'var(--text-muted)' }}>search</span>

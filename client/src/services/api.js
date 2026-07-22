@@ -153,6 +153,7 @@ export const adminAPI = {
   updateClass: (id, data) => api.put(`/api/admin/classes/${id}`, data),
   deleteClass: (id) => api.delete(`/api/admin/classes/${id}`),
   getClassCapacityInfo: (className, section) => api.get('/api/admin/classes/capacity-check', { params: { className, section: section || '' } }),
+  getClassStudents: (classId) => api.get(`/api/admin/classes/${classId}/students`),
 
   // Fees (legacy)
   getFees: (params) => api.get('/api/admin/fees', { params }),

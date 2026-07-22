@@ -353,6 +353,13 @@ public class AdminController {
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
     }
 
+    /** All students in a class/section, unpaginated — backs the "View Students" modal. */
+    @GetMapping("/classes/{id}/students")
+    public ResponseEntity<ApiResponse<List<Student>>> getStudentsForClass(@PathVariable Long id, Authentication auth) {
+        ApiResponse<List<Student>> response = adminService.getStudentsForClass(id, getCurrentSchoolId(auth));
+        return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
+    }
+
     // ===== Fees =====
     @GetMapping("/fees")
     public ResponseEntity<ApiResponse<List<Fee>>> getFees(Authentication auth) {

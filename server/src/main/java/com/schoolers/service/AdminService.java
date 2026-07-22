@@ -1422,6 +1422,22 @@ public class AdminService {
         return ApiResponse.success(result);
     }
 
+    /**
+     * Returns every student belonging to a class/section (case-insensitive match on the
+     * ClassRoom's stored name/section), with no pagination cap — used by the "View Students"
+     * modal so its count always matches the occupancy figure shown on the classes list,
+     * regardless of how many total students the school has.
+     */
+    public ApiResponse<List<Student>> getStudentsForClass(Long classId, Long schoolId) {
+        if (schoolId == null) return ApiResponse.error("School not found");
+        ClassRoom room = classRoomRepository.findById(classId).orElse(null);
+        if (room == null || schoolMismatch(schoolId, room.getSchoolId()))
+            return ApiResponse.error("Class not found");
+        List<Student> students = studentRepository.findBySchoolIdAndClassNameIgnoreCaseAndSectionIgnoreCase(
+                schoolId, room.getName(), room.getSection() != null ? room.getSection() : "");
+        return ApiResponse.success(students);
+    }
+
     public ApiResponse<Map<String, Object>> getClassCapacityInfo(String className, String section, Long schoolId) {
         String resolvedClass   = resolveClassName(className != null ? className : "");
         String resolvedSection = section != null ? section.trim() : "";
