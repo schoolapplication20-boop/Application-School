@@ -23,6 +23,8 @@ const ALL_MODULES = [
   { key: 'examination',  label: 'Exam & Certificates',icon: 'verified' },
   { key: 'diary',        label: 'Class Diary',        icon: 'menu_book' },
   { key: 'messages',     label: 'Messages',           icon: 'chat' },
+  { key: 'sms',          label: 'SMS Notifications',  icon: 'sms' },
+  { key: 'whatsapp',     label: 'WhatsApp',           icon: 'chat' },
 ];
 
 const DEFAULT_PERMS = ALL_MODULES.reduce((acc, m) => ({ ...acc, [m.key]: true }), {});

@@ -101,7 +101,8 @@ public class School {
             + "\"applications\":true,\"fees\":true,\"collectFee\":true,"
             + "\"salaries\":true,\"expenses\":true,\"leave\":true,"
             + "\"transport\":true,\"attendance\":true,\"timetable\":true,"
-            + "\"examination\":true,\"diary\":true,\"messages\":true}";
+            + "\"examination\":true,\"diary\":true,\"messages\":true,"
+            + "\"sms\":false,\"whatsapp\":false}";
 
     // ── Setup Status ──────────────────────────────────────────────────────────
     /**
