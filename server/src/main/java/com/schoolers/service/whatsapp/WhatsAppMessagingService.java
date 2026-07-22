@@ -54,9 +54,9 @@ import java.util.Map;
  * duplicating its STUDENTS/FEE_DUE resolution logic.
  */
 @Service
-public class WhatsAppService {
+public class WhatsAppMessagingService {
 
-    private static final Logger log = LoggerFactory.getLogger(WhatsAppService.class);
+    private static final Logger log = LoggerFactory.getLogger(WhatsAppMessagingService.class);
     private static final DateTimeFormatter CAMPAIGN_NAME_FORMAT = DateTimeFormatter.ofPattern("dd-MMM-yyyy HH:mm");
 
     private final WhatsAppCampaignRepository campaignRepository;
@@ -72,7 +72,7 @@ public class WhatsAppService {
     @Value("${whatsapp.max.retry.attempts:3}")
     private int maxRetryAttempts;
 
-    public WhatsAppService(WhatsAppCampaignRepository campaignRepository,
+    public WhatsAppMessagingService(WhatsAppCampaignRepository campaignRepository,
                             WhatsAppQueueRepository queueRepository,
                             WhatsAppLogRepository logRepository,
                             WhatsAppTemplateRepository templateRepository,
@@ -166,7 +166,7 @@ public class WhatsAppService {
         queueRepository.saveAll(queueItems);
         queueProcessor.triggerImmediateProcessing();
 
-        log.info("[WhatsAppService] Created fee-reminder campaign {} for school {}: {} recipient(s)",
+        log.info("[WhatsAppMessagingService] Created fee-reminder campaign {} for school {}: {} recipient(s)",
                 campaignId, schoolId, recipients.size());
         return ApiResponse.success("Fee reminder queued for " + recipients.size() + " recipient(s)", WhatsAppCampaignResponse.from(campaign));
     }
@@ -194,7 +194,7 @@ public class WhatsAppService {
                     .filter(t -> t.getApprovalStatus() == WhatsAppApprovalStatus.APPROVED)
                     .findFirst().orElse(null);
             if (template == null) {
-                log.info("[WhatsAppService] No approved {} template configured for school {} — skipping", category, schoolId);
+                log.info("[WhatsAppMessagingService] No approved {} template configured for school {} — skipping", category, schoolId);
                 return;
             }
 
@@ -230,7 +230,7 @@ public class WhatsAppService {
                     .build());
             queueProcessor.triggerImmediateProcessing();
         } catch (Exception e) {
-            log.warn("[WhatsAppService] Failed to enqueue {} for school {}: {}", category, schoolId, e.getMessage());
+            log.warn("[WhatsAppMessagingService] Failed to enqueue {} for school {}: {}", category, schoolId, e.getMessage());
         }
     }
 

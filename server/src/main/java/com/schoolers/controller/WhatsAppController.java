@@ -5,7 +5,7 @@ import com.schoolers.dto.whatsapp.WhatsAppFeeReminderRequest;
 import com.schoolers.model.whatsapp.WhatsAppTargetType;
 import com.schoolers.security.CurrentUserUtil;
 import com.schoolers.service.whatsapp.WhatsAppConfigurationService;
-import com.schoolers.service.whatsapp.WhatsAppService;
+import com.schoolers.service.whatsapp.WhatsAppMessagingService;
 import com.schoolers.service.whatsapp.WhatsAppTemplateService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -28,16 +28,16 @@ import java.util.Map;
 @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
 public class WhatsAppController {
 
-    private final WhatsAppService whatsAppService;
+    private final WhatsAppMessagingService messagingService;
     private final WhatsAppTemplateService templateService;
     private final WhatsAppConfigurationService configurationService;
     private final CurrentUserUtil currentUserUtil;
 
-    public WhatsAppController(WhatsAppService whatsAppService,
+    public WhatsAppController(WhatsAppMessagingService messagingService,
                               WhatsAppTemplateService templateService,
                               WhatsAppConfigurationService configurationService,
                               CurrentUserUtil currentUserUtil) {
-        this.whatsAppService = whatsAppService;
+        this.messagingService = messagingService;
         this.templateService = templateService;
         this.configurationService = configurationService;
         this.currentUserUtil = currentUserUtil;
@@ -47,7 +47,7 @@ public class WhatsAppController {
 
     @PostMapping("/fee-reminder")
     public ResponseEntity<?> sendFeeReminder(@RequestBody WhatsAppFeeReminderRequest request, Authentication auth) {
-        var response = whatsAppService.sendFeeReminder(currentUserUtil.getCurrentSchoolId(auth), currentUserUtil.getCurrentUserId(auth), request);
+        var response = messagingService.sendFeeReminder(currentUserUtil.getCurrentSchoolId(auth), currentUserUtil.getCurrentUserId(auth), request);
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
@@ -56,7 +56,7 @@ public class WhatsAppController {
             @RequestParam WhatsAppTargetType targetType,
             @RequestParam(required = false) List<Long> studentIds,
             Authentication auth) {
-        var response = whatsAppService.previewRecipients(currentUserUtil.getCurrentSchoolId(auth), targetType, studentIds);
+        var response = messagingService.previewRecipients(currentUserUtil.getCurrentSchoolId(auth), targetType, studentIds);
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
@@ -67,18 +67,18 @@ public class WhatsAppController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             Authentication auth) {
-        return ResponseEntity.ok(whatsAppService.getCampaigns(currentUserUtil.getCurrentSchoolId(auth), page, size));
+        return ResponseEntity.ok(messagingService.getCampaigns(currentUserUtil.getCurrentSchoolId(auth), page, size));
     }
 
     @GetMapping("/campaigns/{id}")
     public ResponseEntity<?> getCampaign(@PathVariable Long id, Authentication auth) {
-        var response = whatsAppService.getCampaign(currentUserUtil.getCurrentSchoolId(auth), id);
+        var response = messagingService.getCampaign(currentUserUtil.getCurrentSchoolId(auth), id);
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.status(404).body(response);
     }
 
     @PostMapping("/campaigns/{id}/cancel")
     public ResponseEntity<?> cancelCampaign(@PathVariable Long id, Authentication auth) {
-        var response = whatsAppService.cancelCampaign(currentUserUtil.getCurrentSchoolId(auth), id);
+        var response = messagingService.cancelCampaign(currentUserUtil.getCurrentSchoolId(auth), id);
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
@@ -93,13 +93,13 @@ public class WhatsAppController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             Authentication auth) {
-        var response = whatsAppService.getHistory(currentUserUtil.getCurrentSchoolId(auth), status, from, to, search, page, size);
+        var response = messagingService.getHistory(currentUserUtil.getCurrentSchoolId(auth), status, from, to, search, page, size);
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
     @GetMapping("/stats")
     public ResponseEntity<?> getStats(Authentication auth) {
-        return ResponseEntity.ok(whatsAppService.getStats(currentUserUtil.getCurrentSchoolId(auth)));
+        return ResponseEntity.ok(messagingService.getStats(currentUserUtil.getCurrentSchoolId(auth)));
     }
 
     // ── Templates ──────────────────────────────────────────────────────────

@@ -4,7 +4,7 @@ import com.schoolers.dto.ApiResponse;
 import com.schoolers.dto.CreateTeacherRequest;
 import com.schoolers.model.*;
 import com.schoolers.repository.*;
-import com.schoolers.service.whatsapp.WhatsAppService;
+import com.schoolers.service.whatsapp.WhatsAppMessagingService;
 import com.schoolers.sms.PhoneUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -86,7 +86,7 @@ public class AdminService {
     @Autowired private AssignmentSubmissionRepository assignmentSubmissionRepository;
     @Autowired private AuditLogService auditLogService;
     @Autowired private TokenBlacklistService tokenBlacklistService;
-    @Autowired private WhatsAppService whatsAppService;
+    @Autowired private WhatsAppMessagingService whatsAppMessagingService;
     @Autowired private ReceiptTokenService receiptTokenService;
 
     @Value("${app.base.url:https://my-skoolz.com}")
@@ -2572,10 +2572,10 @@ public class AdminService {
             vars.put("receipt_number", payment.getReceiptNumber() != null ? payment.getReceiptNumber() : "");
             vars.put("payment_date", payment.getPaymentDate() != null ? payment.getPaymentDate().toString() : "");
 
-            whatsAppService.sendPaymentConfirmation(payment.getSchoolId(), payment.getStudentId(), phone, studentName, vars);
+            whatsAppMessagingService.sendPaymentConfirmation(payment.getSchoolId(), payment.getStudentId(), phone, studentName, vars);
 
             String receiptUrl = appBaseUrl + "/api/receipts/" + payment.getId() + "?token=" + receiptTokenService.generate(payment.getId());
-            whatsAppService.sendReceiptLink(payment.getSchoolId(), payment.getStudentId(), phone, studentName, receiptUrl, vars);
+            whatsAppMessagingService.sendReceiptLink(payment.getSchoolId(), payment.getStudentId(), phone, studentName, receiptUrl, vars);
         } catch (Exception e) {
             log.warn("[AdminService] WhatsApp payment notification failed for payment {} (payment itself was already recorded successfully): {}",
                     payment.getId(), e.getMessage());
