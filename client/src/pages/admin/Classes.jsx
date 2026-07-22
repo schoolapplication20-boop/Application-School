@@ -527,46 +527,30 @@ const Classes = () => {
               </div>
 
               {/* Optional fields */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <div>
-                  <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
-                    Class Teacher (Optional)
-                  </label>
-                  <select
-                    style={{ ...iStyle, width: '100%', boxSizing: 'border-box', cursor: 'pointer' }}
-                    value={formData.teacherId || ''}
-                    onChange={e => {
-                      const t = teacherList.find(t => String(t.id) === e.target.value);
-                      setFormData({ ...formData, teacherId: e.target.value, teacher: t?.name || '' });
-                    }}
-                  >
-                    <option value="">— No teacher assigned —</option>
-                    {teacherList
-                      .filter(t =>
-                        (t.teacherType === 'CLASS_TEACHER' || t.teacherType === 'BOTH') &&
-                        !assignedTeacherIds.has(String(t.id))
-                      )
-                      .map(t => (
-                        <option key={t.id} value={t.id}>
-                          {t.name}{t.employeeId ? ` (${t.employeeId})` : ''}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-                <div>
-                  <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
-                    Capacity (Optional)
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="1000"
-                    style={{ ...iStyle, width: '100%', boxSizing: 'border-box' }}
-                    placeholder="Max students"
-                    value={formData.capacity || ''}
-                    onChange={e => setFormData({ ...formData, capacity: e.target.value })}
-                  />
-                </div>
+              <div>
+                <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
+                  Class Teacher (Optional)
+                </label>
+                <select
+                  style={{ ...iStyle, width: '100%', boxSizing: 'border-box', cursor: 'pointer' }}
+                  value={formData.teacherId || ''}
+                  onChange={e => {
+                    const t = teacherList.find(t => String(t.id) === e.target.value);
+                    setFormData({ ...formData, teacherId: e.target.value, teacher: t?.name || '' });
+                  }}
+                >
+                  <option value="">— No teacher assigned —</option>
+                  {teacherList
+                    .filter(t =>
+                      (t.teacherType === 'CLASS_TEACHER' || t.teacherType === 'BOTH') &&
+                      !assignedTeacherIds.has(String(t.id))
+                    )
+                    .map(t => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}{t.employeeId ? ` (${t.employeeId})` : ''}
+                      </option>
+                    ))}
+                </select>
               </div>
             </div>
             <div className="modal-footer">
