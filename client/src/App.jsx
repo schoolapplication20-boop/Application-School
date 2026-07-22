@@ -107,6 +107,12 @@ const AdminMessages = lazy(() => import('./pages/admin/AdminMessages'));
 // Admin SMS Notifications
 const SMS = lazy(() => import('./pages/admin/sms/SMS'));
 
+// Admin WhatsApp
+const WhatsApp = lazy(() => import('./pages/admin/whatsapp/WhatsApp'));
+
+// Integration Setup Guide (Super Admin + Application Owner only)
+const IntegrationGuide = lazy(() => import('./pages/shared/IntegrationGuide'));
+
 // School Settings
 const SchoolSettings = lazy(() => import('./pages/admin/SchoolSettings'));
 
@@ -226,6 +232,14 @@ function App() {
               </ProtectedRoute>
             } />
 
+            {/* Integration setup guide (WhatsApp/Meta + SMS/MSG91 registration steps) —
+                Super Admin and Application Owner only */}
+            <Route path="/integration-guide" element={
+              <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'APPLICATION_OWNER']}>
+                <IntegrationGuide />
+              </ProtectedRoute>
+            } />
+
             {/* SUPER_ADMIN school dashboard */}
             <Route path="/superadmin/dashboard" element={
               <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
@@ -286,6 +300,9 @@ function App() {
 
             {/* Admin SMS Notifications */}
             <Route path="/admin/sms"          element={<ProtectedRoute allowedRoles={['ADMIN','SUPER_ADMIN']} permKey="sms"><SMS /></ProtectedRoute>} />
+
+            {/* Admin WhatsApp */}
+            <Route path="/admin/whatsapp"     element={<ProtectedRoute allowedRoles={['ADMIN','SUPER_ADMIN']} permKey="whatsapp"><WhatsApp /></ProtectedRoute>} />
 
             {/* School Settings */}
             <Route path="/admin/settings"     element={<ProtectedRoute allowedRoles={['ADMIN','SUPER_ADMIN']}><SchoolSettings /></ProtectedRoute>} />

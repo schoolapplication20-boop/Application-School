@@ -6,8 +6,10 @@ import com.schoolers.model.User;
 import com.schoolers.repository.SchoolRepository;
 import com.schoolers.repository.StudentFeeAssignmentRepository;
 import com.schoolers.repository.UserRepository;
+import com.schoolers.repository.whatsapp.WhatsAppLogRepository;
 import com.schoolers.service.AuthService;
 import com.schoolers.service.EmailService;
+import com.schoolers.service.PlatformModuleSettingService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -29,7 +31,10 @@ public class OwnerController {
     @Autowired private SchoolRepository               schoolRepository;
     @Autowired private StudentFeeAssignmentRepository feeAssignmentRepository;
     @Autowired private com.schoolers.repository.PlatformPaymentRepository platformPaymentRepository;
+    @Autowired private WhatsAppLogRepository whatsAppLogRepository;
+    @Autowired private PlatformModuleSettingService platformModuleSettingService;
     @Autowired private EmailService                   emailService;
+    @Autowired private com.schoolers.security.CurrentUserUtil currentUserUtil;
 
     private static final SecureRandom RANDOM = new SecureRandom();
 
@@ -198,6 +203,15 @@ public class OwnerController {
         response.put("teacherCount",   roleCounts.getOrDefault("TEACHER",     0L));
         response.put("studentCount",   roleCounts.getOrDefault("STUDENT",     0L));
         response.put("superAdminCount",roleCounts.getOrDefault("SUPER_ADMIN", 0L));
+
+        // WhatsApp usage (report-only quota, mirrors the billing fields above)
+        LocalDateTime monthStart = LocalDateTime.now().toLocalDate().withDayOfMonth(1).atStartOfDay();
+        long whatsappSentThisMonth = whatsAppLogRepository.countBySchoolIdAndCreatedAtBetween(school.getId(), monthStart, LocalDateTime.now());
+        Integer whatsappQuota = school.getWhatsappMonthlyQuota();
+        response.put("whatsappMonthlyQuota",  whatsappQuota);
+        response.put("whatsappSentThisMonth", whatsappSentThisMonth);
+        response.put("whatsappQuotaBreached", whatsappQuota != null && whatsappSentThisMonth > whatsappQuota);
+
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -331,6 +345,56 @@ public class OwnerController {
                 ? "User limit removed — school now has no limit."
                 : "User limit set to " + school.getUserLimit() + ".";
         return ResponseEntity.ok(ApiResponse.success(msg));
+    }
+
+    /**
+     * Set or clear the monthly WhatsApp message quota for a school.
+     * Body: { "whatsappMonthlyQuota": 500 }  — send null to remove the quota. Report-only —
+     * sending is never blocked when a school exceeds it (see WhatsAppService.getStats).
+     */
+    @PatchMapping("/schools/{schoolDbId}/whatsapp-quota")
+    public ResponseEntity<ApiResponse<String>> setWhatsAppQuota(
+            @PathVariable Long schoolDbId,
+            @RequestBody Map<String, Object> body) {
+
+        School school = schoolRepository.findById(schoolDbId).orElse(null);
+        if (school == null)
+            return ResponseEntity.status(404).body(ApiResponse.error("School not found."));
+
+        Object raw = body.get("whatsappMonthlyQuota");
+        if (raw == null) {
+            school.setWhatsappMonthlyQuota(null);
+        } else {
+            try {
+                int quota = Integer.parseInt(raw.toString());
+                if (quota < 1)
+                    return ResponseEntity.badRequest().body(ApiResponse.error("Quota must be at least 1."));
+                school.setWhatsappMonthlyQuota(quota);
+            } catch (NumberFormatException e) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("whatsappMonthlyQuota must be a number."));
+            }
+        }
+
+        schoolRepository.save(school);
+        String msg = school.getWhatsappMonthlyQuota() == null
+                ? "WhatsApp quota removed — school now has no limit."
+                : "WhatsApp quota set to " + school.getWhatsappMonthlyQuota() + " messages/month.";
+        return ResponseEntity.ok(ApiResponse.success(msg));
+    }
+
+    /** Platform-wide WhatsApp kill switch status. */
+    @GetMapping("/whatsapp/module-status")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getWhatsAppModuleStatus() {
+        return ResponseEntity.ok(ApiResponse.success(Map.of("enabled", platformModuleSettingService.isGloballyEnabled("whatsapp"))));
+    }
+
+    /** Enable/disable WhatsApp for the entire platform. Body: { "enabled": false } */
+    @PatchMapping("/whatsapp/module-status")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> setWhatsAppModuleStatus(
+            @RequestBody Map<String, Object> body, Authentication auth) {
+        boolean enabled = !Boolean.FALSE.equals(body.get("enabled"));
+        platformModuleSettingService.setGloballyEnabled("whatsapp", enabled, currentUserUtil.getCurrentUserId(auth));
+        return ResponseEntity.ok(ApiResponse.success(Map.of("enabled", enabled)));
     }
 
     private User resolve(Authentication auth) {

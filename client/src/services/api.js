@@ -753,6 +753,32 @@ export const smsAPI = {
   updateProviderSettings: (data) => api.put('/api/sms/provider-settings', data),
 };
 
+export const whatsappAPI = {
+  // Sending
+  sendFeeReminder:   (data)   => api.post('/api/whatsapp/fee-reminder', data),
+  previewRecipients: (params) => api.get('/api/whatsapp/recipients/preview', { params }),
+
+  // Campaigns
+  getCampaigns:   (page, size) => api.get('/api/whatsapp/campaigns', { params: { page, size } }),
+  getCampaign:    (id)         => api.get(`/api/whatsapp/campaigns/${id}`),
+  cancelCampaign: (id)         => api.post(`/api/whatsapp/campaigns/${id}/cancel`),
+
+  // History & dashboard
+  getHistory: (params) => api.get('/api/whatsapp/history', { params }),
+  getStats:   ()       => api.get('/api/whatsapp/stats'),
+
+  // Templates
+  getTemplates:   (activeOnly) => api.get('/api/whatsapp/templates', { params: activeOnly ? { activeOnly: true } : {} }),
+  getTemplate:    (id)         => api.get(`/api/whatsapp/templates/${id}`),
+  createTemplate: (data)       => api.post('/api/whatsapp/templates', data),
+  updateTemplate: (id, data)   => api.put(`/api/whatsapp/templates/${id}`, data),
+  deleteTemplate: (id)         => api.delete(`/api/whatsapp/templates/${id}`),
+
+  // Per-school Meta WhatsApp Cloud API credentials
+  getSettings: ()     => api.get('/api/whatsapp/settings'),
+  saveSettings: (data) => api.put('/api/whatsapp/settings', data),
+};
+
 // ============================================
 // AUTH CONFIG APIs
 // ============================================

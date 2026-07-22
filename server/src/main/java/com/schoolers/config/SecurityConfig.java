@@ -111,6 +111,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/chatbot/**").permitAll()     // FAQ chatbot — no sensitive data
                 .requestMatchers("/api/whatsapp/webhook").permitAll() // Meta webhook — must be public
                 .requestMatchers("/api/sms/webhook/**").permitAll() // Twilio delivery-status webhook — must be public
+                .requestMatchers("/api/receipts/**").permitAll() // no-login receipt view, gated by its own signed token
                 .requestMatchers("/api/system/**").authenticated()  // system notices — all users read; write gated by @PreAuthorize
                 .requestMatchers("/error").permitAll()
                 .requestMatchers("/uploads/logos/**").permitAll()    // school logos — public

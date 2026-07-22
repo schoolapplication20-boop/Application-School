@@ -2,6 +2,8 @@ package com.schoolers.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.schoolers.model.whatsapp.WhatsAppLogStatus;
+import com.schoolers.service.whatsapp.WhatsAppDeliveryStatusService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -35,6 +37,11 @@ public class WhatsAppCloudService {
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper mapper = new ObjectMapper();
+    private final WhatsAppDeliveryStatusService deliveryStatusService;
+
+    public WhatsAppCloudService(WhatsAppDeliveryStatusService deliveryStatusService) {
+        this.deliveryStatusService = deliveryStatusService;
+    }
 
     @PostConstruct
     void init() {
@@ -75,11 +82,53 @@ public class WhatsAppCloudService {
                         }
                         handleMessage(from, text);
                     }
+                    for (JsonNode status : value.path("statuses")) {
+                        handleStatus(status, change.toString());
+                    }
                 }
             }
         } catch (Exception e) {
             log.warning("[WhatsAppCloud] Failed to parse payload: " + e.getMessage());
         }
+    }
+
+    /**
+     * Handles a Meta delivery-status callback (sibling of the "messages" array above, on the same
+     * webhook endpoint). Forwards to {@link WhatsAppDeliveryStatusService} for the outbound
+     * template messages sent by the school-to-parent WhatsApp module — irrelevant to this class's
+     * own inbound FAQ bot, which never checks delivery status.
+     */
+    private void handleStatus(JsonNode status, String rawPayload) {
+        try {
+            String wamid = status.path("id").asText(null);
+            String rawStatus = status.path("status").asText(null);
+            if (wamid == null || rawStatus == null) return;
+
+            WhatsAppLogStatus mapped = mapStatus(rawStatus);
+            if (mapped == null) return;
+
+            String errorCode = null;
+            String errorMessage = null;
+            JsonNode errors = status.path("errors");
+            if (errors.isArray() && errors.size() > 0) {
+                errorCode = errors.get(0).path("code").asText(null);
+                errorMessage = errors.get(0).path("message").asText(null);
+            }
+
+            deliveryStatusService.recordDeliveryStatus(wamid, mapped, errorCode, errorMessage, rawPayload);
+        } catch (Exception e) {
+            log.warning("[WhatsAppCloud] Failed to process delivery status: " + e.getMessage());
+        }
+    }
+
+    private WhatsAppLogStatus mapStatus(String rawStatus) {
+        return switch (rawStatus.toLowerCase()) {
+            case "sent" -> WhatsAppLogStatus.SENT;
+            case "delivered" -> WhatsAppLogStatus.DELIVERED;
+            case "read" -> WhatsAppLogStatus.READ;
+            case "failed" -> WhatsAppLogStatus.FAILED;
+            default -> null; // e.g. "deleted" — not a delivery outcome, ignore
+        };
     }
 
     // ── Message routing ───────────────────────────────────────────────────────
