@@ -126,6 +126,10 @@ public class School {
     @Builder.Default
     private String paymentPlan = "YEARLY";
 
+    /** Owner-set monthly WhatsApp message quota (null = not set). Report-only — sending is never blocked on breach. */
+    @Column(name = "whatsapp_monthly_quota")
+    private Integer whatsappMonthlyQuota;
+
     // ── Status ───────────────────────────────────────────────────────────────
     @Column(name = "is_active")
     @Builder.Default

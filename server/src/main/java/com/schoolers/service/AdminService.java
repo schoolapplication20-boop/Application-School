@@ -4,7 +4,10 @@ import com.schoolers.dto.ApiResponse;
 import com.schoolers.dto.CreateTeacherRequest;
 import com.schoolers.model.*;
 import com.schoolers.repository.*;
+import com.schoolers.service.whatsapp.WhatsAppService;
+import com.schoolers.sms.PhoneUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -83,6 +86,11 @@ public class AdminService {
     @Autowired private AssignmentSubmissionRepository assignmentSubmissionRepository;
     @Autowired private AuditLogService auditLogService;
     @Autowired private TokenBlacklistService tokenBlacklistService;
+    @Autowired private WhatsAppService whatsAppService;
+    @Autowired private ReceiptTokenService receiptTokenService;
+
+    @Value("${app.base.url:https://my-skoolz.com}")
+    private String appBaseUrl;
     private static final String CHARS = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#$!";
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final java.util.regex.Pattern EMAIL_PATTERN =
@@ -2373,11 +2381,11 @@ public class AdminService {
         StudentFeeAssignment saved = studentFeeAssignmentRepository.save(assignment);
 
         String term = str(body, "term", null);
-        feePaymentRepository.save(FeePayment.builder()
+        FeePayment savedPayment = feePaymentRepository.save(FeePayment.builder()
                 .feeId(0L)
                 .assignmentId(saved.getId())
                 .studentId(saved.getStudentId())
-                .schoolId(schoolId)
+                .schoolId(schoolId != null ? schoolId : saved.getSchoolId())
                 .studentName(saved.getStudentName())
                 .rollNumber(saved.getRollNumber())
                 .className(saved.getClassName())
@@ -2390,6 +2398,7 @@ public class AdminService {
                 .receivedBy(str(body, "receivedBy", null))
                 .remarks(str(body, "remarks", null))
                 .build());
+        sendWhatsAppPaymentNotifications(savedPayment);
 
         return ApiResponse.success("Payment recorded", saved);
     }
@@ -2510,7 +2519,7 @@ public class AdminService {
         studentFeeAssignmentRepository.save(assignment);
 
         // Record in fee_payments table
-        feePaymentRepository.save(FeePayment.builder()
+        FeePayment savedPayment = feePaymentRepository.save(FeePayment.builder()
                 .feeId(0L)
                 .assignmentId(assignment.getId())
                 .studentId(assignment.getStudentId())
@@ -2527,12 +2536,50 @@ public class AdminService {
                 .receivedBy(str(body, "receivedBy", null))
                 .remarks(str(body, "remarks", null))
                 .build());
+        sendWhatsAppPaymentNotifications(savedPayment);
 
         String msg = fullyCovered
             ? "Payment recorded for " + installment.getTermName()
             : "Partial payment recorded. ₹" + shortage.setScale(0, java.math.RoundingMode.HALF_UP)
               + " carried over to the next term.";
         return ApiResponse.success(msg, savedInst);
+    }
+
+    /**
+     * Fires the WhatsApp payment-confirmation and receipt-link messages after a fee payment is
+     * recorded. Best-effort and fully isolated from the payment transaction — any failure here
+     * (WhatsApp not configured, no approved template, network error) is caught and logged, never
+     * propagated, so it can never cause a successful payment to be rolled back or reported as failed.
+     */
+    private void sendWhatsAppPaymentNotifications(FeePayment payment) {
+        try {
+            if (payment.getSchoolId() == null || payment.getStudentId() == null) return;
+
+            Student student = studentRepository.findById(payment.getStudentId()).orElse(null);
+            if (student == null) return;
+
+            String rawPhone = student.getParentMobile() != null && !student.getParentMobile().isBlank() ? student.getParentMobile()
+                    : student.getMotherMobile() != null && !student.getMotherMobile().isBlank() ? student.getMotherMobile()
+                    : student.getGuardianMobile();
+            String phone = PhoneUtil.normalize(rawPhone, "+91");
+            if (phone == null) return;
+
+            String studentName = payment.getStudentName() != null ? payment.getStudentName() : student.getName();
+            Map<String, Object> vars = new HashMap<>();
+            vars.put("parent_name", "");
+            vars.put("student_name", studentName != null ? studentName : "");
+            vars.put("amount", payment.getAmountPaid() != null ? payment.getAmountPaid().toString() : "");
+            vars.put("receipt_number", payment.getReceiptNumber() != null ? payment.getReceiptNumber() : "");
+            vars.put("payment_date", payment.getPaymentDate() != null ? payment.getPaymentDate().toString() : "");
+
+            whatsAppService.sendPaymentConfirmation(payment.getSchoolId(), payment.getStudentId(), phone, studentName, vars);
+
+            String receiptUrl = appBaseUrl + "/api/receipts/" + payment.getId() + "?token=" + receiptTokenService.generate(payment.getId());
+            whatsAppService.sendReceiptLink(payment.getSchoolId(), payment.getStudentId(), phone, studentName, receiptUrl, vars);
+        } catch (Exception e) {
+            log.warn("[AdminService] WhatsApp payment notification failed for payment {} (payment itself was already recorded successfully): {}",
+                    payment.getId(), e.getMessage());
+        }
     }
 
     /**

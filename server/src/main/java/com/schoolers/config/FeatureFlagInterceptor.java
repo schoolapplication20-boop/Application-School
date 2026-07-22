@@ -1,5 +1,6 @@
 package com.schoolers.config;
 
+import com.schoolers.repository.PlatformModuleSettingRepository;
 import com.schoolers.repository.SchoolFeatureRepository;
 import com.schoolers.security.CurrentUserUtil;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,6 +21,7 @@ public class FeatureFlagInterceptor implements HandlerInterceptor {
     private static final Logger log = LoggerFactory.getLogger(FeatureFlagInterceptor.class);
 
     @Autowired private SchoolFeatureRepository schoolFeatureRepository;
+    @Autowired private PlatformModuleSettingRepository platformModuleSettingRepository;
     @Autowired private CurrentUserUtil currentUserUtil;
 
     // Map URI path segments to feature keys
@@ -27,6 +29,7 @@ public class FeatureFlagInterceptor implements HandlerInterceptor {
         Map.entry("/api/transport",     "transport"),
         Map.entry("/api/timetable",     "timetable"),
         Map.entry("/api/sms",           "sms"),
+        Map.entry("/api/whatsapp",      "whatsapp"), // note: /api/whatsapp/webhook is fine here too — unauthenticated requests return true above before this map is even consulted
         Map.entry("/api/online-exams",  "online_exams"),
         Map.entry("/api/examination",   "examination"),
         Map.entry("/api/report-cards",  "report_cards"),
@@ -54,6 +57,18 @@ public class FeatureFlagInterceptor implements HandlerInterceptor {
         String path = request.getRequestURI();
         String featureKey = resolveFeatureKey(path);
         if (featureKey == null) return true; // No feature gate for this path
+
+        // Platform-wide kill switch (Owner-controlled), checked ahead of the per-school flag —
+        // a missing row means enabled, mirroring school_features' own opt-out semantics.
+        boolean globallyDisabled = platformModuleSettingRepository.findById(featureKey)
+                .map(m -> Boolean.FALSE.equals(m.getEnabled()))
+                .orElse(false);
+        if (globallyDisabled) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"success\":false,\"message\":\"This module is currently disabled platform-wide.\"}");
+            return false;
+        }
 
         Long schoolId;
         try {

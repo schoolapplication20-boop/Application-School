@@ -33,8 +33,20 @@ export default function FeatureControlDashboard() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(null);
 
+  // WhatsApp: platform-wide kill switch
+  const [whatsappGlobalEnabled, setWhatsappGlobalEnabled] = useState(true);
+  const [whatsappGlobalSaving, setWhatsappGlobalSaving] = useState(false);
+
+  // WhatsApp: per-school quota/usage
+  const [whatsappUsage, setWhatsappUsage] = useState(null);
+  const [quotaInput, setQuotaInput] = useState('');
+  const [quotaSaving, setQuotaSaving] = useState(false);
+
   useEffect(() => {
     api.get('/api/schools').then(r => setSchools(r.data?.data || [])).catch(() => {});
+    api.get('/api/owner/whatsapp/module-status')
+      .then(r => setWhatsappGlobalEnabled(!!r.data?.data?.enabled))
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -50,6 +62,18 @@ export default function FeatureControlDashboard() {
       })
       .catch(() => showToast('Failed to load features', 'error'))
       .finally(() => setLoading(false));
+
+    api.get(`/api/owner/schools/${selectedSchool.id}/fee-summary`)
+      .then(r => {
+        const d = r.data?.data || {};
+        setWhatsappUsage({
+          quota: d.whatsappMonthlyQuota ?? null,
+          sentThisMonth: d.whatsappSentThisMonth ?? 0,
+          breached: !!d.whatsappQuotaBreached,
+        });
+        setQuotaInput(d.whatsappMonthlyQuota != null ? String(d.whatsappMonthlyQuota) : '');
+      })
+      .catch(() => setWhatsappUsage(null));
   }, [selectedSchool]);
 
   const toggle = async (key) => {
@@ -67,10 +91,65 @@ export default function FeatureControlDashboard() {
     }
   };
 
+  const toggleWhatsappGlobal = async () => {
+    const newVal = !whatsappGlobalEnabled;
+    setWhatsappGlobalSaving(true);
+    try {
+      await api.patch('/api/owner/whatsapp/module-status', { enabled: newVal });
+      setWhatsappGlobalEnabled(newVal);
+      showToast(`WhatsApp ${newVal ? 'enabled' : 'disabled'} platform-wide`, 'success');
+    } catch {
+      showToast('Failed to update WhatsApp module status', 'error');
+    } finally {
+      setWhatsappGlobalSaving(false);
+    }
+  };
+
+  const saveQuota = async () => {
+    if (!selectedSchool) return;
+    setQuotaSaving(true);
+    try {
+      const quota = quotaInput.trim() === '' ? null : Number(quotaInput);
+      await api.patch(`/api/owner/schools/${selectedSchool.id}/whatsapp-quota`, { whatsappMonthlyQuota: quota });
+      setWhatsappUsage(prev => prev ? { ...prev, quota } : prev);
+      showToast('WhatsApp quota updated', 'success');
+    } catch {
+      showToast('Failed to update WhatsApp quota', 'error');
+    } finally {
+      setQuotaSaving(false);
+    }
+  };
+
   return (
     <div style={{ padding: '24px', maxWidth: '900px', margin: '0 auto' }}>
       <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '8px' }}>Feature Control</h2>
       <p style={{ color: '#6b7280', marginBottom: '24px' }}>Enable or disable modules per school.</p>
+
+      {/* WhatsApp platform-wide kill switch */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
+        background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '14px 18px', marginBottom: '24px',
+      }}>
+        <div>
+          <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>WhatsApp — Platform-Wide Switch</div>
+          <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#6b7280' }}>
+            Master switch for the entire WhatsApp module, across all schools. Per-school access below still applies on top of this.
+          </p>
+        </div>
+        <button
+          onClick={toggleWhatsappGlobal}
+          disabled={whatsappGlobalSaving}
+          style={{
+            padding: '6px 18px', borderRadius: '20px', border: 'none',
+            cursor: whatsappGlobalSaving ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '0.8rem',
+            background: whatsappGlobalEnabled ? '#dcfce7' : '#fee2e2',
+            color: whatsappGlobalEnabled ? '#16a34a' : '#dc2626',
+            opacity: whatsappGlobalSaving ? 0.7 : 1, flexShrink: 0,
+          }}
+        >
+          {whatsappGlobalSaving ? '...' : whatsappGlobalEnabled ? 'ON' : 'OFF'}
+        </button>
+      </div>
 
       <div style={{ marginBottom: '24px' }}>
         <label style={{ fontWeight: 600, display: 'block', marginBottom: '8px' }}>Select School</label>
@@ -88,6 +167,36 @@ export default function FeatureControlDashboard() {
         <div>
           <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '12px 16px', marginBottom: '20px' }}>
             <strong>{selectedSchool.name}</strong> — Plan: {selectedSchool.subscriptionPlan || 'BASIC'}
+          </div>
+
+          <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '14px 16px', marginBottom: '20px' }}>
+            <div style={{ fontWeight: 700, fontSize: '0.85rem', marginBottom: 8 }}>WhatsApp Monthly Quota</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <input
+                type="number"
+                min="1"
+                placeholder="No limit"
+                value={quotaInput}
+                onChange={e => setQuotaInput(e.target.value)}
+                style={{ padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: '6px', width: 140 }}
+              />
+              <button
+                onClick={saveQuota}
+                disabled={quotaSaving}
+                style={{ padding: '6px 14px', borderRadius: '6px', border: 'none', background: '#2563eb', color: '#fff', fontWeight: 600, fontSize: '0.8rem', cursor: quotaSaving ? 'not-allowed' : 'pointer', opacity: quotaSaving ? 0.7 : 1 }}
+              >
+                {quotaSaving ? 'Saving…' : 'Save Quota'}
+              </button>
+              {whatsappUsage && (
+                <span style={{ fontSize: '0.8rem', color: whatsappUsage.breached ? '#dc2626' : '#6b7280', fontWeight: whatsappUsage.breached ? 700 : 400 }}>
+                  {whatsappUsage.sentThisMonth} sent this month{whatsappUsage.quota != null ? ` / ${whatsappUsage.quota} quota` : ''}
+                  {whatsappUsage.breached ? ' — quota exceeded' : ''}
+                </span>
+              )}
+            </div>
+            <p style={{ margin: '6px 0 0', fontSize: '0.75rem', color: '#9ca3af' }}>
+              Report-only — sending is never blocked when a school exceeds its quota.
+            </p>
           </div>
 
           {loading ? <p>Loading features...</p> : (

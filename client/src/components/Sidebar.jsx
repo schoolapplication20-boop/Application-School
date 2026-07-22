@@ -27,6 +27,7 @@ const adminNavItems = [
   { path: '/admin/examination',        icon: 'verified',                label: 'Exam & Certificates', permKey: 'examination' },
   { path: '/admin/messages',            icon: 'campaign',                label: 'Messages',            permKey: 'messages' },
   { path: '/admin/sms',                 icon: 'sms',                     label: 'SMS Notifications',   permKey: 'sms' },
+  { path: '/admin/whatsapp',            icon: 'chat',                    label: 'WhatsApp',            permKey: 'whatsapp' },
   { path: '/school/calendar',           icon: 'event',                   label: 'School Calendar',      permKey: null },
   { path: '/admin/settings',            icon: 'settings',                label: 'School Settings',      permKey: null },
 ];
@@ -37,6 +38,7 @@ const superAdminOnlyItems = [
   // Setup School is only shown while needsSchoolSetup === true (filtered below)
   { path: '/superadmin/setup-school',      icon: 'add_business',     label: 'Setup School',         permKey: null },
   { path: '/superadmin/exam-schedule',     icon: 'event_note',       label: 'Exam Schedule',        permKey: null },
+  { path: '/integration-guide',            icon: 'menu_book',        label: 'Setup Guide',          permKey: null },
 ];
 
 // APPLICATION_OWNER portal items — platform dashboard only.
@@ -45,6 +47,7 @@ const superAdminOnlyItems = [
 const appOwnerNavItems = [
   { path: '/owner/dashboard',        icon: 'domain',     label: 'Platform Dashboard', permKey: null },
   { path: '/owner/feature-control',  icon: 'toggle_on',  label: 'Feature Control',    permKey: null },
+  { path: '/integration-guide',      icon: 'menu_book',  label: 'Setup Guide',        permKey: null },
 ];
 
 const teacherNavItems = [
