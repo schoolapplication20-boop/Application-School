@@ -235,14 +235,6 @@ const Classes = () => {
     }
   };
 
-  // ── Occupancy colour ─────────────────────────────────────────────────────
-  const occColor = (enrolled, capacity) => {
-    const pct = (enrolled / (capacity || 1)) * 100;
-    if (pct >= 95) return '#e53e3e';
-    if (pct >= 80) return '#ed8936';
-    return '#0de1e8';
-  };
-
   // ── Save (add / edit) ────────────────────────────────────────────────────
   const handleSave = async () => {
     const name    = (formData.className || '').trim();
@@ -432,8 +424,6 @@ const Classes = () => {
                   </div>
                 </td></tr>
               ) : filtered.map(c => {
-                const pct   = c.capacity ? Math.round((c.enrolled / c.capacity) * 100) : 0;
-                const color = occColor(c.enrolled, c.capacity || 1);
                 return (
                   <tr key={c.id}>
                     <td>
@@ -457,15 +447,8 @@ const Classes = () => {
                     <td style={{ fontSize: '13px' }}>{c.teacher || '—'}</td>
                     <td style={{ minWidth: 140 }}>
                       <div onClick={() => openView(c)} title="Click to view students" style={{ cursor: 'pointer' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <div style={{ flex: 1 }}>
-                            <div className="progress-bar-custom">
-                              <div className="progress-fill" style={{ width: `${pct}%`, background: `linear-gradient(90deg,${color},${color}cc)` }} />
-                            </div>
-                          </div>
-                          <span style={{ fontSize: '12px', fontWeight: 600, color, minWidth: 40 }}>{c.enrolled}/{c.capacity}</span>
-                        </div>
-                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: 2 }}>{pct}% full · <span style={{ color: '#0de1e8' }}>view</span></div>
+                        <span style={{ fontSize: '13px', fontWeight: 700 }}>{c.enrolled} student{c.enrolled !== 1 ? 's' : ''}</span>
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: 2 }}><span style={{ color: '#0de1e8' }}>view</span></div>
                       </div>
                     </td>
                     <td>
