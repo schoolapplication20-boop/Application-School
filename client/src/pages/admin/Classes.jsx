@@ -154,13 +154,15 @@ const Classes = () => {
       const sClass   = String(s.className || s.class || '').trim();
       const sSection = String(s.section || '').trim();
 
-      // Normalise both sides: strip leading "Class " so "Class 3" and "3" both match
-      const normalise = (v) => v.replace(/^Class\s+/i, '').trim();
+      // Normalise both sides: strip leading "Class " so "Class 3" and "3" both match,
+      // and ignore case so imported rows like "vii"/"VII" or "s"/"S" still match —
+      // mirrors the case-insensitive match the backend uses to compute the enrolled count.
+      const normalise = (v) => v.replace(/^Class\s+/i, '').trim().toLowerCase();
       const targetClass   = normalise(viewClass.name);
-      const targetSection = viewClass.section;
+      const targetSection = normalise(viewClass.section);
 
       const matchClass   = normalise(sClass) === targetClass;
-      const matchSection = sSection === targetSection;
+      const matchSection = normalise(sSection) === targetSection;
 
       const q = viewSearch.toLowerCase();
       const matchSearch = !q ||
