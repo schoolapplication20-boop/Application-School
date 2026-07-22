@@ -13,20 +13,23 @@
 -- Reminder: RLS is not inherited by future tables — any migration that adds a
 -- new public table should enable RLS on it directly.
 --
--- ENABLE ROW LEVEL SECURITY takes an AccessExclusiveLock per table. During a
--- rolling deploy the previous instance may still hold open transactions on
--- these tables, which would otherwise make this migration (and everything
--- else queued behind its lock request) hang indefinitely. Fail fast instead —
--- FlywayRepairConfig auto-repairs a failed migration on the next startup, so
--- a clean failure here is safe to just retry.
+-- ENABLE ROW LEVEL SECURITY takes an AccessExclusiveLock per table. Fail fast
+-- instead of hanging if a lock isn't available — FlywayRepairConfig
+-- auto-repairs a failed migration on the next startup, so a clean failure
+-- here is safe to just retry.
 SET lock_timeout = '5s';
 
+-- flyway_schema_history is deliberately excluded: Flyway holds its own lock on
+-- this table for the duration of the migration run (to prevent concurrent
+-- Flyway executions), so altering it from inside a Flyway-run migration
+-- self-deadlocks every time. It was enabled manually, once, out-of-band.
 DO $$
 DECLARE
     tbl text;
 BEGIN
     FOR tbl IN
-        SELECT tablename FROM pg_tables WHERE schemaname = 'public'
+        SELECT tablename FROM pg_tables
+        WHERE schemaname = 'public' AND tablename != 'flyway_schema_history'
     LOOP
         EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', tbl);
     END LOOP;
