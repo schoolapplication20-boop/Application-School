@@ -920,9 +920,11 @@ public class AdminService {
      * This means the button works whether or not "createAccounts" was checked
      * during the original bulk import.
      */
+    private record PendingCred(com.schoolers.model.Student student, String username, String loginEmail, String tempPassword) {}
+
     @Transactional
     public ApiResponse<List<Map<String, Object>>> getPendingStudentCredentials(Long schoolId) {
-        List<Map<String, Object>> rows = new java.util.ArrayList<>();
+        List<PendingCred> pending = new java.util.ArrayList<>();
 
         // ── Group A: students with no account yet ──────────────────────────────
         List<com.schoolers.model.Student> withoutAccount =
@@ -937,7 +939,7 @@ public class AdminService {
                 student.setStudentUserId(result.user().getId());
                 student.setIsActive(true);
                 studentRepository.save(student);
-                rows.add(credRow(student, result.user().getUsername(),
+                pending.add(new PendingCred(student, result.user().getUsername(),
                         displayEmail(result.loginEmail()), result.rawPassword()));
             } catch (Exception e) {
                 log.warn("[getPendingStudentCredentials] Could not create account for student {}: {}",
@@ -972,9 +974,21 @@ public class AdminService {
                     userRepository.save(u);
                 }
                 com.schoolers.model.Student student = studentByUserId.get(u.getId());
-                rows.add(credRow(student, u.getUsername(), displayEmail(u.getEmail()), tempPwd));
+                pending.add(new PendingCred(student, u.getUsername(), displayEmail(u.getEmail()), tempPwd));
             }
         }
+
+        // Class order, then section, then roll number — same ordering as the Students list
+        // and Class Management, so the downloaded sheet reads class-wise instead of in
+        // whatever order accounts happened to get created/queried in.
+        pending.sort(java.util.Comparator
+                .comparingInt((PendingCred p) -> classOrderRank(p.student() != null ? p.student().getClassName() : null))
+                .thenComparing(p -> p.student() != null && p.student().getSection() != null ? p.student().getSection() : "", String.CASE_INSENSITIVE_ORDER)
+                .thenComparing(p -> p.student() != null && p.student().getRollNumber() != null ? p.student().getRollNumber() : ""));
+
+        List<Map<String, Object>> rows = pending.stream()
+                .map(p -> credRow(p.student(), p.username(), p.loginEmail(), p.tempPassword()))
+                .collect(java.util.stream.Collectors.toList());
 
         return ApiResponse.success("Pending credentials", rows);
     }
