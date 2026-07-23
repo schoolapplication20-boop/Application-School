@@ -85,6 +85,11 @@ public class AdminController {
                 .orElse(null);
     }
 
+    private boolean isSuperAdmin(Authentication auth) {
+        return auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_SUPER_ADMIN".equals(a.getAuthority()));
+    }
+
     /**
      * Returns true (and short-circuits the caller) when the Idempotency-Key header was already processed.
      * If the key is new, saves it and returns false so the caller can proceed.
@@ -341,9 +346,18 @@ public class AdminController {
         return ResponseEntity.status(201).body(adminService.createClass(classRoom, getCurrentSchoolId(auth)));
     }
 
+    /**
+     * force=true skips the "capacity below current enrollment" guard — only SUPER_ADMIN may use it;
+     * an ADMIN passing force is silently ignored (treated as force=false) rather than erroring.
+     */
     @PutMapping("/classes/{id}")
-    public ResponseEntity<?> updateClass(@PathVariable Long id, @RequestBody ClassRoom classRoom, Authentication auth) {
-        ApiResponse<ClassRoom> response = adminService.updateClass(id, classRoom, getCurrentSchoolId(auth));
+    public ResponseEntity<?> updateClass(
+            @PathVariable Long id,
+            @RequestBody ClassRoom classRoom,
+            @RequestParam(defaultValue = "false") boolean force,
+            Authentication auth) {
+        boolean allowCapacityOverride = force && isSuperAdmin(auth);
+        ApiResponse<ClassRoom> response = adminService.updateClass(id, classRoom, getCurrentSchoolId(auth), allowCapacityOverride);
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 

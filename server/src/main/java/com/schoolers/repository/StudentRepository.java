@@ -16,6 +16,32 @@ import java.util.Optional;
 @Repository
 public interface StudentRepository extends JpaRepository<Student, Long> {
 
+    /**
+     * JPQL ORDER BY fragment that ranks a class name the same way as classOrderRank() in
+     * AdminService and classOrder() in client/src/utils/classOrder.js: Nursery, LKG, UKG,
+     * then grade 1-12 (accepting digit, "Class N", or Roman-numeral spellings), then anything
+     * unrecognized last. Deliberately not alphabetic — alphabetic order puts "X" before "IX".
+     * Kept as a compile-time constant so it can be concatenated straight into @Query strings.
+     */
+    String CLASS_ORDER_CASE =
+        "CASE " +
+        "WHEN LOWER(TRIM(s.className)) LIKE '%nursery%' THEN -3 " +
+        "WHEN LOWER(TRIM(s.className)) LIKE '%lkg%' THEN -2 " +
+        "WHEN LOWER(TRIM(s.className)) LIKE '%ukg%' THEN -1 " +
+        "WHEN LOWER(TRIM(s.className)) IN ('i','1','class 1') THEN 1 " +
+        "WHEN LOWER(TRIM(s.className)) IN ('ii','2','class 2') THEN 2 " +
+        "WHEN LOWER(TRIM(s.className)) IN ('iii','3','class 3') THEN 3 " +
+        "WHEN LOWER(TRIM(s.className)) IN ('iv','4','class 4') THEN 4 " +
+        "WHEN LOWER(TRIM(s.className)) IN ('v','5','class 5') THEN 5 " +
+        "WHEN LOWER(TRIM(s.className)) IN ('vi','6','class 6') THEN 6 " +
+        "WHEN LOWER(TRIM(s.className)) IN ('vii','7','class 7') THEN 7 " +
+        "WHEN LOWER(TRIM(s.className)) IN ('viii','8','class 8') THEN 8 " +
+        "WHEN LOWER(TRIM(s.className)) IN ('ix','9','class 9') THEN 9 " +
+        "WHEN LOWER(TRIM(s.className)) IN ('x','10','class 10') THEN 10 " +
+        "WHEN LOWER(TRIM(s.className)) IN ('xi','11','class 11') THEN 11 " +
+        "WHEN LOWER(TRIM(s.className)) IN ('xii','12','class 12') THEN 12 " +
+        "ELSE 999 END";
+
     // ── School-scoped queries (multi-tenant) ──────────────────────────────────
 
     /**
@@ -51,6 +77,9 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     List<Student> findBySchoolIdAndClassNameAndSection(Long schoolId, String className, String section);
 
     List<Student> findBySchoolIdAndClassNameIgnoreCaseAndSectionIgnoreCase(Long schoolId, String className, String section);
+
+    /** Same match, ordered for display — used by the "View Students" modal so rows are roll-number order, not DB insertion order. */
+    List<Student> findBySchoolIdAndClassNameIgnoreCaseAndSectionIgnoreCaseOrderByRollNumberAscNameAsc(Long schoolId, String className, String section);
 
     long countBySchoolIdAndClassNameAndSection(Long schoolId, String className, String section);
 
@@ -88,7 +117,8 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     @Query("SELECT s FROM Student s WHERE s.schoolId = :schoolId " +
            "AND (:search = '' OR LOWER(s.name) LIKE LOWER(CONCAT('%',:search,'%')) ESCAPE '\\' OR LOWER(s.rollNumber) LIKE LOWER(CONCAT('%',:search,'%')) ESCAPE '\\' OR s.parentMobile LIKE CONCAT('%',:search,'%') ESCAPE '\\') " +
            "AND (:className = '' OR LOWER(s.className) = LOWER(:className)) " +
-           "AND (:status = '' OR (:status = 'Active' AND s.isActive = true AND s.studentUserId IS NOT NULL) OR (:status = 'Inactive' AND (s.isActive = false OR s.isActive IS NULL OR s.studentUserId IS NULL)))")
+           "AND (:status = '' OR (:status = 'Active' AND s.isActive = true AND s.studentUserId IS NOT NULL) OR (:status = 'Inactive' AND (s.isActive = false OR s.isActive IS NULL OR s.studentUserId IS NULL))) " +
+           "ORDER BY " + CLASS_ORDER_CASE + ", s.section ASC, s.rollNumber ASC, s.name ASC")
     Page<Student> findByFilters(
         @Param("schoolId") Long schoolId,
         @Param("search") String search,

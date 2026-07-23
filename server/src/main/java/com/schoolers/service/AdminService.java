@@ -335,7 +335,9 @@ public class AdminService {
     public ApiResponse<Page<Student>> getStudents(Long schoolId, String search, String className, String status, int page, int size) {
         if (schoolId == null) return ApiResponse.success(Page.empty());
         size = Math.min(size, 200);
-        Pageable pageable = PageRequest.of(page, size, Sort.by("name").ascending());
+        // Unsorted: findByFilters() embeds its own ORDER BY (class order, section, roll number, name) —
+        // a Pageable Sort here would just get appended after that and muddy the ordering.
+        Pageable pageable = PageRequest.of(page, size);
         // Escape LIKE wildcards so a search for "50%" doesn't match every row
         String s  = search    != null ? search.trim().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") : "";
         String cn = className != null ? className.trim() : "";
@@ -1400,6 +1402,9 @@ public class AdminService {
     public ApiResponse<List<Map<String, Object>>> getClasses(Long schoolId) {
         if (schoolId == null) return ApiResponse.success(java.util.List.of());
         List<ClassRoom> rooms = classRoomRepository.findBySchoolId(schoolId);
+        rooms.sort(java.util.Comparator
+                .comparingInt((ClassRoom r) -> classOrderRank(r.getName()))
+                .thenComparing(r -> r.getSection() != null ? r.getSection() : "", String.CASE_INSENSITIVE_ORDER));
 
         List<Map<String, Object>> result = rooms.stream().map(room -> {
             Long sid = schoolId != null ? schoolId : room.getSchoolId();
@@ -1433,7 +1438,7 @@ public class AdminService {
         ClassRoom room = classRoomRepository.findById(classId).orElse(null);
         if (room == null || schoolMismatch(schoolId, room.getSchoolId()))
             return ApiResponse.error("Class not found");
-        List<Student> students = studentRepository.findBySchoolIdAndClassNameIgnoreCaseAndSectionIgnoreCase(
+        List<Student> students = studentRepository.findBySchoolIdAndClassNameIgnoreCaseAndSectionIgnoreCaseOrderByRollNumberAscNameAsc(
                 schoolId, room.getName(), room.getSection() != null ? room.getSection() : "");
         return ApiResponse.success(students);
     }
@@ -1476,6 +1481,9 @@ public class AdminService {
 
         if (name.isBlank()) return ApiResponse.error("Class name is required");
 
+        if (classRoom.getCapacity() != null && classRoom.getCapacity() <= 0)
+            return ApiResponse.error("Capacity must be a positive number");
+
         // Validate that the assigned teacher is eligible to be a class teacher
         if (classRoom.getTeacherId() != null) {
             Teacher t = teacherRepository.findById(classRoom.getTeacherId()).orElse(null);
@@ -1503,7 +1511,7 @@ public class AdminService {
     }
 
     @Transactional
-    public ApiResponse<ClassRoom> updateClass(Long id, ClassRoom updated, Long schoolId) {
+    public ApiResponse<ClassRoom> updateClass(Long id, ClassRoom updated, Long schoolId, boolean allowCapacityOverride) {
         try {
             return classRoomRepository.findById(id)
                 .map(c -> {
@@ -1511,6 +1519,18 @@ public class AdminService {
                         return ApiResponse.<ClassRoom>error("Class not found");
                     String oldName = c.getName();
                     String oldSection = normalizeSection(c.getSection());
+
+                    if (updated.getCapacity() != null) {
+                        if (updated.getCapacity() <= 0)
+                            return ApiResponse.<ClassRoom>error("Capacity must be a positive number");
+                        Long capacitySchoolId = schoolId != null ? schoolId : c.getSchoolId();
+                        long currentEnrolled = (capacitySchoolId != null)
+                                ? studentRepository.countEnrolledForCapacity(capacitySchoolId, oldName, oldSection)
+                                : studentRepository.countByClassNameIgnoreCaseAndSectionIgnoreCase(oldName, oldSection);
+                        if (!allowCapacityOverride && updated.getCapacity() < currentEnrolled)
+                            return ApiResponse.<ClassRoom>error(
+                                    "This class already has more students than the entered capacity.");
+                    }
 
                     if (updated.getName() != null)        c.setName(resolveClassName(updated.getName()));
                     if (updated.getSection() != null)     c.setSection(normalizeSection(updated.getSection()));
@@ -2862,6 +2882,34 @@ public class AdminService {
 
     private String normalizeSection(String section) {
         return (section != null && !section.isBlank()) ? section.trim().toUpperCase() : "A";
+    }
+
+    /** Maps every common way a grade level gets typed — digit, "Class N", or Roman numeral — to its grade number. */
+    private static final Map<String, Integer> GRADE_LEVEL_MAP = new java.util.HashMap<>();
+    static {
+        String[][] romanAndDigit = {
+            {"i", "1"}, {"ii", "2"}, {"iii", "3"}, {"iv", "4"}, {"v", "5"}, {"vi", "6"},
+            {"vii", "7"}, {"viii", "8"}, {"ix", "9"}, {"x", "10"}, {"xi", "11"}, {"xii", "12"},
+        };
+        for (String[] pair : romanAndDigit) {
+            int grade = Integer.parseInt(pair[1]);
+            GRADE_LEVEL_MAP.put(pair[0], grade);
+            GRADE_LEVEL_MAP.put(pair[1], grade);
+        }
+    }
+
+    /**
+     * Numeric sort key for a class name so classes order Nursery → LKG → UKG → I/1 → II/2 → …
+     * → XII/12 → anything unrecognized. Deliberately not alphabetic — alphabetic sorting puts
+     * "X" before "IX" and "VIII". Mirrors client/src/utils/classOrder.js exactly.
+     */
+    private int classOrderRank(String className) {
+        if (className == null) return 999;
+        String n = className.trim().toLowerCase().replaceFirst("^class\\s+", "");
+        if (n.contains("nursery")) return -3;
+        if (n.contains("lkg"))     return -2;
+        if (n.contains("ukg"))     return -1;
+        return GRADE_LEVEL_MAP.getOrDefault(n, 999);
     }
 
     private String canonicalizeWords(String raw) {
