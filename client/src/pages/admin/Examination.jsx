@@ -345,19 +345,33 @@ export default function Examination() {
     setShowPreview(true);
   };
 
-  // Isolated print: injects only the hall ticket into the print stream
+  // Isolated print: (re)renders the hall ticket, waits for its images (school logo) to
+  // actually finish loading, then opens the print dialog. @media print CSS (examination.css)
+  // shows only #hall-ticket-print-root, so "Save as PDF" captures just the ticket — not the
+  // modal chrome or dashboard behind it.
   const handlePrint = (item, type) => {
     if (type === 'hallticket' && item) {
-      document.body.classList.add('printing-hall-ticket');
-      // Temporarily render the ticket DOM so the ID exists
       setPreviewItem(item);
       setPreviewType('hallticket');
       setShowPreview(true);
+      document.body.classList.add('printing-hall-ticket');
+      const finishPrint = () => {
+        window.print();
+        document.body.classList.remove('printing-hall-ticket');
+      };
       requestAnimationFrame(() => {
-        setTimeout(() => {
-          window.print();
-          document.body.classList.remove('printing-hall-ticket');
-        }, 180);
+        const root = document.getElementById('hall-ticket-print-root');
+        const pendingImages = root ? Array.from(root.querySelectorAll('img')).filter(img => !img.complete) : [];
+        if (pendingImages.length === 0) {
+          finishPrint();
+          return;
+        }
+        let remaining = pendingImages.length;
+        const proceedWhenReady = () => { if (--remaining <= 0) finishPrint(); };
+        pendingImages.forEach(img => {
+          img.addEventListener('load', proceedWhenReady, { once: true });
+          img.addEventListener('error', proceedWhenReady, { once: true }); // don't block forever on a broken image
+        });
       });
     } else {
       window.print();

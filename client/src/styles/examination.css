@@ -921,66 +921,58 @@
 
 /* ─── Print / PDF Styles ────────────────────────────────────────────────────── */
 
-/* When the body has .printing-hall-ticket, hide everything except the ticket */
-body.printing-hall-ticket * {
-  visibility: hidden;
-}
-body.printing-hall-ticket #hall-ticket-print-root,
-body.printing-hall-ticket #hall-ticket-print-root * {
-  visibility: visible;
-}
-body.printing-hall-ticket #hall-ticket-print-root {
-  position: fixed;
-  inset: 0;
-  margin: 0;
-  padding: 16px;
-  z-index: 99999;
-  background: #fff;
-  overflow: auto;
-}
-
+/*
+ * Hide everything except the hall ticket during print, using visibility (not
+ * display). #hall-ticket-print-root is nested many levels deep — inside the
+ * React #root div, the modal overlay, the modal body — not a direct child of
+ * <body>. A "hide everything, then display:block the ticket" approach fails
+ * here: display:none on any one of those ancestors removes the whole subtree
+ * from rendering, and no display value on the descendant can undo that. This
+ * is why the previous version of this rule produced a blank printed page.
+ *
+ * visibility doesn't have that problem — it's inherited, but any descendant
+ * can set its own visibility:visible to override an ancestor's hidden value,
+ * so the deeply-nested ticket can still show itself. Pulling it out with
+ * position:absolute (not fixed — fixed elements tend to repeat on every
+ * printed page and clip to one viewport instead of paginating) lets long
+ * tickets flow naturally onto a second page instead of being cut off.
+ *
+ * Scoped to body.printing-hall-ticket (toggled in Examination.jsx's handlePrint)
+ * rather than every @media print — certificates print via the separate fallback
+ * block below and must NOT be caught by this "hide everything" rule too.
+ */
 @media print {
-  /* Page setup */
   @page {
     size: A4 portrait;
     margin: 10mm 12mm;
   }
 
-  /* Hide everything by default */
-  body > * {
-    display: none !important;
+  body.printing-hall-ticket * {
+    visibility: hidden !important;
   }
 
-  /* Show only the hall ticket root */
-  #hall-ticket-print-root {
-    display: block !important;
+  body.printing-hall-ticket #hall-ticket-print-root,
+  body.printing-hall-ticket #hall-ticket-print-root * {
     visibility: visible !important;
-    position: static !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  body.printing-hall-ticket #hall-ticket-print-root {
+    position: absolute;
+    left: 0;
+    top: 0;
     width: 100% !important;
     max-width: none !important;
     border: none !important;
     box-shadow: none !important;
     margin: 0 !important;
     padding: 0 !important;
-    page-break-inside: avoid;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-    color-adjust: exact !important;
-  }
-
-  #hall-ticket-print-root * {
-    display: revert !important;
-    visibility: visible !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-    color-adjust: exact !important;
-  }
-
-  /* Ensure backgrounds print */
-  * {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-    color-adjust: exact !important;
+    /* The on-screen preview clips overflow (rounded corners) and avoids breaking across
+       pages — fine in a modal, but it would silently cut off a long ticket when printed. */
+    overflow: visible !important;
+    page-break-inside: auto !important;
   }
 }
 
