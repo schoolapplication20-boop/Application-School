@@ -345,33 +345,31 @@ export default function Examination() {
     setShowPreview(true);
   };
 
-  // Isolated print: (re)renders the hall ticket, waits for its images (school logo) to
-  // actually finish loading, then opens the print dialog. @media print CSS (examination.css)
-  // shows only #hall-ticket-print-root, so "Save as PDF" captures just the ticket — not the
-  // modal chrome or dashboard behind it.
+  // Hall tickets render to a single-page A4 PDF directly (html2canvas + jsPDF) instead of
+  // going through window.print() — that guarantees exactly one page no matter how long the
+  // ticket's content is, and there's no browser print dialog to inject a URL/date/page-number
+  // header. Certificates still use the browser print dialog (unchanged, out of scope here).
   const handlePrint = (item, type) => {
     if (type === 'hallticket' && item) {
       setPreviewItem(item);
       setPreviewType('hallticket');
       setShowPreview(true);
-      document.body.classList.add('printing-hall-ticket');
-      const finishPrint = () => {
-        window.print();
-        document.body.classList.remove('printing-hall-ticket');
-      };
-      requestAnimationFrame(() => {
+      requestAnimationFrame(async () => {
         const root = document.getElementById('hall-ticket-print-root');
-        const pendingImages = root ? Array.from(root.querySelectorAll('img')).filter(img => !img.complete) : [];
-        if (pendingImages.length === 0) {
-          finishPrint();
-          return;
+        const safeName = (item.studentName || item.rollNumber || 'ticket').replace(/[^a-z0-9]+/gi, '-');
+        const filename = `HallTicket-${safeName}.pdf`;
+        try {
+          // Lazy-loaded: html2canvas + jsPDF are only needed once someone actually downloads
+          // a hall ticket, so they shouldn't bloat every visit to this page.
+          const { downloadElementAsSinglePagePdf } = await import('../../utils/hallTicketPdf');
+          await downloadElementAsSinglePagePdf(root, filename);
+        } catch (err) {
+          console.error('Hall ticket PDF generation failed, falling back to the print dialog', err);
+          showToast('Could not generate the PDF directly — opening the print dialog instead.', 'warning');
+          document.body.classList.add('printing-hall-ticket');
+          window.print();
+          document.body.classList.remove('printing-hall-ticket');
         }
-        let remaining = pendingImages.length;
-        const proceedWhenReady = () => { if (--remaining <= 0) finishPrint(); };
-        pendingImages.forEach(img => {
-          img.addEventListener('load', proceedWhenReady, { once: true });
-          img.addEventListener('error', proceedWhenReady, { once: true }); // don't block forever on a broken image
-        });
       });
     } else {
       window.print();

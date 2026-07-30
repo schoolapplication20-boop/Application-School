@@ -61,27 +61,27 @@ const S = {
   header: {
     background: 'linear-gradient(135deg, #1a3c5e 0%, #14345a 100%)',
     color: '#fff',
-    padding: '16px 24px',
+    padding: '10px 20px',
     display: 'flex',
     alignItems: 'center',
-    gap: '18px',
+    gap: '14px',
   },
   logoBox: {
-    width: '64px',
-    height: '64px',
+    width: '52px',
+    height: '52px',
     background: 'rgba(255,255,255,0.15)',
     border: '2px solid rgba(255,255,255,0.4)',
     borderRadius: '50%',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: '28px',
+    fontSize: '22px',
     flexShrink: 0,
   },
   schoolName: {
-    fontSize: '20px',
+    fontSize: '17px',
     fontWeight: '900',
-    letterSpacing: '1.5px',
+    letterSpacing: '1.2px',
     textTransform: 'uppercase',
     margin: 0,
     lineHeight: 1.2,
@@ -118,10 +118,10 @@ const S = {
     background: '#c8a951',
     color: '#1a202c',
     textAlign: 'center',
-    padding: '8px 24px',
+    padding: '5px 20px',
     fontWeight: '900',
-    fontSize: '14px',
-    letterSpacing: '4px',
+    fontSize: '13px',
+    letterSpacing: '3px',
     textTransform: 'uppercase',
     display: 'flex',
     alignItems: 'center',
@@ -132,7 +132,7 @@ const S = {
   metaRow: {
     background: '#f0f4f8',
     borderBottom: '1px solid #d1dce8',
-    padding: '8px 24px',
+    padding: '6px 20px',
     display: 'flex',
     gap: '32px',
     flexWrap: 'wrap',
@@ -143,22 +143,22 @@ const S = {
   metaValue: { color: '#1a202c', fontWeight: '700', fontSize: '12px' },
 
   // ── Body ──
-  body: { padding: '16px 24px' },
+  body: { padding: '10px 20px' },
 
   // ── Student section ──
   studentSection: {
     display: 'flex',
-    gap: '16px',
-    marginBottom: '16px',
+    gap: '12px',
+    marginBottom: '10px',
     border: '1.5px solid #c8a951',
     borderRadius: '6px',
     overflow: 'hidden',
   },
-  studentInfo: { flex: 1, padding: '14px 16px' },
+  studentInfo: { flex: 1, padding: '9px 14px' },
   studentGrid: {
     display: 'grid',
     gridTemplateColumns: '1fr 1fr',
-    gap: '10px 16px',
+    gap: '7px 16px',
   },
   fieldBlock: { display: 'flex', flexDirection: 'column', gap: '2px' },
   fieldLabel: {
@@ -179,8 +179,8 @@ const S = {
 
   // ── Photo box ──
   photoBox: {
-    width: '110px',
-    minHeight: '130px',
+    width: '88px',
+    minHeight: '104px',
     background: '#f8fafc',
     borderLeft: '1.5px solid #c8a951',
     display: 'flex',
@@ -191,20 +191,20 @@ const S = {
     position: 'relative',
   },
   photoImg: {
-    width: '90px',
-    height: '110px',
+    width: '72px',
+    height: '88px',
     objectFit: 'cover',
     border: '1.5px solid #d1dce8',
   },
   photoPlaceholder: {
-    width: '90px',
-    height: '110px',
+    width: '72px',
+    height: '88px',
     border: '1.5px dashed #a0aec0',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: '28px',
+    fontSize: '22px',
     color: '#a0aec0',
     background: '#f0f4f8',
   },
@@ -227,8 +227,8 @@ const S = {
     background: '#ebf4ff',
     border: '1px solid #bee3f8',
     borderRadius: '4px',
-    padding: '5px 10px',
-    marginBottom: '8px',
+    padding: '3px 10px',
+    marginBottom: '5px',
     display: 'flex',
     alignItems: 'center',
     gap: '6px',
@@ -238,36 +238,36 @@ const S = {
   table: {
     width: '100%',
     borderCollapse: 'collapse',
-    fontSize: '11px',
-    marginBottom: '14px',
+    fontSize: '10.5px',
+    marginBottom: '8px',
   },
   th: {
     background: '#1a3c5e',
     color: '#fff',
-    padding: '7px 10px',
+    padding: '4px 8px',
     textAlign: 'left',
     fontWeight: '700',
-    fontSize: '10px',
+    fontSize: '9.5px',
     textTransform: 'uppercase',
     letterSpacing: '0.4px',
     border: '1px solid #14345a',
     whiteSpace: 'nowrap',
   },
   td: {
-    padding: '7px 10px',
+    padding: '4px 8px',
     border: '1px solid #d1dce8',
     color: '#1a202c',
     verticalAlign: 'middle',
   },
   tdAlt: {
-    padding: '7px 10px',
+    padding: '4px 8px',
     border: '1px solid #d1dce8',
     color: '#1a202c',
     verticalAlign: 'middle',
     background: '#f8fafc',
   },
   tdCenter: {
-    padding: '7px 10px',
+    padding: '4px 8px',
     border: '1px solid #d1dce8',
     color: '#1a202c',
     verticalAlign: 'middle',
@@ -279,27 +279,27 @@ const S = {
   instructionsBox: {
     border: '1.5px solid #e2e8f0',
     borderRadius: '6px',
-    padding: '12px 14px',
-    marginBottom: '16px',
+    padding: '7px 12px',
+    marginBottom: '8px',
     background: '#fffdf5',
   },
   instrTitle: {
-    fontSize: '10px',
+    fontSize: '9.5px',
     fontWeight: '900',
     textTransform: 'uppercase',
     letterSpacing: '0.8px',
     color: '#c05621',
-    marginBottom: '8px',
+    marginBottom: '4px',
     display: 'flex',
     alignItems: 'center',
     gap: '4px',
   },
   instrList: {
     margin: 0,
-    paddingLeft: '18px',
-    lineHeight: 1.8,
+    paddingLeft: '16px',
+    lineHeight: 1.35,
     color: '#2d3748',
-    fontSize: '11px',
+    fontSize: '9.5px',
   },
 
   // ── Signatures ──
@@ -307,42 +307,42 @@ const S = {
     display: 'flex',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
-    padding: '14px 24px 16px',
+    padding: '8px 20px 10px',
     borderTop: '1.5px solid #c8a951',
     background: '#fafaf6',
-    gap: '12px',
+    gap: '10px',
   },
   sigBlock: { textAlign: 'center', flex: 1 },
   sigLine: {
     width: '100%',
-    maxWidth: '130px',
-    margin: '0 auto 6px',
+    maxWidth: '120px',
+    margin: '0 auto 4px',
     borderTop: '1.5px solid #4a5568',
   },
   sigLabel: {
-    fontSize: '10px',
+    fontSize: '9.5px',
     color: '#4a5568',
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: '0.4px',
   },
-  sigSub: { fontSize: '9px', color: '#718096', marginTop: '2px' },
+  sigSub: { fontSize: '8.5px', color: '#718096', marginTop: '2px' },
   stampBox: {
-    width: '80px',
-    height: '80px',
+    width: '58px',
+    height: '58px',
     border: '2px dashed #c8a951',
     borderRadius: '50%',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     margin: '0 auto',
-    fontSize: '9px',
+    fontSize: '8px',
     color: '#c8a951',
     fontWeight: '900',
     textAlign: 'center',
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
-    lineHeight: 1.3,
+    lineHeight: 1.2,
   },
 
   // ── Bottom bar ──
@@ -625,16 +625,11 @@ export default function HallTicketDocument({ ticket, schedules = [] }) {
             ⚠ &nbsp;IMPORTANT INSTRUCTIONS FOR CANDIDATES
           </div>
           <ol style={S.instrList}>
-            <li>Candidates must report to the examination hall at least <strong>30 minutes</strong> before the commencement of the examination.</li>
-            <li>This Hall Ticket must be produced on demand by the invigilator / examination authority. Failure to produce it may result in denial of entry.</li>
-            <li>Mobile phones, smartwatches, Bluetooth devices, and any electronic gadgets are <strong>strictly prohibited</strong> inside the examination hall.</li>
-            <li>Candidates must carry a valid School ID card along with this Hall Ticket.</li>
-            <li>No candidate shall be permitted to enter the hall after <strong>15 minutes</strong> of the commencement of the examination.</li>
-            <li>Candidates must write their Hall Ticket Number on every answer sheet; no other identification is permitted.</li>
-            <li>Malpractice of any kind will lead to immediate disqualification and disciplinary action.</li>
-            <li>Candidates must occupy only the seat allotted to them as per the seating arrangement displayed outside the hall.</li>
-            <li>All writing materials (pen, pencil, ruler, etc.) must be carried by the candidate; sharing is not allowed.</li>
-            <li>Candidates must maintain silence and discipline throughout the examination duration.</li>
+            <li>Report to the hall at least <strong>30 minutes</strong> early; entry closes <strong>15 minutes</strong> after commencement.</li>
+            <li>Carry this Hall Ticket and a valid School ID — produce on demand; entry may be denied without them.</li>
+            <li>Mobile phones, smartwatches, and electronic gadgets are <strong>strictly prohibited</strong> in the hall.</li>
+            <li>Write your Hall Ticket Number on every answer sheet; occupy only your allotted seat.</li>
+            <li>Carry your own writing materials — sharing is not allowed. Malpractice leads to disqualification.</li>
           </ol>
         </div>
       </div>
