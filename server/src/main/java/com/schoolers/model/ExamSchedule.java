@@ -55,8 +55,7 @@ public class ExamSchedule {
     @Column(nullable = false, length = 10)
     private String endTime;
 
-    @NotNull
-    @Column(nullable = false, length = 50)
+    @Column(length = 50)
     private String hallNumber;
 
     @NotNull

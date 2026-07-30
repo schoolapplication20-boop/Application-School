@@ -523,7 +523,7 @@ export default function HallTicketDocument({ ticket, schedules = [] }) {
                 </span>
               </div>
               <div style={S.fieldBlock}>
-                <span style={S.fieldLabel}>Registration Number</span>
+                <span style={S.fieldLabel}>Admission Number</span>
                 <span style={{ ...S.fieldValue, fontFamily: 'monospace' }}>{regNo}</span>
               </div>
               <div style={S.fieldBlock}>

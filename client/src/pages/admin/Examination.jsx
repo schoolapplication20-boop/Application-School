@@ -4,13 +4,12 @@ import Button from '../../components/Button';
 import { examinationAPI, adminAPI } from '../../services/api';
 import { useSchool } from '../../context/SchoolContext';
 import { useToast } from '../../context/ToastContext';
-import { sortClassNames } from '../../utils/classOrder';
+import { sortClassNames, classOrder } from '../../utils/classOrder';
 import { EXAM_TYPES, CERT_TYPES, certLabel, examTypeLabel, today, newSubjectRow } from './examination/constants';
 import SchedulesTable from './examination/SchedulesTable';
 import HallTicketsTable from './examination/HallTicketsTable';
 import CertificatesTable from './examination/CertificatesTable';
 import ScheduleModal from './examination/ScheduleModal';
-import HallTicketModal from './examination/HallTicketModal';
 import BulkGenerateModal from './examination/BulkGenerateModal';
 import CertificateModal from './examination/CertificateModal';
 import PreviewModal from './examination/PreviewModal';
@@ -32,13 +31,13 @@ export default function Examination() {
   const dbSections = [...new Set(classrooms.map(c => c.section).filter(Boolean))].sort();
 
   // Filters
-  const [search,      setSearch]      = useState('');
-  const [filterClass, setFilterClass] = useState('');
-  const [filterType,  setFilterType]  = useState('');
+  const [search,        setSearch]        = useState('');
+  const [filterClass,   setFilterClass]   = useState('');
+  const [filterType,    setFilterType]    = useState('');
+  const [filterExamName, setFilterExamName] = useState(''); // exam-name tab, schedules tab only
 
   // Modals
   const [showSchedModal,  setShowSchedModal]  = useState(false);
-  const [showHtModal,     setShowHtModal]     = useState(false);
   const [showBulkModal,   setShowBulkModal]   = useState(false);
   const [showCertModal,   setShowCertModal]   = useState(false);
   const [showPreview,     setShowPreview]     = useState(false);
@@ -48,7 +47,6 @@ export default function Examination() {
 
   // Forms
   const emptySchedForm = { examName: '', examType: 'ANNUAL', className: '', section: '', status: 'SCHEDULED', instructions: '' };
-  const emptyHtForm    = { studentId: '', examName: '', examType: 'ANNUAL', academicYear: '2023-2024' };
   const emptyBulkForm  = { className: '', section: '', examName: '', examType: 'ANNUAL', academicYear: '2023-2024' };
   const emptyCertForm  = { studentId: '', certificateType: 'BONAFIDE', purpose: '', academicYear: '2023-2024' };
 
@@ -57,7 +55,6 @@ export default function Examination() {
   const [rowErrors,    setRowErrors]    = useState({});
   const [schedErrors,  setSchedErrors]  = useState({});
   const [bulkProgress, setBulkProgress] = useState(null); // { done, total }
-  const [htForm,     setHtForm]     = useState(emptyHtForm);
   const [bulkForm,   setBulkForm]   = useState(emptyBulkForm);
   const [certForm,   setCertForm]   = useState(emptyCertForm);
   const [saving,     setSaving]     = useState(false);
@@ -101,14 +98,34 @@ export default function Examination() {
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
+  // Distinct exam names present in the schedules — powers the "group by exam" tab bar.
+  // Free-text (FA-1, FA-2, Mid Term, Annual, ...) rather than the fixed examType enum,
+  // since that's what schools actually name their exams.
+  const examNameOptions = useMemo(
+    () => [...new Set(schedules.map(s => s.examName).filter(Boolean))].sort(),
+    [schedules]
+  );
+
   // ─── Filtered Lists ─────────────────────────────────────────────────────────
   const filteredSchedules = useMemo(() => schedules.filter(s => {
     const q = search.toLowerCase();
     const matchQ = !q || s.examName.toLowerCase().includes(q) || s.subject.toLowerCase().includes(q) || s.className.includes(q);
     const matchClass = !filterClass || s.className === filterClass;
     const matchType  = !filterType  || s.examType === filterType;
-    return matchQ && matchClass && matchType;
-  }), [schedules, search, filterClass, filterType]);
+    const matchExamName = !filterExamName || s.examName === filterExamName;
+    return matchQ && matchClass && matchType && matchExamName;
+  }).sort((a, b) => {
+    // Exam Type → Class → Date → Subject, so a school's timetable reads in a sensible order
+    // instead of whatever order the API happened to return.
+    const typeA = EXAM_TYPES.indexOf(a.examType), typeB = EXAM_TYPES.indexOf(b.examType);
+    const typeDiff = (typeA === -1 ? 999 : typeA) - (typeB === -1 ? 999 : typeB);
+    if (typeDiff !== 0) return typeDiff;
+    const classDiff = classOrder(a.className) - classOrder(b.className);
+    if (classDiff !== 0) return classDiff;
+    const dateDiff = (a.examDate || '').localeCompare(b.examDate || '');
+    if (dateDiff !== 0) return dateDiff;
+    return (a.subject || '').localeCompare(b.subject || '');
+  }), [schedules, search, filterClass, filterType, filterExamName]);
 
   const filteredTickets = useMemo(() => hallTickets.filter(t => {
     const q = search.toLowerCase();
@@ -166,7 +183,6 @@ export default function Examination() {
       if (!row.startTime)          e.startTime  = 'Required';
       if (!row.endTime)            e.endTime    = 'Required';
       if (row.startTime && row.endTime && row.endTime <= row.startTime) e.endTime = 'Must be after start';
-      if (!row.hallNumber.trim())  e.hallNumber = 'Required';
       if (!row.maxMarks || isNaN(row.maxMarks) || +row.maxMarks < 1) e.maxMarks = 'Invalid';
       if (row.subject && seen.has(row.subject)) e.subject = 'Duplicate subject';
       if (row.subject) seen.add(row.subject);
@@ -226,62 +242,7 @@ export default function Examination() {
     }
   };
 
-  // ─── Hall Ticket CRUD ───────────────────────────────────────────────────────
-  const handleCreateHallTicket = async () => {
-    if (!htForm.studentId || !htForm.examName) {
-      showToast('Select student and exam', 'error'); return;
-    }
-    setSaving(true);
-    const student = students.find(s => String(s.id) === String(htForm.studentId));
-    if (!student) { showToast('Student not found', 'error'); setSaving(false); return; }
-
-    // Fee eligibility check — warn (not block) if student has outstanding dues
-    try {
-      const feeRes = await adminAPI.getStudentFeeAssignment(student.id);
-      const feeData = feeRes.data?.data;
-      if (feeData && String(feeData.status || '').toUpperCase() !== 'PAID') {
-        const due = Math.max(0, Number(feeData.totalFee || 0) - Number(feeData.paidAmount || 0));
-        if (due > 0) {
-          const proceed = window.confirm(
-            `⚠️ ${student.name} has an outstanding fee of ₹${due.toLocaleString('en-IN')}.\n\nDo you still want to generate the hall ticket?`
-          );
-          if (!proceed) { setSaving(false); return; }
-        }
-      }
-    } catch { /* fee check is advisory — don't block on API failure */ }
-
-    const subjectList = schedules
-      .filter(s => s.examName === htForm.examName && s.className === student.className)
-      .map(s => ({ subject: s.subject, date: s.examDate, startTime: s.startTime, endTime: s.endTime, hall: s.hallNumber, maxMarks: s.maxMarks }));
-    if (subjectList.length === 0) {
-      showToast(`No exam schedules found for "${htForm.examName}" in class ${student.className}. Add exam schedules first.`, 'error');
-      setSaving(false); return;
-    }
-    const payload = {
-      studentId:   student.id,
-      studentName: student.name,
-      rollNumber:  student.rollNumber,
-      className:   student.className,
-      section:     student.section,
-      examName:    htForm.examName,
-      examType:    htForm.examType,
-      academicYear: htForm.academicYear,
-      examSubjects: JSON.stringify(subjectList),
-    };
-    try {
-      await examinationAPI.createHallTicket(payload);
-      showToast('Hall ticket generated');
-      setShowHtModal(false);
-      loadAll();
-    } catch {
-      const ticket = { id: Date.now(), ticketNumber: 'HT' + Date.now().toString().slice(5), ...payload, createdAt: new Date().toISOString() };
-      setHallTickets(prev => [ticket, ...prev]);
-      showToast('Hall ticket generated (offline mode)');
-      setShowHtModal(false);
-    }
-    setSaving(false);
-  };
-
+  // ─── Hall Ticket generation — always by class & section, never a single-student picker ────
   const handleBulkGenerate = async () => {
     if (!bulkForm.className || !bulkForm.examName) {
       showToast('Select class and exam name', 'error'); return;
@@ -403,7 +364,7 @@ export default function Examination() {
     }
   };
 
-  const resetFilters = () => { setSearch(''); setFilterClass(''); setFilterType(''); };
+  const resetFilters = () => { setSearch(''); setFilterClass(''); setFilterType(''); setFilterExamName(''); };
 
   // ─── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -424,16 +385,10 @@ export default function Examination() {
             </Button>
           )}
           {activeTab === 'halltickets' && (
-            <>
-              <Button variant="exam-secondary" onClick={() => setShowBulkModal(true)}>
-                <span className="material-icons" style={{ fontSize: '16px' }}>group</span>
-                Bulk Generate
-              </Button>
-              <Button variant="exam-primary" onClick={() => setShowHtModal(true)}>
-                <span className="material-icons" style={{ fontSize: '16px' }}>add</span>
-                Generate
-              </Button>
-            </>
+            <Button variant="exam-primary" onClick={() => setShowBulkModal(true)}>
+              <span className="material-icons" style={{ fontSize: '16px' }}>group</span>
+              Generate Hall Tickets
+            </Button>
           )}
           {activeTab === 'certificates' && (
             <Button variant="exam-primary" onClick={() => setShowCertModal(true)}>
@@ -507,6 +462,24 @@ export default function Examination() {
         )}
       </div>
 
+      {activeTab === 'schedules' && examNameOptions.length > 0 && (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '0 0 14px' }}>
+          {['', ...examNameOptions].map(name => (
+            <button
+              key={name || 'all'}
+              onClick={() => setFilterExamName(name)}
+              style={{
+                padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                border: filterExamName === name ? '1.5px solid #2b6cb0' : '1.5px solid var(--border-strong)',
+                background: filterExamName === name ? '#ebf8ff' : 'var(--surface)',
+                color: filterExamName === name ? '#2b6cb0' : 'var(--text-secondary)',
+              }}>
+              {name || 'All'}
+            </button>
+          ))}
+        </div>
+      )}
+
       {activeTab === 'schedules' && (
         <SchedulesTable loading={loading} schedules={filteredSchedules} onEdit={handleOpenSchedModal} onDelete={handleDeleteSchedule} />
       )}
@@ -528,11 +501,6 @@ export default function Examination() {
           dbClasses={dbClasses} dbSections={dbSections}
           onClose={() => setShowSchedModal(false)} onSave={handleSaveSchedule}
         />
-      )}
-
-      {showHtModal && (
-        <HallTicketModal htForm={htForm} setHtForm={setHtForm} students={students} schedules={schedules} saving={saving}
-          onClose={() => setShowHtModal(false)} onSubmit={handleCreateHallTicket} />
       )}
 
       {showBulkModal && (

@@ -107,7 +107,6 @@ function ScheduleModal({ initial, onClose, onSaved, dbClasses = [], dbSections =
       if (!row.startTime)        e.startTime  = 'Required';
       if (!row.endTime)          e.endTime    = 'Required';
       if (row.startTime && row.endTime && row.endTime <= row.startTime) e.endTime = 'Must be after start';
-      if (!row.hallNumber.trim())e.hallNumber = 'Required';
       if (!row.maxMarks || isNaN(row.maxMarks) || +row.maxMarks < 1) e.maxMarks = 'Invalid';
       if (Object.keys(e).length) re[row._id] = e;
     });

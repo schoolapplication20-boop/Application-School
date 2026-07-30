@@ -112,7 +112,7 @@ export default function ScheduleModal({
             <div className="exam-subject-table-scroll">
             {/* Table header */}
             <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1.3fr 90px 90px 1.1fr 74px 32px', gap: 0, minWidth: 560, background: 'var(--border)', borderRadius: '8px 8px 0 0', border: '1px solid var(--border-strong)', borderBottom: 'none', padding: '8px 10px', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              <div>Subject *</div><div>Exam Date *</div><div>Start</div><div>End</div><div>Hall / Room *</div><div style={{ textAlign: 'center' }}>Marks</div><div></div>
+              <div>Subject *</div><div>Exam Date *</div><div>Start</div><div>End</div><div>Hall / Room (Optional)</div><div style={{ textAlign: 'center' }}>Marks</div><div></div>
             </div>
 
             {/* Rows */}

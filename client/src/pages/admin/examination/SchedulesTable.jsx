@@ -39,7 +39,7 @@ export default function SchedulesTable({ loading, schedules, onEdit, onDelete })
                 <td>{s.subject}</td>
                 <td>{fmtDate(s.examDate)}</td>
                 <td style={{ whiteSpace: 'nowrap' }}>{s.startTime} – {s.endTime}</td>
-                <td>{s.hallNumber}</td>
+                <td>{s.hallNumber || '—'}</td>
                 <td style={{ textAlign: 'center' }}>{s.maxMarks}</td>
                 <td><span className={`exam-badge ${statusColor[s.status] || 'exam-badge-gray'}`}>{s.status}</span></td>
                 <td>

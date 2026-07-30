@@ -29,6 +29,21 @@ public interface HallTicketRepository extends JpaRepository<HallTicket, Long> {
     /** Batch duplicate-check: existing tickets for the given exam across a set of students (legacy, no schoolId). */
     List<HallTicket> findByStudentIdInAndExamName(List<Long> studentIds, String examName);
 
+    /**
+     * Batch upsert-check: existing tickets for the same exam type + academic year across a set of
+     * students (school-scoped). Re-generating for the same key updates these rather than duplicating.
+     */
+    List<HallTicket> findByStudentIdInAndExamTypeAndAcademicYearAndSchoolId(List<Long> studentIds, String examType, String academicYear, Long schoolId);
+
+    /** Same, legacy (no schoolId). */
+    List<HallTicket> findByStudentIdInAndExamTypeAndAcademicYear(List<Long> studentIds, String examType, String academicYear);
+
+    /** Single-student upsert-check, school-scoped. */
+    Optional<HallTicket> findByStudentIdAndExamTypeAndAcademicYearAndSchoolId(Long studentId, String examType, String academicYear, Long schoolId);
+
+    /** Single-student upsert-check, legacy (no schoolId). */
+    Optional<HallTicket> findByStudentIdAndExamTypeAndAcademicYear(Long studentId, String examType, String academicYear);
+
     @Modifying @Transactional
     void deleteByStudentId(Long studentId);
 

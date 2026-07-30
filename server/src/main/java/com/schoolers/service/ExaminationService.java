@@ -67,6 +67,7 @@ public class ExaminationService {
         if (maxMarks <= 0) return ApiResponse.error("Max marks must be greater than zero");
         String instructions = (String) body.getOrDefault("instructions", "");
         if (instructions.length() > 2000) return ApiResponse.error("Instructions cannot exceed 2000 characters");
+        String hallNumber = blankToNull((String) body.get("hallNumber"));
 
         ExamSchedule schedule = ExamSchedule.builder()
                 .examName(examName)
@@ -77,7 +78,7 @@ public class ExaminationService {
                 .examDate(examDate)
                 .startTime((String) body.get("startTime"))
                 .endTime((String) body.get("endTime"))
-                .hallNumber((String) body.get("hallNumber"))
+                .hallNumber(hallNumber)
                 .maxMarks(maxMarks)
                 .status((String) body.getOrDefault("status", "SCHEDULED"))
                 .instructions(instructions)
@@ -100,7 +101,7 @@ public class ExaminationService {
         if (body.containsKey("examDate"))    s.setExamDate(LocalDate.parse((String) body.get("examDate")));
         if (body.containsKey("startTime"))   s.setStartTime((String) body.get("startTime"));
         if (body.containsKey("endTime"))     s.setEndTime((String) body.get("endTime"));
-        if (body.containsKey("hallNumber"))  s.setHallNumber((String) body.get("hallNumber"));
+        if (body.containsKey("hallNumber"))  s.setHallNumber(blankToNull((String) body.get("hallNumber")));
         if (body.containsKey("maxMarks"))    s.setMaxMarks(parseIntSafe(body.get("maxMarks"), s.getMaxMarks() != null ? s.getMaxMarks() : 100));
         if (body.containsKey("status"))      s.setStatus((String) body.get("status"));
         if (body.containsKey("instructions")) s.setInstructions((String) body.get("instructions"));
@@ -141,8 +142,13 @@ public class ExaminationService {
         return ApiResponse.success("Hall tickets retrieved", tickets);
     }
 
+    /**
+     * Single-student generate/regenerate. Kept for API compatibility (and any non-UI callers) —
+     * the admin UI now only uses generateBulkHallTickets(). Upserts on studentId + examType +
+     * academicYear so calling this twice for the same exam updates the existing ticket instead
+     * of creating a duplicate.
+     */
     public ApiResponse<HallTicket> createHallTicket(Map<String, Object> body, String generatedBy, Long schoolId) {
-        String ticketNumber = generateTicketNumber();
         Object studentIdObj = body.get("studentId");
         if (studentIdObj == null) {
             return ApiResponse.error("studentId is required.");
@@ -153,29 +159,46 @@ public class ExaminationService {
         } catch (NumberFormatException e) {
             return ApiResponse.error("Invalid studentId format.");
         }
-        HallTicket ticket = HallTicket.builder()
-                .ticketNumber(ticketNumber)
+        String examType = (String) body.get("examType");
+        String academicYear = (String) body.getOrDefault("academicYear", getCurrentAcademicYear());
+
+        Optional<HallTicket> existing = (schoolId != null)
+                ? hallTicketRepository.findByStudentIdAndExamTypeAndAcademicYearAndSchoolId(studentIdVal, examType, academicYear, schoolId)
+                : hallTicketRepository.findByStudentIdAndExamTypeAndAcademicYear(studentIdVal, examType, academicYear);
+        boolean isNew = existing.isEmpty();
+
+        HallTicket ticket = existing.orElseGet(() -> HallTicket.builder()
+                .ticketNumber(generateTicketNumber())
                 .studentId(studentIdVal)
-                .studentName((String) body.get("studentName"))
-                .rollNumber((String) body.get("rollNumber"))
-                .className((String) body.get("className"))
-                .section((String) body.getOrDefault("section", ""))
-                .examName((String) body.get("examName"))
-                .examType((String) body.get("examType"))
-                .examSubjects((String) body.getOrDefault("examSubjects", "[]"))
-                .academicYear((String) body.getOrDefault("academicYear", getCurrentAcademicYear()))
-                .photoUrl((String) body.getOrDefault("photoUrl", ""))
-                .dateOfBirth((String) body.getOrDefault("dateOfBirth", ""))
-                .gender((String) body.getOrDefault("gender", ""))
-                .registrationNumber((String) body.getOrDefault("registrationNumber", ""))
-                .examCenter((String) body.getOrDefault("examCenter", "Main Campus"))
-                .examCenterAddress((String) body.getOrDefault("examCenterAddress", "Schoolers Institution, Main Road"))
                 .schoolId(schoolId)
-                .generatedBy(generatedBy)
-                .build();
-        return ApiResponse.success("Hall ticket generated", hallTicketRepository.save(ticket));
+                .build());
+        ticket.setStudentName((String) body.get("studentName"));
+        ticket.setRollNumber((String) body.get("rollNumber"));
+        ticket.setClassName((String) body.get("className"));
+        ticket.setSection((String) body.getOrDefault("section", ""));
+        ticket.setExamName((String) body.get("examName"));
+        ticket.setExamType(examType);
+        ticket.setExamSubjects((String) body.getOrDefault("examSubjects", "[]"));
+        ticket.setAcademicYear(academicYear);
+        if (isNew) {
+            ticket.setPhotoUrl((String) body.getOrDefault("photoUrl", ""));
+            ticket.setDateOfBirth((String) body.getOrDefault("dateOfBirth", ""));
+            ticket.setGender((String) body.getOrDefault("gender", ""));
+            ticket.setRegistrationNumber((String) body.getOrDefault("registrationNumber", ""));
+        }
+        ticket.setExamCenter((String) body.getOrDefault("examCenter", "Main Campus"));
+        ticket.setExamCenterAddress((String) body.getOrDefault("examCenterAddress", "Schoolers Institution, Main Road"));
+        ticket.setGeneratedBy(generatedBy);
+
+        HallTicket saved = hallTicketRepository.save(ticket);
+        return ApiResponse.success(isNew ? "Hall ticket generated" : "Hall ticket updated", saved);
     }
 
+    /**
+     * Generates (or regenerates) hall tickets for every student in a class/section for one exam.
+     * Upserts on studentId + examType + academicYear: a student who already has a ticket for that
+     * exam gets it refreshed in place (new exam subjects/section/etc.) instead of a duplicate row.
+     */
     @org.springframework.transaction.annotation.Transactional
     public ApiResponse<HallTicket> generateBulkHallTickets(Map<String, Object> body, String generatedBy, Long schoolId) {
         String className = (String) body.get("className");
@@ -184,6 +207,8 @@ public class ExaminationService {
         String examType = (String) body.get("examType");
         String examSubjects = (String) body.getOrDefault("examSubjects", "[]");
         String academicYear = (String) body.getOrDefault("academicYear", getCurrentAcademicYear());
+        String examCenter = (String) body.getOrDefault("examCenter", "Main Campus");
+        String examCenterAddress = (String) body.getOrDefault("examCenterAddress", "Schoolers Institution, Main Road");
 
         List<Student> students;
         if (schoolId != null && section != null && !section.isEmpty()) {
@@ -195,47 +220,62 @@ public class ExaminationService {
         } else {
             students = studentRepository.findByClassName(className);
         }
+        if (students.isEmpty()) return ApiResponse.error("No students found in that class/section.");
 
         List<Long> studentIds = students.stream().map(Student::getId).collect(Collectors.toList());
-        Set<Long> studentsWithTicket = studentIds.isEmpty()
-                ? Set.of()
-                : ((schoolId != null)
-                        ? hallTicketRepository.findByStudentIdInAndExamNameAndSchoolId(studentIds, examName, schoolId)
-                        : hallTicketRepository.findByStudentIdInAndExamName(studentIds, examName))
-                    .stream().map(HallTicket::getStudentId).collect(Collectors.toSet());
+        Map<Long, HallTicket> existingByStudent = ((schoolId != null)
+                        ? hallTicketRepository.findByStudentIdInAndExamTypeAndAcademicYearAndSchoolId(studentIds, examType, academicYear, schoolId)
+                        : hallTicketRepository.findByStudentIdInAndExamTypeAndAcademicYear(studentIds, examType, academicYear))
+                .stream().collect(Collectors.toMap(HallTicket::getStudentId, t -> t, (a, b) -> a));
 
-        List<HallTicket> tickets = new ArrayList<>();
+        int created = 0, updated = 0;
+        List<HallTicket> toSave = new ArrayList<>();
         for (Student student : students) {
-            if (studentsWithTicket.contains(student.getId())) {
-                continue; // Skip if already generated
+            HallTicket existing = existingByStudent.get(student.getId());
+            if (existing != null) {
+                existing.setExamName(examName);
+                existing.setExamSubjects(examSubjects);
+                existing.setClassName(student.getClassName());
+                existing.setSection(student.getSection());
+                existing.setStudentName(student.getName());
+                existing.setRollNumber(student.getRollNumber());
+                existing.setExamCenter(examCenter);
+                existing.setExamCenterAddress(examCenterAddress);
+                existing.setGeneratedBy(generatedBy);
+                toSave.add(existing);
+                updated++;
+            } else {
+                String dobStr = student.getDateOfBirth() != null ? student.getDateOfBirth().toString() : "";
+                toSave.add(HallTicket.builder()
+                        .ticketNumber(generateTicketNumber())
+                        .studentId(student.getId())
+                        .studentName(student.getName())
+                        .rollNumber(student.getRollNumber())
+                        .className(student.getClassName())
+                        .section(student.getSection())
+                        .examName(examName)
+                        .examType(examType)
+                        .examSubjects(examSubjects)
+                        .academicYear(academicYear)
+                        .photoUrl(student.getPhotoUrl())
+                        .dateOfBirth(dobStr)
+                        .gender("")
+                        .registrationNumber(student.getAdmissionNumber())
+                        .examCenter(examCenter)
+                        .examCenterAddress(examCenterAddress)
+                        .schoolId(schoolId)
+                        .generatedBy(generatedBy)
+                        .build());
+                created++;
             }
-            String dobStr = student.getDateOfBirth() != null ? student.getDateOfBirth().toString() : "";
-            String examCenter = (String) body.getOrDefault("examCenter", "Main Campus");
-            String examCenterAddress = (String) body.getOrDefault("examCenterAddress", "Schoolers Institution, Main Road");
-            HallTicket ticket = HallTicket.builder()
-                    .ticketNumber(generateTicketNumber())
-                    .studentId(student.getId())
-                    .studentName(student.getName())
-                    .rollNumber(student.getRollNumber())
-                    .className(student.getClassName())
-                    .section(student.getSection())
-                    .examName(examName)
-                    .examType(examType)
-                    .examSubjects(examSubjects)
-                    .academicYear(academicYear)
-                    .photoUrl(student.getPhotoUrl())
-                    .dateOfBirth(dobStr)
-                    .gender("")
-                    .registrationNumber(student.getRollNumber())
-                    .examCenter(examCenter)
-                    .examCenterAddress(examCenterAddress)
-                    .schoolId(schoolId)
-                    .generatedBy(generatedBy)
-                    .build();
-            tickets.add(ticket);
         }
-        hallTicketRepository.saveAll(tickets);
-        return ApiResponse.success("Generated " + tickets.size() + " hall tickets", null);
+        hallTicketRepository.saveAll(toSave);
+        String msg = (created > 0 && updated > 0)
+                ? String.format("Generated %d new and updated %d existing hall tickets", created, updated)
+                : (created > 0)
+                    ? String.format("Generated %d hall tickets", created)
+                    : String.format("Updated %d existing hall tickets", updated);
+        return ApiResponse.success(msg, null);
     }
 
     public ApiResponse<Void> deleteHallTicket(Long id, Long schoolId) {
@@ -353,6 +393,10 @@ public class ExaminationService {
         } else {
             return (year - 1) + "-" + year;
         }
+    }
+
+    private String blankToNull(String value) {
+        return (value == null || value.isBlank()) ? null : value;
     }
 
     /**

@@ -7,13 +7,14 @@ export default function BulkGenerateModal({ bulkForm, setBulkForm, students, sch
     <div className="exam-modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="exam-modal" style={{ maxWidth: '480px' }}>
         <div className="exam-modal-header">
-          <h2><span className="material-icons">group</span>Bulk Generate Hall Tickets</h2>
+          <h2><span className="material-icons">group</span>Generate Hall Tickets</h2>
           <button className="exam-modal-close" onClick={onClose}><span className="material-icons">close</span></button>
         </div>
         <div className="exam-modal-body">
           <div style={{ background: '#fffaf0', border: '1px solid #fbd38d', borderRadius: '9px', padding: '12px 14px', marginBottom: '16px', fontSize: '13px', color: '#c05621' }}>
             <span className="material-icons" style={{ fontSize: '16px', verticalAlign: 'middle', marginRight: '6px' }}>info</span>
-            This will generate hall tickets for all students in the selected class.
+            Generates a hall ticket for every student in the selected class and section — no need to pick students one by one.
+            Running it again for the same exam updates their existing tickets instead of duplicating them.
           </div>
           <div className="exam-form-grid">
             <div className="exam-form-group">
@@ -57,7 +58,7 @@ export default function BulkGenerateModal({ bulkForm, setBulkForm, students, sch
         <div className="exam-modal-footer">
           <Button variant="exam-secondary" onClick={onClose}>Cancel</Button>
           <Button variant="exam-primary" onClick={onSubmit} disabled={saving}>
-            {saving ? 'Generating…' : 'Generate All'}
+            {saving ? 'Generating…' : 'Generate Hall Tickets'}
           </Button>
         </div>
       </div>
