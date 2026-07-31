@@ -3,7 +3,6 @@ import Layout from '../../components/Layout';
 import Button from '../../components/Button';
 import { adminAPI } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
-import { useAuth } from '../../context/AuthContext';
 import { classOrder, parseGradeLevel } from '../../utils/classOrder';
 
 // Derive display category from class name — handles Roman numerals (VII) and digits (7) alike,
@@ -20,7 +19,7 @@ const getCategory = (name) => {
 // Used by the category filter in the table — derived automatically from class names via getCategory()
 const CATEGORIES = ['Pre-Primary', 'Primary', 'Secondary'];
 
-const initialForm = { className: '', section: '', teacher: '', teacherId: '', capacity: '' };
+const initialForm = { className: '', section: '', teacher: '', teacherId: '' };
 
 const iStyle = { padding: '9px 12px', border: '1.5px solid var(--border-strong)', borderRadius: '8px', fontSize: '13px', background: 'var(--surface)', outline: 'none', fontFamily: 'Poppins, sans-serif' };
 
@@ -39,7 +38,6 @@ const Classes = () => {
   const [showModal,  setShowModal]  = useState(false);
   const [editClass,  setEditClass]  = useState(null);
   const [formData,   setFormData]   = useState(initialForm);
-  const [capacityOverrideConfirm, setCapacityOverrideConfirm] = useState(null); // { capacity, enrolled } — Super Admin only
 
   // Student view panel
   const [viewClass,       setViewClass]       = useState(null);
@@ -52,19 +50,14 @@ const Classes = () => {
   const [deleteStudentTarget, setDeleteStudentTarget] = useState(null); // student to delete from view modal
 
   const showToast = useToast();
-  const { user } = useAuth();
-  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
 
   // ── Map backend ClassRoom to frontend shape ───────────────────────────────
-  // capacity stays null when not configured — do NOT default it (a fake 40 here throws off
-  // the Total Capacity / Avg Occupancy dashboard cards for every class the admin hasn't set up).
   const mapClass = (c) => ({
     id:        c.id,
     name:      c.name,
     section:   c.section,
     teacher:   c.teacherName || '',
     teacherId: c.teacherId   || '',
-    capacity:  c.capacity ?? null,
     category:  getCategory(c.name),
     isActive:  c.isActive,
     enrolled:  c.enrolled    || 0,
@@ -95,27 +88,7 @@ const Classes = () => {
   // Enrolled count comes directly from the backend getClasses() response.
   const withEnrolled = useMemo(() => classes, [classes]);
 
-  // ── Capacity / occupancy summary ──────────────────────────────────────────
-  // A class with no configured capacity contributes its own enrolled count as its
-  // "effective capacity" — never a fixed default like 40, and never less than what's
-  // already enrolled there. That guarantees Total Capacity >= Total Enrolled unless an
-  // admin has explicitly set a real capacity below current enrollment (only possible via
-  // the Super Admin override in the edit modal), which is exactly when the warning below
-  // should fire instead of the dashboard silently showing >100% occupancy.
-  const capacityStats = useMemo(() => {
-    const effectiveCapacity = (c) => (c.capacity != null && c.capacity > 0) ? c.capacity : (c.enrolled || 0);
-    const totalCapacity = withEnrolled.reduce((a, c) => a + effectiveCapacity(c), 0);
-    const totalEnrolled = withEnrolled.reduce((a, c) => a + (c.enrolled || 0), 0);
-    const unconfiguredCount = withEnrolled.filter(c => c.capacity == null).length;
-    const overCapacityCount = withEnrolled.filter(c => c.capacity != null && c.capacity > 0 && c.enrolled > c.capacity).length;
-    return {
-      totalCapacity,
-      totalEnrolled,
-      avgOccupancyPct: totalCapacity > 0 ? Math.round((totalEnrolled / totalCapacity) * 100) : 0,
-      unconfiguredCount,
-      overCapacityCount,
-    };
-  }, [withEnrolled]);
+  const totalEnrolled = useMemo(() => withEnrolled.reduce((a, c) => a + (c.enrolled || 0), 0), [withEnrolled]);
 
   // Teacher IDs already assigned as Class Teacher to a class other than the one being edited.
   // Used to exclude them from the Class Teacher dropdown so one teacher can only hold one class.
@@ -255,8 +228,7 @@ const Classes = () => {
   };
 
   // ── Save (add / edit) ────────────────────────────────────────────────────
-  // capacityOverride !== null means "Super Admin already confirmed the below-enrollment override" — retry with force=true
-  const handleSave = async (capacityOverride = null) => {
+  const handleSave = async () => {
     const name    = (formData.className || '').trim();
     const section = (formData.section   || '').trim().toUpperCase();
 
@@ -286,39 +258,18 @@ const Classes = () => {
       }
     }
 
-    // ── Capacity: optional, but validated — no silent default like the old "|| 40" ──
-    let capacity = null;
-    if (String(formData.capacity || '').trim() !== '') {
-      capacity = Number(formData.capacity);
-      if (!Number.isFinite(capacity) || capacity <= 0) {
-        showToast('Capacity must be a positive number', 'error');
-        return;
-      }
-      if (editClass && capacity < editClass.enrolled) {
-        if (!isSuperAdmin) {
-          showToast('This class already has more students than the entered capacity.', 'error');
-          return;
-        }
-        if (!capacityOverride) {
-          setCapacityOverrideConfirm({ capacity, enrolled: editClass.enrolled });
-          return; // wait for Super Admin to confirm via the override dialog
-        }
-      }
-    }
-
     const selectedTeacher = teacherList.find(t => String(t.id) === String(formData.teacherId));
     const payload = {
       name,
       section,
       teacherId:   formData.teacherId ? Number(formData.teacherId) : null,
       teacherName: selectedTeacher?.name || formData.teacher || '',
-      capacity,
       isActive:    true,
     };
 
     try {
       if (editClass) {
-        await adminAPI.updateClass(editClass.id, payload, !!capacityOverride);
+        await adminAPI.updateClass(editClass.id, payload);
         showToast('Class updated');
       } else {
         await adminAPI.createClass(payload);
@@ -329,19 +280,17 @@ const Classes = () => {
       setShowModal(false);
       setFormData(initialForm);
       setEditClass(null);
-      setCapacityOverrideConfirm(null);
     } catch (err) {
       // Keep modal open so the user can correct the input
       const msg = err.response?.data?.message ||
                   (editClass ? 'Failed to update class' : 'Class already exists or could not be saved');
       showToast(msg, 'error');
-      setCapacityOverrideConfirm(null);
     }
   };
 
   const openEdit = (c) => {
     setEditClass(c);
-    setFormData({ className: c.name, section: c.section, teacher: c.teacher || '', teacherId: c.teacherId ? String(c.teacherId) : '', capacity: c.capacity || '' });
+    setFormData({ className: c.name, section: c.section, teacher: c.teacher || '', teacherId: c.teacherId ? String(c.teacherId) : '' });
     setShowModal(true);
   };
 
@@ -356,12 +305,10 @@ const Classes = () => {
       </div>
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '16px', marginBottom: (capacityStats.unconfiguredCount > 0 || capacityStats.overCapacityCount > 0) ? 12 : 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '16px', marginBottom: 24 }}>
         {[
-          { label: 'Total Classes',  value: withEnrolled.length,               icon: 'class',     color: '#0de1e8' },
-          { label: 'Total Capacity', value: capacityStats.totalCapacity,       icon: 'people',    color: '#3182ce' },
-          { label: 'Total Enrolled', value: capacityStats.totalEnrolled,       icon: 'school',    color: '#805ad5' },
-          { label: 'Avg Occupancy',  value: `${capacityStats.avgOccupancyPct}%`, icon: 'bar_chart', color: '#ed8936' },
+          { label: 'Total Classes',  value: withEnrolled.length, icon: 'class',  color: '#0de1e8' },
+          { label: 'Total Enrolled', value: totalEnrolled,       icon: 'school', color: '#805ad5' },
         ].map(s => (
           <div key={s.label} className="stat-card">
             <div className="stat-icon" style={{ backgroundColor: s.color + '15' }}>
@@ -372,23 +319,6 @@ const Classes = () => {
           </div>
         ))}
       </div>
-
-      {capacityStats.overCapacityCount > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: '#fff5f5', border: '1px solid #fed7d7', borderRadius: 8, fontSize: 12.5, color: '#c53030', marginBottom: 12 }}>
-          <span className="material-icons" style={{ fontSize: 17 }}>warning</span>
-          <span>Some class capacities are lower than enrolled students. Please update capacity.</span>
-        </div>
-      )}
-
-      {capacityStats.unconfiguredCount > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, fontSize: 12.5, color: '#9a3412', marginBottom: 24 }}>
-          <span className="material-icons" style={{ fontSize: 17 }}>info</span>
-          <span>
-            {capacityStats.unconfiguredCount} class{capacityStats.unconfiguredCount !== 1 ? 'es have' : ' has'} no capacity configured —
-            counted using their current enrollment until you set a real capacity. Edit a class to configure it.
-          </span>
-        </div>
-      )}
 
       {/* Table + Filters */}
       <div className="data-table-card">
@@ -507,15 +437,7 @@ const Classes = () => {
                     <td style={{ minWidth: 140 }}>
                       <div onClick={() => openView(c)} title="Click to view students" style={{ cursor: 'pointer' }}>
                         <span style={{ fontSize: '13px', fontWeight: 700 }}>{c.enrolled} student{c.enrolled !== 1 ? 's' : ''}</span>
-                        {c.capacity == null ? (
-                          <div style={{ fontSize: '11px', color: '#b7791f', marginTop: 2 }}>Capacity not set · <span style={{ color: '#0de1e8' }}>view</span></div>
-                        ) : c.enrolled > c.capacity ? (
-                          <div style={{ fontSize: '11px', color: '#e53e3e', marginTop: 2 }} title="Enrollment exceeds class capacity. Please update capacity.">
-                            ⚠ Over capacity ({c.capacity}) · <span style={{ color: '#0de1e8' }}>view</span>
-                          </div>
-                        ) : (
-                          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: 2 }}>of {c.capacity} · <span style={{ color: '#0de1e8' }}>view</span></div>
-                        )}
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: 2 }}><span style={{ color: '#0de1e8' }}>view</span></div>
                       </div>
                     </td>
                     <td>
@@ -536,11 +458,11 @@ const Classes = () => {
 
       {/* ── Add / Edit Modal ── */}
       {showModal && (
-        <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) { setShowModal(false); setCapacityOverrideConfirm(null); } }}>
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowModal(false)}>
           <div className="modal-container" style={{ maxWidth: 520 }}>
             <div className="modal-header">
               <span className="modal-title">{editClass ? 'Edit Class' : 'Add New Class'}</span>
-              <button className="modal-close" onClick={() => { setShowModal(false); setCapacityOverrideConfirm(null); }}><span className="material-icons">close</span></button>
+              <button className="modal-close" onClick={() => setShowModal(false)}><span className="material-icons">close</span></button>
             </div>
             <div className="modal-body">
               {/* Class Name */}
@@ -577,86 +499,38 @@ const Classes = () => {
               </div>
 
               {/* Optional fields */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <div>
-                  <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
-                    Class Teacher (Optional)
-                  </label>
-                  <select
-                    style={{ ...iStyle, width: '100%', boxSizing: 'border-box', cursor: 'pointer' }}
-                    value={formData.teacherId || ''}
-                    onChange={e => {
-                      const t = teacherList.find(t => String(t.id) === e.target.value);
-                      setFormData({ ...formData, teacherId: e.target.value, teacher: t?.name || '' });
-                    }}
-                  >
-                    <option value="">— No teacher assigned —</option>
-                    {teacherList
-                      .filter(t =>
-                        (t.teacherType === 'CLASS_TEACHER' || t.teacherType === 'BOTH') &&
-                        !assignedTeacherIds.has(String(t.id))
-                      )
-                      .map(t => (
-                        <option key={t.id} value={t.id}>
-                          {t.name}{t.employeeId ? ` (${t.employeeId})` : ''}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-                <div>
-                  <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
-                    Capacity (Optional)
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="1000"
-                    style={{ ...iStyle, width: '100%', boxSizing: 'border-box' }}
-                    placeholder="Max students"
-                    value={formData.capacity || ''}
-                    onChange={e => setFormData({ ...formData, capacity: e.target.value })}
-                  />
-                  {editClass && editClass.enrolled > 0 && (
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
-                      Currently {editClass.enrolled} student{editClass.enrolled !== 1 ? 's' : ''} enrolled
-                    </div>
-                  )}
-                </div>
+              <div>
+                <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
+                  Class Teacher (Optional)
+                </label>
+                <select
+                  style={{ ...iStyle, width: '100%', boxSizing: 'border-box', cursor: 'pointer' }}
+                  value={formData.teacherId || ''}
+                  onChange={e => {
+                    const t = teacherList.find(t => String(t.id) === e.target.value);
+                    setFormData({ ...formData, teacherId: e.target.value, teacher: t?.name || '' });
+                  }}
+                >
+                  <option value="">— No teacher assigned —</option>
+                  {teacherList
+                    .filter(t =>
+                      (t.teacherType === 'CLASS_TEACHER' || t.teacherType === 'BOTH') &&
+                      !assignedTeacherIds.has(String(t.id))
+                    )
+                    .map(t => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}{t.employeeId ? ` (${t.employeeId})` : ''}
+                      </option>
+                    ))}
+                </select>
               </div>
             </div>
             <div className="modal-footer">
-              <button onClick={() => { setShowModal(false); setEditClass(null); setFormData(initialForm); setCapacityOverrideConfirm(null); }}
+              <button onClick={() => { setShowModal(false); setEditClass(null); setFormData(initialForm); }}
                 style={{ padding: '10px 20px', border: '1.5px solid var(--border-strong)', borderRadius: 8, background: 'var(--surface)', cursor: 'pointer', fontWeight: 600 }}>Cancel</button>
               <button onClick={() => handleSave()}
                 style={{ padding: '10px 24px', background: '#0de1e8', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
                 {editClass ? 'Update' : 'Add Class'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Capacity Override Confirm (Super Admin only) ── */}
-      {capacityOverrideConfirm && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setCapacityOverrideConfirm(null)}>
-          <div className="modal-container" style={{ maxWidth: 440 }}>
-            <div className="modal-header">
-              <span className="modal-title" style={{ color: '#c53030' }}>Capacity Below Enrollment</span>
-              <button className="modal-close" onClick={() => setCapacityOverrideConfirm(null)}><span className="material-icons">close</span></button>
-            </div>
-            <div className="modal-body" style={{ padding: '20px 28px' }}>
-              <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
-                This class already has <strong>{capacityOverrideConfirm.enrolled}</strong> student{capacityOverrideConfirm.enrolled !== 1 ? 's' : ''} enrolled,
-                more than the capacity you entered (<strong>{capacityOverrideConfirm.capacity}</strong>).
-                As Super Admin you can save anyway, but the class will show as over capacity.
-              </p>
-            </div>
-            <div className="modal-footer">
-              <button onClick={() => setCapacityOverrideConfirm(null)}
-                style={{ padding: '10px 20px', border: '1.5px solid var(--border-strong)', borderRadius: 8, background: 'var(--surface)', cursor: 'pointer', fontWeight: 600 }}>Cancel</button>
-              <button onClick={() => handleSave(capacityOverrideConfirm)}
-                style={{ padding: '10px 24px', background: '#e53e3e', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
-                Save Anyway
               </button>
             </div>
           </div>
