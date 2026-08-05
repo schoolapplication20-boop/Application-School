@@ -31,6 +31,17 @@ public class StudentPrivacyService {
                 .orElse(false);
     }
 
+    /**
+     * Returns true when the school's privacy config says to hide total fee /
+     * fee concession info from the student portal (also covers parents, who
+     * view fees via the student login).
+     */
+    public boolean shouldHideFeeInfo(Long schoolId) {
+        return privacyConfigRepository.findBySchoolId(schoolId)
+                .map(cfg -> Boolean.TRUE.equals(cfg.getHideFeeInfoFromStudents()))
+                .orElse(false);
+    }
+
     /** Nulls out sensitive contact fields on a single student (call after JPA transaction, i.e. detached entity). */
     public void maskContactInfo(Student s) {
         s.setParentMobile(null);

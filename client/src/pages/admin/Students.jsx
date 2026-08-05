@@ -245,6 +245,7 @@ export default function Students() {
       motherName: s.motherName || '',
       motherPhone: s.motherPhone || '',
       permanentAddress: s.permanentAddress || s.address || '',
+      gender: s.gender || 'Male',
     });
     setPhotoPreview(s.photo || null);
     setErrors({});
@@ -315,6 +316,7 @@ export default function Students() {
       class:            formData.class,
       section:          formData.section,
       dob:              formData.dob,
+      gender:           formData.gender,
       status:           formData.status,
       photo:            formData.photo,
       fatherName:       formData.fatherName,

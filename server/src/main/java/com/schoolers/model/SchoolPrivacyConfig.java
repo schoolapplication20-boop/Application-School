@@ -21,6 +21,14 @@ public class SchoolPrivacyConfig {
     @Column(name = "hide_student_contact_info", nullable = false)
     private Boolean hideStudentContactInfo = false;
 
+    /**
+     * When true, the student's total fee and fee concession (condonation) amount
+     * are hidden from the student portal — which is also how parents currently
+     * view fees, since there is no separate parent login in this app.
+     */
+    @Column(name = "hide_fee_info_from_students", nullable = false)
+    private Boolean hideFeeInfoFromStudents = false;
+
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 

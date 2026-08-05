@@ -122,6 +122,12 @@ export default function TeacherFormModal({
                 <input type="tel" style={inputStyle(errors.mobile)} placeholder="10-digit mobile" maxLength={10} value={form.mobile}
                   onChange={e => setForm({ ...form, mobile: e.target.value.replace(/\D/g, '').slice(0, 10) })} />
               </Field>
+              <Field label="Gender">
+                <select style={{ ...inputStyle(false), cursor: 'pointer' }} value={form.gender}
+                  onChange={e => setForm({ ...form, gender: e.target.value })}>
+                  <option>Male</option><option>Female</option><option>Other</option>
+                </select>
+              </Field>
             </Col2>
 
             {/* ── Professional Info ────────────────────────────────── */}

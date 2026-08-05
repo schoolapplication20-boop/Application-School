@@ -57,6 +57,9 @@ public class Teacher {
     @Column(name = "joining_date")
     private LocalDate joiningDate;
 
+    @Column(length = 10)
+    private String gender;
+
     /** CLASS_TEACHER or SUBJECT_TEACHER */
     @Column(name = "teacher_type", length = 20)
     private String teacherType;

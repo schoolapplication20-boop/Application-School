@@ -93,7 +93,7 @@ public class ExaminationController {
 
     @PostMapping("/hall-tickets/bulk")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
-    public ResponseEntity<ApiResponse<HallTicket>> generateBulk(
+    public ResponseEntity<ApiResponse<List<HallTicket>>> generateBulk(
             @RequestBody Map<String, Object> body, Authentication auth) {
         return ResponseEntity.ok(examinationService.generateBulkHallTickets(body, currentUser(), currentUserUtil.getCurrentSchoolId(auth)));
     }

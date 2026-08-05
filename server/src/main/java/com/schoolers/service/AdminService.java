@@ -53,6 +53,7 @@ public class AdminService {
     private AdminService self;
 
     @Autowired private StudentRepository studentRepository;
+    @Autowired private StudentPrivacyService studentPrivacyService;
     @Autowired private TeacherRepository teacherRepository;
     @Autowired private ClassRoomRepository classRoomRepository;
     @Autowired private FeeRepository feeRepository;
@@ -441,6 +442,7 @@ public class AdminService {
                 .guardianName(str(body, "guardianName", null))
                 .guardianMobile(str(body, "guardianMobile", str(body, "guardianPhone", null)))
                 .dateOfBirth(parseDate(str(body, "dateOfBirth", str(body, "dob", null))))
+                .gender(str(body, "gender", null))
                 .address(str(body, "address", str(body, "permanentAddress", "")))
                 .alternateAddress(str(body, "alternateAddress", null))
                 .photoUrl(str(body, "photo", str(body, "photoUrl", null)))
@@ -631,6 +633,8 @@ public class AdminService {
                         student.setGuardianMobile(str(body, "guardianMobile", str(body, "guardianPhone", student.getGuardianMobile())));
                     if (body.containsKey("dateOfBirth") || body.containsKey("dob"))
                         student.setDateOfBirth(parseDate(str(body, "dateOfBirth", str(body, "dob", null))));
+                    if (body.containsKey("gender"))
+                        student.setGender(str(body, "gender", student.getGender()));
                     if (body.containsKey("address") || body.containsKey("permanentAddress"))
                         student.setAddress(str(body, "address", str(body, "permanentAddress", student.getAddress())));
                     if (body.containsKey("alternateAddress"))
@@ -1120,6 +1124,7 @@ public class AdminService {
                     .user(user)
                     .name(req.getName().trim())
                     .employeeId(empId)
+                    .gender(req.getGender())
                     .subject(req.getSubject())
                     .department(req.getDepartment())
                     .classes(req.getClasses())
@@ -1213,6 +1218,7 @@ public class AdminService {
                     }
 
                     if (req.getName() != null && !req.getName().isBlank()) teacher.setName(req.getName().trim());
+                    if (req.getGender() != null)        teacher.setGender(req.getGender());
                     if (req.getSubject() != null)       teacher.setSubject(req.getSubject());
                     if (req.getDepartment() != null)    teacher.setDepartment(req.getDepartment());
                     if (req.getClasses() != null)       teacher.setClasses(req.getClasses());
@@ -2639,6 +2645,18 @@ public class AdminService {
     public ApiResponse<Map<String, Object>> getStudentFeeData(Long studentId) {
         Map<String, Object> result = new LinkedHashMap<>();
 
+        Student feeStudent = studentRepository.findById(studentId).orElse(null);
+        boolean hideFee = feeStudent != null
+                && studentPrivacyService.shouldHideFeeInfo(feeStudent.getSchoolId());
+
+        // Fee visibility is switched off for this school — return nothing fee-related
+        // at all, not even via network inspection. The student portal shows a
+        // "contact administration" message instead of the fee page.
+        if (hideFee) {
+            result.put("feeInfoHidden", true);
+            return ApiResponse.success(result);
+        }
+
         String currentYear = currentAcademicYear();
         StudentFeeAssignment assignment = studentFeeAssignmentRepository
                 .findFirstByStudentIdAndAcademicYearOrderByCreatedAtDesc(studentId, currentYear)
@@ -2659,6 +2677,7 @@ public class AdminService {
             result.put("payments", List.of());
             result.put("classFeeStructure", null);
             result.put("summary", emptySummary);
+            result.put("feeInfoHidden", false);
             return ApiResponse.success(result);
         }
 
@@ -2688,11 +2707,10 @@ public class AdminService {
         // Include class fee structure (fee type breakdown) if available
         ClassFeeStructure cfs = null;
         if (assignment.getClassName() != null && assignment.getAcademicYear() != null) {
-            Student student = studentRepository.findById(studentId).orElse(null);
-            if (student != null && student.getSchoolId() != null) {
+            if (feeStudent != null && feeStudent.getSchoolId() != null) {
                 cfs = classFeeStructureRepository
                         .findByClassNameAndAcademicYearAndSchoolId(
-                                assignment.getClassName(), assignment.getAcademicYear(), student.getSchoolId())
+                                assignment.getClassName(), assignment.getAcademicYear(), feeStudent.getSchoolId())
                         .orElse(null);
             }
             if (cfs == null) {
@@ -2707,6 +2725,7 @@ public class AdminService {
         result.put("payments",          payments);
         result.put("classFeeStructure", cfs);
         result.put("summary",           summary);
+        result.put("feeInfoHidden",     false);
         return ApiResponse.success(result);
     }
 

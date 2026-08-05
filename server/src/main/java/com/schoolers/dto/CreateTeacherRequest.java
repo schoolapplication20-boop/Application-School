@@ -8,6 +8,7 @@ public class CreateTeacherRequest {
     private String email;
     private String mobile;
     private String empId;
+    private String gender;
     private String subject;
     private String department;
     private String qualification;

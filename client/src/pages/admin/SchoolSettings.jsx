@@ -185,7 +185,7 @@ const SchoolSettings = () => {
   const updateDc = (field, value) => setDiaryConfig(prev => ({ ...prev, [field]: value }));
 
   // ── Privacy config ────────────────────────────────────────────────────────────
-  const [privacyConfig,  setPrivacyConfig]  = useState({ hideStudentContactInfo: false });
+  const [privacyConfig,  setPrivacyConfig]  = useState({ hideStudentContactInfo: false, hideFeeInfoFromStudents: false });
   const [pcSaving,       setPcSaving]       = useState(false);
   const [pcError,        setPcError]        = useState('');
   const [pcSuccess,      setPcSuccess]      = useState('');
@@ -194,7 +194,10 @@ const SchoolSettings = () => {
     try {
       const r = await privacyConfigAPI.get();
       const d = r.data?.data;
-      if (d) setPrivacyConfig({ hideStudentContactInfo: d.hideStudentContactInfo ?? false });
+      if (d) setPrivacyConfig({
+        hideStudentContactInfo:  d.hideStudentContactInfo  ?? false,
+        hideFeeInfoFromStudents: d.hideFeeInfoFromStudents ?? false,
+      });
     } catch { /* silently use defaults */ }
   }, []);
 
@@ -1194,7 +1197,7 @@ const SchoolSettings = () => {
             <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
               <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Student Data Privacy</h2>
               <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '4px 0 0' }}>
-                Control which roles can see sensitive student information (phone numbers, parent email).
+                Control which roles can see sensitive student information (phone numbers, parent email, fee details).
               </p>
             </div>
             <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -1216,6 +1219,26 @@ const SchoolSettings = () => {
                   <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>
                     When enabled, teachers can only see student name, class, and roll number.
                     Phone numbers, parent email, and fee details are visible only to Admin and Super Admin.
+                  </p>
+                </div>
+              </label>
+
+              {/* Toggle: hide total fee / concession from students */}
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 12, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={privacyConfig.hideFeeInfoFromStudents}
+                  onChange={e => setPrivacyConfig(prev => ({ ...prev, hideFeeInfoFromStudents: e.target.checked }))}
+                  style={{ marginTop: 2, width: 16, height: 16, accentColor: '#0369a1', cursor: 'pointer' }}
+                />
+                <div>
+                  <p style={{ margin: 0, fontWeight: 600, fontSize: 13, color: 'var(--text-primary)' }}>
+                    Hide fee details (including concession) from students
+                  </p>
+                  <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>
+                    When enabled, the "My Fees" page is blocked for students — no total fee, concession, amount paid,
+                    balance due, installments, or payment history. They'll be told to contact your school administration instead.
+                    Since parents view fees through the student login, this also hides it from them.
                   </p>
                 </div>
               </label>

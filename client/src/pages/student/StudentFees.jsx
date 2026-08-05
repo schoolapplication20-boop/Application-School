@@ -67,6 +67,7 @@ export default function StudentFees() {
   const payments     = feeData?.payments          ?? [];
   const assignment   = feeData?.assignment        ?? null;
   const cfs          = feeData?.classFeeStructure ?? null;  // fee type breakdown
+  const feeInfoHidden = feeData?.feeInfoHidden === true;
 
   const totalFee   = Number(summary.totalFee   || 0);
   const paidAmount = Number(summary.paidAmount  || 0);
@@ -147,6 +148,30 @@ export default function StudentFees() {
         <button onClick={load} style={{ padding: '9px 22px', background: '#1A56DB', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
           Try Again
         </button>
+      </div>
+    </Layout>
+  );
+
+  /* ── hidden by school administration ── */
+  if (feeInfoHidden) return (
+    <Layout pageTitle="My Fees">
+      <div style={{ padding: '20px 24px', maxWidth: 700 }}>
+        <div style={{ marginBottom: 24 }}>
+          <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: 'var(--text-primary)' }}>My Fees</h2>
+        </div>
+        <div style={{
+          background: 'var(--surface)', border: '2px dashed var(--border-strong)', borderRadius: 16,
+          padding: '70px 40px', textAlign: 'center',
+        }}>
+          <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+            <span className="material-icons" style={{ fontSize: 36, color: 'var(--text-muted)' }}>lock</span>
+          </div>
+          <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 800, color: 'var(--text-secondary)' }}>Fee Details Unavailable</h3>
+          <p style={{ margin: 0, fontSize: 14, color: 'var(--text-muted)', maxWidth: 360, marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.6 }}>
+            Fee details are not available on this portal.
+            Please contact your school administration for fee details.
+          </p>
+        </div>
       </div>
     </Layout>
   );

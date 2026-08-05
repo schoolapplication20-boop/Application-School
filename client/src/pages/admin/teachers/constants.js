@@ -12,7 +12,7 @@ export const getInitials = (name) =>
   (name || 'T').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
 export const EMPTY_FORM = {
-  name: '', empId: '', subject: '', department: '', qualification: '',
+  name: '', empId: '', gender: 'Male', subject: '', department: '', qualification: '',
   experience: '', joining: '', mobile: '', email: '', classes: '', status: 'Active',
   idProof: '', idProofName: '', idProofSize: '', otherDoc: '', otherDocName: '', otherDocSize: '',
   password: '',

@@ -172,6 +172,7 @@ export default function Teachers() {
         email:          form.email,
         mobile:         form.mobile,
         empId:          form.empId,
+        gender:         form.gender,
         subject:        form.subject,
         department:     form.department,
         classes:        form.classes,
@@ -199,6 +200,7 @@ export default function Teachers() {
         email:          form.email,
         mobile:         form.mobile,
         empId:          form.empId,
+        gender:         form.gender,
         subject:        form.subject,
         department:     form.department,
         qualification:  form.qualification,
@@ -313,6 +315,7 @@ export default function Teachers() {
     setEditTeacher(t);
     setForm({
       ...EMPTY_FORM, ...t,
+      gender:         t.gender         || 'Male',
       teacherType:    t.teacherType    || 'SUBJECT_TEACHER',
       primaryClassId: t.primaryClassId ? String(t.primaryClassId) : '',
     });

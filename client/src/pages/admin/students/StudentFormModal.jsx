@@ -151,6 +151,12 @@ export default function StudentFormModal({
                     onChange={set('dob')} />
                 </div>
                 <div className="col-md-4">
+                  <label className="form-label fw-medium small">Gender</label>
+                  <select className="form-select form-select-sm" value={formData.gender} onChange={set('gender')}>
+                    <option>Male</option><option>Female</option><option>Other</option>
+                  </select>
+                </div>
+                <div className="col-md-4">
                   <label className="form-label fw-medium small">Status</label>
                   <select className="form-select form-select-sm" value={formData.status} onChange={set('status')}>
                     <option>Active</option>

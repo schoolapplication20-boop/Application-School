@@ -200,7 +200,7 @@ public class ExaminationService {
      * exam gets it refreshed in place (new exam subjects/section/etc.) instead of a duplicate row.
      */
     @org.springframework.transaction.annotation.Transactional
-    public ApiResponse<HallTicket> generateBulkHallTickets(Map<String, Object> body, String generatedBy, Long schoolId) {
+    public ApiResponse<List<HallTicket>> generateBulkHallTickets(Map<String, Object> body, String generatedBy, Long schoolId) {
         String className = (String) body.get("className");
         String section = (String) body.getOrDefault("section", "");
         String examName = (String) body.get("examName");
@@ -259,7 +259,7 @@ public class ExaminationService {
                         .academicYear(academicYear)
                         .photoUrl(student.getPhotoUrl())
                         .dateOfBirth(dobStr)
-                        .gender("")
+                        .gender(student.getGender())
                         .registrationNumber(student.getAdmissionNumber())
                         .examCenter(examCenter)
                         .examCenterAddress(examCenterAddress)
@@ -269,13 +269,13 @@ public class ExaminationService {
                 created++;
             }
         }
-        hallTicketRepository.saveAll(toSave);
+        List<HallTicket> saved = hallTicketRepository.saveAll(toSave);
         String msg = (created > 0 && updated > 0)
                 ? String.format("Generated %d new and updated %d existing hall tickets", created, updated)
                 : (created > 0)
                     ? String.format("Generated %d hall tickets", created)
                     : String.format("Updated %d existing hall tickets", updated);
-        return ApiResponse.success(msg, null);
+        return ApiResponse.success(msg, saved);
     }
 
     public ApiResponse<Void> deleteHallTicket(Long id, Long schoolId) {

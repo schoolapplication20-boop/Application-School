@@ -1,7 +1,7 @@
 export const PAGE_SIZE = 20; // students per page — server-side
 
 export const EMPTY_FORM = {
-  name: '', rollNo: '', admissionNumber: '', class: '', section: '', dob: '', status: 'Active', photo: null,
+  name: '', rollNo: '', admissionNumber: '', class: '', section: '', dob: '', gender: 'Male', status: 'Active', photo: null,
   studentEmail: '',
   fatherName: '', fatherPhone: '',
   motherName: '', motherPhone: '',

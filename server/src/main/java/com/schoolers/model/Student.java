@@ -110,6 +110,9 @@ public class Student {
     @Column(name = "blood_group", length = 10)
     private String bloodGroup;
 
+    @Column(length = 10)
+    private String gender;
+
     @Column(name = "is_active")
     @Builder.Default
     private Boolean isActive = true;
