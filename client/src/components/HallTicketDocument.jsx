@@ -361,7 +361,7 @@ const S = {
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
-export default function HallTicketDocument({ ticket, schedules = [] }) {
+export default function HallTicketDocument({ ticket, schedules = [], id = 'hall-ticket-print-root' }) {
   const { school, logoVersion } = useSchool();
 
   // Build school display values from dynamic school data
@@ -434,7 +434,7 @@ export default function HallTicketDocument({ ticket, schedules = [] }) {
   const regNo      = ticket.registrationNumber || extra.registrationNumber || ticket.rollNumber || '—';
 
   return (
-    <div id="hall-ticket-print-root" style={S.page}>
+    <div id={id} style={S.page}>
       {/* Top color bar */}
       <div style={S.topBar} />
 

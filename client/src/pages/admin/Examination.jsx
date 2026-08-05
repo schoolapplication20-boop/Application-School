@@ -13,6 +13,9 @@ import ScheduleModal from './examination/ScheduleModal';
 import BulkGenerateModal from './examination/BulkGenerateModal';
 import CertificateModal from './examination/CertificateModal';
 import PreviewModal from './examination/PreviewModal';
+import PrintTemplateModal from './examination/PrintTemplateModal';
+import HallTicketDocument from '../../components/HallTicketDocument';
+import CompactHallTicket from '../../components/CompactHallTicket';
 import '../../styles/examination.css';
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -44,6 +47,12 @@ export default function Examination() {
   const [previewItem,     setPreviewItem]     = useState(null);
   const [previewType,     setPreviewType]     = useState(''); // 'hallticket' | 'certificate'
   const [editSched,       setEditSched]       = useState(null);
+
+  // Multi-ticket "Download All" — N-per-page print template
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [printTemplate,     setPrintTemplate]     = useState('ONE_PER_PAGE');
+  const [generatingBatchPdf, setGeneratingBatchPdf] = useState(false);
+  const [batchExportTickets, setBatchExportTickets] = useState([]); // tickets currently mounted off-screen for capture
 
   // Forms
   const emptySchedForm = { examName: '', examType: 'ANNUAL', className: '', section: '', status: 'SCHEDULED', instructions: '' };
@@ -376,6 +385,37 @@ export default function Examination() {
     }
   };
 
+  // ─── "Download All" — N-per-page print template for the currently filtered ticket list ────
+  // Mounts one off-screen ticket component per selected ticket (full HallTicketDocument for
+  // ONE_PER_PAGE, the denser CompactHallTicket for 2/3/4-per-page — the full design is too
+  // visually heavy to shrink into a fraction of a page and stay readable). Each is captured
+  // individually and placed into its own grid cell, so a ticket can never split across pages.
+  const handleDownloadAllTickets = async () => {
+    if (filteredTickets.length === 0) return;
+    setGeneratingBatchPdf(true);
+    setBatchExportTickets(filteredTickets);
+    // Two frames: one for React to commit the newly-mounted off-screen tickets, one for layout/paint.
+    requestAnimationFrame(() => requestAnimationFrame(async () => {
+      try {
+        const isCompact = printTemplate !== 'ONE_PER_PAGE';
+        const elements = filteredTickets
+          .map(t => document.getElementById(`batch-ticket-${isCompact ? 'compact' : 'full'}-${t.id}`))
+          .filter(Boolean);
+        if (elements.length === 0) throw new Error('Tickets did not render for capture');
+        const { downloadHallTicketsGroupPdf } = await import('../../utils/hallTicketPdf');
+        await downloadHallTicketsGroupPdf(elements, printTemplate, `HallTickets-${filteredTickets.length}.pdf`);
+        showToast(`Downloaded ${elements.length} hall ticket${elements.length !== 1 ? 's' : ''}`);
+        setShowTemplateModal(false);
+      } catch (err) {
+        console.error('Batch hall ticket PDF generation failed', err);
+        showToast('Could not generate the PDF. Please try again.', 'error');
+      } finally {
+        setGeneratingBatchPdf(false);
+        setBatchExportTickets([]);
+      }
+    }));
+  };
+
   const resetFilters = () => { setSearch(''); setFilterClass(''); setFilterType(''); setFilterExamName(''); };
 
   // ─── Render ─────────────────────────────────────────────────────────────────
@@ -397,10 +437,16 @@ export default function Examination() {
             </Button>
           )}
           {activeTab === 'halltickets' && (
-            <Button variant="exam-primary" onClick={() => setShowBulkModal(true)}>
-              <span className="material-icons" style={{ fontSize: '16px' }}>group</span>
-              Generate Hall Tickets
-            </Button>
+            <>
+              <Button variant="exam-secondary" onClick={() => setShowTemplateModal(true)} disabled={filteredTickets.length === 0}>
+                <span className="material-icons" style={{ fontSize: '16px' }}>download</span>
+                Download All
+              </Button>
+              <Button variant="exam-primary" onClick={() => setShowBulkModal(true)}>
+                <span className="material-icons" style={{ fontSize: '16px' }}>group</span>
+                Generate Hall Tickets
+              </Button>
+            </>
           )}
           {activeTab === 'certificates' && (
             <Button variant="exam-primary" onClick={() => setShowCertModal(true)}>
@@ -529,6 +575,30 @@ export default function Examination() {
       {showPreview && previewItem && (
         <PreviewModal previewItem={previewItem} previewType={previewType} schedules={schedules} school={school}
           onClose={() => setShowPreview(false)} onPrint={handlePrint} />
+      )}
+
+      {showTemplateModal && (
+        <PrintTemplateModal
+          count={filteredTickets.length} template={printTemplate} setTemplate={setPrintTemplate}
+          generating={generatingBatchPdf}
+          onClose={() => !generatingBatchPdf && setShowTemplateModal(false)}
+          onDownload={handleDownloadAllTickets}
+        />
+      )}
+
+      {/* Off-screen render target for the "Download All" batch capture — never visible, but must
+          be real, laid-out DOM (not display:none) for html2canvas to capture each ticket. */}
+      {batchExportTickets.length > 0 && (
+        <div style={{ position: 'fixed', top: 0, left: '-9999px', zIndex: -1 }} aria-hidden="true">
+          {printTemplate === 'ONE_PER_PAGE'
+            ? batchExportTickets.map(t => (
+                <HallTicketDocument key={t.id} id={`batch-ticket-full-${t.id}`} ticket={t} schedules={schedules} />
+              ))
+            : batchExportTickets.map(t => (
+                <CompactHallTicket key={t.id} id={`batch-ticket-compact-${t.id}`} ticket={t} schedules={schedules} />
+              ))
+          }
+        </div>
       )}
     </Layout>
   );
