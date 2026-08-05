@@ -48,10 +48,14 @@ export default function Examination() {
   const [previewType,     setPreviewType]     = useState(''); // 'hallticket' | 'certificate'
   const [editSched,       setEditSched]       = useState(null);
 
-  // Multi-ticket "Download All" — N-per-page print template
+  // Multi-ticket print template — the picker opens either from "Download All" (toolbar,
+  // operates on whatever's currently filtered) or automatically right after a bulk generate
+  // (operates on exactly the batch just created), so it targets its own ticket list rather
+  // than assuming filteredTickets.
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [printTemplate,     setPrintTemplate]     = useState('ONE_PER_PAGE');
   const [generatingBatchPdf, setGeneratingBatchPdf] = useState(false);
+  const [templateModalTickets, setTemplateModalTickets] = useState([]); // tickets the picker/download act on
   const [batchExportTickets, setBatchExportTickets] = useState([]); // tickets currently mounted off-screen for capture
 
   // Forms
@@ -251,6 +255,16 @@ export default function Examination() {
     }
   };
 
+  // Opens the print-template picker targeting a specific ticket list — used both by the
+  // toolbar's "Download All" (whatever's currently filtered) and automatically right after a
+  // bulk generate (exactly the batch just created).
+  const openTemplateModalFor = (tickets) => {
+    if (!tickets || tickets.length === 0) return;
+    setTemplateModalTickets(tickets);
+    setPrintTemplate('ONE_PER_PAGE');
+    setShowTemplateModal(true);
+  };
+
   // ─── Hall Ticket generation — always by class & section, never a single-student picker ────
   const handleBulkGenerate = async () => {
     if (!bulkForm.className || !bulkForm.examName) {
@@ -273,6 +287,18 @@ export default function Examination() {
       showToast(res.data?.message || 'Bulk hall tickets generated');
       setShowBulkModal(false);
       loadAll();
+      // Fetch the fresh batch directly rather than reading component state — state from
+      // loadAll() above won't have committed by the time this closure keeps running.
+      try {
+        const freshRes = await examinationAPI.getHallTickets({ className: bulkForm.className, examType: bulkForm.examType });
+        const freshList = freshRes.data?.data ?? [];
+        const batch = freshList.filter(t =>
+          t.examName === bulkForm.examName &&
+          (!bulkForm.section || t.section === bulkForm.section) &&
+          t.academicYear === bulkForm.academicYear
+        );
+        openTemplateModalFor(batch);
+      } catch { /* generation itself already succeeded — template picker is a bonus step */ }
     } catch {
       const classStudents = students.filter(s => s.className === bulkForm.className && (!bulkForm.section || s.section === bulkForm.section));
       const newTickets = classStudents.map(s => ({
@@ -284,6 +310,7 @@ export default function Examination() {
       }));
       setHallTickets(prev => [...newTickets, ...prev]);
       showToast(`Generated ${newTickets.length} hall tickets (offline mode)`);
+      openTemplateModalFor(newTickets);
       setShowBulkModal(false);
     }
     setSaving(false);
@@ -385,25 +412,25 @@ export default function Examination() {
     }
   };
 
-  // ─── "Download All" — N-per-page print template for the currently filtered ticket list ────
+  // ─── Print-template picker download — acts on templateModalTickets ─────────────────────────
   // Mounts one off-screen ticket component per selected ticket (full HallTicketDocument for
   // ONE_PER_PAGE, the denser CompactHallTicket for 2/3/4-per-page — the full design is too
   // visually heavy to shrink into a fraction of a page and stay readable). Each is captured
   // individually and placed into its own grid cell, so a ticket can never split across pages.
   const handleDownloadAllTickets = async () => {
-    if (filteredTickets.length === 0) return;
+    if (templateModalTickets.length === 0) return;
     setGeneratingBatchPdf(true);
-    setBatchExportTickets(filteredTickets);
+    setBatchExportTickets(templateModalTickets);
     // Two frames: one for React to commit the newly-mounted off-screen tickets, one for layout/paint.
     requestAnimationFrame(() => requestAnimationFrame(async () => {
       try {
         const isCompact = printTemplate !== 'ONE_PER_PAGE';
-        const elements = filteredTickets
+        const elements = templateModalTickets
           .map(t => document.getElementById(`batch-ticket-${isCompact ? 'compact' : 'full'}-${t.id}`))
           .filter(Boolean);
         if (elements.length === 0) throw new Error('Tickets did not render for capture');
         const { downloadHallTicketsGroupPdf } = await import('../../utils/hallTicketPdf');
-        await downloadHallTicketsGroupPdf(elements, printTemplate, `HallTickets-${filteredTickets.length}.pdf`);
+        await downloadHallTicketsGroupPdf(elements, printTemplate, `HallTickets-${templateModalTickets.length}.pdf`);
         showToast(`Downloaded ${elements.length} hall ticket${elements.length !== 1 ? 's' : ''}`);
         setShowTemplateModal(false);
       } catch (err) {
@@ -438,7 +465,7 @@ export default function Examination() {
           )}
           {activeTab === 'halltickets' && (
             <>
-              <Button variant="exam-secondary" onClick={() => setShowTemplateModal(true)} disabled={filteredTickets.length === 0}>
+              <Button variant="exam-secondary" onClick={() => openTemplateModalFor(filteredTickets)} disabled={filteredTickets.length === 0}>
                 <span className="material-icons" style={{ fontSize: '16px' }}>download</span>
                 Download All
               </Button>
@@ -579,7 +606,7 @@ export default function Examination() {
 
       {showTemplateModal && (
         <PrintTemplateModal
-          count={filteredTickets.length} template={printTemplate} setTemplate={setPrintTemplate}
+          count={templateModalTickets.length} template={printTemplate} setTemplate={setPrintTemplate}
           generating={generatingBatchPdf}
           onClose={() => !generatingBatchPdf && setShowTemplateModal(false)}
           onDownload={handleDownloadAllTickets}
