@@ -430,17 +430,15 @@ export default function Examination() {
         const elements = templateModalTickets
           .map(t => document.getElementById(`batch-ticket-${isCompact ? 'compact' : 'full'}-${t.id}`))
           .filter(Boolean);
-        // TEMPORARY DIAGNOSTIC — remove once the wrong-template bug is confirmed/fixed.
-        console.log('[HallTicket PDF debug]', {
-          printTemplate, isCompact,
-          ticketsRequested: templateModalTickets.length,
-          elementsFound: elements.length,
-          firstElementId: elements[0]?.id,
-        });
-        showToast(`Debug: template=${printTemplate}, isCompact=${isCompact}, elementsFound=${elements.length}/${templateModalTickets.length}`, 'warning');
         if (elements.length === 0) throw new Error('Tickets did not render for capture');
-        const { downloadHallTicketsGroupPdf } = await import('../../utils/hallTicketPdf');
-        await downloadHallTicketsGroupPdf(elements, printTemplate, `HallTickets-${templateModalTickets.length}.pdf`);
+        const { downloadHallTicketsGroupPdf, TEMPLATE_TICKETS_PER_PAGE } = await import('../../utils/hallTicketPdf');
+        // TEMPORARY DIAGNOSTIC — the filename itself carries the runtime-resolved values
+        // (a toast is too easy to miss/dismiss before reading). Remove once the wrong-
+        // template-grouping bug is confirmed/fixed: tpl = printTemplate as seen by the
+        // *loaded PDF module*, n = tickets-per-page it resolved, els = elements captured.
+        const debugN = TEMPLATE_TICKETS_PER_PAGE[printTemplate];
+        const filename = `HallTickets-tpl_${printTemplate}-n_${debugN}-els_${elements.length}.pdf`;
+        await downloadHallTicketsGroupPdf(elements, printTemplate, filename);
         showToast(`Downloaded ${elements.length} hall ticket${elements.length !== 1 ? 's' : ''}`);
         setShowTemplateModal(false);
       } catch (err) {

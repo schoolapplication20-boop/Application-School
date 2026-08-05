@@ -14,7 +14,10 @@ import jsPDF from 'jspdf';
  * (lightweight) template picker doesn't statically pull html2canvas/jsPDF into the main
  * Examination bundle; this file is only ever reached via dynamic import().
  */
-const TEMPLATE_TICKETS_PER_PAGE = {
+// TEMPORARY DIAGNOSTIC: exported (not just module-local) so the caller can embed the
+// runtime-resolved per-page count into the downloaded filename — remove the export once
+// the wrong-template-grouping bug is confirmed/fixed.
+export const TEMPLATE_TICKETS_PER_PAGE = {
   FULL_ONE_PER_PAGE: 1,
   COMPACT_TWO_PER_PAGE: 2,
   COMPACT_THREE_PER_PAGE: 3,
