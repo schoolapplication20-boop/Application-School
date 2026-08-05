@@ -104,8 +104,8 @@ export default function CompactHallTicket({ id, ticket, schedules = [] }) {
   const scheduleRows = useMemo(() => {
     const live = schedules.filter(s => s.examName === ticket.examName && s.className === ticket.className);
     const rows = live.length > 0
-      ? live.map(s => ({ subject: s.subject, date: s.examDate, hall: s.hallNumber }))
-      : embeddedSubjects.map(s => ({ subject: s.subject, date: s.date, hall: s.hall }));
+      ? live.map(s => ({ subject: s.subject, date: s.examDate, startTime: s.startTime, endTime: s.endTime, hall: s.hallNumber }))
+      : embeddedSubjects.map(s => ({ subject: s.subject, date: s.date, startTime: s.startTime, endTime: s.endTime, hall: s.hall }));
     return rows.slice(0, 6); // keep the card short — a 12-subject exam still fits the essentials
   }, [schedules, embeddedSubjects, ticket.examName, ticket.className]);
 
@@ -146,8 +146,10 @@ export default function CompactHallTicket({ id, ticket, schedules = [] }) {
         <ul style={S.schedList}>
           {scheduleRows.length > 0 ? scheduleRows.map((r, i) => (
             <li key={i} style={S.schedRow}>
-              <span style={{ fontWeight: 700 }}>{r.subject}</span>
-              <span>{fmtDate(r.date)} · Hall {r.hall || '—'}</span>
+              <span style={{ fontWeight: 700, flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.subject}</span>
+              <span style={{ whiteSpace: 'nowrap', flexShrink: 0 }}>
+                {fmtDate(r.date)} · {r.startTime || '—'}–{r.endTime || '—'} · Hall {r.hall || '—'}
+              </span>
             </li>
           )) : <li style={{ ...S.schedRow, color: '#a0aec0', fontStyle: 'italic' }}>No schedule available</li>}
         </ul>
