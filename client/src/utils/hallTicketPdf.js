@@ -15,8 +15,10 @@ import jsPDF from 'jspdf';
  * Examination bundle; this file is only ever reached via dynamic import().
  */
 const TEMPLATE_TICKETS_PER_PAGE = {
-  ONE_PER_PAGE: 1,
-  THREE_PER_PAGE: 3,
+  FULL_ONE_PER_PAGE: 1,
+  COMPACT_TWO_PER_PAGE: 2,
+  COMPACT_THREE_PER_PAGE: 3,
+  COMPACT_FOUR_PER_PAGE: 4,
 };
 
 /** Resolves once every <img> under `element` has finished loading (or errored). */
@@ -78,7 +80,18 @@ function computeCells(n, pageWidth, pageHeight, margin, gap) {
 
   if (n === 1) return [{ x: margin, y: margin, w: usableW, h: usableH }];
 
-  // n === 3: three stacked full-width rows
+  if (n === 4) {
+    const w = (usableW - gap) / 2;
+    const h = (usableH - gap) / 2;
+    return [
+      { x: margin,           y: margin,           w, h },
+      { x: margin + w + gap, y: margin,           w, h },
+      { x: margin,           y: margin + h + gap, w, h },
+      { x: margin + w + gap, y: margin + h + gap, w, h },
+    ];
+  }
+
+  // n === 2 or n === 3: stacked full-width rows
   const h = (usableH - gap * (n - 1)) / n;
   return Array.from({ length: n }, (_, i) => ({
     x: margin, y: margin + i * (h + gap), w: usableW, h,

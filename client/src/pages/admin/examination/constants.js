@@ -30,6 +30,8 @@ export const newSubjectRow = () => ({ _id: Math.random().toString(36).slice(2), 
 // template picker UI doesn't drag those heavy libs into the main Examination bundle —
 // see TEMPLATE_TICKETS_PER_PAGE in hallTicketPdf.js for the matching per-page counts.
 export const PRINT_TEMPLATES = [
-  { value: 'ONE_PER_PAGE',   label: 'Full Hall Ticket',    description: '1 per A4 page' },
-  { value: 'THREE_PER_PAGE', label: 'Compact Hall Ticket', description: '3 per A4 page' },
+  { value: 'FULL_ONE_PER_PAGE',      label: 'Full Hall Ticket', description: '1 per A4 page' },
+  { value: 'COMPACT_TWO_PER_PAGE',   label: 'Compact',          description: '2 per A4 page' },
+  { value: 'COMPACT_THREE_PER_PAGE', label: 'Compact',          description: '3 per A4 page' },
+  { value: 'COMPACT_FOUR_PER_PAGE',  label: 'Compact',          description: '4 per A4 page' },
 ];

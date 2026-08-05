@@ -53,7 +53,7 @@ export default function Examination() {
   // (operates on exactly the batch just created), so it targets its own ticket list rather
   // than assuming filteredTickets.
   const [showTemplateModal, setShowTemplateModal] = useState(false);
-  const [printTemplate,     setPrintTemplate]     = useState('ONE_PER_PAGE');
+  const [printTemplate,     setPrintTemplate]     = useState('FULL_ONE_PER_PAGE');
   const [generatingBatchPdf, setGeneratingBatchPdf] = useState(false);
   const [templateModalTickets, setTemplateModalTickets] = useState([]); // tickets the picker/download act on
   const [batchExportTickets, setBatchExportTickets] = useState([]); // tickets currently mounted off-screen for capture
@@ -257,11 +257,12 @@ export default function Examination() {
 
   // Opens the print-template picker targeting a specific ticket list — used both by the
   // toolbar's "Download All" (whatever's currently filtered) and automatically right after a
-  // bulk generate (exactly the batch just created).
+  // bulk generate (exactly the batch just created). Deliberately does NOT reset printTemplate —
+  // it stays on whatever the admin picked last, so re-generating for another class doesn't
+  // silently fall back to "1 per page" and produce the wrong PDF without them noticing.
   const openTemplateModalFor = (tickets) => {
     if (!tickets || tickets.length === 0) return;
     setTemplateModalTickets(tickets);
-    setPrintTemplate('ONE_PER_PAGE');
     setShowTemplateModal(true);
   };
 
@@ -414,9 +415,10 @@ export default function Examination() {
 
   // ─── Print-template picker download — acts on templateModalTickets ─────────────────────────
   // Mounts one off-screen ticket component per selected ticket (full HallTicketDocument for
-  // ONE_PER_PAGE, the denser CompactHallTicket for 2/3/4-per-page — the full design is too
-  // visually heavy to shrink into a fraction of a page and stay readable). Each is captured
-  // individually and placed into its own grid cell, so a ticket can never split across pages.
+  // FULL_ONE_PER_PAGE, the denser CompactHallTicket for the COMPACT_*_PER_PAGE templates — the
+  // full design is too visually heavy to shrink into a fraction of a page and stay readable).
+  // Each is captured individually and placed into its own grid cell, so a ticket can never
+  // split across pages.
   const handleDownloadAllTickets = async () => {
     if (templateModalTickets.length === 0) return;
     setGeneratingBatchPdf(true);
@@ -424,7 +426,7 @@ export default function Examination() {
     // Two frames: one for React to commit the newly-mounted off-screen tickets, one for layout/paint.
     requestAnimationFrame(() => requestAnimationFrame(async () => {
       try {
-        const isCompact = printTemplate !== 'ONE_PER_PAGE';
+        const isCompact = printTemplate !== 'FULL_ONE_PER_PAGE';
         const elements = templateModalTickets
           .map(t => document.getElementById(`batch-ticket-${isCompact ? 'compact' : 'full'}-${t.id}`))
           .filter(Boolean);
@@ -617,7 +619,7 @@ export default function Examination() {
           be real, laid-out DOM (not display:none) for html2canvas to capture each ticket. */}
       {batchExportTickets.length > 0 && (
         <div style={{ position: 'fixed', top: 0, left: '-9999px', zIndex: -1 }} aria-hidden="true">
-          {printTemplate === 'ONE_PER_PAGE'
+          {printTemplate === 'FULL_ONE_PER_PAGE'
             ? batchExportTickets.map(t => (
                 <HallTicketDocument key={t.id} id={`batch-ticket-full-${t.id}`} ticket={t} schedules={schedules} />
               ))

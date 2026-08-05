@@ -158,7 +158,7 @@ export default function CompactHallTicket({ id, ticket, schedules = [] }) {
 
         <div style={S.sigRow}>
           <span>Candidate Sign: ___________</span>
-          <span>Invigilator Sign: ___________</span>
+          <span>Class Teacher / Principal: ___________</span>
         </div>
       </div>
     </div>
