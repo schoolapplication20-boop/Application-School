@@ -20,6 +20,9 @@ const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Satur
 function fmtDate(d) {
   if (!d) return '—';
   const dt = new Date(d);
+  // A missing/malformed date value still produces a Date object here — without this check,
+  // toLocaleDateString() silently renders the literal string "Invalid Date" instead of '—'.
+  if (isNaN(dt.getTime())) return '—';
   return dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
@@ -215,6 +218,8 @@ const S = {
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: '0.3px',
+    textAlign: 'center',
+    width: '100%',
   },
 
   // ── Section heading ──
@@ -472,7 +477,7 @@ export default function HallTicketDocument({ ticket, schedules = [], id = 'hall-
         </span>
         <span>⬥ HALL TICKET ⬥</span>
         <span style={{ fontSize: '11px', letterSpacing: '1px', opacity: 0.8 }}>
-          {examTypeFull}
+          {ticket.examName || examTypeFull}
         </span>
       </div>
 
@@ -534,7 +539,7 @@ export default function HallTicketDocument({ ticket, schedules = [], id = 'hall-
               </div>
               <div style={S.fieldBlock}>
                 <span style={S.fieldLabel}>Date of Birth</span>
-                <span style={S.fieldValue}>{fmtDate(dob) !== '—' ? fmtDate(dob) : dob}</span>
+                <span style={S.fieldValue}>{fmtDate(dob)}</span>
               </div>
               <div style={S.fieldBlock}>
                 <span style={S.fieldLabel}>Gender</span>

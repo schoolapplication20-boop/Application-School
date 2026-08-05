@@ -1,12 +1,12 @@
 /**
  * CompactHallTicket
  *
- * A dense, small-footprint hall ticket card for the 2/3/4-per-page print
- * templates. HallTicketDocument (the full design) is too visually heavy to
- * shrink into a fraction of an A4 page and stay legible, so this is a
+ * A dense, small-footprint hall ticket card for the "Compact — 3 per A4 page"
+ * print template. HallTicketDocument (the full design) is too visually heavy
+ * to shrink into a third of an A4 page and stay legible, so this is a
  * genuinely simplified layout, not a scaled-down copy: smaller header, a
- * condensed exam-schedule list instead of an 8-column table, 2 short
- * instruction lines instead of a full list, and a single signature row.
+ * condensed exam-schedule list instead of an 8-column table, one short
+ * instruction line instead of a full list, and a single signature row.
  *
  * Rendered off-screen (one instance per ticket) so it can be captured by
  * html2canvas and composited into a print-template PDF page — see
@@ -25,7 +25,10 @@ import { formatClassName } from '../utils/format';
 
 function fmtDate(d) {
   if (!d) return '—';
-  return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+  const dt = new Date(d);
+  // Guards against the literal string "Invalid Date" rendering for a missing/malformed value.
+  if (isNaN(dt.getTime())) return '—';
+  return dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
 }
 
 const EXAM_TYPE_LABEL = {
@@ -47,42 +50,42 @@ const S = {
   header: {
     background: '#1a3c5e',
     color: '#fff',
-    padding: '5px 8px',
+    padding: '3.5px 7px',
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
+    gap: '6px',
   },
   logo: {
-    width: '22px', height: '22px', borderRadius: '50%',
+    width: '18px', height: '18px', borderRadius: '50%',
     background: 'rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center',
-    justifyContent: 'center', fontSize: '9px', fontWeight: 900, flexShrink: 0, overflow: 'hidden',
+    justifyContent: 'center', fontSize: '8px', fontWeight: 900, flexShrink: 0, overflow: 'hidden',
   },
-  schoolName: { fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', lineHeight: 1.15, letterSpacing: '0.3px' },
-  headerRight: { marginLeft: 'auto', textAlign: 'right', fontSize: '7px', opacity: 0.85, lineHeight: 1.3 },
+  schoolName: { fontSize: '9.5px', fontWeight: 900, textTransform: 'uppercase', lineHeight: 1.1, letterSpacing: '0.2px' },
+  headerRight: { marginLeft: 'auto', textAlign: 'right', fontSize: '6.5px', opacity: 0.85, lineHeight: 1.25 },
   titleBar: {
-    background: '#c8a951', color: '#1a202c', textAlign: 'center', padding: '2.5px 8px',
-    fontWeight: 900, fontSize: '8.5px', letterSpacing: '1.5px', textTransform: 'uppercase',
+    background: '#c8a951', color: '#1a202c', textAlign: 'center', padding: '2px 8px',
+    fontWeight: 900, fontSize: '8px', letterSpacing: '1.2px', textTransform: 'uppercase',
   },
-  body: { padding: '6px 8px' },
-  grid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 10px', marginBottom: '5px' },
+  body: { padding: '5px 7px' },
+  grid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5px 10px', marginBottom: '4px' },
   field: { display: 'flex', gap: '3px', borderBottom: '1px solid #edf2f7', paddingBottom: '1px' },
   label: { color: '#718096', fontWeight: 700, flexShrink: 0 },
   value: { color: '#1a202c', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
   sectionTitle: {
-    fontSize: '7.5px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.5px',
-    color: '#1a3c5e', background: '#ebf4ff', padding: '2px 6px', marginBottom: '3px', borderRadius: '3px',
+    fontSize: '7px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.5px',
+    color: '#1a3c5e', background: '#ebf4ff', padding: '1.5px 6px', marginBottom: '2px', borderRadius: '3px',
   },
-  schedList: { margin: '0 0 5px', padding: 0, listStyle: 'none' },
+  schedList: { margin: '0 0 4px', padding: 0, listStyle: 'none' },
   schedRow: {
     display: 'flex', justifyContent: 'space-between', gap: '6px',
-    padding: '1.5px 0', borderBottom: '1px dotted #d1dce8', fontSize: '7.5px',
+    padding: '1px 0', borderBottom: '1px dotted #d1dce8', fontSize: '7.5px',
   },
   instr: {
-    fontSize: '7px', color: '#7c2d12', background: '#fffdf5', border: '1px solid #f6e2b3',
-    borderRadius: '3px', padding: '3px 6px', marginBottom: '5px', lineHeight: 1.35,
+    fontSize: '6.5px', color: '#7c2d12', background: '#fffdf5', border: '1px solid #f6e2b3',
+    borderRadius: '3px', padding: '2.5px 6px', marginBottom: '4px', lineHeight: 1.3,
   },
   sigRow: {
-    display: 'flex', justifyContent: 'space-between', paddingTop: '4px',
+    display: 'flex', justifyContent: 'space-between', paddingTop: '3px',
     borderTop: '1px solid #c8a951', fontSize: '7px', color: '#4a5568', fontWeight: 700,
   },
 };
@@ -123,7 +126,7 @@ export default function CompactHallTicket({ id, ticket, schedules = [] }) {
         </div>
       </div>
 
-      <div style={S.titleBar}>Hall Ticket — {examTypeFull}</div>
+      <div style={S.titleBar}>Hall Ticket — {ticket.examName || examTypeFull}</div>
 
       <div style={S.body}>
         <div style={S.grid}>
@@ -144,7 +147,7 @@ export default function CompactHallTicket({ id, ticket, schedules = [] }) {
           {scheduleRows.length > 0 ? scheduleRows.map((r, i) => (
             <li key={i} style={S.schedRow}>
               <span style={{ fontWeight: 700 }}>{r.subject}</span>
-              <span>{fmtDate(r.date)}{r.hall ? ` · Hall ${r.hall}` : ''}</span>
+              <span>{fmtDate(r.date)} · Hall {r.hall || '—'}</span>
             </li>
           )) : <li style={{ ...S.schedRow, color: '#a0aec0', fontStyle: 'italic' }}>No schedule available</li>}
         </ul>

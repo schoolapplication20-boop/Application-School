@@ -5,7 +5,7 @@ import { examinationAPI, adminAPI } from '../../services/api';
 import { useSchool } from '../../context/SchoolContext';
 import { useToast } from '../../context/ToastContext';
 import { sortClassNames, classOrder } from '../../utils/classOrder';
-import { EXAM_TYPES, CERT_TYPES, certLabel, examTypeLabel, today, newSubjectRow } from './examination/constants';
+import { EXAM_TYPES, CERT_TYPES, certLabel, examTypeLabel, today, newSubjectRow, currentAcademicYear } from './examination/constants';
 import SchedulesTable from './examination/SchedulesTable';
 import HallTicketsTable from './examination/HallTicketsTable';
 import CertificatesTable from './examination/CertificatesTable';
@@ -60,8 +60,8 @@ export default function Examination() {
 
   // Forms
   const emptySchedForm = { examName: '', examType: 'ANNUAL', className: '', section: '', status: 'SCHEDULED', instructions: '' };
-  const emptyBulkForm  = { className: '', section: '', examName: '', examType: 'ANNUAL', academicYear: '2023-2024' };
-  const emptyCertForm  = { studentId: '', certificateType: 'BONAFIDE', purpose: '', academicYear: '2023-2024' };
+  const emptyBulkForm  = { className: '', section: '', examName: '', examType: 'ANNUAL', academicYear: currentAcademicYear() };
+  const emptyCertForm  = { studentId: '', certificateType: 'BONAFIDE', purpose: '', academicYear: currentAcademicYear() };
 
   const [schedForm,    setSchedForm]    = useState(emptySchedForm);
   const [subjectRows,  setSubjectRows]  = useState([newSubjectRow()]);

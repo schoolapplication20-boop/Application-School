@@ -2,24 +2,20 @@ import React from 'react';
 import Button from '../../../components/Button';
 import { PRINT_TEMPLATES } from './constants';
 
-const CELLS_BY_TEMPLATE = { ONE_PER_PAGE: 1, TWO_PER_PAGE: 2, THREE_PER_PAGE: 3, FOUR_PER_PAGE: 4 };
+const CELLS_BY_TEMPLATE = { ONE_PER_PAGE: 1, THREE_PER_PAGE: 3 };
 
-/** Small A4-shaped mockup showing how N tickets get arranged on the page — the actual layout used by hallTicketPdf.js (1 full page / stacked rows / 2x2 grid). */
+/** Small A4-shaped mockup showing how N tickets get stacked on the page — the actual layout used by hallTicketPdf.js. */
 function LayoutPreview({ n, active }) {
   const border = active ? '#2b6cb0' : '#a0aec0';
   const fill = active ? '#bee3f8' : '#e2e8f0';
-  const cellStyle = { border: `1px solid ${border}`, background: fill, borderRadius: 1.5 };
-  const gridProps = n === 4
-    ? { display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 3 }
-    : { display: 'flex', flexDirection: 'column', gap: 3 };
+  const cellStyle = { border: `1px solid ${border}`, background: fill, borderRadius: 1.5, flex: 1 };
   return (
     <div style={{
       width: 34, height: 48, padding: 3, boxSizing: 'border-box',
-      border: `1.5px solid ${border}`, borderRadius: 3, background: '#fff', ...gridProps,
+      border: `1.5px solid ${border}`, borderRadius: 3, background: '#fff',
+      display: 'flex', flexDirection: 'column', gap: 3,
     }}>
-      {Array.from({ length: n }, (_, i) => (
-        <div key={i} style={{ ...cellStyle, flex: n === 4 ? undefined : 1 }} />
-      ))}
+      {Array.from({ length: n }, (_, i) => <div key={i} style={cellStyle} />)}
     </div>
   );
 }

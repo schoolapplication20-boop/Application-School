@@ -1,6 +1,6 @@
 import React from 'react';
 import Button from '../../../components/Button';
-import { EXAM_TYPES, examTypeLabel } from './constants';
+import { EXAM_TYPES, examTypeLabel, currentAcademicYear } from './constants';
 
 export default function BulkGenerateModal({ bulkForm, setBulkForm, students, schedules, dbClasses, dbSections, saving, onClose, onSubmit }) {
   return (
@@ -46,7 +46,7 @@ export default function BulkGenerateModal({ bulkForm, setBulkForm, students, sch
             </div>
             <div className="exam-form-group">
               <label>Academic Year</label>
-              <input placeholder="2023-2024" value={bulkForm.academicYear} onChange={e => setBulkForm(f => ({ ...f, academicYear: e.target.value }))} />
+              <input placeholder={currentAcademicYear()} value={bulkForm.academicYear} onChange={e => setBulkForm(f => ({ ...f, academicYear: e.target.value }))} />
             </div>
           </div>
           {bulkForm.className && (

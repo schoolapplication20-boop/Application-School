@@ -1,6 +1,6 @@
 import React from 'react';
 import Button from '../../../components/Button';
-import { CERT_TYPES, certLabel } from './constants';
+import { CERT_TYPES, certLabel, currentAcademicYear } from './constants';
 
 export default function CertificateModal({ certForm, setCertForm, students, saving, onClose, onSubmit }) {
   return (
@@ -27,7 +27,7 @@ export default function CertificateModal({ certForm, setCertForm, students, savi
             </div>
             <div className="exam-form-group">
               <label>Academic Year</label>
-              <input placeholder="2023-2024" value={certForm.academicYear} onChange={e => setCertForm(f => ({ ...f, academicYear: e.target.value }))} />
+              <input placeholder={currentAcademicYear()} value={certForm.academicYear} onChange={e => setCertForm(f => ({ ...f, academicYear: e.target.value }))} />
             </div>
             <div className="exam-form-group">
               <label>Purpose / Reason</label>
