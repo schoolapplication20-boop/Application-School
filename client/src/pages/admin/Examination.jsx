@@ -430,6 +430,14 @@ export default function Examination() {
         const elements = templateModalTickets
           .map(t => document.getElementById(`batch-ticket-${isCompact ? 'compact' : 'full'}-${t.id}`))
           .filter(Boolean);
+        // TEMPORARY DIAGNOSTIC — remove once the wrong-template bug is confirmed/fixed.
+        console.log('[HallTicket PDF debug]', {
+          printTemplate, isCompact,
+          ticketsRequested: templateModalTickets.length,
+          elementsFound: elements.length,
+          firstElementId: elements[0]?.id,
+        });
+        showToast(`Debug: template=${printTemplate}, isCompact=${isCompact}, elementsFound=${elements.length}/${templateModalTickets.length}`, 'warning');
         if (elements.length === 0) throw new Error('Tickets did not render for capture');
         const { downloadHallTicketsGroupPdf } = await import('../../utils/hallTicketPdf');
         await downloadHallTicketsGroupPdf(elements, printTemplate, `HallTickets-${templateModalTickets.length}.pdf`);
