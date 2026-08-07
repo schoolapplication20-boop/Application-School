@@ -510,6 +510,12 @@ public class AdminController {
         return ResponseEntity.ok(adminService.getAllStudentFeeAssignments(getCurrentSchoolId(auth)));
     }
 
+    @GetMapping("/fees/export")
+    public ResponseEntity<?> getFeeExportRows(@RequestParam String className, @RequestParam String section, Authentication auth) {
+        var response = adminService.getFeeExportRows(getCurrentSchoolId(auth), className, section);
+        return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
+    }
+
     @GetMapping("/student-fee-assignments/student/{studentId}")
     public ResponseEntity<?> getStudentFeeAssignment(@PathVariable Long studentId, Authentication auth) {
         var response = adminService.getStudentFeeAssignment(studentId, getCurrentSchoolId(auth));

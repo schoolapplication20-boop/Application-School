@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import Layout from '../../components/Layout';
 import { adminAPI } from '../../services/api';
 import { sortClassNames } from '../../utils/classOrder';
+import { exportFeeDetailsToExcel } from '../../utils/excelExport';
 import { useToast } from '../../context/ToastContext';
 
 /* ── helpers ── */
@@ -59,6 +60,11 @@ export default function Fees() {
   const [filterClass, setFilterClass] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [search, setSearch]           = useState('');
+
+  /* Excel export by class + section */
+  const [exportClass, setExportClass]     = useState('');
+  const [exportSection, setExportSection] = useState('');
+  const [exporting, setExporting]         = useState(false);
 
   /* payment history */
   const [payments, setPayments]       = useState([]);
@@ -139,6 +145,34 @@ export default function Fees() {
 
   /* ── unique class names from created classes ── */
   const uniqueClasses = useMemo(() => [...new Set(classList.map(c => c.name))].sort(sortClassNames), [classList]);
+
+  /* ── sections available for the class picked in the Excel export panel ── */
+  const exportSections = useMemo(
+    () => [...new Set(classList.filter(c => c.name === exportClass).map(c => c.section).filter(Boolean))].sort(),
+    [classList, exportClass]
+  );
+
+  useEffect(() => {
+    if (exportSection && !exportSections.includes(exportSection)) setExportSection('');
+  }, [exportSections, exportSection]);
+
+  const handleExportFeeExcel = async () => {
+    if (!exportClass || !exportSection) return;
+    setExporting(true);
+    try {
+      const res = await adminAPI.getFeeExportRows(exportClass, exportSection);
+      const rows = res.data?.data ?? [];
+      if (rows.length === 0) {
+        showToast(`No students found in ${exportClass}-${exportSection}`, 'error');
+        return;
+      }
+      exportFeeDetailsToExcel(rows, { className: exportClass, section: exportSection });
+      showToast('Fee details exported');
+    } catch (err) {
+      const msg = err?.response?.data?.message || 'Failed to export fee details';
+      showToast(msg, 'error');
+    } finally { setExporting(false); }
+  };
 
   /* ── structure map: className → ClassFeeStructure ── */
   const structureMap = useMemo(() => {
@@ -529,6 +563,34 @@ export default function Fees() {
         {/* ── TAB 2: Student Fees ── */}
         {tab === 'students' && (
           <div>
+            {/* Excel export by Class + Section */}
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 14, padding: '14px 16px', background: 'var(--surface)', border: '1px solid var(--border-strong)', borderRadius: 12 }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginRight: 4 }}>Fee Details Excel Export</span>
+              <select value={exportClass} onChange={e => { setExportClass(e.target.value); setExportSection(''); }}
+                style={{ padding: '8px 12px', border: '1.5px solid var(--border-strong)', borderRadius: 8, fontSize: 13, outline: 'none' }}>
+                <option value="">Select Class</option>
+                {uniqueClasses.map(c => <option key={c}>{c}</option>)}
+              </select>
+              <select value={exportSection} onChange={e => setExportSection(e.target.value)} disabled={!exportClass}
+                style={{ padding: '8px 12px', border: '1.5px solid var(--border-strong)', borderRadius: 8, fontSize: 13, outline: 'none' }}>
+                <option value="">Select Section</option>
+                {exportSections.map(s => <option key={s}>{s}</option>)}
+              </select>
+              <button
+                onClick={handleExportFeeExcel}
+                disabled={!exportClass || !exportSection || exporting}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px',
+                  background: (!exportClass || !exportSection || exporting) ? '#a0aec0' : '#0de1e8',
+                  color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700,
+                  cursor: (!exportClass || !exportSection || exporting) ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap',
+                }}
+              >
+                <span className="material-icons" style={{ fontSize: 16 }}>{exporting ? 'hourglass_top' : 'table_view'}</span>
+                {exporting ? 'Exporting...' : 'Export Excel'}
+              </button>
+            </div>
+
             {/* Filters + Export */}
             <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
               <input

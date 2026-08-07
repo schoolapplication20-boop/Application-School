@@ -2146,6 +2146,69 @@ public class AdminService {
         return ApiResponse.success(studentFeeAssignmentRepository.findBySchoolIdOrderByCreatedAtDesc(schoolId));
     }
 
+    /** Fee-details rows for the class/section Excel export — one row per student, joined with their current-year fee assignment and latest payment. */
+    public ApiResponse<List<com.schoolers.dto.FeeExportRowDTO>> getFeeExportRows(Long schoolId, String className, String section) {
+        if (schoolId == null) return ApiResponse.error("School not found");
+        if (className == null || className.isBlank() || section == null || section.isBlank())
+            return ApiResponse.error("Class and Section are required");
+
+        List<Student> students = studentRepository
+                .findBySchoolIdAndClassNameIgnoreCaseAndSectionIgnoreCaseOrderByRollNumberAscNameAsc(schoolId, className, section);
+        if (students.isEmpty()) return ApiResponse.success(java.util.List.of());
+
+        String academicYear = currentAcademicYear();
+        List<Long> studentIds = students.stream().map(Student::getId).collect(Collectors.toList());
+        Map<Long, StudentFeeAssignment> assignmentByStudent = studentFeeAssignmentRepository
+                .findByStudentIdInAndAcademicYearAndSchoolId(studentIds, academicYear, schoolId).stream()
+                .collect(Collectors.toMap(StudentFeeAssignment::getStudentId, a -> a, (a, b) -> a));
+
+        List<com.schoolers.dto.FeeExportRowDTO> rows = new ArrayList<>();
+        for (Student s : students) {
+            StudentFeeAssignment a = assignmentByStudent.get(s.getId());
+
+            BigDecimal totalFee   = BigDecimal.ZERO;
+            BigDecimal paidAmount = BigDecimal.ZERO;
+            BigDecimal concession = BigDecimal.ZERO;
+            BigDecimal dueAmount  = BigDecimal.ZERO;
+            String paymentStatus;
+            LocalDate lastPaidDate = null;
+
+            if (a == null) {
+                // No fee ever assigned for this student/year — distinct from "assigned but nothing paid" (Due).
+                paymentStatus = "Not Paid";
+            } else {
+                totalFee   = a.getTotalFee()         != null ? a.getTotalFee()         : BigDecimal.ZERO;
+                paidAmount = a.getPaidAmount()        != null ? a.getPaidAmount()        : BigDecimal.ZERO;
+                concession = a.getCondonationAmount() != null ? a.getCondonationAmount() : BigDecimal.ZERO;
+                dueAmount  = totalFee.subtract(paidAmount).subtract(concession).max(BigDecimal.ZERO);
+
+                if (dueAmount.compareTo(BigDecimal.ZERO) <= 0) paymentStatus = "Paid";
+                else if (paidAmount.compareTo(BigDecimal.ZERO) > 0) paymentStatus = "Partial";
+                else paymentStatus = "Due";
+
+                lastPaidDate = feePaymentRepository.findByStudentIdOrderByPaymentDateDescCreatedAtDesc(s.getId())
+                        .stream().findFirst().map(FeePayment::getPaymentDate).orElse(null);
+            }
+
+            rows.add(com.schoolers.dto.FeeExportRowDTO.builder()
+                    .studentName(s.getName())
+                    .admissionNumber(s.getAdmissionNumber())
+                    .rollNumber(s.getRollNumber())
+                    .className(s.getClassName())
+                    .section(s.getSection())
+                    .fatherName(s.getParentName())
+                    .fatherPhone(s.getParentMobile())
+                    .totalFee(totalFee)
+                    .paidAmount(paidAmount)
+                    .dueAmount(dueAmount)
+                    .concessionAmount(concession)
+                    .paymentStatus(paymentStatus)
+                    .lastPaidDate(lastPaidDate)
+                    .build());
+        }
+        return ApiResponse.success(rows);
+    }
+
     @Transactional
     public ApiResponse<StudentFeeAssignment> getStudentFeeAssignment(Long studentId, Long schoolId) {
         Student student = studentRepository.findById(studentId).orElse(null);

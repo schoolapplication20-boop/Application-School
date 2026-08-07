@@ -97,4 +97,69 @@ export const exportStudentsToExcel = (students, opts = {}) => {
   return safeName;
 };
 
+/**
+ * Build a flat row object for one fee-export record.
+ * `concessionAmount` is a single waiver field in the backend — it's duplicated into both
+ * the "Concession Amount" and "Condonation Amount" columns since this app treats them as
+ * the same amount (see FeeExportRowDTO).
+ */
+const toFeeRow = (r, idx) => ({
+  'S.No':                idx + 1,
+  'Student Name':        r.studentName      || '',
+  'Admission Number':    r.admissionNumber  || '',
+  'Roll Number':         r.rollNumber       || '',
+  'Class':               formatClassName(r.className),
+  'Section':             r.section          || '',
+  "Father's Name":       r.fatherName       || '',
+  "Father's Phone":      r.fatherPhone      || '',
+  'Total Fee':           Number(r.totalFee || 0),
+  'Paid Amount':         Number(r.paidAmount || 0),
+  'Due Amount':          Number(r.dueAmount || 0),
+  'Concession Amount':   Number(r.concessionAmount || 0),
+  'Condonation Amount':  Number(r.concessionAmount || 0),
+  'Payment Status':      r.paymentStatus    || 'Not Paid',
+  'Last Paid Date':      r.lastPaidDate     || '—',
+});
+
+/**
+ * Download a class/section fee-details .xlsx file.
+ * @param {object[]} rows - FeeExportRowDTO[] from adminAPI.getFeeExportRows
+ * @param {object}   opts - { className, section }
+ */
+export const exportFeeDetailsToExcel = (rows, opts = {}) => {
+  const { className, section } = opts;
+
+  const sheetRows = rows.map((r, i) => toFeeRow(r, i));
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(sheetRows);
+
+  ws['!cols'] = [
+    { wch: 6  }, // S.No
+    { wch: 24 }, // Student Name
+    { wch: 16 }, // Admission Number
+    { wch: 12 }, // Roll Number
+    { wch: 10 }, // Class
+    { wch: 9  }, // Section
+    { wch: 22 }, // Father's Name
+    { wch: 15 }, // Father's Phone
+    { wch: 12 }, // Total Fee
+    { wch: 12 }, // Paid Amount
+    { wch: 12 }, // Due Amount
+    { wch: 14 }, // Concession Amount
+    { wch: 15 }, // Condonation Amount
+    { wch: 13 }, // Payment Status
+    { wch: 14 }, // Last Paid Date
+  ];
+
+  XLSX.utils.book_append_sheet(wb, ws, 'Fee Details');
+
+  const safeClass = String(className).replace(/[^a-zA-Z0-9]+/g, '_');
+  const safeSection = String(section).replace(/[^a-zA-Z0-9]+/g, '_');
+  const fileName = `Class_${safeClass}_${safeSection}_Fee_Details.xlsx`;
+
+  XLSX.writeFile(wb, fileName);
+  return fileName;
+};
+
 export { ACADEMIC_YEARS, getCurrentAY };
