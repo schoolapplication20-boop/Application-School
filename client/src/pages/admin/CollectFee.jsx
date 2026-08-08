@@ -4,6 +4,7 @@ import { adminAPI, BASE_URL } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useSchool } from '../../context/SchoolContext';
 import { useToast } from '../../context/ToastContext';
+import { exportFeeDetailsToExcel } from '../../utils/excelExport';
 
 /* ── helpers ── */
 const todayStr = () => {
@@ -39,6 +40,7 @@ export default function CollectFee() {
   const [loadingClasses, setLoadingClasses] = useState(true); // true until /api/admin/classes resolves
   const [classStudents, setClassStudents] = useState([]);   // full list for selected class
   const [loadingClass, setLoadingClass] = useState(false);  // loading class student list
+  const [exportingFee, setExportingFee] = useState(false);  // exporting fee-details Excel for the selected class
   const [suggestions, setSuggestions]   = useState([]);     // name-search dropdown
   const [showDrop, setShowDrop]         = useState(false);
   const [searching, setSearching]       = useState(false);
@@ -147,6 +149,24 @@ export default function CollectFee() {
     }, 300);
     return () => clearTimeout(t);
   }, [query, filterClass]);
+
+  /* ── export fee details for the selected class (all students, not just those loaded on screen) ── */
+  const handleDownloadFeeExcel = async () => {
+    if (!filterClassName) return;
+    setExportingFee(true);
+    try {
+      const res = await adminAPI.getFeeExportRows(filterClassName, filterSection);
+      const rows = res.data?.data ?? [];
+      if (rows.length === 0) {
+        showToast(`No students found in ${filterClass}`, 'error');
+        return;
+      }
+      exportFeeDetailsToExcel(rows, { className: filterClassName, section: filterSection });
+      showToast('Fee details exported');
+    } catch (err) {
+      showToast(err?.response?.data?.message || 'Failed to export fee details', 'error');
+    } finally { setExportingFee(false); }
+  };
 
   /* ── reload installments & payments ── */
   const reloadFeeData = useCallback(async (assignId) => {
@@ -327,6 +347,23 @@ export default function CollectFee() {
             </select>
             <span className="material-icons" style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: 18, pointerEvents: 'none' }}>expand_more</span>
           </div>
+
+          {/* Download Excel — fee details for the selected class (all sections if none picked) */}
+          <button
+            onClick={handleDownloadFeeExcel}
+            disabled={!filterClassName || exportingFee}
+            title={!filterClassName ? 'Please select a class to export fee details.' : undefined}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6, padding: '12px 16px',
+              background: (!filterClassName || exportingFee) ? '#a0aec0' : '#0de1e8',
+              color: '#fff', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 700,
+              cursor: (!filterClassName || exportingFee) ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.06)', flexShrink: 0,
+            }}
+          >
+            <span className="material-icons" style={{ fontSize: 17 }}>{exportingFee ? 'hourglass_top' : 'download'}</span>
+            {exportingFee ? 'Exporting...' : 'Download Excel'}
+          </button>
 
           {/* Name-search input — only shown when no class filter is active */}
           {!filterClass && (

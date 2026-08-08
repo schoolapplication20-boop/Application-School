@@ -2146,20 +2146,22 @@ public class AdminService {
         return ApiResponse.success(studentFeeAssignmentRepository.findBySchoolIdOrderByCreatedAtDesc(schoolId));
     }
 
-    /** Fee-details rows for the class/section Excel export — one row per student, joined with their current-year fee assignment and latest payment. */
-    public ApiResponse<List<com.schoolers.dto.FeeExportRowDTO>> getFeeExportRows(Long schoolId, String className, String section) {
+    /** Fee-details rows for the class/section Excel export — one row per student, joined with their fee assignment and latest payment. Section is optional (blank = all sections of the class). */
+    public ApiResponse<List<com.schoolers.dto.FeeExportRowDTO>> getFeeExportRows(Long schoolId, String className, String section, String academicYear) {
         if (schoolId == null) return ApiResponse.error("School not found");
-        if (className == null || className.isBlank() || section == null || section.isBlank())
-            return ApiResponse.error("Class and Section are required");
+        if (className == null || className.isBlank())
+            return ApiResponse.error("Class is required");
 
-        List<Student> students = studentRepository
-                .findBySchoolIdAndClassNameIgnoreCaseAndSectionIgnoreCaseOrderByRollNumberAscNameAsc(schoolId, className, section);
+        boolean hasSection = section != null && !section.isBlank();
+        List<Student> students = hasSection
+                ? studentRepository.findBySchoolIdAndClassNameIgnoreCaseAndSectionIgnoreCaseOrderByRollNumberAscNameAsc(schoolId, className, section)
+                : studentRepository.findBySchoolIdAndClassNameIgnoreCaseOrderByRollNumberAscNameAsc(schoolId, className);
         if (students.isEmpty()) return ApiResponse.success(java.util.List.of());
 
-        String academicYear = currentAcademicYear();
+        String year = (academicYear != null && !academicYear.isBlank()) ? academicYear : currentAcademicYear();
         List<Long> studentIds = students.stream().map(Student::getId).collect(Collectors.toList());
         Map<Long, StudentFeeAssignment> assignmentByStudent = studentFeeAssignmentRepository
-                .findByStudentIdInAndAcademicYearAndSchoolId(studentIds, academicYear, schoolId).stream()
+                .findByStudentIdInAndAcademicYearAndSchoolId(studentIds, year, schoolId).stream()
                 .collect(Collectors.toMap(StudentFeeAssignment::getStudentId, a -> a, (a, b) -> a));
 
         List<com.schoolers.dto.FeeExportRowDTO> rows = new ArrayList<>();

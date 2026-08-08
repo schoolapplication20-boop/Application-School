@@ -176,7 +176,7 @@ export const adminAPI = {
   getAssignmentPayments: (assignmentId) => api.get(`/api/admin/student-fee-assignments/${assignmentId}/payments`),
   collectAssignmentFee: (assignmentId, data) => api.post(`/api/admin/student-fee-assignments/${assignmentId}/collect`, data),
   getAllFeePayments: () => api.get('/api/admin/fee-payments'),
-  getFeeExportRows: (className, section) => api.get('/api/admin/fees/export', { params: { className, section } }),
+  getFeeExportRows: (className, section, academicYear) => api.get('/api/admin/fees/export', { params: { className, section: section || undefined, academicYear: academicYear || undefined } }),
 
   // Fee Installments
   getInstallments: (assignmentId) => api.get(`/api/admin/student-fee-assignments/${assignmentId}/installments`),

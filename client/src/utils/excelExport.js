@@ -155,8 +155,8 @@ export const exportFeeDetailsToExcel = (rows, opts = {}) => {
   XLSX.utils.book_append_sheet(wb, ws, 'Fee Details');
 
   const safeClass = String(className).replace(/[^a-zA-Z0-9]+/g, '_');
-  const safeSection = String(section).replace(/[^a-zA-Z0-9]+/g, '_');
-  const fileName = `Class_${safeClass}_${safeSection}_Fee_Details.xlsx`;
+  const safeSection = section ? String(section).replace(/[^a-zA-Z0-9]+/g, '_') : '';
+  const fileName = `Class_${safeClass}${safeSection ? `_${safeSection}` : ''}_Fee_Details.xlsx`;
 
   XLSX.writeFile(wb, fileName);
   return fileName;

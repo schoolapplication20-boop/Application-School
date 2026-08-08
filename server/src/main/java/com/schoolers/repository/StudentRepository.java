@@ -81,6 +81,9 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     /** Same match, ordered for display — used by the "View Students" modal so rows are roll-number order, not DB insertion order. */
     List<Student> findBySchoolIdAndClassNameIgnoreCaseAndSectionIgnoreCaseOrderByRollNumberAscNameAsc(Long schoolId, String className, String section);
 
+    /** Same match, no section filter — used when a class-wide (all sections) export/report is requested. */
+    List<Student> findBySchoolIdAndClassNameIgnoreCaseOrderByRollNumberAscNameAsc(Long schoolId, String className);
+
     long countBySchoolIdAndClassNameAndSection(Long schoolId, String className, String section);
 
     long countBySchoolIdAndClassNameAndSectionAndIsActive(Long schoolId, String className, String section, Boolean isActive);

@@ -511,8 +511,11 @@ public class AdminController {
     }
 
     @GetMapping("/fees/export")
-    public ResponseEntity<?> getFeeExportRows(@RequestParam String className, @RequestParam String section, Authentication auth) {
-        var response = adminService.getFeeExportRows(getCurrentSchoolId(auth), className, section);
+    public ResponseEntity<?> getFeeExportRows(@RequestParam String className,
+                                               @RequestParam(required = false) String section,
+                                               @RequestParam(required = false) String academicYear,
+                                               Authentication auth) {
+        var response = adminService.getFeeExportRows(getCurrentSchoolId(auth), className, section, academicYear);
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
