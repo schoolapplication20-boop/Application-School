@@ -44,6 +44,9 @@ public class FeePayment {
     @Column(name = "class_name", length = 20)
     private String className;
 
+    @Column(name = "section", length = 20)
+    private String section;
+
     @Column(name = "fee_type", length = 50)
     private String feeType;
 
@@ -72,6 +75,21 @@ public class FeePayment {
 
     @Column(columnDefinition = "TEXT")
     private String remarks;
+
+    /**
+     * Receipt snapshot — the assignment's totalFee/paidAmount/(concession-adjusted)dueAmount
+     * as of the moment this payment was recorded, so a reprint always matches the original
+     * receipt even if the assignment is edited afterwards. Null on payments recorded before
+     * this snapshot existed (see AdminService.getReceiptByNumber for the legacy fallback).
+     */
+    @Column(name = "total_fee_at_payment", precision = 10, scale = 2)
+    private BigDecimal totalFeeAtPayment;
+
+    @Column(name = "paid_to_date_at_payment", precision = 10, scale = 2)
+    private BigDecimal paidToDateAtPayment;
+
+    @Column(name = "balance_due_at_payment", precision = 10, scale = 2)
+    private BigDecimal balanceDueAtPayment;
 
     /** Multi-tenancy: which school this fee payment belongs to. */
     @Column(name = "school_id")

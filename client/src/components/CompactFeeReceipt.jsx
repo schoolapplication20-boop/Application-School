@@ -93,6 +93,11 @@ export default function CompactFeeReceipt({ id, receipt }) {
       </div>
 
       <div style={S.titleBar}>Fee Payment Receipt</div>
+      {r.reprint && (
+        <div style={{ background: '#fef3c7', color: '#92400e', textAlign: 'center', padding: '2px 8px', fontWeight: 800, fontSize: '8px', letterSpacing: '0.6px', textTransform: 'uppercase' }}>
+          Duplicate Copy / Reprint
+        </div>
+      )}
 
       <div style={S.body}>
         <div style={S.metaRow}>

@@ -3,7 +3,9 @@
 // N-per-page engine in pdfPageComposer.js. See utils/hallTicketPdf.js for the
 // same pattern applied to hall tickets.
 // ─────────────────────────────────────────────────────────────────────────────
-import { downloadItemsGroupPdf, placeCanvasNaturalOrFit } from './pdfPageComposer';
+import { downloadItemsGroupPdf, buildItemsGroupPdf, placeCanvasNaturalOrFit, openPdfInNewTab } from './pdfPageComposer';
+
+export { openPdfInNewTab };
 
 export const RECEIPT_PRINT_TEMPLATES = [
   { value: 'ONE_PER_PAGE',   label: '1 receipt per A4 page' },
@@ -28,4 +30,10 @@ export const RECEIPT_TEMPLATE_PER_PAGE = {
 export async function downloadFeeReceiptsPdf(elements, template, filename) {
   const n = RECEIPT_TEMPLATE_PER_PAGE[template] || 1;
   return downloadItemsGroupPdf(elements, n, filename, { margin: 8, gap: 5, placeFn: placeCanvasNaturalOrFit });
+}
+
+/** Same layout as downloadFeeReceiptsPdf, but returns the built PDF instead of saving it — for "View"/"Print" (open in a new tab) instead of a forced download. */
+export async function buildFeeReceiptsPdf(elements, template) {
+  const n = RECEIPT_TEMPLATE_PER_PAGE[template] || 1;
+  return buildItemsGroupPdf(elements, n, { margin: 8, gap: 5, placeFn: placeCanvasNaturalOrFit });
 }

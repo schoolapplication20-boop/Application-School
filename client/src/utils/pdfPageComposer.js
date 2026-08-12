@@ -94,12 +94,12 @@ export function computeCells(n, pageWidth, pageHeight, margin, gap) {
 }
 
 /**
- * Renders `element` to a single A4 page PDF and downloads it as `filename`.
- * The whole element is captured as one image and scaled to fit within the page
+ * Renders `element` to a single A4 page jsPDF document (not yet saved/downloaded) —
+ * the whole element is captured as one image and scaled to fit within the page
  * (preserving aspect ratio) — so however tall the content is, it always lands
  * on exactly one page instead of spilling onto a second.
  */
-export async function downloadSingleItemPdf(element, filename) {
+export async function buildSingleItemPdf(element) {
   if (!element) throw new Error('No element to render');
   await waitForImages(element);
   const canvas = await captureElement(element);
@@ -108,18 +108,25 @@ export async function downloadSingleItemPdf(element, filename) {
   const pageWidth  = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
   placeCanvasInRect(pdf, canvas, { x: 0, y: 0, w: pageWidth, h: pageHeight });
+  return pdf;
+}
+
+/** Same as buildSingleItemPdf, but saves/downloads the result as `filename`. */
+export async function downloadSingleItemPdf(element, filename) {
+  const pdf = await buildSingleItemPdf(element);
   pdf.save(filename);
 }
 
 /**
- * Renders a list of already-mounted DOM elements into one PDF, N per A4 page.
- * Each element is captured as its own canvas and confined to its own grid cell —
- * an item can never split across a page boundary, and every page except possibly
- * the last holds exactly N items (last page holds the remainder, never a blank page).
+ * Renders a list of already-mounted DOM elements into one jsPDF document (not yet
+ * saved/downloaded), N per A4 page. Each element is captured as its own canvas and
+ * confined to its own grid cell — an item can never split across a page boundary,
+ * and every page except possibly the last holds exactly N items (last page holds
+ * the remainder, never a blank page).
  *
  * elements.length items at N per page => Math.ceil(elements.length / N) pages.
  */
-export async function downloadItemsGroupPdf(elements, itemsPerPage, filename, opts = {}) {
+export async function buildItemsGroupPdf(elements, itemsPerPage, opts = {}) {
   if (!elements || elements.length === 0) throw new Error('No items to render');
   const n = itemsPerPage || 1;
   const margin = opts.margin ?? 8;
@@ -155,5 +162,17 @@ export async function downloadItemsGroupPdf(elements, itemsPerPage, filename, op
     place(pdf, canvas, cells[cellIndex]);
   });
 
+  return pdf;
+}
+
+/** Same as buildItemsGroupPdf, but saves/downloads the result as `filename`. */
+export async function downloadItemsGroupPdf(elements, itemsPerPage, filename, opts = {}) {
+  const pdf = await buildItemsGroupPdf(elements, itemsPerPage, opts);
   pdf.save(filename);
+}
+
+/** Opens an already-built jsPDF document in a new browser tab via a blob URL (view/print without forcing a download). */
+export function openPdfInNewTab(pdf) {
+  const blobUrl = pdf.output('bloburl');
+  window.open(blobUrl, '_blank');
 }

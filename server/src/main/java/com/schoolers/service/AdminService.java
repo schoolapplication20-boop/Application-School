@@ -2513,6 +2513,12 @@ public class AdminService {
 
         StudentFeeAssignment saved = studentFeeAssignmentRepository.save(assignment);
 
+        BigDecimal totalFeeSnapshot = saved.getTotalFee()         != null ? saved.getTotalFee()         : BigDecimal.ZERO;
+        BigDecimal concessionSnapshot = saved.getCondonationAmount() != null ? saved.getCondonationAmount() : BigDecimal.ZERO;
+        BigDecimal balanceDueSnapshot = totalFeeSnapshot.subtract(newPaid).subtract(concessionSnapshot).max(BigDecimal.ZERO);
+        String studentSection = studentRepository.findById(saved.getStudentId())
+                .map(Student::getSection).orElse(null);
+
         String term = str(body, "term", null);
         FeePayment savedPayment = feePaymentRepository.save(FeePayment.builder()
                 .feeId(0L)
@@ -2522,6 +2528,7 @@ public class AdminService {
                 .studentName(saved.getStudentName())
                 .rollNumber(saved.getRollNumber())
                 .className(saved.getClassName())
+                .section(studentSection)
                 .feeType("Fee Payment")
                 .term(term != null && !term.isBlank() ? term : null)
                 .amountPaid(amountPaid)
@@ -2530,6 +2537,9 @@ public class AdminService {
                 .receiptNumber(receiptNumber)
                 .receivedBy(str(body, "receivedBy", null))
                 .remarks(str(body, "remarks", null))
+                .totalFeeAtPayment(totalFeeSnapshot)
+                .paidToDateAtPayment(newPaid)
+                .balanceDueAtPayment(balanceDueSnapshot)
                 .build());
         sendWhatsAppPaymentNotifications(savedPayment);
 
@@ -2540,6 +2550,64 @@ public class AdminService {
         if (schoolId == null) return ApiResponse.success(java.util.List.of());
         return ApiResponse.success(
                 feePaymentRepository.findBySchoolIdOrderByPaymentDateDescCreatedAtDesc(schoolId));
+    }
+
+    /**
+     * Fetches a fee receipt by its receipt number — used both by the "View/Print/Download"
+     * actions on the just-collected receipt and by "Reprint Receipt" in Payment History.
+     * Never creates a new payment or receipt number; always returns the same original
+     * receiptNo/date/amount/term/receivedBy. Total/paid-to-date/balance-due come from the
+     * snapshot captured at payment time (see FeePayment.totalFeeAtPayment etc.) so a later
+     * edit to the assignment can never change what a reprint shows; payments recorded before
+     * that snapshot existed fall back to a best-effort reconstruction from the current
+     * assignment.
+     */
+    public ApiResponse<com.schoolers.dto.ReceiptDTO> getReceiptByNumber(String receiptNumber, Long schoolId) {
+        if (receiptNumber == null || receiptNumber.isBlank()) return ApiResponse.error("Receipt number is required");
+        FeePayment payment = feePaymentRepository.findByReceiptNumber(receiptNumber.trim()).orElse(null);
+        if (payment == null) return ApiResponse.error("Receipt not found");
+        if (schoolId != null && schoolMismatch(schoolId, payment.getSchoolId()))
+            return ApiResponse.error("Receipt not found");
+
+        BigDecimal totalFee;
+        BigDecimal paidToDate;
+        BigDecimal dueAmount;
+
+        if (payment.getTotalFeeAtPayment() != null && payment.getPaidToDateAtPayment() != null
+                && payment.getBalanceDueAtPayment() != null) {
+            totalFee   = payment.getTotalFeeAtPayment();
+            paidToDate = payment.getPaidToDateAtPayment();
+            dueAmount  = payment.getBalanceDueAtPayment();
+        } else {
+            // Legacy payment predating the snapshot — best-effort reconstruction from the
+            // CURRENT assignment (may drift from what the original receipt actually showed
+            // if the assignment has since been edited or more payments recorded).
+            StudentFeeAssignment assignment = payment.getAssignmentId() != null
+                    ? studentFeeAssignmentRepository.findById(payment.getAssignmentId()).orElse(null) : null;
+            BigDecimal assignedTotal = assignment != null && assignment.getTotalFee() != null ? assignment.getTotalFee() : BigDecimal.ZERO;
+            BigDecimal assignedPaid  = assignment != null && assignment.getPaidAmount() != null ? assignment.getPaidAmount() : BigDecimal.ZERO;
+            BigDecimal concession    = assignment != null && assignment.getCondonationAmount() != null ? assignment.getCondonationAmount() : BigDecimal.ZERO;
+            totalFee   = assignedTotal;
+            paidToDate = assignedPaid;
+            dueAmount  = assignedTotal.subtract(assignedPaid).subtract(concession).max(BigDecimal.ZERO);
+        }
+
+        return ApiResponse.success(com.schoolers.dto.ReceiptDTO.builder()
+                .receiptNo(payment.getReceiptNumber())
+                .date(payment.getPaymentDate())
+                .studentName(payment.getStudentName())
+                .rollNo(payment.getRollNumber())
+                .className(payment.getClassName())
+                .section(payment.getSection())
+                .totalFee(totalFee)
+                .amountPaid(payment.getAmountPaid())
+                .paidSoFar(paidToDate)
+                .dueAmount(dueAmount)
+                .paymentMode(payment.getPaymentMode())
+                .term(payment.getTerm())
+                .receivedBy(payment.getReceivedBy())
+                .reprint(true)
+                .build());
     }
 
     // ── Installment management ─────────────────────────────────────────────
@@ -2653,7 +2721,15 @@ public class AdminService {
         assignment.setStatus(deriveStatus(newPaid, assignment.getTotalFee()));
         studentFeeAssignmentRepository.save(assignment);
 
-        // Record in fee_payments table
+        BigDecimal totalFeeSnapshot = assignment.getTotalFee()         != null ? assignment.getTotalFee()         : BigDecimal.ZERO;
+        BigDecimal concessionSnapshot = assignment.getCondonationAmount() != null ? assignment.getCondonationAmount() : BigDecimal.ZERO;
+        BigDecimal balanceDueSnapshot = totalFeeSnapshot.subtract(newPaid).subtract(concessionSnapshot).max(BigDecimal.ZERO);
+        String studentSection = studentRepository.findById(assignment.getStudentId())
+                .map(Student::getSection).orElse(null);
+
+        // Record in fee_payments table — total/paid-to-date/balance-due are a snapshot of the
+        // assignment at this exact moment, so a later reprint (or a subsequent edit to the
+        // assignment) can never change what this receipt shows.
         FeePayment savedPayment = feePaymentRepository.save(FeePayment.builder()
                 .feeId(0L)
                 .assignmentId(assignment.getId())
@@ -2662,6 +2738,7 @@ public class AdminService {
                 .studentName(assignment.getStudentName())
                 .rollNumber(assignment.getRollNumber())
                 .className(assignment.getClassName())
+                .section(studentSection)
                 .feeType("Fee Payment")
                 .term(installment.getTermName())
                 .amountPaid(amountPaid)
@@ -2670,6 +2747,9 @@ public class AdminService {
                 .receiptNumber(receiptNumber)
                 .receivedBy(str(body, "receivedBy", null))
                 .remarks(str(body, "remarks", null))
+                .totalFeeAtPayment(totalFeeSnapshot)
+                .paidToDateAtPayment(newPaid)
+                .balanceDueAtPayment(balanceDueSnapshot)
                 .build());
         sendWhatsAppPaymentNotifications(savedPayment);
 

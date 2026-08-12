@@ -16,6 +16,7 @@ public interface FeePaymentRepository extends JpaRepository<FeePayment, Long> {
     List<FeePayment> findByStudentIdOrderByPaymentDateDescCreatedAtDesc(Long studentId);
     List<FeePayment> findByAssignmentIdOrderByPaymentDateDescCreatedAtDesc(Long assignmentId);
     boolean existsByReceiptNumber(String receiptNumber);
+    java.util.Optional<FeePayment> findByReceiptNumber(String receiptNumber);
 
     /** School-scoped: all payments for one school, newest first */
     List<FeePayment> findBySchoolIdOrderByPaymentDateDescCreatedAtDesc(Long schoolId);

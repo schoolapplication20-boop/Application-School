@@ -77,6 +77,12 @@ export default function CollectFee() {
   const [receiptTemplate, setReceiptTemplate] = useState('ONE_PER_PAGE');
   const [downloadingReceipt, setDownloadingReceipt] = useState(false);
 
+  /* receipt reprint (Payment History → View / Print / Download) */
+  const [viewReceipt, setViewReceipt]     = useState(null); // ReceiptDTO shown in the read-only preview modal
+  const [reprintReceipt, setReprintReceipt] = useState(null); // ReceiptDTO staged for off-screen PDF capture
+  const [reprintAction, setReprintAction] = useState(null); // 'print' | 'download'
+  const [reprintBusyNo, setReprintBusyNo] = useState(null); // receiptNumber currently loading, for per-row spinners
+
   const searchRef                       = useRef(null);
   const abortControllerRef             = useRef(null);
 
@@ -319,6 +325,62 @@ export default function CollectFee() {
       showToast('Failed to generate receipt PDF', 'error');
     } finally { setDownloadingReceipt(false); }
   };
+
+  /* ── Payment History → View / Print / Download a past receipt ──
+   * Fetches the persisted receipt by number (never re-derives it from current assignment
+   * state), so reprints always show the original receipt number, date, amount, term, and
+   * received-by — and never create a new payment or receipt number. */
+  const fetchReceiptByNumber = async (receiptNo) => {
+    const res = await adminAPI.getReceiptByNumber(receiptNo);
+    const data = res.data?.data;
+    if (!data) throw new Error('Receipt not found');
+    return data;
+  };
+
+  const handleViewReceipt = async (receiptNo) => {
+    setReprintBusyNo(receiptNo);
+    try {
+      setViewReceipt(await fetchReceiptByNumber(receiptNo));
+    } catch (err) {
+      showToast(err?.response?.data?.message || 'Failed to load receipt', 'error');
+    } finally { setReprintBusyNo(null); }
+  };
+
+  const handlePrintOrDownloadReceipt = async (receiptNo, action) => {
+    setReprintBusyNo(receiptNo);
+    try {
+      const data = await fetchReceiptByNumber(receiptNo);
+      setReprintReceipt(data);
+      setReprintAction(action); // picked up by the effect below once the off-screen node renders
+    } catch (err) {
+      showToast(err?.response?.data?.message || 'Failed to load receipt', 'error');
+      setReprintBusyNo(null);
+    }
+  };
+
+  // Runs after `reprintReceipt` has actually rendered into the off-screen node (effects fire
+  // post-commit), so html2canvas always has real, laid-out DOM — including a loaded logo — to capture.
+  useEffect(() => {
+    if (!reprintReceipt || !reprintAction) return;
+    (async () => {
+      try {
+        const { buildFeeReceiptsPdf, downloadFeeReceiptsPdf, openPdfInNewTab } = await import('../../utils/feeReceiptPdf');
+        const el = document.getElementById('reprint-pdf-source');
+        if (reprintAction === 'print') {
+          const pdf = await buildFeeReceiptsPdf([el], receiptTemplate);
+          openPdfInNewTab(pdf);
+        } else {
+          await downloadFeeReceiptsPdf([el], receiptTemplate, `Receipt_${reprintReceipt.receiptNo}.pdf`);
+        }
+      } catch (err) {
+        showToast('Failed to generate receipt PDF', 'error');
+      } finally {
+        setReprintReceipt(null);
+        setReprintAction(null);
+        setReprintBusyNo(null);
+      }
+    })();
+  }, [reprintReceipt, reprintAction]);
 
   const due = assignment ? Number(assignment.dueAmount ?? Math.max(0, Number(assignment.totalFee || 0) - Number(assignment.paidAmount || 0))) : 0;
   const paidPct = assignment && Number(assignment.totalFee) > 0
@@ -819,13 +881,15 @@ export default function CollectFee() {
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                     <thead>
                       <tr style={{ background: 'var(--surface-alt)' }}>
-                        {['Date','Term / Installment','Amount','Receipt No','Received By','Remarks'].map(h => (
+                        {['Date','Term / Installment','Amount','Receipt No','Received By','Remarks','Actions'].map(h => (
                           <th key={h} style={{ padding: '9px 14px', textAlign: h === 'Amount' ? 'right' : 'left', fontWeight: 700, color: 'var(--text-secondary)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '1px solid var(--border-strong)' }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
-                      {payments.map(p => (
+                      {payments.map(p => {
+                        const rowBusy = reprintBusyNo === p.receiptNumber;
+                        return (
                         <tr key={p.id} style={{ borderBottom: '1px solid var(--border)' }}>
                           <td style={{ padding: '10px 14px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{p.paymentDate}</td>
                           <td style={{ padding: '10px 14px' }}>
@@ -837,8 +901,25 @@ export default function CollectFee() {
                           <td style={{ padding: '10px 14px', fontFamily: 'monospace', fontSize: 11, color: 'var(--text-secondary)' }}>{p.receiptNumber}</td>
                           <td style={{ padding: '10px 14px', color: 'var(--text-secondary)' }}>{p.receivedBy || '—'}</td>
                           <td style={{ padding: '10px 14px', color: 'var(--text-muted)' }}>{p.remarks || '—'}</td>
+                          <td style={{ padding: '10px 14px' }}>
+                            <div style={{ display: 'flex', gap: 4, whiteSpace: 'nowrap' }}>
+                              <button onClick={() => handleViewReceipt(p.receiptNumber)} disabled={rowBusy} title="View Receipt"
+                                style={{ border: 'none', background: '#ebf8ff', color: '#2b6cb0', borderRadius: 6, padding: '5px 7px', cursor: rowBusy ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center' }}>
+                                <span className="material-icons" style={{ fontSize: 15 }}>visibility</span>
+                              </button>
+                              <button onClick={() => handlePrintOrDownloadReceipt(p.receiptNumber, 'print')} disabled={rowBusy} title="Print Receipt"
+                                style={{ border: 'none', background: '#f0fff4', color: '#276749', borderRadius: 6, padding: '5px 7px', cursor: rowBusy ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center' }}>
+                                <span className="material-icons" style={{ fontSize: 15 }}>print</span>
+                              </button>
+                              <button onClick={() => handlePrintOrDownloadReceipt(p.receiptNumber, 'download')} disabled={rowBusy} title="Download PDF"
+                                style={{ border: 'none', background: '#fffbeb', color: '#b45309', borderRadius: 6, padding: '5px 7px', cursor: rowBusy ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center' }}>
+                                <span className="material-icons" style={{ fontSize: 15 }}>{rowBusy ? 'hourglass_top' : 'picture_as_pdf'}</span>
+                              </button>
+                            </div>
+                          </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 )}
@@ -854,6 +935,28 @@ export default function CollectFee() {
       {receiptData && (
         <div style={{ position: 'fixed', top: 0, left: '-9999px', zIndex: -1 }} aria-hidden="true">
           <CompactFeeReceipt id="receipt-pdf-source" receipt={receiptData} />
+        </div>
+      )}
+
+      {/* Off-screen source for a Payment-History reprint (Print/Download) — same idea as
+          above, staged separately so it can't collide with the just-collected receipt. */}
+      {reprintReceipt && (
+        <div style={{ position: 'fixed', top: 0, left: '-9999px', zIndex: -1 }} aria-hidden="true">
+          <CompactFeeReceipt id="reprint-pdf-source" receipt={reprintReceipt} />
+        </div>
+      )}
+
+      {/* View Receipt modal — read-only preview of a past receipt, fetched fresh by receipt number */}
+      {viewReceipt && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
+             onClick={e => e.target === e.currentTarget && setViewReceipt(null)}>
+          <div style={{ background: '#fff', borderRadius: 12, padding: 20, boxShadow: '0 20px 60px rgba(0,0,0,0.25)', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: 'var(--text-primary)' }}>Receipt Preview</h3>
+              <button onClick={() => setViewReceipt(null)} style={{ border: 'none', background: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--text-muted)' }}>×</button>
+            </div>
+            <CompactFeeReceipt receipt={viewReceipt} />
+          </div>
         </div>
       )}
     </Layout>

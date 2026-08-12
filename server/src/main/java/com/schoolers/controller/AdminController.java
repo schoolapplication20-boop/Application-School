@@ -519,6 +519,13 @@ public class AdminController {
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
+    /** Fetch a receipt by its receipt number — reprint-safe, never mutates payment records. */
+    @GetMapping("/fees/receipts/{receiptNo}")
+    public ResponseEntity<?> getReceiptByNumber(@PathVariable String receiptNo, Authentication auth) {
+        var response = adminService.getReceiptByNumber(receiptNo, getCurrentSchoolId(auth));
+        return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.status(404).body(response);
+    }
+
     @GetMapping("/student-fee-assignments/student/{studentId}")
     public ResponseEntity<?> getStudentFeeAssignment(@PathVariable Long studentId, Authentication auth) {
         var response = adminService.getStudentFeeAssignment(studentId, getCurrentSchoolId(auth), isSuperAdmin(auth));
