@@ -15,9 +15,11 @@ const STATUS_STYLE = {
 const todayStr = () => new Date().toISOString().slice(0, 10);
 const genReceipt = () => `RCP-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
 const fmt = (n) => Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+// This term's own due only — its amount minus what's been paid toward it. Never affected
+// by another term's shortfall (no carry-forward).
 const effectiveDue = (inst) => {
   if (inst.effectiveDue != null) return Number(inst.effectiveDue);
-  return Math.max(0, Number(inst.amount || 0) + Number(inst.carryOver || 0) - Number(inst.paidAmount || 0));
+  return Math.max(0, Number(inst.amount || 0) - Number(inst.paidAmount || 0));
 };
 
 export default function AdminCollectFee() {
@@ -232,6 +234,7 @@ export default function AdminCollectFee() {
           {installments.map(inst => {
             const status = inst.status;
             const isPaid = status === 'PAID';
+            const isPartial = status === 'PARTIAL';
             const eff = effectiveDue(inst);
             const selected = selectedInstallment?.id === inst.id;
             return (
@@ -244,12 +247,12 @@ export default function AdminCollectFee() {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.instTerm}>{inst.termName}</Text>
                   <Text style={styles.instDue}>Due: {inst.dueDate || '—'}</Text>
-                  {Number(inst.carryOver) > 0 && (
-                    <Text style={styles.instCarry}>↪ ₹{fmt(inst.carryOver)} carried from previous term</Text>
+                  {isPartial && Number(inst.paidAmount) > 0 && (
+                    <Text style={styles.instCarry}>₹{fmt(inst.paidAmount)} paid · ₹{fmt(eff)} still due</Text>
                   )}
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={[styles.instAmount, { color: isPaid ? '#166534' : '#1e293b' }]}>₹{fmt(isPaid ? inst.amount : eff)}</Text>
+                  <Text style={[styles.instAmount, { color: isPaid ? '#166534' : '#1e293b' }]}>₹{fmt(inst.amount)}</Text>
                   <View style={[styles.badge, { backgroundColor: (STATUS_STYLE[status] || STATUS_STYLE.PENDING).bg }]}>
                     <Text style={[styles.badgeText, { color: (STATUS_STYLE[status] || STATUS_STYLE.PENDING).text }]}>
                       {isPaid ? '✓ Paid' : selected ? 'Selected' : 'Tap to pay'}
@@ -334,7 +337,7 @@ const styles = StyleSheet.create({
   instRowPaid: { opacity: 0.6 },
   instTerm: { fontSize: 13, fontWeight: '700', color: '#1e293b' },
   instDue: { fontSize: 11, color: '#94a3b8', marginTop: 2 },
-  instCarry: { fontSize: 10, color: '#dc2626', fontWeight: '600', marginTop: 4 },
+  instCarry: { fontSize: 10, color: '#b45309', fontWeight: '600', marginTop: 4 },
   instAmount: { fontSize: 14, fontWeight: '800', marginBottom: 4 },
   payForm: { backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 12, borderWidth: 2, borderColor: '#7c3aed' },
   label: { fontSize: 12, fontWeight: '600', color: '#374151', marginBottom: 6, marginTop: 4 },

@@ -220,12 +220,12 @@ export default function CollectFee() {
     } finally { setLoadingFee(false); }
   }, [reloadFeeData]);
 
-  /* ── effective due for an installment (base + carry-over − already paid) ── */
+  /* ── due for an installment — its own amount minus what's been paid toward it, full stop.
+   * Never affected by any other term's shortfall (no carry-forward). ── */
   const effectiveDue = (inst) => {
-    const base  = Number(inst.amount    || 0);
-    const carry = Number(inst.carryOver || 0);
-    const paid  = Number(inst.paidAmount || 0);
-    return Math.max(0, base + carry - paid);
+    const base = Number(inst.amount     || 0);
+    const paid = Number(inst.paidAmount || 0);
+    return Math.max(0, base - paid);
   };
 
   /* ── select an installment for payment ── */
@@ -663,7 +663,6 @@ export default function CollectFee() {
                       const isPartial = status === 'PARTIAL';
                       const overdue   = !isPaid && isOverdue(inst.dueDate);
                       const selected  = selectedInstallment?.id === inst.id;
-                      const carry     = Number(inst.carryOver || 0);
                       const instPaid  = Number(inst.paidAmount || 0);
                       const effDue    = effectiveDue(inst);
                       return (
@@ -671,7 +670,7 @@ export default function CollectFee() {
                           onClick={() => !isPaid && pickInstallment(inst)}
                           style={{
                             padding: '10px 16px',
-                            borderLeft: selected ? '3px solid #0de1e8' : isPartial ? '3px solid #f6ad55' : carry > 0 ? '3px solid #e53e3e' : '3px solid transparent',
+                            borderLeft: selected ? '3px solid #0de1e8' : isPartial ? '3px solid #f6ad55' : '3px solid transparent',
                             background: selected ? '#f0fff4' : isPaid ? 'var(--surface-alt)' : 'var(--surface)',
                             cursor: isPaid ? 'default' : 'pointer',
                             display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
@@ -688,14 +687,7 @@ export default function CollectFee() {
                               Due: {inst.dueDate || '—'}
                               {overdue && <span style={{ marginLeft: 4, fontWeight: 700 }}>· OVERDUE</span>}
                             </div>
-                            {/* Carry-over badge */}
-                            {carry > 0 && (
-                              <div style={{ marginTop: 4, display: 'inline-flex', alignItems: 'center', gap: 4, background: '#fff5f5', border: '1px solid #fed7d7', borderRadius: 6, padding: '2px 7px' }}>
-                                <span className="material-icons" style={{ fontSize: 11, color: '#e53e3e' }}>arrow_forward</span>
-                                <span style={{ fontSize: 10, color: '#e53e3e', fontWeight: 700 }}>₹{fmt(carry)} carried from previous term</span>
-                              </div>
-                            )}
-                            {/* Partial payment progress */}
+                            {/* Partial payment progress — this term's own paid/due only, never affected by other terms */}
                             {isPartial && instPaid > 0 && (
                               <div style={{ marginTop: 4, fontSize: 10, color: '#b45309', fontWeight: 600 }}>
                                 ₹{fmt(instPaid)} paid · ₹{fmt(effDue)} still due
@@ -703,13 +695,9 @@ export default function CollectFee() {
                             )}
                           </div>
                           <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 12 }}>
-                            {/* Show effective due when carry exists, base amount below */}
-                            <div style={{ fontWeight: 800, fontSize: 13, color: isPaid ? '#276749' : carry > 0 ? '#e53e3e' : 'var(--text-primary)' }}>
-                              ₹{fmt(isPaid ? inst.amount : effDue > 0 ? effDue : inst.amount)}
+                            <div style={{ fontWeight: 800, fontSize: 13, color: isPaid ? '#276749' : 'var(--text-primary)' }}>
+                              ₹{fmt(inst.amount)}
                             </div>
-                            {carry > 0 && !isPaid && (
-                              <div style={{ fontSize: 10, color: 'var(--text-muted)', textDecoration: 'line-through' }}>₹{fmt(inst.amount)}</div>
-                            )}
                             {isPaid
                               ? <span style={{ fontSize: 10, color: '#276749', fontWeight: 700 }}>✓ PAID</span>
                               : isPartial
@@ -739,34 +727,22 @@ export default function CollectFee() {
                     </button>
                   </div>
 
-                  {/* Effective due breakdown */}
+                  {/* Due breakdown — this term's own amount only, never affected by other terms */}
                   {(() => {
-                    const carry   = Number(selectedInstallment.carryOver  || 0);
-                    const base    = Number(selectedInstallment.amount      || 0);
                     const alrPaid = Number(selectedInstallment.paidAmount  || 0);
                     const effDue  = effectiveDue(selectedInstallment);
                     return (
                       <div style={{ background: 'var(--surface-alt)', borderRadius: 8, padding: '10px 12px', marginBottom: 14, fontSize: 12 }}>
-                        {carry > 0 && (
-                          <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)', marginBottom: 3 }}>
-                            <span>Base amount</span><span>₹{fmt(base)}</span>
-                          </div>
-                        )}
-                        {carry > 0 && (
-                          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#e53e3e', marginBottom: 3, fontWeight: 600 }}>
-                            <span>↪ Carried from previous term</span><span>+ ₹{fmt(carry)}</span>
-                          </div>
-                        )}
                         {alrPaid > 0 && (
                           <div style={{ display: 'flex', justifyContent: 'space-between', color: '#276749', marginBottom: 3 }}>
                             <span>Already paid</span><span>− ₹{fmt(alrPaid)}</span>
                           </div>
                         )}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, color: 'var(--text-primary)', borderTop: carry > 0 || alrPaid > 0 ? '1px solid var(--border-strong)' : 'none', paddingTop: carry > 0 || alrPaid > 0 ? 6 : 0, marginTop: carry > 0 || alrPaid > 0 ? 4 : 0 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, color: 'var(--text-primary)', borderTop: alrPaid > 0 ? '1px solid var(--border-strong)' : 'none', paddingTop: alrPaid > 0 ? 6 : 0, marginTop: alrPaid > 0 ? 4 : 0 }}>
                           <span>Due this term</span><span style={{ color: '#e53e3e' }}>₹{fmt(effDue)}</span>
                         </div>
                         <div style={{ marginTop: 6, fontSize: 11, color: 'var(--text-secondary)' }}>
-                          You can pay less than the due amount — the shortfall will be carried to the next term.
+                          You can pay less than the due amount — the balance stays on this term; it will not be added to any other term.
                         </div>
                       </div>
                     );

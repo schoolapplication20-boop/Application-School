@@ -53,10 +53,11 @@ public class FeeInstallment {
     private LocalDate paidDate;
 
     /**
-     * Shortage rolled over from the previous term.
-     * effectiveDue = (amount - condonationAmount) + carryOver
-     * If parent pays less than effectiveDue, the new shortage rolls to the next term.
+     * @deprecated Each installment is fully self-contained — a shortfall stays on the term it
+     * belongs to (status PARTIAL) rather than being added to another term's amount. No longer
+     * written to; kept only so existing rows don't need a schema change. See getEffectiveDue().
      */
+    @Deprecated
     @Column(name = "carry_over", precision = 10, scale = 2)
     @Builder.Default
     private BigDecimal carryOver = BigDecimal.ZERO;
@@ -84,14 +85,13 @@ public class FeeInstallment {
     @Builder.Default
     private Long version = 0L;
 
-    /** Net payable for this term = (amount - condonation) + carryOver - paidAmount. */
+    /** Net payable for this term = (amount - condonation) - paidAmount. Never affected by any other term. */
     @Transient
     public BigDecimal getEffectiveDue() {
         BigDecimal base  = amount             != null ? amount             : BigDecimal.ZERO;
         BigDecimal cond  = condonationAmount  != null ? condonationAmount  : BigDecimal.ZERO;
-        BigDecimal carry = carryOver          != null ? carryOver          : BigDecimal.ZERO;
         BigDecimal paid  = paidAmount         != null ? paidAmount         : BigDecimal.ZERO;
-        return base.subtract(cond).max(BigDecimal.ZERO).add(carry).subtract(paid).max(BigDecimal.ZERO);
+        return base.subtract(cond).max(BigDecimal.ZERO).subtract(paid).max(BigDecimal.ZERO);
     }
 
     /** Original amount before condonation (for reports). */

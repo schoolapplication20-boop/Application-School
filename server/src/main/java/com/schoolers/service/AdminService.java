@@ -2417,20 +2417,10 @@ public class AdminService {
             Object instObj = body.get("installments");
             if (instObj instanceof java.util.List<?> rawList && !rawList.isEmpty()) {
                 List<FeeInstallment> existing = feeInstallmentRepository.findByAssignmentIdOrderByCreatedAtAsc(saved.getId());
-
-                // Collect any carry-over that was set on pending installments from prior partial payments.
-                // When we delete pending installments, this carry-over would otherwise be lost (F-03).
-                BigDecimal carryToApply = existing.stream()
-                        .filter(i -> i.getStatus() == FeeInstallment.Status.PENDING)
-                        .filter(i -> i.getCarryOver() != null && i.getCarryOver().compareTo(BigDecimal.ZERO) > 0)
-                        .map(FeeInstallment::getCarryOver)
-                        .reduce(BigDecimal.ZERO, BigDecimal::add);
-
                 existing.stream()
                         .filter(i -> i.getStatus() == FeeInstallment.Status.PENDING)
                         .forEach(i -> feeInstallmentRepository.deleteById(i.getId()));
 
-                boolean firstInst = true;
                 for (Object rawInst : rawList) {
                     if (!(rawInst instanceof Map<?, ?> instMap)) continue;
                     String termName = instMap.get("termName") != null ? instMap.get("termName").toString().trim() : "Term";
@@ -2445,19 +2435,14 @@ public class AdminService {
                     if (instMap.get("dueDate") != null && !instMap.get("dueDate").toString().isBlank()) {
                         try { instDue = LocalDate.parse(instMap.get("dueDate").toString()); } catch (Exception ignored2) {}
                     }
-                    // Apply any carry-over from deleted pending installments to the first new installment (F-03)
-                    BigDecimal initialCarry = (firstInst && carryToApply.compareTo(BigDecimal.ZERO) > 0)
-                            ? carryToApply : null;
                     feeInstallmentRepository.save(FeeInstallment.builder()
                             .assignmentId(saved.getId())
                             .termName(termName)
                             .amount(instAmt)
                             .dueDate(instDue)
                             .status(FeeInstallment.Status.PENDING)
-                            .carryOver(initialCarry)
                             .schoolId(saved.getSchoolId())
                             .build());
-                    firstInst = false;
                 }
             }
 
@@ -2675,11 +2660,12 @@ public class AdminService {
         }
         if (amountPaid.compareTo(BigDecimal.ZERO) <= 0) return ApiResponse.error("Amount must be greater than zero");
 
-        // Effective amount due = base installment amount + any carry-over from previous term
+        // Each installment is fully self-contained: its due amount is its own base amount
+        // minus whatever has already been paid toward it — never inflated by another term's
+        // shortfall, and never reduced by paying it forward either.
         BigDecimal base      = installment.getAmount()   != null ? installment.getAmount()   : BigDecimal.ZERO;
-        BigDecimal carryOver = installment.getCarryOver() != null ? installment.getCarryOver() : BigDecimal.ZERO;
         BigDecimal prevPaid  = installment.getPaidAmount() != null ? installment.getPaidAmount() : BigDecimal.ZERO;
-        BigDecimal effectiveDue = base.add(carryOver).subtract(prevPaid);
+        BigDecimal effectiveDue = base.subtract(prevPaid);
 
         if (amountPaid.compareTo(effectiveDue) > 0)
             return ApiResponse.error("Amount ₹" + amountPaid + " exceeds due amount ₹" + effectiveDue);
@@ -2689,29 +2675,13 @@ public class AdminService {
         installment.setPaidAmount(totalPaidForTerm);
         installment.setPaidDate(paymentDate);
 
-        BigDecimal shortage = base.add(carryOver).subtract(totalPaidForTerm);
+        BigDecimal shortage = base.subtract(totalPaidForTerm);
         boolean fullyCovered = shortage.compareTo(BigDecimal.ZERO) <= 0;
 
-        if (fullyCovered) {
-            installment.setStatus(FeeInstallment.Status.PAID);
-        } else {
-            // Partial payment — roll the shortage to the next pending term.
-            // If this installment was already PARTIAL (prevPaid > 0), the next term's
-            // carryOver already includes our old shortage (= effectiveDue). We replace
-            // that contribution with the new shortage rather than adding on top (F-02).
-            BigDecimal carryDelta = prevPaid.compareTo(BigDecimal.ZERO) > 0
-                    ? shortage.subtract(effectiveDue)   // = -(amountPaid): net correction
-                    : shortage;                          // first partial: add full shortage
-            installment.setStatus(FeeInstallment.Status.PARTIAL);
-            feeInstallmentRepository.findNextPending(installment.getAssignmentId(), installment.getId())
-                .ifPresent(next -> {
-                    BigDecimal existingCarry = next.getCarryOver() != null ? next.getCarryOver() : BigDecimal.ZERO;
-                    next.setCarryOver(existingCarry.add(carryDelta).max(BigDecimal.ZERO));
-                    feeInstallmentRepository.save(next);
-                    log.info("[collectInstallmentFee] ₹{} shortage from '{}' rolled over to '{}'",
-                        shortage, installment.getTermName(), next.getTermName());
-                });
-        }
+        // A shortfall stays on THIS term (status PARTIAL) — it is never added to another
+        // installment's amount. The admin can come back to this same term later, while it's
+        // still PARTIAL, to collect the remainder.
+        installment.setStatus(fullyCovered ? FeeInstallment.Status.PAID : FeeInstallment.Status.PARTIAL);
         FeeInstallment savedInst = feeInstallmentRepository.save(installment);
 
         // Update assignment totals with actual amount paid
@@ -2755,8 +2725,8 @@ public class AdminService {
 
         String msg = fullyCovered
             ? "Payment recorded for " + installment.getTermName()
-            : "Partial payment recorded. ₹" + shortage.setScale(0, java.math.RoundingMode.HALF_UP)
-              + " carried over to the next term.";
+            : "Partial payment recorded for " + installment.getTermName() + ". ₹"
+              + shortage.setScale(0, java.math.RoundingMode.HALF_UP) + " still due on this term.";
         return ApiResponse.success(msg, savedInst);
     }
 
@@ -2921,7 +2891,6 @@ public class AdminService {
         m.put("status",     i.getStatus());
         m.put("paidAmount", i.getPaidAmount());
         m.put("paidDate",   i.getPaidDate());
-        m.put("carryOver",  i.getCarryOver());
         if (!hideConcession) m.put("concessionAmount", i.getCondonationAmount());
         return m;
     }
@@ -2969,7 +2938,6 @@ public class AdminService {
         m.put("status",     i.getStatus());
         m.put("paidAmount", i.getPaidAmount());
         m.put("paidDate",   i.getPaidDate());
-        m.put("carryOver",  i.getCarryOver());
         if (canViewConcession) m.put("concessionAmount", i.getCondonationAmount());
         return m;
     }
