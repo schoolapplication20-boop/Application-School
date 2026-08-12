@@ -1,10 +1,19 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Layout from '../../components/Layout';
-import { adminAPI, BASE_URL } from '../../services/api';
+import { adminAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import { useSchool } from '../../context/SchoolContext';
 import { useToast } from '../../context/ToastContext';
 import { exportFeeDetailsToExcel } from '../../utils/excelExport';
+import CompactFeeReceipt from '../../components/CompactFeeReceipt';
+
+// Labels only — kept separate from utils/feeReceiptPdf.js (which pulls in html2canvas/jsPDF)
+// so the template picker doesn't drag those heavy libs into the main Collect Fee bundle;
+// that module is only ever reached via dynamic import(), see downloadReceiptPdf below.
+const RECEIPT_PRINT_TEMPLATES = [
+  { value: 'ONE_PER_PAGE',   label: '1 receipt per A4 page' },
+  { value: 'TWO_PER_PAGE',   label: '2 receipts per A4 page' },
+  { value: 'THREE_PER_PAGE', label: '3 receipts per A4 page' },
+];
 
 /* ── helpers ── */
 const todayStr = () => {
@@ -29,7 +38,6 @@ const StatusBadge = ({ status }) => {
 /* ══════════════════════════════════════════════════════════════════ */
 export default function CollectFee() {
   const { user } = useAuth();
-  const { school, logoVersion } = useSchool();
 
   /* search */
   const [query, setQuery]               = useState('');
@@ -66,6 +74,8 @@ export default function CollectFee() {
 
   /* receipt modal */
   const [receiptData, setReceiptData]   = useState(null);
+  const [receiptTemplate, setReceiptTemplate] = useState('ONE_PER_PAGE');
+  const [downloadingReceipt, setDownloadingReceipt] = useState(false);
 
   const searchRef                       = useRef(null);
   const abortControllerRef             = useRef(null);
@@ -269,6 +279,7 @@ export default function CollectFee() {
         studentName: student.name,
         rollNo:      student.rollNumber,
         className:   student.className,
+        section:     student.section,
         totalFee:    updatedAssignment?.totalFee,
         amountPaid:  amt,
         paidSoFar:   newPaid,
@@ -292,16 +303,21 @@ export default function CollectFee() {
     } finally { setPaying(false); }
   };
 
-  /* ── print receipt ── */
-  const printReceipt = () => {
+  /* ── download receipt PDF ──
+   * Renders CompactFeeReceipt off-screen and composites it into a real PDF (same
+   * html2canvas + jsPDF pipeline as hall tickets) instead of window.print() — this is
+   * what guarantees the logo is fully loaded before capture and keeps the browser's own
+   * print header/footer (URL, date, page number) out of the output entirely. */
+  const downloadReceiptPdf = async () => {
     if (!receiptData) return;
-    const printContents = document.getElementById('receipt-print-area').innerHTML;
-    const w = window.open('', '_blank', 'width=400,height=600');
-    w.document.write('<html><head><title>Receipt</title><style>body{font-family:sans-serif;padding:20px}@media print{body{padding:0}}</style></head><body>' + printContents + '</body></html>');
-    w.document.close();
-    w.focus();
-    w.print();
-    w.close();
+    setDownloadingReceipt(true);
+    try {
+      const { downloadFeeReceiptsPdf } = await import('../../utils/feeReceiptPdf');
+      const el = document.getElementById('receipt-pdf-source');
+      await downloadFeeReceiptsPdf([el], receiptTemplate, `Receipt_${receiptData.receiptNo}.pdf`);
+    } catch (err) {
+      showToast('Failed to generate receipt PDF', 'error');
+    } finally { setDownloadingReceipt(false); }
   };
 
   const due = assignment ? Number(assignment.dueAmount ?? Math.max(0, Number(assignment.totalFee || 0) - Number(assignment.paidAmount || 0))) : 0;
@@ -753,12 +769,23 @@ export default function CollectFee() {
               {/* Receipt card */}
               {receiptData && (
                 <div style={{ background: 'var(--surface)', border: '2px solid #0de1e8', borderRadius: 12, padding: 24 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
                     <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#276749' }}>Payment Confirmed</h3>
-                    <button onClick={printReceipt}
-                      style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 16px', background: '#276749', color: '#fff', border: 'none', borderRadius: 7, fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
-                      <span className="material-icons" style={{ fontSize: 16 }}>print</span> Print Receipt
-                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <select
+                        value={receiptTemplate}
+                        onChange={e => setReceiptTemplate(e.target.value)}
+                        title="Receipt print template"
+                        style={{ padding: '7px 10px', border: '1.5px solid var(--border-strong)', borderRadius: 7, fontSize: 12, outline: 'none', background: 'var(--surface)', color: 'var(--text-primary)' }}
+                      >
+                        {RECEIPT_PRINT_TEMPLATES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                      </select>
+                      <button onClick={downloadReceiptPdf} disabled={downloadingReceipt}
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 16px', background: downloadingReceipt ? '#a0aec0' : '#276749', color: '#fff', border: 'none', borderRadius: 7, fontWeight: 700, fontSize: 12, cursor: downloadingReceipt ? 'not-allowed' : 'pointer' }}>
+                        <span className="material-icons" style={{ fontSize: 16 }}>{downloadingReceipt ? 'hourglass_top' : 'picture_as_pdf'}</span>
+                        {downloadingReceipt ? 'Generating...' : 'Download Receipt PDF'}
+                      </button>
+                    </div>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 13 }}>
                     {[
@@ -821,95 +848,14 @@ export default function CollectFee() {
         )}
       </div>
 
-      {/* Hidden receipt area — rendered as React JSX; innerHTML is copied into the print popup */}
-      {receiptData && (() => {
-        const d = receiptData;
-        const schoolName = school?.name || 'School Management System';
-        const rawLogo    = school?.logoUrl;
-        const logoSrc    = rawLogo
-          ? (rawLogo.startsWith('http') ? rawLogo : `${BASE_URL}${rawLogo}`) + `?v=${logoVersion}`
-          : null;
-        return (
-          <div id="receipt-print-area" style={{ display: 'none' }}>
-            {logoSrc
-              ? <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 4 }}>
-                  <img src={logoSrc} style={{ width: 52, height: 52, objectFit: 'contain' }} alt={schoolName} />
-                  <div style={{ fontSize: 22, fontWeight: 800, color: '#276749' }}>{schoolName}</div>
-                </div>
-              : <div style={{ fontSize: 22, fontWeight: 800, color: '#276749', textAlign: 'center' }}>{schoolName}</div>
-            }
-            <div style={{ fontSize: 15, fontWeight: 600, textAlign: 'center', color: '#718096', margin: '4px 0 20px' }}>Fee Payment Receipt</div>
-            <hr style={{ border: 'none', borderTop: '2px solid #e2e8f0', margin: '14px 0' }} />
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 14 }}>
-              <span style={{ color: '#718096' }}>Receipt No.</span>
-              <span style={{ fontWeight: 600, fontFamily: 'monospace' }}>{d.receiptNo}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 14 }}>
-              <span style={{ color: '#718096' }}>Date</span>
-              <span style={{ fontWeight: 600 }}>{d.date}</span>
-            </div>
-            <hr style={{ borderTop: '1px dashed #a0aec0', margin: '14px 0' }} />
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 14 }}>
-              <span style={{ color: '#718096' }}>Student Name</span>
-              <span style={{ fontWeight: 600 }}>{d.studentName}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 14 }}>
-              <span style={{ color: '#718096' }}>Roll Number</span>
-              <span style={{ fontWeight: 600 }}>{d.rollNo || '—'}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 14 }}>
-              <span style={{ color: '#718096' }}>Class</span>
-              <span style={{ fontWeight: 600 }}>{d.className}</span>
-            </div>
-            <hr style={{ borderTop: '1px dashed #a0aec0', margin: '14px 0' }} />
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 14 }}>
-              <span style={{ color: '#718096' }}>Total Assigned Fee</span>
-              <span style={{ fontWeight: 600 }}>₹{fmt(d.totalFee)}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 14 }}>
-              <span style={{ color: '#718096' }}>Previously Paid</span>
-              <span style={{ fontWeight: 600 }}>₹{fmt(Number(d.paidSoFar) - Number(d.amountPaid))}</span>
-            </div>
-            {String(d.status || '').toUpperCase() === 'PAID' && (
-              <div style={{ fontSize: 50, fontWeight: 900, color: '#0de1e820', textAlign: 'center', margin: '10px 0', letterSpacing: 8, textTransform: 'uppercase' }}>PAID</div>
-            )}
-            <div style={{ background: '#f0fff4', border: '2px solid #0de1e8', borderRadius: 8, padding: '14px 20px', margin: '16px 0', textAlign: 'center' }}>
-              <div style={{ fontSize: 12, color: '#276749', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Amount Received ({d.paymentMode || 'Cash'})</div>
-              <div style={{ fontSize: 30, fontWeight: 800, color: '#276749' }}>₹{fmt(d.amountPaid)}</div>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 14 }}>
-              <span style={{ color: '#718096' }}>Total Paid to Date</span>
-              <span style={{ fontWeight: 600 }}>₹{fmt(d.paidSoFar)}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 14 }}>
-              <span style={{ color: '#718096' }}>Balance Due</span>
-              <span style={{ fontWeight: 600, color: d.dueAmount > 0 ? '#e53e3e' : '#276749' }}>{d.dueAmount > 0 ? `₹${fmt(d.dueAmount)}` : 'NIL'}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 14 }}>
-              <span style={{ color: '#718096' }}>Payment Mode</span>
-              <span style={{ fontWeight: 600 }}>{d.paymentMode || 'Cash'}</span>
-            </div>
-            {d.term && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 14 }}>
-                <span style={{ color: '#718096' }}>Term / Installment</span>
-                <span style={{ fontWeight: 700, color: '#2b6cb0' }}>{d.term}</span>
-              </div>
-            )}
-            {d.remarks && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 14 }}>
-                <span style={{ color: '#718096' }}>Remarks</span>
-                <span style={{ fontWeight: 600 }}>{d.remarks}</span>
-              </div>
-            )}
-            <div style={{ marginTop: 30, display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#718096' }}>
-              <span>Generated: {new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</span>
-              <div style={{ borderTop: '1px solid #2d3748', paddingTop: 6, width: 180, fontSize: 11, color: '#718096' }}>
-                Received By: {d.receivedBy}
-              </div>
-            </div>
-          </div>
-        );
-      })()}
+      {/* Off-screen source for the receipt PDF — captured by html2canvas via downloadReceiptPdf.
+          Rendered (not display:none) so images actually load and layout is measurable, just
+          moved off the visible viewport. */}
+      {receiptData && (
+        <div style={{ position: 'fixed', top: 0, left: '-9999px', zIndex: -1 }} aria-hidden="true">
+          <CompactFeeReceipt id="receipt-pdf-source" receipt={receiptData} />
+        </div>
+      )}
     </Layout>
   );
 }
