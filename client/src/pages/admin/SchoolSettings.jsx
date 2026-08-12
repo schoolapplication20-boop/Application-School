@@ -185,7 +185,12 @@ const SchoolSettings = () => {
   const updateDc = (field, value) => setDiaryConfig(prev => ({ ...prev, [field]: value }));
 
   // ── Privacy config ────────────────────────────────────────────────────────────
-  const [privacyConfig,  setPrivacyConfig]  = useState({ hideStudentContactInfo: false, hideFeeInfoFromStudents: false });
+  const [privacyConfig,  setPrivacyConfig]  = useState({
+    hideStudentContactInfo:     false,
+    showFeeDetailsToStudents:   true,
+    hideConcessionFromStudents: true,
+    concessionSuperAdminOnly:   true,
+  });
   const [pcSaving,       setPcSaving]       = useState(false);
   const [pcError,        setPcError]        = useState('');
   const [pcSuccess,      setPcSuccess]      = useState('');
@@ -195,8 +200,10 @@ const SchoolSettings = () => {
       const r = await privacyConfigAPI.get();
       const d = r.data?.data;
       if (d) setPrivacyConfig({
-        hideStudentContactInfo:  d.hideStudentContactInfo  ?? false,
-        hideFeeInfoFromStudents: d.hideFeeInfoFromStudents ?? false,
+        hideStudentContactInfo:     d.hideStudentContactInfo     ?? false,
+        showFeeDetailsToStudents:   d.showFeeDetailsToStudents   ?? true,
+        hideConcessionFromStudents: d.hideConcessionFromStudents ?? true,
+        concessionSuperAdminOnly:   d.concessionSuperAdminOnly   ?? true,
       });
     } catch { /* silently use defaults */ }
   }, []);
@@ -1223,25 +1230,69 @@ const SchoolSettings = () => {
                 </div>
               </label>
 
-              {/* Toggle: hide total fee / concession from students */}
-              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 12, cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={privacyConfig.hideFeeInfoFromStudents}
-                  onChange={e => setPrivacyConfig(prev => ({ ...prev, hideFeeInfoFromStudents: e.target.checked }))}
-                  style={{ marginTop: 2, width: 16, height: 16, accentColor: '#0369a1', cursor: 'pointer' }}
-                />
-                <div>
-                  <p style={{ margin: 0, fontWeight: 600, fontSize: 13, color: 'var(--text-primary)' }}>
-                    Hide fee details (including concession) from students
-                  </p>
-                  <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>
-                    When enabled, the "My Fees" page is blocked for students — no total fee, concession, amount paid,
-                    balance due, installments, or payment history. They'll be told to contact your school administration instead.
-                    Since parents view fees through the student login, this also hides it from them.
-                  </p>
-                </div>
-              </label>
+              <div style={{ borderTop: '1px dashed var(--border-strong)', paddingTop: 16, marginTop: 4 }}>
+                <p style={{ margin: '0 0 12px', fontWeight: 700, fontSize: 12, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Fee Visibility
+                </p>
+
+                {/* Toggle: allow students to view their fee details at all */}
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: 12, cursor: 'pointer', marginBottom: 16 }}>
+                  <input
+                    type="checkbox"
+                    checked={privacyConfig.showFeeDetailsToStudents}
+                    onChange={e => setPrivacyConfig(prev => ({ ...prev, showFeeDetailsToStudents: e.target.checked }))}
+                    style={{ marginTop: 2, width: 16, height: 16, accentColor: '#0369a1', cursor: 'pointer' }}
+                  />
+                  <div>
+                    <p style={{ margin: 0, fontWeight: 600, fontSize: 13, color: 'var(--text-primary)' }}>
+                      Allow students to view their fee details
+                    </p>
+                    <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>
+                      When enabled (default), the "My Fees" page shows total fee, amount paid, balance due,
+                      installments, and payment history. When disabled, students (and parents, who view fees
+                      through the student login) are told to contact your school administration instead.
+                    </p>
+                  </div>
+                </label>
+
+                {/* Toggle: hide concession amount from students */}
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: 12, cursor: 'pointer', marginBottom: 16 }}>
+                  <input
+                    type="checkbox"
+                    checked={privacyConfig.hideConcessionFromStudents}
+                    onChange={e => setPrivacyConfig(prev => ({ ...prev, hideConcessionFromStudents: e.target.checked }))}
+                    style={{ marginTop: 2, width: 16, height: 16, accentColor: '#0369a1', cursor: 'pointer' }}
+                  />
+                  <div>
+                    <p style={{ margin: 0, fontWeight: 600, fontSize: 13, color: 'var(--text-primary)' }}>
+                      Hide concession amount from students
+                    </p>
+                    <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>
+                      When enabled (default), the concession/condonation amount is never shown to students or
+                      parents — their balance due still reflects it, it's just not broken out as a separate figure.
+                    </p>
+                  </div>
+                </label>
+
+                {/* Toggle: restrict concession amount to Super Admin */}
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: 12, cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={privacyConfig.concessionSuperAdminOnly}
+                    onChange={e => setPrivacyConfig(prev => ({ ...prev, concessionSuperAdminOnly: e.target.checked }))}
+                    style={{ marginTop: 2, width: 16, height: 16, accentColor: '#0369a1', cursor: 'pointer' }}
+                  />
+                  <div>
+                    <p style={{ margin: 0, fontWeight: 600, fontSize: 13, color: 'var(--text-primary)' }}>
+                      Show concession amount only to Super Admin
+                    </p>
+                    <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>
+                      When enabled (default), the concession/condonation amount is hidden from plain Admin accounts
+                      in fee lists, Collect Fee, and Excel exports — only Super Admin can see it. Teachers never see it.
+                    </p>
+                  </div>
+                </label>
+              </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                 <button

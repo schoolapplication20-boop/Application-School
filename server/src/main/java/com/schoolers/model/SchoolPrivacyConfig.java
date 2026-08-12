@@ -22,12 +22,26 @@ public class SchoolPrivacyConfig {
     private Boolean hideStudentContactInfo = false;
 
     /**
-     * When true, the student's total fee and fee concession (condonation) amount
-     * are hidden from the student portal — which is also how parents currently
-     * view fees, since there is no separate parent login in this app.
+     * @deprecated Used to block the ENTIRE student "My Fees" page (total fee, paid amount,
+     * due amount, installments, payment history), even though its stated intent was only to
+     * hide the concession amount. No longer read — see {@link #showFeeDetailsToStudents},
+     * {@link #hideConcessionFromStudents}, and {@link #concessionSuperAdminOnly}.
      */
+    @Deprecated
     @Column(name = "hide_fee_info_from_students", nullable = false)
     private Boolean hideFeeInfoFromStudents = false;
+
+    /** When false, the student "My Fees" page is blocked entirely (rare — most schools want this on). */
+    @Column(name = "show_fee_details_to_students", nullable = false)
+    private Boolean showFeeDetailsToStudents = true;
+
+    /** When true, the concession/condonation amount is never included in the student's own fee data. */
+    @Column(name = "hide_concession_from_students", nullable = false)
+    private Boolean hideConcessionFromStudents = true;
+
+    /** When true, only SUPER_ADMIN sees the concession/condonation amount in admin-facing fee views/exports — plain ADMIN does not. */
+    @Column(name = "concession_super_admin_only", nullable = false)
+    private Boolean concessionSuperAdminOnly = true;
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;

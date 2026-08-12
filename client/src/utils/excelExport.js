@@ -103,7 +103,7 @@ export const exportStudentsToExcel = (students, opts = {}) => {
  * the "Concession Amount" and "Condonation Amount" columns since this app treats them as
  * the same amount (see FeeExportRowDTO).
  */
-const toFeeRow = (r, idx) => ({
+const toFeeRow = (r, idx, includeConcession) => ({
   'S.No':                idx + 1,
   'Student Name':        r.studentName      || '',
   'Admission Number':    r.admissionNumber  || '',
@@ -115,8 +115,10 @@ const toFeeRow = (r, idx) => ({
   'Total Fee':           Number(r.totalFee || 0),
   'Paid Amount':         Number(r.paidAmount || 0),
   'Due Amount':          Number(r.dueAmount || 0),
-  'Concession Amount':   Number(r.concessionAmount || 0),
-  'Condonation Amount':  Number(r.concessionAmount || 0),
+  ...(includeConcession ? {
+    'Concession Amount':  Number(r.concessionAmount || 0),
+    'Condonation Amount': Number(r.concessionAmount || 0),
+  } : {}),
   'Payment Status':      r.paymentStatus    || 'Not Paid',
   'Last Paid Date':      r.lastPaidDate     || '—',
 });
@@ -129,7 +131,12 @@ const toFeeRow = (r, idx) => ({
 export const exportFeeDetailsToExcel = (rows, opts = {}) => {
   const { className, section } = opts;
 
-  const sheetRows = rows.map((r, i) => toFeeRow(r, i));
+  // The backend omits concessionAmount entirely (not just zeroes it) for callers who
+  // aren't allowed to see it — see FeeExportRowDTO / AdminService.getFeeExportRows.
+  // Only render the Concession/Condonation columns when at least one row actually has it.
+  const includeConcession = rows.some(r => r.concessionAmount != null);
+
+  const sheetRows = rows.map((r, i) => toFeeRow(r, i, includeConcession));
 
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.json_to_sheet(sheetRows);
@@ -146,8 +153,10 @@ export const exportFeeDetailsToExcel = (rows, opts = {}) => {
     { wch: 12 }, // Total Fee
     { wch: 12 }, // Paid Amount
     { wch: 12 }, // Due Amount
-    { wch: 14 }, // Concession Amount
-    { wch: 15 }, // Condonation Amount
+    ...(includeConcession ? [
+      { wch: 14 }, // Concession Amount
+      { wch: 15 }, // Condonation Amount
+    ] : []),
     { wch: 13 }, // Payment Status
     { wch: 14 }, // Last Paid Date
   ];

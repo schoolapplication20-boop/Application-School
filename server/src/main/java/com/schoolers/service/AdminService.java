@@ -2145,18 +2145,22 @@ public class AdminService {
 
     // ── Student Fee Assignment ───────────────────────────────────────────────
 
-    public ApiResponse<List<StudentFeeAssignment>> getAllStudentFeeAssignments(Long schoolId) {
+    public ApiResponse<List<Map<String, Object>>> getAllStudentFeeAssignments(Long schoolId, boolean isSuperAdmin) {
         if (schoolId == null) return ApiResponse.success(java.util.List.of());
+        boolean canViewConcession = studentPrivacyService.canAdminViewConcession(schoolId, isSuperAdmin);
         // Filter via student ownership since StudentFeeAssignment has schoolId column
-        return ApiResponse.success(studentFeeAssignmentRepository.findBySchoolIdOrderByCreatedAtDesc(schoolId));
+        List<Map<String, Object>> rows = studentFeeAssignmentRepository.findBySchoolIdOrderByCreatedAtDesc(schoolId)
+                .stream().map(a -> adminFacingAssignmentMap(a, canViewConcession)).collect(Collectors.toList());
+        return ApiResponse.success(rows);
     }
 
     /** Fee-details rows for the class/section Excel export — one row per student, joined with their fee assignment and latest payment. Section is optional (blank = all sections of the class). */
-    public ApiResponse<List<com.schoolers.dto.FeeExportRowDTO>> getFeeExportRows(Long schoolId, String className, String section, String academicYear) {
+    public ApiResponse<List<com.schoolers.dto.FeeExportRowDTO>> getFeeExportRows(Long schoolId, String className, String section, String academicYear, boolean isSuperAdmin) {
         if (schoolId == null) return ApiResponse.error("School not found");
         if (className == null || className.isBlank())
             return ApiResponse.error("Class is required");
 
+        boolean canViewConcession = studentPrivacyService.canAdminViewConcession(schoolId, isSuperAdmin);
         boolean hasSection = section != null && !section.isBlank();
         List<Student> students = hasSection
                 ? studentRepository.findBySchoolIdAndClassNameIgnoreCaseAndSectionIgnoreCaseOrderByRollNumberAscNameAsc(schoolId, className, section)
@@ -2208,7 +2212,7 @@ public class AdminService {
                     .totalFee(totalFee)
                     .paidAmount(paidAmount)
                     .dueAmount(dueAmount)
-                    .concessionAmount(concession)
+                    .concessionAmount(canViewConcession ? concession : null)
                     .paymentStatus(paymentStatus)
                     .lastPaidDate(lastPaidDate)
                     .build());
@@ -2217,18 +2221,21 @@ public class AdminService {
     }
 
     @Transactional
-    public ApiResponse<StudentFeeAssignment> getStudentFeeAssignment(Long studentId, Long schoolId) {
+    public ApiResponse<Map<String, Object>> getStudentFeeAssignment(Long studentId, Long schoolId, boolean isSuperAdmin) {
         Student student = studentRepository.findById(studentId).orElse(null);
         if (student == null) return ApiResponse.error("No fee assignment found for this student");
         if (schoolId != null && schoolMismatch(schoolId, student.getSchoolId()))
             return ApiResponse.error("No fee assignment found for this student");
+
+        boolean canViewConcession = studentPrivacyService.canAdminViewConcession(
+                schoolId != null ? schoolId : student.getSchoolId(), isSuperAdmin);
 
         // Look up (or auto-create) the assignment for the CURRENT academic year only.
         // A row from a prior academic year must never be returned here — otherwise a
         // student whose class fee structure was just created/updated for this year
         // would keep seeing last year's stale fee instead of the current one.
         return syncClassFeeAssignment(student)
-                .map(ApiResponse::success)
+                .map(a -> ApiResponse.success(adminFacingAssignmentMap(a, canViewConcession)))
                 .orElse(ApiResponse.error("Fee not assigned"));
     }
 
@@ -2537,7 +2544,7 @@ public class AdminService {
 
     // ── Installment management ─────────────────────────────────────────────
 
-    public ApiResponse<List<FeeInstallment>> getInstallments(Long assignmentId, Long schoolId) {
+    public ApiResponse<List<Map<String, Object>>> getInstallments(Long assignmentId, Long schoolId, boolean isSuperAdmin) {
         if (schoolId != null) {
             StudentFeeAssignment assignment = studentFeeAssignmentRepository.findById(assignmentId).orElse(null);
             if (assignment != null) {
@@ -2546,8 +2553,10 @@ public class AdminService {
                     return ApiResponse.error("Unauthorized");
             }
         }
-        return ApiResponse.success(
-                feeInstallmentRepository.findByAssignmentIdOrderByDueDateAsc(assignmentId));
+        boolean canViewConcession = studentPrivacyService.canAdminViewConcession(schoolId, isSuperAdmin);
+        List<Map<String, Object>> rows = feeInstallmentRepository.findByAssignmentIdOrderByDueDateAsc(assignmentId)
+                .stream().map(i -> adminFacingInstallmentMap(i, canViewConcession)).collect(Collectors.toList());
+        return ApiResponse.success(rows);
     }
 
     /**
@@ -2716,16 +2725,15 @@ public class AdminService {
         Map<String, Object> result = new LinkedHashMap<>();
 
         Student feeStudent = studentRepository.findById(studentId).orElse(null);
-        boolean hideFee = feeStudent != null
-                && studentPrivacyService.shouldHideFeeInfo(feeStudent.getSchoolId());
+        Long schoolId = feeStudent != null ? feeStudent.getSchoolId() : null;
 
-        // Fee visibility is switched off for this school — return nothing fee-related
-        // at all, not even via network inspection. The student portal shows a
-        // "contact administration" message instead of the fee page.
-        if (hideFee) {
+        // Whole-page visibility (rare opt-out) is separate from concession visibility (default-on privacy rule).
+        boolean showFeeDetails = feeStudent == null || studentPrivacyService.shouldShowFeeDetailsToStudents(schoolId);
+        if (!showFeeDetails) {
             result.put("feeInfoHidden", true);
             return ApiResponse.success(result);
         }
+        boolean hideConcession = studentPrivacyService.shouldHideConcessionFromStudents(schoolId);
 
         String currentYear = currentAcademicYear();
         StudentFeeAssignment assignment = studentFeeAssignmentRepository
@@ -2756,9 +2764,12 @@ public class AdminService {
         List<FeePayment> payments =
                 feePaymentRepository.findByAssignmentIdOrderByPaymentDateDescCreatedAtDesc(assignment.getId());
 
-        BigDecimal totalFee   = assignment.getTotalFee() != null ? assignment.getTotalFee() : BigDecimal.ZERO;
-        BigDecimal paidAmount = assignment.getPaidAmount() != null ? assignment.getPaidAmount() : BigDecimal.ZERO;
-        BigDecimal dueAmount  = totalFee.subtract(paidAmount).max(BigDecimal.ZERO);
+        BigDecimal totalFee   = assignment.getTotalFee()         != null ? assignment.getTotalFee()         : BigDecimal.ZERO;
+        BigDecimal paidAmount = assignment.getPaidAmount()        != null ? assignment.getPaidAmount()        : BigDecimal.ZERO;
+        BigDecimal concession = assignment.getCondonationAmount() != null ? assignment.getCondonationAmount() : BigDecimal.ZERO;
+        // Due amount always accounts for concession/condonation internally, even though the
+        // concession figure itself is not shown to the student (see hideConcession below).
+        BigDecimal dueAmount  = totalFee.subtract(paidAmount).subtract(concession).max(BigDecimal.ZERO);
 
         LocalDate nextDue = installments.stream()
                 .filter(i -> i.getStatus() == FeeInstallment.Status.PENDING && i.getDueDate() != null)
@@ -2777,10 +2788,10 @@ public class AdminService {
         // Include class fee structure (fee type breakdown) if available
         ClassFeeStructure cfs = null;
         if (assignment.getClassName() != null && assignment.getAcademicYear() != null) {
-            if (feeStudent != null && feeStudent.getSchoolId() != null) {
+            if (schoolId != null) {
                 cfs = classFeeStructureRepository
                         .findByClassNameAndAcademicYearAndSchoolId(
-                                assignment.getClassName(), assignment.getAcademicYear(), feeStudent.getSchoolId())
+                                assignment.getClassName(), assignment.getAcademicYear(), schoolId)
                         .orElse(null);
             }
             if (cfs == null) {
@@ -2790,13 +2801,97 @@ public class AdminService {
             }
         }
 
-        result.put("assignment",        assignment);
-        result.put("installments",      installments);
+        result.put("assignment",        studentFacingAssignmentMap(assignment, hideConcession));
+        result.put("installments",      installments.stream()
+                .map(i -> studentFacingInstallmentMap(i, hideConcession)).collect(Collectors.toList()));
         result.put("payments",          payments);
         result.put("classFeeStructure", cfs);
         result.put("summary",           summary);
         result.put("feeInfoHidden",     false);
         return ApiResponse.success(result);
+    }
+
+    /**
+     * Builds the assignment payload sent to the student portal — never the raw entity, so a
+     * hidden concession amount can never leak over the network regardless of what the UI renders.
+     */
+    private Map<String, Object> studentFacingAssignmentMap(StudentFeeAssignment a, boolean hideConcession) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id",            a.getId());
+        m.put("studentId",     a.getStudentId());
+        m.put("studentName",   a.getStudentName());
+        m.put("rollNumber",    a.getRollNumber());
+        m.put("className",     a.getClassName());
+        m.put("academicYear",  a.getAcademicYear());
+        m.put("totalFee",      a.getTotalFee());
+        m.put("paidAmount",    a.getPaidAmount());
+        m.put("dueDate",       a.getDueDate());
+        m.put("status",        a.getStatus());
+        m.put("remarks",       a.getRemarks());
+        if (!hideConcession) m.put("concessionAmount", a.getCondonationAmount());
+        return m;
+    }
+
+    private Map<String, Object> studentFacingInstallmentMap(FeeInstallment i, boolean hideConcession) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id",         i.getId());
+        m.put("termName",   i.getTermName());
+        m.put("amount",     i.getAmount());
+        m.put("dueDate",    i.getDueDate());
+        m.put("status",     i.getStatus());
+        m.put("paidAmount", i.getPaidAmount());
+        m.put("paidDate",   i.getPaidDate());
+        m.put("carryOver",  i.getCarryOver());
+        if (!hideConcession) m.put("concessionAmount", i.getCondonationAmount());
+        return m;
+    }
+
+    /**
+     * Builds the assignment payload for admin-facing fee views (Fees & Payments, Collect Fee).
+     * concessionAmount is only included when the caller is allowed to see it — see
+     * {@link StudentPrivacyService#canAdminViewConcession}. dueAmount is always concession-adjusted
+     * even when the concession figure itself is withheld.
+     */
+    private Map<String, Object> adminFacingAssignmentMap(StudentFeeAssignment a, boolean canViewConcession) {
+        BigDecimal totalFee   = a.getTotalFee()         != null ? a.getTotalFee()         : BigDecimal.ZERO;
+        BigDecimal paidAmount = a.getPaidAmount()        != null ? a.getPaidAmount()        : BigDecimal.ZERO;
+        BigDecimal concession = a.getCondonationAmount() != null ? a.getCondonationAmount() : BigDecimal.ZERO;
+
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id",           a.getId());
+        m.put("studentId",    a.getStudentId());
+        m.put("studentName",  a.getStudentName());
+        m.put("rollNumber",   a.getRollNumber());
+        m.put("className",    a.getClassName());
+        m.put("academicYear", a.getAcademicYear());
+        m.put("totalFee",     totalFee);
+        m.put("paidAmount",   paidAmount);
+        m.put("dueAmount",    totalFee.subtract(paidAmount).subtract(concession).max(BigDecimal.ZERO));
+        m.put("dueDate",      a.getDueDate());
+        m.put("status",       a.getStatus());
+        m.put("remarks",      a.getRemarks());
+        m.put("term1Fee",     a.getTerm1Fee());
+        m.put("term2Fee",     a.getTerm2Fee());
+        m.put("term3Fee",     a.getTerm3Fee());
+        m.put("createdAt",    a.getCreatedAt());
+        m.put("updatedAt",    a.getUpdatedAt());
+        if (canViewConcession) m.put("concessionAmount", concession);
+        return m;
+    }
+
+    private Map<String, Object> adminFacingInstallmentMap(FeeInstallment i, boolean canViewConcession) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id",         i.getId());
+        m.put("assignmentId", i.getAssignmentId());
+        m.put("termName",   i.getTermName());
+        m.put("amount",     i.getAmount());
+        m.put("dueDate",    i.getDueDate());
+        m.put("status",     i.getStatus());
+        m.put("paidAmount", i.getPaidAmount());
+        m.put("paidDate",   i.getPaidDate());
+        m.put("carryOver",  i.getCarryOver());
+        if (canViewConcession) m.put("concessionAmount", i.getCondonationAmount());
+        return m;
     }
 
     // ── Expenses ───────────────────────────────────────────────────────────

@@ -32,14 +32,40 @@ public class StudentPrivacyService {
     }
 
     /**
-     * Returns true when the school's privacy config says to hide total fee /
-     * fee concession info from the student portal (also covers parents, who
-     * view fees via the student login).
+     * Whether the student "My Fees" page (total fee, paid, due, installments, payment
+     * history) should be shown at all. Defaults to true — most schools want students to
+     * see their own fee status; this only blocks the page for schools that explicitly opt out.
      */
-    public boolean shouldHideFeeInfo(Long schoolId) {
+    public boolean shouldShowFeeDetailsToStudents(Long schoolId) {
         return privacyConfigRepository.findBySchoolId(schoolId)
-                .map(cfg -> Boolean.TRUE.equals(cfg.getHideFeeInfoFromStudents()))
-                .orElse(false);
+                .map(cfg -> !Boolean.FALSE.equals(cfg.getShowFeeDetailsToStudents()))
+                .orElse(true);
+    }
+
+    /**
+     * Whether the concession/condonation amount should be hidden from the student's own
+     * fee data (also covers parents, who view fees via the student login). Defaults to true.
+     */
+    public boolean shouldHideConcessionFromStudents(Long schoolId) {
+        return privacyConfigRepository.findBySchoolId(schoolId)
+                .map(cfg -> !Boolean.FALSE.equals(cfg.getHideConcessionFromStudents()))
+                .orElse(true);
+    }
+
+    /**
+     * Whether the concession/condonation amount is restricted to SUPER_ADMIN in admin-facing
+     * fee views (student fee list, collect fee, Excel exports) — i.e. plain ADMIN does not see
+     * it. Defaults to true.
+     */
+    public boolean isConcessionSuperAdminOnly(Long schoolId) {
+        return privacyConfigRepository.findBySchoolId(schoolId)
+                .map(cfg -> !Boolean.FALSE.equals(cfg.getConcessionSuperAdminOnly()))
+                .orElse(true);
+    }
+
+    /** Whether concessionAmount may be included in an admin-facing response for this caller. */
+    public boolean canAdminViewConcession(Long schoolId, boolean isSuperAdmin) {
+        return isSuperAdmin || !isConcessionSuperAdminOnly(schoolId);
     }
 
     /** Nulls out sensitive contact fields on a single student (call after JPA transaction, i.e. detached entity). */

@@ -194,7 +194,7 @@ export default function Fees() {
   const stats = useMemo(() => {
     const totalBilled = assignments.reduce((s, a) => s + Number(a.totalFee || 0), 0);
     const totalPaid   = assignments.reduce((s, a) => s + Number(a.paidAmount || 0), 0);
-    const totalDue    = totalBilled - totalPaid;
+    const totalDue    = assignments.reduce((s, a) => s + Number(a.dueAmount ?? Math.max(0, Number(a.totalFee || 0) - Number(a.paidAmount || 0))), 0);
     const paid        = assignments.filter(a => String(a.status || '').toUpperCase() === 'PAID').length;
     return { totalBilled, totalPaid, totalDue, paid, total: assignments.length };
   }, [assignments]);
@@ -618,7 +618,7 @@ export default function Fees() {
                     'Academic Year':  a.academicYear,
                     'Total Fee (₹)':  Number(a.totalFee || 0).toFixed(2),
                     'Paid (₹)':       Number(a.paidAmount || 0).toFixed(2),
-                    'Due (₹)':        Math.max(0, Number(a.totalFee || 0) - Number(a.paidAmount || 0)).toFixed(2),
+                    'Due (₹)':        Number(a.dueAmount ?? Math.max(0, Number(a.totalFee || 0) - Number(a.paidAmount || 0))).toFixed(2),
                     'Status':         a.status || 'PENDING',
                     'Due Date':       a.dueDate || '—',
                     'Remarks':        a.remarks || '',
@@ -658,7 +658,7 @@ export default function Fees() {
                     </thead>
                     <tbody>
                       {filteredAssignments.map(a => {
-                        const due = Number(a.totalFee || 0) - Number(a.paidAmount || 0);
+                        const due = Number(a.dueAmount ?? (Number(a.totalFee || 0) - Number(a.paidAmount || 0)));
                         return (
                           <tr key={a.id} style={{ borderBottom: '1px solid var(--border)' }}>
                             <td style={{ padding: '12px 14px', fontWeight: 700, color: 'var(--text-primary)' }}>{a.studentName}</td>

@@ -1,5 +1,6 @@
 package com.schoolers.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,6 +14,7 @@ import java.time.LocalDate;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class FeeExportRowDTO {
     private String studentName;
     private String admissionNumber;
@@ -24,7 +26,11 @@ public class FeeExportRowDTO {
     private BigDecimal totalFee;
     private BigDecimal paidAmount;
     private BigDecimal dueAmount;
-    /** Single waiver amount in this system — shown as both "Concession" and "Condonation" in the export (see excelExport.js). */
+    /**
+     * Single waiver amount in this system — shown as both "Concession" and "Condonation" in the
+     * export (see excelExport.js). Left null (and so omitted from the JSON entirely, not just
+     * zeroed) when the caller isn't allowed to see it — see AdminService.getFeeExportRows().
+     */
     private BigDecimal concessionAmount;
     private String paymentStatus;
     private LocalDate lastPaidDate;

@@ -507,7 +507,7 @@ public class AdminController {
     // ===== Student Fee Assignments =====
     @GetMapping("/student-fee-assignments")
     public ResponseEntity<?> getAllStudentFeeAssignments(Authentication auth) {
-        return ResponseEntity.ok(adminService.getAllStudentFeeAssignments(getCurrentSchoolId(auth)));
+        return ResponseEntity.ok(adminService.getAllStudentFeeAssignments(getCurrentSchoolId(auth), isSuperAdmin(auth)));
     }
 
     @GetMapping("/fees/export")
@@ -515,13 +515,13 @@ public class AdminController {
                                                @RequestParam(required = false) String section,
                                                @RequestParam(required = false) String academicYear,
                                                Authentication auth) {
-        var response = adminService.getFeeExportRows(getCurrentSchoolId(auth), className, section, academicYear);
+        var response = adminService.getFeeExportRows(getCurrentSchoolId(auth), className, section, academicYear, isSuperAdmin(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.badRequest().body(response);
     }
 
     @GetMapping("/student-fee-assignments/student/{studentId}")
     public ResponseEntity<?> getStudentFeeAssignment(@PathVariable Long studentId, Authentication auth) {
-        var response = adminService.getStudentFeeAssignment(studentId, getCurrentSchoolId(auth));
+        var response = adminService.getStudentFeeAssignment(studentId, getCurrentSchoolId(auth), isSuperAdmin(auth));
         return response.isSuccess() ? ResponseEntity.ok(response) : ResponseEntity.status(404).body(response);
     }
 
@@ -562,7 +562,7 @@ public class AdminController {
 
     @GetMapping("/student-fee-assignments/{assignmentId}/installments")
     public ResponseEntity<?> getInstallments(@PathVariable Long assignmentId, Authentication auth) {
-        return ResponseEntity.ok(adminService.getInstallments(assignmentId, getCurrentSchoolId(auth)));
+        return ResponseEntity.ok(adminService.getInstallments(assignmentId, getCurrentSchoolId(auth), isSuperAdmin(auth)));
     }
 
     @PostMapping("/fee-installments/{installmentId}/pay")

@@ -261,7 +261,7 @@ export default function CollectFee() {
       setAssignment(updatedAssignment);
 
       const newPaid = Number(updatedAssignment?.paidAmount || 0);
-      const newDue  = Number(updatedAssignment?.totalFee || 0) - newPaid;
+      const newDue  = Number(updatedAssignment?.dueAmount ?? (Number(updatedAssignment?.totalFee || 0) - newPaid));
 
       setReceiptData({
         receiptNo,
@@ -304,7 +304,7 @@ export default function CollectFee() {
     w.close();
   };
 
-  const due = assignment ? Math.max(0, Number(assignment.totalFee || 0) - Number(assignment.paidAmount || 0)) : 0;
+  const due = assignment ? Number(assignment.dueAmount ?? Math.max(0, Number(assignment.totalFee || 0) - Number(assignment.paidAmount || 0))) : 0;
   const paidPct = assignment && Number(assignment.totalFee) > 0
     ? Math.min(100, (Number(assignment.paidAmount || 0) / Number(assignment.totalFee)) * 100)
     : 0;
