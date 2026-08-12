@@ -196,14 +196,15 @@ export default function Students() {
   const validate = () => {
     const e = {};
     if (!formData.name.trim())            e.name        = 'Student name is required';
-    if (!formData.rollNo.toString().trim()) {
-      e.rollNo = 'Roll number is required';
-    } else if (!/^\d+$/.test(formData.rollNo.toString().trim())) {
-      e.rollNo = 'Roll number must be a number';
-    } else if (capacityInfo?.capacity) {
-      const rn = parseInt(formData.rollNo);
-      if (rn < 1 || rn > capacityInfo.capacity)
-        e.rollNo = `Roll number must be between 1 and ${capacityInfo.capacity}`;
+    // Roll number is optional — only validate format/range when the admin provided one.
+    if (formData.rollNo.toString().trim()) {
+      if (!/^\d+$/.test(formData.rollNo.toString().trim())) {
+        e.rollNo = 'Roll number must be a number';
+      } else if (capacityInfo?.capacity) {
+        const rn = parseInt(formData.rollNo);
+        if (rn < 1 || rn > capacityInfo.capacity)
+          e.rollNo = `Roll number must be between 1 and ${capacityInfo.capacity}`;
+      }
     }
     if (!editStudent && !formData.admissionNumber.trim())
       e.admissionNumber = 'Admission number is required to generate login credentials';

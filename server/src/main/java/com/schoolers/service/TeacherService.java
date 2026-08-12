@@ -205,24 +205,27 @@ public class TeacherService {
 
         ClassRoom classRoom = access.getData();
         String name = str(body, "name", null);
+        // Roll number is optional — many schools assign it after admission, or not at all.
         String rollNumber = str(body, "rollNumber", str(body, "rollNo", null));
+        rollNumber = (rollNumber != null && !rollNumber.isBlank()) ? rollNumber.trim() : null;
         if (name == null || name.isBlank()) return ApiResponse.error("Student name is required");
-        if (rollNumber == null || rollNumber.isBlank()) return ApiResponse.error("Roll number is required");
 
         String section = normalizeSection(classRoom.getSection());
         Long schoolId = classRoom.getSchoolId();
 
         // Use school-scoped duplicate check so roll numbers are unique per school, not globally
-        boolean duplicate = (schoolId != null)
-                ? studentRepository.findDuplicateInClassAndSchool(schoolId, rollNumber.trim(), classRoom.getName(), section).isPresent()
-                : studentRepository.findDuplicateInClass(rollNumber.trim(), classRoom.getName(), section).isPresent();
-        if (duplicate) {
-            return ApiResponse.error("Roll number " + rollNumber.trim() + " already exists in " + classRoom.getName() + " - " + section);
+        if (rollNumber != null) {
+            boolean duplicate = (schoolId != null)
+                    ? studentRepository.findDuplicateInClassAndSchool(schoolId, rollNumber, classRoom.getName(), section).isPresent()
+                    : studentRepository.findDuplicateInClass(rollNumber, classRoom.getName(), section).isPresent();
+            if (duplicate) {
+                return ApiResponse.error("Roll number " + rollNumber + " already exists in " + classRoom.getName() + " - " + section);
+            }
         }
 
         Student student = Student.builder()
                 .name(name.trim())
-                .rollNumber(rollNumber.trim())
+                .rollNumber(rollNumber)
                 .className(classRoom.getName())
                 .section(section)
                 .schoolId(schoolId)
@@ -255,15 +258,19 @@ public class TeacherService {
                         return ApiResponse.<Student>error("Student does not belong to this class");
                     }
 
-                    String targetRoll = body.containsKey("rollNumber") || body.containsKey("rollNo")
-                            ? str(body, "rollNumber", str(body, "rollNo", student.getRollNumber())).trim()
+                    // Roll number is optional — a blank value clears it (normalized to null, not "").
+                    String targetRollRaw = body.containsKey("rollNumber") || body.containsKey("rollNo")
+                            ? str(body, "rollNumber", str(body, "rollNo", student.getRollNumber()))
                             : student.getRollNumber();
-                    studentRepository.findDuplicateInClass(targetRoll, classRoom.getName(), normalizeSection(classRoom.getSection()))
-                            .ifPresent(existing -> {
-                                if (!existing.getId().equals(studentId)) {
-                                    throw new IllegalArgumentException("Roll number " + targetRoll + " already exists in " + classRoom.getName() + " - " + normalizeSection(classRoom.getSection()));
-                                }
-                            });
+                    String targetRoll = (targetRollRaw != null && !targetRollRaw.isBlank()) ? targetRollRaw.trim() : null;
+                    if (targetRoll != null) {
+                        studentRepository.findDuplicateInClass(targetRoll, classRoom.getName(), normalizeSection(classRoom.getSection()))
+                                .ifPresent(existing -> {
+                                    if (!existing.getId().equals(studentId)) {
+                                        throw new IllegalArgumentException("Roll number " + targetRoll + " already exists in " + classRoom.getName() + " - " + normalizeSection(classRoom.getSection()));
+                                    }
+                                });
+                    }
 
                     if (body.containsKey("name")) student.setName(str(body, "name", student.getName()));
                     student.setRollNumber(targetRoll);

@@ -356,11 +356,10 @@ public class AdminService {
 
     @Transactional
     public ApiResponse<Map<String, Object>> createStudent(Map<String, Object> body) {
-        // Accept both camelCase frontend fields and snake_case backend fields
+        // Accept both camelCase frontend fields and snake_case backend fields.
+        // Roll number is optional — many schools assign it after admission, or not at all.
         String rollNumber = str(body, "rollNumber", str(body, "rollNo", null));
-        if (rollNumber == null || rollNumber.isBlank())
-            return ApiResponse.error("Roll number is required");
-        rollNumber = rollNumber.trim();
+        rollNumber = (rollNumber != null && !rollNumber.isBlank()) ? rollNumber.trim() : null;
 
         String name = str(body, "name", null);
         if (name == null || name.isBlank()) return ApiResponse.<Map<String, Object>>error("Student name is required");
@@ -391,8 +390,8 @@ public class AdminService {
         String section   = normalizeSection(str(body, "section", ""));
 
         // Roll-number uniqueness is scoped to (school, class, section) only.
-        // Without a schoolId there is no meaningful scope — skip the check.
-        if (schoolId != null &&
+        // Without a schoolId, or without a roll number to begin with, there is nothing to check.
+        if (rollNumber != null && schoolId != null &&
                 studentRepository.findDuplicateInClassAndSchool(schoolId, rollNumber, className, section).isPresent())
             return ApiResponse.<Map<String, Object>>error(
                 "Roll number " + rollNumber + " already exists in " +
@@ -410,15 +409,17 @@ public class AdminService {
                     .findBySchoolIdAndNameIgnoreCaseAndSectionIgnoreCase(schoolId, className, section != null ? section : "")
                     .orElse(null);
             if (targetRoom != null && targetRoom.getCapacity() != null && targetRoom.getCapacity() > 0) {
-                // Roll number must be within 1 to capacity
-                try {
-                    int rollInt = Integer.parseInt(rollNumber);
-                    if (rollInt < 1 || rollInt > targetRoom.getCapacity()) {
-                        return ApiResponse.<Map<String, Object>>error(
-                            "Roll number must be between 1 and " + targetRoom.getCapacity()
-                            + " (class capacity is " + targetRoom.getCapacity() + ").");
-                    }
-                } catch (NumberFormatException ignored) {}
+                // Roll number must be within 1 to capacity — only checked when one was provided.
+                if (rollNumber != null) {
+                    try {
+                        int rollInt = Integer.parseInt(rollNumber);
+                        if (rollInt < 1 || rollInt > targetRoom.getCapacity()) {
+                            return ApiResponse.<Map<String, Object>>error(
+                                "Roll number must be between 1 and " + targetRoom.getCapacity()
+                                + " (class capacity is " + targetRoom.getCapacity() + ").");
+                        }
+                    } catch (NumberFormatException ignored) {}
+                }
                 // Reject if class is already full
                 long enrolled = studentRepository.countEnrolledForCapacity(
                         schoolId, className, section != null ? section : "");
@@ -572,13 +573,17 @@ public class AdminService {
                     String targetSection = body.containsKey("section")
                             ? normalizeSection(str(body, "section", student.getSection()))
                             : normalizeSection(student.getSection());
-                    String targetRoll = body.containsKey("rollNumber")
-                            ? str(body, "rollNumber", student.getRollNumber()).trim()
+                    // Roll number is optional — a blank value clears it (stored as null, not "",
+                    // so two students in the same class can both have no roll number without
+                    // tripping the uq_roll_class_section_school unique constraint).
+                    String targetRollRaw = body.containsKey("rollNumber")
+                            ? str(body, "rollNumber", student.getRollNumber())
                             : student.getRollNumber();
+                    String targetRoll = (targetRollRaw != null && !targetRollRaw.isBlank()) ? targetRollRaw.trim() : null;
 
                     // Use the student's own school when the caller context has no school (APPLICATION_OWNER).
                     Long dupSchoolId = schoolId != null ? schoolId : student.getSchoolId();
-                    if (dupSchoolId != null) {
+                    if (targetRoll != null && dupSchoolId != null) {
                         studentRepository.findDuplicateInClassAndSchool(dupSchoolId, targetRoll, targetClass, targetSection)
                                 .ifPresent(existing -> {
                                     if (!existing.getId().equals(id))

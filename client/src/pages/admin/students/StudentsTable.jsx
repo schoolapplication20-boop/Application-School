@@ -349,7 +349,7 @@ export default function StudentsTable({
                     </div>
                   </div>
                 </td>
-                <td style={{ fontFamily: 'monospace', fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>{s.rollNo}</td>
+                <td style={{ fontFamily: 'monospace', fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>{s.rollNo || '—'}</td>
                 <td><span style={{ fontSize: '13px', fontWeight: 700 }}>{String(s.class || '—').replace(/^Class\s+/i, '')}</span></td>
                 <td><span style={{ padding: '2px 10px', borderRadius: 20, fontSize: '11px', fontWeight: 700, background: '#3182ce20', color: '#2b6cb0' }}>{s.section || '—'}</span></td>
                 <td style={{ fontSize: '13px' }}>{s.fatherName || s.parent || '—'}</td>

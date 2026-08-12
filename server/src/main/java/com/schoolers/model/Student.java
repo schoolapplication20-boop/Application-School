@@ -36,8 +36,8 @@ public class Student {
     @Column(nullable = false, length = 100)
     private String name;
 
-    @NotNull
-    @Column(name = "roll_number", nullable = false, length = 20)
+    /** Optional — many schools assign roll numbers after admission, or not at all. */
+    @Column(name = "roll_number", length = 20)
     private String rollNumber;
 
     @Column(name = "admission_number", length = 30)

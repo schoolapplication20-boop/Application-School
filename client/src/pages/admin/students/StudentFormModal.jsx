@@ -62,7 +62,7 @@ export default function StudentFormModal({
                 </div>
                 <div className="col-md-4">
                   <label className="form-label fw-medium small">
-                    Roll Number *
+                    Roll Number <span className="text-muted">(Optional)</span>
                     {capacityInfo?.capacity && <span style={{ color: 'var(--text-muted)', fontWeight: 400, marginLeft: 4 }}>(1–{capacityInfo.capacity})</span>}
                   </label>
                   <input type="number" className={`form-control form-control-sm ${errors.rollNo ? 'is-invalid' : ''}`}
